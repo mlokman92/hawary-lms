@@ -1,0 +1,29 @@
+# Netlify build config for the pnpm + Turborepo monorepo.
+# Connect the WHOLE repo in Netlify (base directory = repo root, the default) —
+# not apps/web — because apps/web depends on @hawary/shared via "workspace:*",
+# which only resolves from the workspace root where pnpm-lock.yaml lives.
+
+[build]
+  # Build only the web app (and any workspace deps it needs) via Turborepo.
+  command = "pnpm turbo run build --filter=web..."
+  # Vite output, relative to the repo root.
+  publish = "apps/web/dist"
+  # Skip the deploy when this commit didn't touch apps/web or its deps
+  # (e.g. mobile- or docs-only changes). turbo-ignore exits 0 => Netlify cancels
+  # the build, non-zero => build proceeds.
+  ignore = "npx --yes turbo-ignore web"
+
+[build.environment]
+  NODE_VERSION = "20"
+  # pnpm is auto-detected from the root package.json "packageManager" field.
+
+# Single-page app: serve index.html for any client-side route (200, not redirect).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Set these in the Netlify UI (Site settings → Environment variables), not here:
+#   VITE_SUPABASE_URL
+#   VITE_SUPABASE_PUBLISHABLE_KEY
+# The publishable key is safe in the client bundle (RLS bounds it).

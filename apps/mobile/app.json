@@ -1,16 +1,18 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "Hawary LMS",
+    "slug": "hawary-lms",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobile",
+    "scheme": "hawarylms",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "bundleIdentifier": "com.hawary.lms",
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.hawary.lms",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
