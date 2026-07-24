@@ -1,19 +1,32 @@
-# @hawary/web
+# React + TypeScript + Vite
 
-Web application — **Vite + React + TypeScript**. Serves the **Admin** back-office
-and the **Trainer** desktop surface for Hawary LMS.
+This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
-## Status
+Currently, two official plugins are available:
 
-Not scaffolded yet. Planned scaffold:
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-```bash
-pnpm create vite@latest . --template react-ts
+## React Compiler
+
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+
+## Expanding the Oxlint configuration
+
+If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+
+```json
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "oxc"],
+  "options": {
+    "typeAware": true
+  },
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+  }
+}
 ```
 
-Then depend on `@hawary/shared` for types, the Supabase client, and domain logic.
-
-## Responsibilities
-
-- Admin: academy settings, users, courses, enrollment, invoicing & payments, reports.
-- Trainer: authoring notes/assessments/assignments, grading, progress dashboards.
+See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
