@@ -123,6 +123,14 @@ submit and Actions for everything else.
 }
 ```
 
+**Local dev needs a development build, not Expo Go.** Recent Expo SDKs no longer support
+the general-purpose Expo Go app for projects with custom native config — you run a **dev
+client** instead: `eas build --profile development` produces an installable dev build, then
+`npx expo start --dev-client` connects to it. On Windows the iOS dev build is done in the
+**EAS cloud** (no Mac needed) but requires an Apple Developer account and a **registered
+device** (`eas device:create`) baked into the provisioning profile. Android dev builds
+install directly. Plan to provision a development device before mobile feature work.
+
 **Monorepo requirement:** EAS builds a pnpm monorepo fine, but Metro must be told where the
 workspace is — see the metro config in the monorepo section. Without it the mobile bundle
 can't resolve `@hawary/shared`.
