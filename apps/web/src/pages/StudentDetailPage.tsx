@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Pencil, Plus, X } from 'lucide-react'
+import { ArrowLeft, Pencil, Plus, UserPlus, X } from 'lucide-react'
 import { useAcademy } from '@/lib/academy'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -33,9 +33,11 @@ import {
 } from '@/components/ui/alert-dialog'
 import { StudentFormDialog } from '@/features/students/StudentFormDialog'
 import { EnrollCourseDialog } from '@/features/students/EnrollCourseDialog'
-import { STATUS_META } from '@/features/students/status'
+import { InviteLink } from '@/features/students/InviteLink'
+import { MANUAL_STATUSES, STATUS_META } from '@/features/students/status'
 import {
   useArchiveStudent,
+  useCreateInvitation,
   useStudent,
   useStudentEnrollments,
   useUnenroll,
@@ -88,9 +90,11 @@ export function StudentDetailPage() {
   const updateStudent = useUpdateStudent(academyId)
   const archiveStudent = useArchiveStudent(academyId)
   const unenroll = useUnenroll(academyId, id ?? '')
+  const createInvitation = useCreateInvitation()
 
   const [editOpen, setEditOpen] = useState(false)
   const [enrollOpen, setEnrollOpen] = useState(false)
+  const [inviteLink, setInviteLink] = useState<string | null>(null)
 
   if (isLoading) {
     return (
@@ -120,54 +124,94 @@ export function StudentDetailPage() {
 
       {/* 1. Header */}
       <Card>
-        <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <Avatar className="size-16">
-            <AvatarImage src={student.avatar_url ?? undefined} />
-            <AvatarFallback className="text-lg">
-              {initials(student.full_name, student.email)}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1">
-            <h1 className="text-xl font-semibold tracking-tight">
-              {student.full_name ?? 'Unnamed student'}
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              Member since{' '}
-              {fmtDate(student.created_at, { month: 'long', year: 'numeric' })} ·
-              ID {student.student_no}
-            </p>
-          </div>
-          {isStaff ? (
-            <div className="flex items-center gap-2">
-              <Select
-                value={student.status}
-                onValueChange={(v) =>
-                  updateStudent.mutate({
-                    id: student.id,
-                    patch: { status: v as StudentStatus },
-                  })
-                }
-              >
-                <SelectTrigger size="sm" className="w-36">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(STATUS_META) as StudentStatus[]).map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {STATUS_META[s].label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button variant="outline" onClick={() => setEditOpen(true)}>
-                <Pencil /> Edit profile
-              </Button>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <Avatar className="size-16">
+              <AvatarImage src={student.avatar_url ?? undefined} />
+              <AvatarFallback className="text-lg">
+                {initials(student.full_name, student.email)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <h1 className="text-xl font-semibold tracking-tight">
+                {student.full_name ?? 'Unnamed student'}
+              </h1>
+              <p className="text-muted-foreground text-sm">
+                Member since{' '}
+                {fmtDate(student.created_at, { month: 'long', year: 'numeric' })}{' '}
+                · ID {student.student_no}
+              </p>
+              <div className="mt-2 flex items-center gap-2">
+                {student.user_id ? (
+                  <Badge variant="secondary">App account linked</Badge>
+                ) : student.email ? (
+                  isStaff ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={createInvitation.isPending}
+                      onClick={async () => {
+                        try {
+                          const inv = await createInvitation.mutateAsync(
+                            student.id,
+                          )
+                          setInviteLink(
+                            `${window.location.origin}/accept-invite?token=${inv.token}`,
+                          )
+                        } catch {
+                          /* surfaced via createInvitation.error below */
+                        }
+                      }}
+                    >
+                      <UserPlus />
+                      {createInvitation.isPending ? 'Creating…' : 'Invite to app'}
+                    </Button>
+                  ) : null
+                ) : isStaff ? (
+                  <span className="text-muted-foreground text-xs">
+                    Add an email to invite this student to the app.
+                  </span>
+                ) : null}
+              </div>
             </div>
-          ) : (
-            <Badge variant={STATUS_META[student.status].variant}>
-              {STATUS_META[student.status].label}
-            </Badge>
-          )}
+            {isStaff ? (
+              <div className="flex items-center gap-2">
+                <Select
+                  value={student.status}
+                  onValueChange={(v) =>
+                    updateStudent.mutate({
+                      id: student.id,
+                      patch: { status: v as StudentStatus },
+                    })
+                  }
+                >
+                  <SelectTrigger size="sm" className="w-36">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MANUAL_STATUSES.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {STATUS_META[s].label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" onClick={() => setEditOpen(true)}>
+                  <Pencil /> Edit profile
+                </Button>
+              </div>
+            ) : (
+              <Badge variant={STATUS_META[student.status].variant}>
+                {STATUS_META[student.status].label}
+              </Badge>
+            )}
+          </div>
+          {createInvitation.error ? (
+            <p className="text-destructive text-sm">
+              {createInvitation.error.message}
+            </p>
+          ) : null}
+          {inviteLink ? <InviteLink url={inviteLink} /> : null}
         </CardContent>
       </Card>
 

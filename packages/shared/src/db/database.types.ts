@@ -87,6 +87,83 @@ export type Database = {
         }
         Relationships: []
       }
+      academy_invitations: {
+        Row: {
+          academy_id: string
+          accepted_at: string | null
+          accepted_user_id: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string | null
+          role: "admin" | "trainer" | "student"
+          status: Database["public"]["Enums"]["invitation_status"]
+          student_id: string | null
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          academy_id: string
+          accepted_at?: string | null
+          accepted_user_id?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          role?: "admin" | "trainer" | "student"
+          status?: Database["public"]["Enums"]["invitation_status"]
+          student_id?: string | null
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          academy_id?: string
+          accepted_at?: string | null
+          accepted_user_id?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          role?: "admin" | "trainer" | "student"
+          status?: Database["public"]["Enums"]["invitation_status"]
+          student_id?: string | null
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academy_invitations_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academy_invitations_academy_id_student_id_fkey"
+            columns: ["academy_id", "student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "academy_invitations_accepted_user_id_fkey"
+            columns: ["accepted_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academy_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       academy_members: {
         Row: {
           academy_id: string
@@ -1057,7 +1134,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      accept_invitation: {
+        Args: { _token: string }
+        Returns: Json
+      }
+      create_invitation: {
+        Args: { _student_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       academy_status: "active" | "suspended" | "cancelled"
@@ -1071,6 +1155,7 @@ export type Database = {
         | "dropped"
         | "cancelled"
       gender: "male" | "female"
+      invitation_status: "pending" | "accepted" | "revoked" | "expired"
       invoice_status:
         | "draft"
         | "issued"
@@ -1241,6 +1326,7 @@ export const Constants = {
         "cancelled",
       ],
       gender: ["male", "female"],
+      invitation_status: ["pending", "accepted", "revoked", "expired"],
       invoice_status: [
         "draft",
         "issued",

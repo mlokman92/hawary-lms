@@ -13,6 +13,47 @@ and the `app.*` tenancy helpers). Auth is **Supabase Auth (email + password)** w
 
 ---
 
+## Identity & reconciliation (implemented — supersedes the specifics in Flow B below)
+
+**Identity is global; roles/records are per-academy.** One email = one Supabase auth
+account = one `profiles` row, globally. That single profile can simultaneously be admin
+of the academy it created, a **student** in academy X, and a student in academy Y
+(each = a `students` row + an `academy_members` row). A person can also self-register
+and create their own academy. So the single-origin app + academy switcher is correct —
+**no subdomains** (per-origin sessions would fragment the multi-academy user; slugs stay
+for invite/public links, subdomains only ever for future public/marketing pages).
+
+**Duplicate student emails are allowed.** Admins may enter the same email on multiple
+student records (guardian-shared, dupes). So invitations are **anchored to a specific
+`student_id`, not an email** — linking is unambiguous even with duplicates. Guardrail:
+`unique(academy_id, user_id)` on `students` means one login backs at most one student per
+academy.
+
+**Reconciliation = link a global profile to a per-academy student record.** Implemented
+as two `SECURITY DEFINER` RPCs (no Edge Functions):
+
+- `create_invitation(student_id)` — staff only; supersedes older pending invites; returns
+  a `token`. The app builds `…/accept-invite?token=…` (shown as a copyable link; email
+  delivery lands when SMTP is configured).
+- `accept_invitation(token)` — the signed-in invitee. Verifies the caller's email matches
+  the invite, sets `students.user_id = auth.uid()` for the invitation's `student_id`, and
+  upserts the `academy_members` row. Idempotent. Covers all four cases uniformly:
+
+  | Existing auth account? | Academy pre-made a record? | Result |
+  |---|---|---|
+  | No / Yes | Yes (Add Student) | **links** that record (reconcile) |
+  | No / Yes | No | creates a student record + membership |
+
+Accept flow in the app: `/accept-invite?token=…` → if signed out, sign up/**sign in with
+the invited email** (routes carry `?next=`); then the RPC runs and the switcher shows the
+new academy. (With email-confirmation ON, the confirm step must precede accept — resolved
+by the Supabase invite email once SMTP is set up.)
+
+**Avatars** live in a public `avatars` Storage bucket; writes are staff-scoped by the
+first path segment (`<academy_id>/…`) via `storage.objects` RLS.
+
+---
+
 ## Building blocks already in place
 
 - `profiles` is auto-created for every new auth user (trigger `app.handle_new_user`).

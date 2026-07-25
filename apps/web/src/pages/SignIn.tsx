@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { AuthCard } from '@/components/AuthCard'
 import { Button } from '@/components/ui/button'
@@ -8,6 +8,9 @@ import { Label } from '@/components/ui/label'
 
 export function SignIn() {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const next = params.get('next') || '/'
+  const signupTo = next !== '/' ? `/signup?next=${encodeURIComponent(next)}` : '/signup'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -23,7 +26,7 @@ export function SignIn() {
       setError(error.message)
       return
     }
-    navigate('/', { replace: true })
+    navigate(next, { replace: true })
   }
 
   return (
@@ -66,7 +69,7 @@ export function SignIn() {
         <span className="text-muted-foreground">
           New here?{' '}
           <Link
-            to="/signup"
+            to={signupTo}
             className="text-primary font-medium underline-offset-4 hover:underline"
           >
             Create an account

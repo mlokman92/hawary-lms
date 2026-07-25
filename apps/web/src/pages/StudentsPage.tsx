@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/table'
 import { StudentFormDialog } from '@/features/students/StudentFormDialog'
 import { InviteStudentDialog } from '@/features/students/InviteStudentDialog'
-import { STATUS_META } from '@/features/students/status'
+import { MANUAL_STATUSES, STATUS_META } from '@/features/students/status'
 import {
   studentStats,
   useStudents,
@@ -92,7 +92,11 @@ export function StudentsPage() {
 
   const rows = useMemo(() => {
     let list = students ?? []
-    if (filter !== 'all') list = list.filter((s) => s.status === filter)
+    if (filter === 'unenrolled') {
+      list = list.filter((s) => s.enrollments.length === 0)
+    } else if (filter !== 'all') {
+      list = list.filter((s) => s.status === filter)
+    }
     const q = search.trim().toLowerCase()
     if (q) {
       list = list.filter((s) =>
@@ -176,11 +180,12 @@ export function StudentsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
-              {(Object.keys(STATUS_META) as StudentStatus[]).map((s) => (
+              {MANUAL_STATUSES.map((s) => (
                 <SelectItem key={s} value={s}>
                   {STATUS_META[s].label}
                 </SelectItem>
               ))}
+              <SelectItem value="unenrolled">Unenrolled</SelectItem>
             </SelectContent>
           </Select>
           <Select value={sort} onValueChange={(v) => setSort(v as Sort)}>

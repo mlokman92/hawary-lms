@@ -180,7 +180,7 @@ export const STUDENT_STATUSES: StudentStatus[] = [
   'unenrolled',
 ]
 
-export function studentStats(students: Pick<Student, 'status'>[]) {
+export function studentStats(students: StudentRow[]) {
   const by = (s: StudentStatus) => students.filter((x) => x.status === s).length
   return {
     total: students.length,
@@ -188,6 +188,29 @@ export function studentStats(students: Pick<Student, 'status'>[]) {
     trial: by('trial'),
     inactive: by('inactive'),
     withdrawn: by('withdrawn'),
-    unenrolled: by('unenrolled'),
+    // "Unenrolled" is derived: a student with no courses attached.
+    unenrolled: students.filter((x) => x.enrollments.length === 0).length,
   }
+}
+
+/** Create an invitation for a student record; returns a token for the accept link. */
+export function useCreateInvitation() {
+  return useMutation({
+    mutationFn: async (studentId: string) => {
+      const { data, error } = await supabase.rpc('create_invitation', {
+        _student_id: studentId,
+      })
+      if (error) throw error
+      return data as unknown as { id: string; token: string }
+    },
+  })
+}
+
+/** Accept an invitation (invited person, signed in). Links their profile + membership. */
+export async function acceptInvitation(token: string) {
+  const { data, error } = await supabase.rpc('accept_invitation', {
+    _token: token,
+  })
+  if (error) throw error
+  return data as unknown as { academy_id: string; status: string }
 }

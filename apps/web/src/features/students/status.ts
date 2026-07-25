@@ -12,3 +12,12 @@ export const STATUS_META: Record<
   withdrawn: { label: 'Withdrawn', variant: 'destructive' },
   unenrolled: { label: 'Unenrolled', variant: 'outline' },
 }
+
+// Statuses an admin can set manually. "unenrolled" is derived (no courses), so
+// it is not offered as a manual choice.
+export const MANUAL_STATUSES: StudentStatus[] = [
+  'active',
+  'trial',
+  'inactive',
+  'withdrawn',
+]

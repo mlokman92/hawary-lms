@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { AvatarUploader } from './AvatarUploader'
 import {
   useCreateStudent,
   useUpdateStudent,
@@ -190,13 +191,12 @@ export function StudentFormDialog({
               </AccordionTrigger>
               <AccordionContent className="grid gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="avatar">Profile picture URL</Label>
-                  <Input
-                    id="avatar"
-                    type="url"
+                  <Label>Profile picture</Label>
+                  <AvatarUploader
+                    academyId={academyId}
                     value={avatarUrl}
-                    onChange={(e) => setAvatarUrl(e.target.value)}
-                    placeholder="https://…"
+                    onChange={setAvatarUrl}
+                    fallback={fullName.trim().slice(0, 2).toUpperCase() || '—'}
                   />
                 </div>
                 <div className="grid gap-2">

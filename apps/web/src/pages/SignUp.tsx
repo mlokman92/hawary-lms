@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { AuthCard } from '@/components/AuthCard'
 import { Button } from '@/components/ui/button'
@@ -8,6 +8,9 @@ import { Label } from '@/components/ui/label'
 
 export function SignUp() {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const next = params.get('next') || '/'
+  const signinTo = next !== '/' ? `/signin?next=${encodeURIComponent(next)}` : '/signin'
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -34,7 +37,7 @@ export function SignUp() {
       return
     }
     if (data.session) {
-      navigate('/', { replace: true })
+      navigate(next, { replace: true })
       return
     }
     setSent(true)
@@ -49,7 +52,7 @@ export function SignUp() {
           activate your account, then sign in.
         </p>
         <Button asChild variant="outline" className="w-full">
-          <Link to="/signin">Back to sign in</Link>
+          <Link to={signinTo}>Back to sign in</Link>
         </Button>
       </AuthCard>
     )
@@ -109,7 +112,7 @@ export function SignUp() {
       <div className="text-muted-foreground mt-4 text-center text-sm">
         Already have an account?{' '}
         <Link
-          to="/signin"
+          to={signinTo}
           className="text-primary font-medium underline-offset-4 hover:underline"
         >
           Sign in

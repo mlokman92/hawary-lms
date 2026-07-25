@@ -10,6 +10,7 @@ import { SignIn } from './pages/SignIn'
 import { SignUp } from './pages/SignUp'
 import { ForgotPassword } from './pages/ForgotPassword'
 import { AuthCallback } from './pages/AuthCallback'
+import { AcceptInvitePage } from './pages/AcceptInvitePage'
 import { Onboarding } from './pages/Onboarding'
 import { Dashboard } from './pages/Dashboard'
 import { CoursesPage } from './pages/CoursesPage'
@@ -28,6 +29,7 @@ export default function App() {
                 <Route path="/signup" element={<SignUp />} />
                 <Route path="/forgot" element={<ForgotPassword />} />
                 <Route path="/auth/callback" element={<AuthCallback />} />
+                <Route path="/accept-invite" element={<AcceptInvitePage />} />
                 <Route
                   path="/onboarding"
                   element={
