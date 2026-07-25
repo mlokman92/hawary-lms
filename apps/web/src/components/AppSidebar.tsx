@@ -23,7 +23,6 @@ import {
 } from '@/components/ui/sidebar'
 
 const COMING_SOON = [
-  { title: 'Notes', icon: FileText },
   { title: 'Assessments', icon: ClipboardList },
   { title: 'Assignments', icon: FileCheck2 },
   { title: 'Invoices', icon: Receipt },
@@ -74,6 +73,18 @@ export function AppSidebar() {
                 <Link to="/students">
                   <Users />
                   <span>Students</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname.startsWith('/notes')}
+                tooltip="Notes"
+              >
+                <Link to="/notes">
+                  <FileText />
+                  <span>Notes</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

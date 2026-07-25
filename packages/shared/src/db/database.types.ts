@@ -879,44 +879,51 @@ export type Database = {
       notes: {
         Row: {
           academy_id: string
-          attachment_url: string | null
-          content: string | null
+          body: Json
           course_id: string
           created_at: string
           created_by: string | null
           id: string
           is_published: boolean
+          parent_id: string | null
           sort_order: number
           title: string
           updated_at: string
         }
         Insert: {
           academy_id: string
-          attachment_url?: string | null
-          content?: string | null
+          body?: Json
           course_id: string
           created_at?: string
           created_by?: string | null
           id?: string
           is_published?: boolean
+          parent_id?: string | null
           sort_order?: number
           title: string
           updated_at?: string
         }
         Update: {
           academy_id?: string
-          attachment_url?: string | null
-          content?: string | null
+          body?: Json
           course_id?: string
           created_at?: string
           created_by?: string | null
           id?: string
           is_published?: boolean
+          parent_id?: string | null
           sort_order?: number
           title?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "notes_course_id_parent_id_fkey"
+            columns: ["course_id", "parent_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["course_id", "id"]
+          },
           {
             foreignKeyName: "notes_academy_id_course_id_fkey"
             columns: ["academy_id", "course_id"]

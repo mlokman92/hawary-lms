@@ -16,6 +16,7 @@ import { Dashboard } from './pages/Dashboard'
 import { CoursesPage } from './pages/CoursesPage'
 import { StudentsPage } from './pages/StudentsPage'
 import { StudentDetailPage } from './pages/StudentDetailPage'
+import { NotesPage } from './pages/NotesPage'
 
 export default function App() {
   return (
@@ -49,6 +50,7 @@ export default function App() {
                   <Route path="/courses" element={<CoursesPage />} />
                   <Route path="/students" element={<StudentsPage />} />
                   <Route path="/students/:id" element={<StudentDetailPage />} />
+                  <Route path="/notes" element={<NotesPage />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
