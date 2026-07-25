@@ -1,10 +1,9 @@
-import { Navigate } from 'react-router-dom'
+import { Navigate, Outlet } from 'react-router-dom'
 import { useAcademy } from '@/lib/academy'
-import { AppLayout } from '@/components/AppLayout'
-import { Dashboard } from './Dashboard'
+import { AppLayout } from './AppLayout'
 
-/** Decide where an authenticated user lands: onboarding (no academy) or the app shell. */
-export function AppHome() {
+/** Authenticated area: require an academy (else onboarding), then render the shell. */
+export function AppShell() {
   const { loading, memberships } = useAcademy()
 
   if (loading) {
@@ -18,7 +17,7 @@ export function AppHome() {
 
   return (
     <AppLayout>
-      <Dashboard />
+      <Outlet />
     </AppLayout>
   )
 }
