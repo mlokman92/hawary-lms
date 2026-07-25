@@ -38,6 +38,23 @@ Monorepo managed with **pnpm workspaces + Turborepo**.
   client factory, validation schemas, and cross-platform business logic reused by
   both apps. **Put anything used by both web and mobile here — do not duplicate.**
 
+### UI & styling
+
+Design system: the **shadcn** approach on both platforms — components are copied
+into the repo (we own and edit them), themed with CSS variables so web and mobile
+stay visually consistent.
+
+- **Web** — **shadcn/ui** (Radix UI primitives + **Tailwind CSS**). Add components
+  with `pnpm dlx shadcn@latest add <name>`; they live in `apps/web/src/components/ui`.
+- **Mobile** — **React Native Reusables** (the shadcn equivalent for React Native,
+  built on **NativeWind** = Tailwind for RN). Same token names, RN implementations.
+- **Shared tokens** — colour / spacing / radius tokens are kept in sync across both
+  (a shared Tailwind preset + CSS variables) so a brand tweak updates both apps.
+
+Note: shadcn/ui components are web-only (Radix/DOM) — the identical component can't
+be reused on RN; mobile uses the RNR counterpart with matching tokens. **Setup is
+pending**; the current web auth screens use plain CSS and will be migrated.
+
 ### Malaysian context
 
 - Currency **MYR**; format as `RM`. Be mindful of **SST** on invoices where relevant.
@@ -62,9 +79,8 @@ hawary-lms/
 
 ## Commands
 
-> Status: **greenfield**. Folder skeleton + config exist; app packages are not yet
-> scaffolded and dependencies are not installed. Run `pnpm install` after the first
-> app is scaffolded. Once apps exist, prefer the root turbo scripts:
+> Both apps are scaffolded and dependencies are installed. **Use pnpm, not npm**
+> (this is a pnpm workspace). Prefer the root turbo scripts:
 
 ```bash
 pnpm install          # install all workspace deps
@@ -83,6 +99,8 @@ pnpm --filter mobile start
 - **TypeScript everywhere.** No plain JS for app code.
 - **Shared-first.** Types, DB access, and domain logic used by both apps live in
   `packages/shared`. Import from there rather than redefining.
+- **UI: use shadcn/ui (web) and React Native Reusables (mobile)** rather than
+  hand-rolling components. Keep design tokens shared so both apps match.
 - **Database types are generated**, not hand-written. Regenerate after schema
   changes (Supabase MCP `generate_typescript_types`) into `packages/shared`.
 - **Multi-tenancy is enforced in the database** via Row Level Security (RLS).
