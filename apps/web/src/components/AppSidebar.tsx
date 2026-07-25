@@ -24,7 +24,6 @@ import {
 
 const COMING_SOON = [
   { title: 'Notes', icon: FileText },
-  { title: 'Enrollment', icon: Users },
   { title: 'Assessments', icon: ClipboardList },
   { title: 'Assignments', icon: FileCheck2 },
   { title: 'Invoices', icon: Receipt },
@@ -63,6 +62,18 @@ export function AppSidebar() {
                 <Link to="/courses">
                   <BookOpen />
                   <span>Courses</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname.startsWith('/students')}
+                tooltip="Students"
+              >
+                <Link to="/students">
+                  <Users />
+                  <span>Students</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

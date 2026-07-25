@@ -654,11 +654,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "enrollments_student_id_fkey"
-            columns: ["student_id"]
+            foreignKeyName: "enrollments_academy_id_student_id_fkey"
+            columns: ["academy_id", "student_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedRelation: "students"
+            referencedColumns: ["academy_id", "id"]
           },
         ]
       }
@@ -970,6 +970,88 @@ export type Database = {
         }
         Relationships: []
       }
+      students: {
+        Row: {
+          academy_id: string
+          address: string | null
+          archived_at: string | null
+          avatar_url: string | null
+          created_at: string
+          created_by: string | null
+          date_of_birth: string | null
+          email: string | null
+          full_name: string | null
+          gender: Database["public"]["Enums"]["gender"] | null
+          ic_number: string | null
+          id: string
+          phone: string | null
+          status: Database["public"]["Enums"]["student_status"]
+          student_no: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          academy_id: string
+          address?: string | null
+          archived_at?: string | null
+          avatar_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          date_of_birth?: string | null
+          email?: string | null
+          full_name?: string | null
+          gender?: Database["public"]["Enums"]["gender"] | null
+          ic_number?: string | null
+          id?: string
+          phone?: string | null
+          status?: Database["public"]["Enums"]["student_status"]
+          student_no: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          academy_id?: string
+          address?: string | null
+          archived_at?: string | null
+          avatar_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          date_of_birth?: string | null
+          email?: string | null
+          full_name?: string | null
+          gender?: Database["public"]["Enums"]["gender"] | null
+          ic_number?: string | null
+          id?: string
+          phone?: string | null
+          status?: Database["public"]["Enums"]["student_status"]
+          student_no?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "students_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "students_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "students_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -988,6 +1070,7 @@ export type Database = {
         | "completed"
         | "dropped"
         | "cancelled"
+      gender: "male" | "female"
       invoice_status:
         | "draft"
         | "issued"
@@ -1012,6 +1095,12 @@ export type Database = {
         | "true_false"
         | "short_text"
         | "essay"
+      student_status:
+        | "active"
+        | "trial"
+        | "inactive"
+        | "withdrawn"
+        | "unenrolled"
       submission_status: "draft" | "submitted" | "graded" | "returned"
     }
     CompositeTypes: {
@@ -1151,6 +1240,7 @@ export const Constants = {
         "dropped",
         "cancelled",
       ],
+      gender: ["male", "female"],
       invoice_status: [
         "draft",
         "issued",
@@ -1177,6 +1267,13 @@ export const Constants = {
         "true_false",
         "short_text",
         "essay",
+      ],
+      student_status: [
+        "active",
+        "trial",
+        "inactive",
+        "withdrawn",
+        "unenrolled",
       ],
       submission_status: ["draft", "submitted", "graded", "returned"],
     },

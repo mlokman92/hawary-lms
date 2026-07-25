@@ -13,6 +13,8 @@ import { AuthCallback } from './pages/AuthCallback'
 import { Onboarding } from './pages/Onboarding'
 import { Dashboard } from './pages/Dashboard'
 import { CoursesPage } from './pages/CoursesPage'
+import { StudentsPage } from './pages/StudentsPage'
+import { StudentDetailPage } from './pages/StudentDetailPage'
 
 export default function App() {
   return (
@@ -43,6 +45,8 @@ export default function App() {
                 >
                   <Route index element={<Dashboard />} />
                   <Route path="/courses" element={<CoursesPage />} />
+                  <Route path="/students" element={<StudentsPage />} />
+                  <Route path="/students/:id" element={<StudentDetailPage />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
