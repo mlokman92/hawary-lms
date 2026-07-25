@@ -363,6 +363,7 @@ export type Database = {
           description: string | null
           duration_minutes: number | null
           id: string
+          instructions: Json
           is_published: boolean
           max_attempts: number
           title: string
@@ -380,6 +381,7 @@ export type Database = {
           description?: string | null
           duration_minutes?: number | null
           id?: string
+          instructions?: Json
           is_published?: boolean
           max_attempts?: number
           title: string
@@ -397,6 +399,7 @@ export type Database = {
           description?: string | null
           duration_minutes?: number | null
           id?: string
+          instructions?: Json
           is_published?: boolean
           max_attempts?: number
           title?: string

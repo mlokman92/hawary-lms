@@ -31,7 +31,7 @@ export function youtubeId(url: string): string | null {
   return null
 }
 
-/** Coerce a note's jsonb body into a typed block array (ignores junk). */
+/** Coerce a jsonb body into a typed block array (ignores junk). */
 export function parseBlocks(body: unknown): Block[] {
   if (!Array.isArray(body)) return []
   return body.filter(
