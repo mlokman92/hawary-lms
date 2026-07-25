@@ -1,8 +1,9 @@
 import { Navigate } from 'react-router-dom'
 import { useAcademy } from '@/lib/academy'
+import { AppLayout } from '@/components/AppLayout'
 import { Dashboard } from './Dashboard'
 
-/** Decide where an authenticated user lands: onboarding (no academy) or dashboard. */
+/** Decide where an authenticated user lands: onboarding (no academy) or the app shell. */
 export function AppHome() {
   const { loading, memberships } = useAcademy()
 
@@ -14,5 +15,10 @@ export function AppHome() {
     )
   }
   if (memberships.length === 0) return <Navigate to="/onboarding" replace />
-  return <Dashboard />
+
+  return (
+    <AppLayout>
+      <Dashboard />
+    </AppLayout>
+  )
 }
