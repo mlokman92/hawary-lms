@@ -52,8 +52,12 @@ stay visually consistent.
   (a shared Tailwind preset + CSS variables) so a brand tweak updates both apps.
 
 Note: shadcn/ui components are web-only (Radix/DOM) — the identical component can't
-be reused on RN; mobile uses the RNR counterpart with matching tokens. **Setup is
-pending**; the current web auth screens use plain CSS and will be migrated.
+be reused on RN; mobile uses the RNR counterpart with matching tokens.
+
+Status: **web is set up** — Tailwind v4 (`@tailwindcss/vite`), neutral theme via CSS
+variables in `apps/web/src/index.css`, `@` path alias, and `components/ui` (button,
+input, label, card, select). Add more with `pnpm dlx shadcn@latest add <name>`.
+**Mobile (RNR + NativeWind) is still pending** — set up when mobile UI begins.
 
 ### Malaysian context
 
