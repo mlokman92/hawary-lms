@@ -1,124 +1,73 @@
 # CLAUDE.md
 
-Guidance for Claude Code when working in this repository.
+Guidance for Claude Code in this repo.
 
 ## Project
 
-**Hawary LMS** is a Malaysian SaaS Learning Management System. Academies (training
-centres, tuition centres, skills providers) subscribe to run their learning
-operations end-to-end. It is **multi-tenant**: each academy is an isolated tenant,
-and its trainers, students, and data must never be visible to another academy.
-
-### User roles
-
-| Role        | Primary surface        | What they do |
-|-------------|------------------------|--------------|
-| **Trainer** | Mobile app + Web       | Create notes/assessments/assignments, grade submissions, track student progress |
-| **Student** | Mobile app             | Read notes, take assessments, submit assignments, enroll in courses, pay invoices |
-| **Admin**   | Web (academy back-office) | Manage academy, users, courses, enrollment, invoicing & payments, reporting |
-
-### Core features
-
-- **Notes** — course learning material authored by trainers, consumed by students.
-- **Assessments** — quizzes/exams with grading (auto or trainer-marked).
-- **Assignments** — student submissions (files/text), trainer grading and feedback.
-- **Enrollment** — students join courses/classes; admin/trainer manage rosters.
-- **Invoicing & Payment** — issue invoices, collect payment (MYR), track status.
+**Hawary LMS** — Malaysian multi-tenant SaaS LMS. Each **academy** is an isolated
+tenant (trainers/students/data never cross academies). Roles: **admin** & **trainer**
+(web back-office), **student** (mobile, later). Features: courses, students/enrollment,
+notes, assessments, assignments, payments. Malaysian: MYR (store as **sen**),
+SST-aware invoices; bilingual BM/EN + payment gateways are future work.
 
 ## Tech stack
 
-Monorepo managed with **pnpm workspaces + Turborepo**.
+Monorepo: **pnpm workspaces + Turborepo**.
 
-- **Web** — Vite + React + TypeScript (`apps/web`). Admin back-office + trainer surface.
-- **Mobile** — Expo (React Native) + TypeScript (`apps/mobile`). Student + trainer surface.
-- **Backend** — Supabase (Postgres, Auth, Storage, Realtime, Edge Functions).
-  - Project ref: `vpklztxqkvqmmzsxfqgp` (configured in `.mcp.json`).
-  - Use the Supabase MCP tools for schema/queries/logs/advisors.
-- **Shared** — `packages/shared`: TypeScript types, generated DB types, Supabase
-  client factory, validation schemas, and cross-platform business logic reused by
-  both apps. **Put anything used by both web and mobile here — do not duplicate.**
+- `apps/web` — Vite + React + TS. Admin/trainer surface. **Built.**
+- `apps/mobile` — Expo (React Native) + TS. Student surface. **Scaffolded, not wired.**
+- `packages/shared` — TS types, **generated** DB types, Supabase client, domain logic.
+- Backend — **Supabase** (Postgres + RLS, Auth, Storage). Project ref
+  `vpklztxqkvqmmzsxfqgp`; use the Supabase MCP tools. Migrations in `supabase/migrations/`.
+- **Web UI** — shadcn/ui (Radix + **Tailwind v4**), neutral theme in
+  `apps/web/src/index.css`, `@` alias, `apps/web/src/components/ui` (add via
+  `pnpm dlx shadcn@latest add <name>`). Data layer: **TanStack Query**; feature code in
+  `apps/web/src/features/*`.
+- **Mobile UI** — React Native Reusables + NativeWind (pending).
 
-### UI & styling
+## Status — what's built (web)
 
-Design system: the **shadcn** approach on both platforms — components are copied
-into the repo (we own and edit them), themed with CSS variables so web and mobile
-stay visually consistent.
+- **Auth + onboarding**: email/password sign in/up, self-serve academy creation
+  (creator becomes admin), academy switcher, light/dark theme.
+- **Modules** (each: list + add/edit, staff-gated, academy-scoped by RLS):
+  Courses · Students · Notes · Assessments · Assignments · Payments.
+- **Data model**: identity is global (`profiles`, one per email); roles/records are
+  per-academy. A **student is an academy record** (`students`, not necessarily an auth
+  user); enrollment/invoices/payments reference `students`. Money in integer **sen**.
+- **Account linking**: `academy_invitations` + `create_invitation`/`accept_invitation`
+  RPCs reconcile an invited student to a profile (email delivery needs SMTP).
+- **Block content**: shared editor (`lib/blocks.ts` + `components/BlocksEditor.tsx`) —
+  text / image / youtube — used by notes, assessments, assignments.
+- **Storage**: public `avatars` + `note-media` buckets, staff-scoped by `<academy_id>/`.
 
-- **Web** — **shadcn/ui** (Radix UI primitives + **Tailwind CSS**). Add components
-  with `pnpm dlx shadcn@latest add <name>`; they live in `apps/web/src/components/ui`.
-- **Mobile** — **React Native Reusables** (the shadcn equivalent for React Native,
-  built on **NativeWind** = Tailwind for RN). Same token names, RN implementations.
-- **Shared tokens** — colour / spacing / radius tokens are kept in sync across both
-  (a shared Tailwind preset + CSS variables) so a brand tweak updates both apps.
+### Deferred / next
+- Student-facing **answering/grading**: `assessment_attempts` + `assignment_submissions`
+  still reference `profiles` (repoint to `students` when built).
+- Mobile app wiring; SMTP email; web code-splitting.
+- Plans in `docs/` (academy registration/reconciliation, CI/CD).
 
-Note: shadcn/ui components are web-only (Radix/DOM) — the identical component can't
-be reused on RN; mobile uses the RNR counterpart with matching tokens.
-
-Status: **web is set up** — Tailwind v4 (`@tailwindcss/vite`), neutral theme via CSS
-variables in `apps/web/src/index.css`, `@` path alias, and `components/ui` (button,
-input, label, card, select). Add more with `pnpm dlx shadcn@latest add <name>`.
-**Mobile (RNR + NativeWind) is still pending** — set up when mobile UI begins.
-
-### Malaysian context
-
-- Currency **MYR**; format as `RM`. Be mindful of **SST** on invoices where relevant.
-- Likely **bilingual** UI (Bahasa Melayu + English) — design copy for i18n from day one.
-- Payment gateways to evaluate: **Billplz**, **ToyyibPay**, **Stripe** (card).
-
-## Repository layout
-
-```
-hawary-lms/
-├── apps/
-│   ├── web/            # Vite + React + TS (admin + trainer web)
-│   └── mobile/         # Expo + React Native + TS (student + trainer)
-├── packages/
-│   └── shared/         # types, supabase client, validation, business logic
-├── docs/               # architecture, requirements, decisions
-├── package.json        # root workspace scripts (turbo)
-├── pnpm-workspace.yaml
-├── turbo.json
-└── tsconfig.base.json  # shared TS compiler options
-```
-
-## Commands
-
-> Both apps are scaffolded and dependencies are installed. **Use pnpm, not npm**
-> (this is a pnpm workspace). Prefer the root turbo scripts:
+## Commands (use pnpm, not npm)
 
 ```bash
-pnpm install          # install all workspace deps
-pnpm dev              # turbo run dev (all apps)
-pnpm build            # turbo run build
-pnpm lint             # turbo run lint
-pnpm typecheck        # turbo run typecheck
-
-# Target one app:
-pnpm --filter web dev
-pnpm --filter mobile start
+pnpm install
+pnpm --filter web dev      # web dev server (http://localhost:5173)
+pnpm --filter web build    # tsc -b && vite build
+pnpm --filter web lint
 ```
 
 ## Conventions
 
-- **TypeScript everywhere.** No plain JS for app code.
-- **Shared-first.** Types, DB access, and domain logic used by both apps live in
-  `packages/shared`. Import from there rather than redefining.
-- **UI: use shadcn/ui (web) and React Native Reusables (mobile)** rather than
-  hand-rolling components. Keep design tokens shared so both apps match.
-- **Database types are generated**, not hand-written. Regenerate after schema
-  changes (Supabase MCP `generate_typescript_types`) into `packages/shared`.
-- **Multi-tenancy is enforced in the database** via Row Level Security (RLS).
-  Every tenant-scoped table needs an `academy_id` and RLS policies. Never rely on
-  client-side filtering alone for tenant isolation.
-- **Secrets** (Supabase service-role key, gateway keys) never ship in the mobile or
-  web bundle. Client apps use the anon/publishable key + RLS; privileged work goes
-  through Edge Functions.
-- Keep money in the smallest unit (sen) as integers to avoid float errors.
+- **TypeScript only.** Shared-first: cross-app types/logic go in `packages/shared`.
+- **DB types are generated** (Supabase MCP `generate_typescript_types`), not hand-written.
+- **Multi-tenancy is enforced in the DB** via RLS: every tenant table has `academy_id`
+  + policies. Tenancy checks use SECURITY DEFINER helpers in the `app` schema
+  (`app.is_staff/is_admin/owns_student/is_enrolled`). Never rely on client filtering.
+- **Secrets** (service-role key, gateway keys) never ship to clients — anon/publishable
+  key + RLS only; privileged work via SECURITY DEFINER RPCs or Edge Functions.
+- Web: `@` path alias; Vite `resolve.dedupe` pins a single React (pnpm monorepo).
 
-## Working agreements for Claude
+## Working agreements
 
-- Before schema work: `list_tables` to understand current structure; check
-  `get_advisors` (security + performance) and `get_logs` when debugging.
-- When adding a feature that touches both apps, land the shared logic/types in
-  `packages/shared` first, then wire each app to it.
-- Update `docs/` when you make an architectural decision worth remembering.
+- Before schema work: `list_tables`; run `get_advisors` (security + perf) after any DDL.
+- After a migration: update `packages/shared` DB types, then wire the app.
+- Verify: `pnpm --filter web build` + `lint`. Record decisions in `docs/`.
