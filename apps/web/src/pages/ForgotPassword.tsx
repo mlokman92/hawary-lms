@@ -1,7 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
-import { AuthCard } from '../components/AuthCard'
+import { supabase } from '@/lib/supabase'
+import { AuthCard } from '@/components/AuthCard'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 export function ForgotPassword() {
   const [email, setEmail] = useState('')
@@ -27,37 +30,44 @@ export function ForgotPassword() {
   if (sent) {
     return (
       <AuthCard title="Check your email" subtitle="Password reset">
-        <p className="notice">
-          If an account exists for <strong>{email}</strong>, a reset link is on its
-          way.
+        <p className="bg-muted text-muted-foreground mb-4 rounded-md border p-3 text-sm">
+          If an account exists for{' '}
+          <strong className="text-foreground">{email}</strong>, a reset link is
+          on its way.
         </p>
-        <Link className="btn" to="/signin">
-          Back to sign in
-        </Link>
+        <Button asChild variant="outline" className="w-full">
+          <Link to="/signin">Back to sign in</Link>
+        </Button>
       </AuthCard>
     )
   }
 
   return (
     <AuthCard title="Reset password" subtitle="We'll email you a link">
-      <form className="form" onSubmit={onSubmit}>
-        <label className="field">
-          <span>Email</span>
-          <input
+      <form className="grid gap-4" onSubmit={onSubmit}>
+        <div className="grid gap-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
             type="email"
             autoComplete="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-        </label>
-        {error ? <p className="error">{error}</p> : null}
-        <button className="btn btn-primary" type="submit" disabled={busy}>
+        </div>
+        {error ? <p className="text-destructive text-sm">{error}</p> : null}
+        <Button type="submit" className="w-full" disabled={busy}>
           {busy ? 'Sending…' : 'Send reset link'}
-        </button>
+        </Button>
       </form>
-      <div className="link-row">
-        <Link to="/signin">Back to sign in</Link>
+      <div className="mt-4 text-center text-sm">
+        <Link
+          to="/signin"
+          className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+        >
+          Back to sign in
+        </Link>
       </div>
     </AuthCard>
   )

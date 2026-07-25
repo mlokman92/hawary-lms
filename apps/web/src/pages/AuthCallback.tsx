@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../lib/auth'
+import { useAuth } from '@/lib/auth'
 
 /**
  * Landing route for email confirmation / password-reset links. The Supabase
@@ -16,5 +16,9 @@ export function AuthCallback() {
     navigate(session ? '/' : '/signin', { replace: true })
   }, [loading, session, navigate])
 
-  return <div className="center muted">Signing you in…</div>
+  return (
+    <div className="text-muted-foreground grid min-h-svh place-items-center text-sm">
+      Signing you in…
+    </div>
+  )
 }

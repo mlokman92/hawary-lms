@@ -1,10 +1,27 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { TablesInsert } from '@hawary/shared'
-import { supabase } from '../lib/supabase'
-import { useAuth } from '../lib/auth'
-import { useAcademy } from '../lib/academy'
-import { slugify } from '../lib/slug'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/auth'
+import { useAcademy } from '@/lib/academy'
+import { slugify } from '@/lib/slug'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 const MY_STATES = [
   'Johor', 'Kedah', 'Kelantan', 'Melaka', 'Negeri Sembilan', 'Pahang',
@@ -25,7 +42,10 @@ export function Onboarding() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  const derivedSlug = useMemo(() => (slugEdited ? slug : slugify(name)), [slug, slugEdited, name])
+  const derivedSlug = useMemo(
+    () => (slugEdited ? slug : slugify(name)),
+    [slug, slugEdited, name],
+  )
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -56,63 +76,80 @@ export function Onboarding() {
       )
       return
     }
-    await refresh() // the trigger made you admin; reload memberships
+    await refresh()
     navigate('/', { replace: true })
   }
 
   return (
-    <div className="page-narrow">
-      <div className="card">
-        <h1>Create your academy</h1>
-        <p className="muted">
-          You’ll be the admin. You can invite trainers and students next.
-        </p>
-        <form className="form" onSubmit={onSubmit}>
-          <label className="field">
-            <span>Academy name</span>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Cemerlang Skills Academy"
-            />
-          </label>
-          <label className="field">
-            <span>URL (slug)</span>
-            <input
-              type="text"
-              required
-              value={derivedSlug}
-              onChange={(e) => {
-                setSlugEdited(true)
-                setSlug(e.target.value)
-              }}
-            />
-            <small className="muted">hawary.app/{derivedSlug || 'your-academy'}</small>
-          </label>
-          <div className="row">
-            <label className="field">
-              <span>Phone (optional)</span>
-              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
-            </label>
-            <label className="field">
-              <span>State (optional)</span>
-              <select value={state} onChange={(e) => setState(e.target.value)}>
-                <option value="">—</option>
-                {MY_STATES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          {error ? <p className="error">{error}</p> : null}
-          <button className="btn btn-primary" type="submit" disabled={busy}>
-            {busy ? 'Creating…' : 'Create academy'}
-          </button>
-        </form>
+    <div className="bg-muted flex min-h-svh items-center justify-center p-6">
+      <div className="w-full max-w-lg">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl">Create your academy</CardTitle>
+            <CardDescription>
+              You’ll be the admin. Invite trainers and students next.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="grid gap-4" onSubmit={onSubmit}>
+              <div className="grid gap-2">
+                <Label htmlFor="name">Academy name</Label>
+                <Input
+                  id="name"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Cemerlang Skills Academy"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="slug">URL (slug)</Label>
+                <Input
+                  id="slug"
+                  required
+                  value={derivedSlug}
+                  onChange={(e) => {
+                    setSlugEdited(true)
+                    setSlug(e.target.value)
+                  }}
+                />
+                <p className="text-muted-foreground text-xs">
+                  hawary.app/{derivedSlug || 'your-academy'}
+                </p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="phone">Phone (optional)</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>State (optional)</Label>
+                  <Select value={state} onValueChange={setState}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select state" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MY_STATES.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              {error ? <p className="text-destructive text-sm">{error}</p> : null}
+              <Button type="submit" className="w-full" disabled={busy}>
+                {busy ? 'Creating…' : 'Create academy'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

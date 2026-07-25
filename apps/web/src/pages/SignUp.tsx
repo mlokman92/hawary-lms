@@ -1,7 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
-import { AuthCard } from '../components/AuthCard'
+import { supabase } from '@/lib/supabase'
+import { AuthCard } from '@/components/AuthCard'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 export function SignUp() {
   const navigate = useNavigate()
@@ -30,7 +33,6 @@ export function SignUp() {
       setError(error.message)
       return
     }
-    // If email confirmation is disabled, a session is returned immediately.
     if (data.session) {
       navigate('/', { replace: true })
       return
@@ -41,52 +43,56 @@ export function SignUp() {
   if (sent) {
     return (
       <AuthCard title="Check your email" subtitle="One more step">
-        <p className="notice">
-          We sent a confirmation link to <strong>{email}</strong>. Click it to
+        <p className="bg-muted text-muted-foreground mb-4 rounded-md border p-3 text-sm">
+          We sent a confirmation link to{' '}
+          <strong className="text-foreground">{email}</strong>. Click it to
           activate your account, then sign in.
         </p>
-        <Link className="btn" to="/signin">
-          Back to sign in
-        </Link>
+        <Button asChild variant="outline" className="w-full">
+          <Link to="/signin">Back to sign in</Link>
+        </Button>
       </AuthCard>
     )
   }
 
   return (
     <AuthCard title="Create your account" subtitle="Start with Hawary LMS">
-      <form className="form" onSubmit={onSubmit}>
-        <label className="field">
-          <span>Full name</span>
-          <input
-            type="text"
+      <form className="grid gap-4" onSubmit={onSubmit}>
+        <div className="grid gap-2">
+          <Label htmlFor="fullName">Full name</Label>
+          <Input
+            id="fullName"
             autoComplete="name"
             required
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
           />
-        </label>
-        <label className="field">
-          <span>Email</span>
-          <input
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
             type="email"
             autoComplete="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-        </label>
-        <label className="field">
-          <span>Phone (optional)</span>
-          <input
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="phone">Phone (optional)</Label>
+          <Input
+            id="phone"
             type="tel"
             autoComplete="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />
-        </label>
-        <label className="field">
-          <span>Password</span>
-          <input
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
             type="password"
             autoComplete="new-password"
             required
@@ -94,16 +100,20 @@ export function SignUp() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-        </label>
-        {error ? <p className="error">{error}</p> : null}
-        <button className="btn btn-primary" type="submit" disabled={busy}>
+        </div>
+        {error ? <p className="text-destructive text-sm">{error}</p> : null}
+        <Button type="submit" className="w-full" disabled={busy}>
           {busy ? 'Creating…' : 'Create account'}
-        </button>
+        </Button>
       </form>
-      <div className="link-row">
-        <span>
-          Already have an account? <Link to="/signin">Sign in</Link>
-        </span>
+      <div className="text-muted-foreground mt-4 text-center text-sm">
+        Already have an account?{' '}
+        <Link
+          to="/signin"
+          className="text-primary font-medium underline-offset-4 hover:underline"
+        >
+          Sign in
+        </Link>
       </div>
     </AuthCard>
   )
