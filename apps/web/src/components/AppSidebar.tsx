@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Receipt,
   Users,
+  type LucideIcon,
 } from 'lucide-react'
 import { AcademySwitcher } from './AcademySwitcher'
 import {
@@ -16,19 +17,26 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
 } from '@/components/ui/sidebar'
 
-const COMING_SOON = [
-  { title: 'Assignments', icon: FileCheck2 },
-  { title: 'Invoices', icon: Receipt },
+const NAV: { title: string; to: string; icon: LucideIcon }[] = [
+  { title: 'Dashboard', to: '/', icon: LayoutDashboard },
+  { title: 'Courses', to: '/courses', icon: BookOpen },
+  { title: 'Students', to: '/students', icon: Users },
+  { title: 'Notes', to: '/notes', icon: FileText },
+  { title: 'Assessments', to: '/assessments', icon: ClipboardList },
+  { title: 'Assignments', to: '/assignments', icon: FileCheck2 },
+  { title: 'Payments', to: '/payments', icon: Receipt },
 ]
 
 export function AppSidebar() {
   const { pathname } = useLocation()
+
+  const isActive = (to: string) =>
+    to === '/' ? pathname === '/' : pathname.startsWith(to)
 
   return (
     <Sidebar collapsible="icon">
@@ -39,83 +47,14 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Platform</SidebarGroupLabel>
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === '/'}
-                tooltip="Dashboard"
-              >
-                <Link to="/">
-                  <LayoutDashboard />
-                  <span>Dashboard</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname.startsWith('/courses')}
-                tooltip="Courses"
-              >
-                <Link to="/courses">
-                  <BookOpen />
-                  <span>Courses</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname.startsWith('/students')}
-                tooltip="Students"
-              >
-                <Link to="/students">
-                  <Users />
-                  <span>Students</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname.startsWith('/notes')}
-                tooltip="Notes"
-              >
-                <Link to="/notes">
-                  <FileText />
-                  <span>Notes</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname.startsWith('/assessments')}
-                tooltip="Assessments"
-              >
-                <Link to="/assessments">
-                  <ClipboardList />
-                  <span>Assessments</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Manage</SidebarGroupLabel>
-          <SidebarMenu>
-            {COMING_SOON.map(({ title, icon: Icon }) => (
-              <SidebarMenuItem key={title}>
-                <SidebarMenuButton
-                  disabled
-                  tooltip={`${title} — coming soon`}
-                  className="opacity-60"
-                >
-                  <Icon />
-                  <span>{title}</span>
+            {NAV.map(({ title, to, icon: Icon }) => (
+              <SidebarMenuItem key={to}>
+                <SidebarMenuButton asChild isActive={isActive(to)} tooltip={title}>
+                  <Link to={to}>
+                    <Icon />
+                    <span>{title}</span>
+                  </Link>
                 </SidebarMenuButton>
-                <SidebarMenuBadge>Soon</SidebarMenuBadge>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>

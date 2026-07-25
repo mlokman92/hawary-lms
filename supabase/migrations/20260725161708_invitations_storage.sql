@@ -83,7 +83,7 @@ begin
   return json_build_object('id', inv_id, 'token', new_token);
 end;
 $$;
-revoke execute on function public.create_invitation(uuid) from public;
+revoke execute on function public.create_invitation(uuid) from public, anon;
 grant execute on function public.create_invitation(uuid) to authenticated;
 
 -- ---------------------------------------------------------------------------
@@ -148,7 +148,7 @@ begin
   return json_build_object('academy_id', inv.academy_id, 'status', 'accepted');
 end;
 $$;
-revoke execute on function public.accept_invitation(text) from public;
+revoke execute on function public.accept_invitation(text) from public, anon;
 grant execute on function public.accept_invitation(text) to authenticated;
 
 -- ---------------------------------------------------------------------------

@@ -19,6 +19,10 @@ import { StudentDetailPage } from './pages/StudentDetailPage'
 import { NotesPage } from './pages/NotesPage'
 import { AssessmentsPage } from './pages/AssessmentsPage'
 import { AssessmentEditorPage } from './pages/AssessmentEditorPage'
+import { AssignmentsPage } from './pages/AssignmentsPage'
+import { AssignmentEditorPage } from './pages/AssignmentEditorPage'
+import { PaymentsPage } from './pages/PaymentsPage'
+import { InvoiceDetailPage } from './pages/InvoiceDetailPage'
 
 export default function App() {
   return (
@@ -58,6 +62,13 @@ export default function App() {
                     path="/assessments/:id"
                     element={<AssessmentEditorPage />}
                   />
+                  <Route path="/assignments" element={<AssignmentsPage />} />
+                  <Route
+                    path="/assignments/:id"
+                    element={<AssignmentEditorPage />}
+                  />
+                  <Route path="/payments" element={<PaymentsPage />} />
+                  <Route path="/payments/:id" element={<InvoiceDetailPage />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

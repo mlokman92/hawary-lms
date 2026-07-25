@@ -520,7 +520,7 @@ export type Database = {
           created_by: string | null
           due_at: string | null
           id: string
-          instructions: string | null
+          instructions: Json
           is_published: boolean
           title: string
           total_points: number
@@ -534,7 +534,7 @@ export type Database = {
           created_by?: string | null
           due_at?: string | null
           id?: string
-          instructions?: string | null
+          instructions?: Json
           is_published?: boolean
           title: string
           total_points?: number
@@ -548,7 +548,7 @@ export type Database = {
           created_by?: string | null
           due_at?: string | null
           id?: string
-          instructions?: string | null
+          instructions?: Json
           is_published?: boolean
           title?: string
           total_points?: number
@@ -871,11 +871,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "invoices_student_id_fkey"
-            columns: ["student_id"]
+            foreignKeyName: "invoices_academy_id_student_id_fkey"
+            columns: ["academy_id", "student_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedRelation: "students"
+            referencedColumns: ["academy_id", "id"]
           },
         ]
       }
@@ -1022,11 +1022,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "payments_student_id_fkey"
-            columns: ["student_id"]
+            foreignKeyName: "payments_academy_id_student_id_fkey"
+            columns: ["academy_id", "student_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedRelation: "students"
+            referencedColumns: ["academy_id", "id"]
           },
         ]
       }
