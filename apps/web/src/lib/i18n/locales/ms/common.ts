@@ -1,0 +1,131 @@
+import type { CommonDict } from '../en/common'
+
+export const common: CommonDict = {
+  // Tindakan
+  'common.save': 'Simpan',
+  'common.saving': 'Menyimpan…',
+  'common.saved': 'Disimpan',
+  'common.cancel': 'Batal',
+  'common.delete': 'Padam',
+  'common.deleting': 'Memadam…',
+  'common.edit': 'Sunting',
+  'common.add': 'Tambah',
+  'common.create': 'Cipta',
+  'common.creating': 'Mencipta…',
+  'common.update': 'Kemas kini',
+  'common.remove': 'Buang',
+  'common.close': 'Tutup',
+  'common.back': 'Kembali',
+  'common.confirm': 'Sahkan',
+  'common.continue': 'Teruskan',
+  'common.retry': 'Cuba lagi',
+  'common.search': 'Cari',
+  'common.filter': 'Tapis',
+  'common.sort': 'Susun ikut',
+  'common.view': 'Lihat',
+  'common.open': 'Buka',
+  'common.copy': 'Salin',
+  'common.copied': 'Disalin',
+  'common.copy_link': 'Salin pautan',
+  'common.upload': 'Muat naik',
+  'common.uploading': 'Memuat naik…',
+  'common.download': 'Muat turun',
+  'common.submit': 'Hantar',
+  'common.submitting': 'Menghantar…',
+  'common.send': 'Hantar',
+  'common.sending': 'Menghantar…',
+  'common.done': 'Selesai',
+  'common.actions': 'Tindakan',
+  'common.select': 'Pilih',
+  'common.clear': 'Kosongkan',
+
+  // Keadaan
+  'common.loading': 'Memuatkan…',
+  'common.error': 'Sesuatu tidak kena.',
+  'common.none': 'Tiada',
+  'common.empty': 'Tiada apa-apa di sini lagi.',
+  'common.not_found': 'Tidak dijumpai.',
+  'common.optional': 'Pilihan',
+  'common.required': 'Wajib',
+  'common.yes': 'Ya',
+  'common.no': 'Tidak',
+  'common.all': 'Semua',
+  'common.unnamed': 'Tanpa nama',
+  'common.untitled': 'Tanpa tajuk',
+
+  // Label medan
+  'common.name': 'Nama',
+  'common.full_name': 'Nama penuh',
+  'common.email': 'E-mel',
+  'common.password': 'Kata laluan',
+  'common.phone': 'Telefon',
+  'common.status': 'Status',
+  'common.title': 'Tajuk',
+  'common.description': 'Penerangan',
+  'common.notes': 'Nota',
+  'common.date': 'Tarikh',
+  'common.amount': 'Jumlah',
+  'common.total': 'Jumlah',
+  'common.role': 'Peranan',
+  'common.course': 'Kursus',
+  'common.courses': 'Kursus',
+  'common.student': 'Pelajar',
+  'common.students': 'Pelajar',
+  'common.instructor': 'Pengajar',
+  'common.instructors': 'Pengajar',
+  'common.module': 'Modul',
+  'common.modules': 'Modul',
+
+  // Penerbitan
+  'common.published': 'Diterbitkan',
+  'common.draft': 'Draf',
+  'common.publish': 'Terbitkan',
+  'common.unpublish': 'Nyahterbit',
+  'common.visible_to_students': 'Boleh dilihat pelajar',
+
+  // Masa
+  'common.today': 'hari ini',
+  'common.days_one': '{count} hari',
+  'common.days_other': '{count} hari',
+  'common.overdue': 'Lewat tempoh',
+  'common.due': 'Tarikh akhir',
+  'common.no_due_date': 'Tiada tarikh akhir',
+
+  // Bilangan
+  'common.count_one': '{count} item',
+  'common.count_other': '{count} item',
+
+  // Status rekod
+  'status.student.active': 'Aktif',
+  'status.student.trial': 'Percubaan',
+  'status.student.inactive': 'Tidak aktif',
+  'status.student.withdrawn': 'Menarik diri',
+  'status.student.unenrolled': 'Belum mendaftar kursus',
+
+  'status.instructor.active': 'Aktif',
+  'status.instructor.on_leave': 'Bercuti',
+  'status.instructor.inactive': 'Tidak aktif',
+  'status.instructor.unassigned': 'Tiada kursus',
+
+  'status.task.todo': 'Belum dimulakan',
+  'status.task.in_progress': 'Sedang dibuat',
+  'status.task.awaiting': 'Telah dihantar',
+  'status.task.marked': 'Telah dinilai',
+
+  'status.submission.draft': 'Draf',
+  'status.submission.submitted': 'Telah dihantar',
+  'status.submission.graded': 'Telah dinilai',
+  'status.submission.returned': 'Dikembalikan untuk pembetulan',
+
+  'status.attempt.in_progress': 'Sedang dijawab',
+  'status.attempt.submitted': 'Telah dihantar',
+  'status.attempt.graded': 'Telah dinilai',
+
+  // Muat naik imej
+  'upload.no_academy':
+    'Tiada akademi dipilih — muat semula halaman dan cuba lagi. (Muat naik disimpan mengikut akademi.)',
+  'upload.not_staff':
+    'Anda log masuk sebagai {account}, yang bukan kakitangan akademi ini. Sila log masuk dengan akaun yang memiliki kursus ini.',
+  'upload.another_account': 'akaun lain',
+  'upload.failed': 'Muat naik gagal',
+}

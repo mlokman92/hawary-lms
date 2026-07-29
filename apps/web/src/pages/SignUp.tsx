@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { useT } from '@/lib/i18n'
 import { AuthCard } from '@/components/AuthCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 export function SignUp() {
+  const { t } = useT()
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const next = params.get('next') || '/'
@@ -28,12 +30,26 @@ export function SignUp() {
       password,
       options: {
         data: { full_name: fullName, phone: phone || null },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        // Carry `next` through the confirmation hop so an invite (e.g.
+        // /accept-invite?token=…) survives email confirmation.
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
       },
     })
     setBusy(false)
     if (error) {
       setError(error.message)
+      return
+    }
+    // Enumeration protection: for an email that already has an account Supabase
+    // returns a user with an EMPTY identities array and no session, instead of
+    // an error. Without this the invitee is told to check an inbox that will
+    // never receive anything — and "the invited person already has a Hawary
+    // account" is the common case, not an edge case.
+    if (data.user && (data.user.identities?.length ?? 0) === 0) {
+      navigate(signinTo, {
+        replace: true,
+        state: { notice: t('auth.signup.email_exists') },
+      })
       return
     }
     if (data.session) {
@@ -45,24 +61,27 @@ export function SignUp() {
 
   if (sent) {
     return (
-      <AuthCard title="Check your email" subtitle="One more step">
+      <AuthCard
+        title={t('auth.check_email.title')}
+        subtitle={t('auth.signup.confirm.subtitle')}
+      >
         <p className="bg-muted text-muted-foreground mb-4 rounded-md border p-3 text-sm">
-          We sent a confirmation link to{' '}
-          <strong className="text-foreground">{email}</strong>. Click it to
-          activate your account, then sign in.
+          {t('auth.signup.confirm.body_before')}{' '}
+          <strong className="text-foreground">{email}</strong>
+          {t('auth.signup.confirm.body_after')}
         </p>
         <Button asChild variant="outline" className="w-full">
-          <Link to={signinTo}>Back to sign in</Link>
+          <Link to={signinTo}>{t('auth.back_to_sign_in')}</Link>
         </Button>
       </AuthCard>
     )
   }
 
   return (
-    <AuthCard title="Create your account" subtitle="Start with Hawary LMS">
+    <AuthCard title={t('auth.signup.title')} subtitle={t('auth.signup.subtitle')}>
       <form className="grid gap-4" onSubmit={onSubmit}>
         <div className="grid gap-2">
-          <Label htmlFor="fullName">Full name</Label>
+          <Label htmlFor="fullName">{t('common.full_name')}</Label>
           <Input
             id="fullName"
             autoComplete="name"
@@ -72,7 +91,7 @@ export function SignUp() {
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t('common.email')}</Label>
           <Input
             id="email"
             type="email"
@@ -83,7 +102,7 @@ export function SignUp() {
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="phone">Phone (optional)</Label>
+          <Label htmlFor="phone">{t('auth.field.phone_optional')}</Label>
           <Input
             id="phone"
             type="tel"
@@ -93,7 +112,7 @@ export function SignUp() {
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t('common.password')}</Label>
           <Input
             id="password"
             type="password"
@@ -106,16 +125,16 @@ export function SignUp() {
         </div>
         {error ? <p className="text-destructive text-sm">{error}</p> : null}
         <Button type="submit" className="w-full" disabled={busy}>
-          {busy ? 'Creating…' : 'Create account'}
+          {busy ? t('common.creating') : t('auth.signup.submit')}
         </Button>
       </form>
       <div className="text-muted-foreground mt-4 text-center text-sm">
-        Already have an account?{' '}
+        {t('auth.signup.have_account')}{' '}
         <Link
           to={signinTo}
           className="text-primary font-medium underline-offset-4 hover:underline"
         >
-          Sign in
+          {t('auth.signin.title')}
         </Link>
       </div>
     </AuthCard>

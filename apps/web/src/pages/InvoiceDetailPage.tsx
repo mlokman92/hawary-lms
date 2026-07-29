@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { formatMYR } from '@hawary/shared'
 import { useAcademy } from '@/lib/academy'
+import { fmtDate } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -31,21 +33,14 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { RecordPaymentDialog } from '@/features/payments/RecordPaymentDialog'
+import { PayLinkCard } from '@/features/payments/PayLinkCard'
 import {
+  INVOICE_STATUS_LABEL,
   INVOICE_STATUS_VARIANT,
+  PAYMENT_METHOD_LABEL,
   useInvoice,
   useVoidInvoice,
 } from '@/features/payments/api'
-
-function fmtDate(iso: string | null) {
-  return iso
-    ? new Date(iso).toLocaleDateString('en-MY', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      })
-    : '—'
-}
 
 function Amount({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
@@ -58,6 +53,7 @@ function Amount({ label, value, strong }: { label: string; value: string; strong
 
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const { t } = useT()
   const { activeAcademyId, active } = useAcademy()
   const academyId = activeAcademyId ?? ''
   const isAdmin = active?.role === 'admin'
@@ -69,16 +65,18 @@ export function InvoiceDetailPage() {
   if (isLoading) {
     return (
       <div className="text-muted-foreground py-16 text-center text-sm">
-        Loading…
+        {t('common.loading')}
       </div>
     )
   }
   if (error || !invoice) {
     return (
       <div className="mx-auto max-w-2xl py-16 text-center">
-        <p className="text-muted-foreground text-sm">Invoice not found.</p>
+        <p className="text-muted-foreground text-sm">
+          {t('payments.detail.not_found')}
+        </p>
         <Button asChild variant="outline" className="mt-4">
-          <Link to="/payments">Back to payments</Link>
+          <Link to="/payments">{t('payments.detail.back')}</Link>
         </Button>
       </div>
     )
@@ -92,7 +90,7 @@ export function InvoiceDetailPage() {
     <div className="mx-auto w-full max-w-4xl space-y-6">
       <Button asChild variant="ghost" size="sm" className="-ml-2">
         <Link to="/payments">
-          <ArrowLeft /> Payments
+          <ArrowLeft /> {t('payments.title')}
         </Link>
       </Button>
 
@@ -103,46 +101,55 @@ export function InvoiceDetailPage() {
               <h1 className="text-xl font-semibold tracking-tight">
                 {invoice.invoice_no}
               </h1>
-              <Badge
-                variant={INVOICE_STATUS_VARIANT[invoice.status]}
-                className="capitalize"
-              >
-                {invoice.status.replace('_', ' ')}
+              <Badge variant={INVOICE_STATUS_VARIANT[invoice.status]}>
+                {t(INVOICE_STATUS_LABEL[invoice.status])}
               </Badge>
             </div>
             <p className="text-muted-foreground mt-1 text-sm">
-              {invoice.student?.full_name ?? 'Student'}
+              {invoice.student?.full_name ?? t('common.student')}
               {invoice.student ? ` · ${invoice.student.student_no}` : ''}
             </p>
+            {invoice.course ? (
+              <p className="text-muted-foreground text-sm">
+                {t('payments.detail.course', { title: invoice.course.title })}
+              </p>
+            ) : null}
             <p className="text-muted-foreground text-sm">
-              Issued {fmtDate(invoice.issued_at ?? invoice.created_at)} · Due{' '}
-              {fmtDate(invoice.due_at)}
+              {t('payments.detail.dates', {
+                issued: fmtDate(invoice.issued_at ?? invoice.created_at),
+                due: fmtDate(invoice.due_at),
+              })}
             </p>
           </div>
           {isAdmin ? (
             <div className="flex items-center gap-2">
               {canPay ? (
-                <Button onClick={() => setPayOpen(true)}>Record payment</Button>
+                <Button onClick={() => setPayOpen(true)}>
+                  {t('payments.record.title')}
+                </Button>
               ) : null}
               {canVoid ? (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="outline">Void</Button>
+                    <Button variant="outline">{t('payments.detail.void')}</Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Void this invoice?</AlertDialogTitle>
+                      <AlertDialogTitle>
+                        {t('payments.detail.void_confirm_title')}
+                      </AlertDialogTitle>
                       <AlertDialogDescription>
-                        {invoice.invoice_no} will be marked void. Recorded
-                        payments are kept for your records.
+                        {t('payments.detail.void_confirm_body', {
+                          invoice: invoice.invoice_no,
+                        })}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                       <AlertDialogAction
                         onClick={() => voidInvoice.mutate(invoice.id)}
                       >
-                        Void invoice
+                        {t('payments.detail.void_action')}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -156,23 +163,27 @@ export function InvoiceDetailPage() {
       <div className="grid gap-6 md:grid-cols-3">
         <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle>Items</CardTitle>
+            <CardTitle>{t('payments.detail.items')}</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Qty</TableHead>
-                  <TableHead className="text-right">Unit</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead>{t('common.description')}</TableHead>
+                  <TableHead className="text-right">
+                    {t('payments.detail.qty')}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t('payments.detail.unit')}
+                  </TableHead>
+                  <TableHead className="text-right">{t('common.amount')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {invoice.items.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-muted-foreground text-sm">
-                      No line items.
+                      {t('payments.detail.no_items')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -203,27 +214,44 @@ export function InvoiceDetailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Summary</CardTitle>
+            <CardTitle>{t('payments.detail.summary')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <Amount label="Subtotal" value={formatMYR(invoice.subtotal_sen)} />
-            <Amount label="Tax / SST" value={formatMYR(invoice.tax_sen)} />
-            <Amount label="Total" value={formatMYR(invoice.total_sen)} strong />
+            <Amount
+              label={t('payments.amount.subtotal')}
+              value={formatMYR(invoice.subtotal_sen)}
+            />
+            <Amount
+              label={t('payments.amount.tax')}
+              value={formatMYR(invoice.tax_sen)}
+            />
+            <Amount
+              label={t('common.total')}
+              value={formatMYR(invoice.total_sen)}
+              strong
+            />
             <div className="my-1 border-t" />
-            <Amount label="Paid" value={formatMYR(invoice.amount_paid_sen)} />
-            <Amount label="Balance" value={formatMYR(balance)} strong />
+            <Amount
+              label={t('payments.amount.paid')}
+              value={formatMYR(invoice.amount_paid_sen)}
+            />
+            <Amount
+              label={t('payments.amount.balance')}
+              value={formatMYR(balance)}
+              strong
+            />
           </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Payments</CardTitle>
+          <CardTitle>{t('payments.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           {invoice.payments.length === 0 ? (
             <p className="text-muted-foreground text-sm">
-              No payments recorded yet.
+              {t('payments.detail.no_payments')}
             </p>
           ) : (
             <ul className="divide-y">
@@ -234,9 +262,9 @@ export function InvoiceDetailPage() {
                 >
                   <div>
                     <span className="font-medium">{formatMYR(p.amount_sen)}</span>
-                    <span className="text-muted-foreground capitalize">
+                    <span className="text-muted-foreground">
                       {' '}
-                      · {p.method.replace('_', ' ')}
+                      · {t(PAYMENT_METHOD_LABEL[p.method])}
                     </span>
                   </div>
                   <span className="text-muted-foreground">
@@ -248,6 +276,15 @@ export function InvoiceDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {isAdmin ? (
+        <PayLinkCard
+          academyId={academyId}
+          invoiceId={invoice.id}
+          initialToken={invoice.pay_token}
+          canPay={['issued', 'partially_paid', 'overdue'].includes(invoice.status)}
+        />
+      ) : null}
 
       {invoice.student ? (
         <RecordPaymentDialog

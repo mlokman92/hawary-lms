@@ -9,6 +9,7 @@ import {
   Video,
 } from 'lucide-react'
 import { uploadPublicImage } from '@/lib/storage'
+import { useT } from '@/lib/i18n'
 import {
   newBlock,
   youtubeId,
@@ -32,6 +33,7 @@ function ImageBlockEditor({
   bucket: string
   onChange: (b: ImageBlock) => void
 }) {
+  const { t } = useT()
   const ref = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -45,7 +47,7 @@ function ImageBlockEditor({
       const url = await uploadPublicImage(bucket, academyId, file)
       onChange({ ...block, url })
     } catch (er) {
-      setErr(er instanceof Error ? er.message : 'Upload failed')
+      setErr(er instanceof Error ? er.message : t('upload.failed'))
     } finally {
       setBusy(false)
       if (ref.current) ref.current.value = ''
@@ -62,7 +64,7 @@ function ImageBlockEditor({
         />
       ) : (
         <div className="text-muted-foreground rounded-md border border-dashed p-6 text-center text-sm">
-          No image yet
+          {t('notes.blocks.no_image')}
         </div>
       )}
       <input
@@ -80,13 +82,18 @@ function ImageBlockEditor({
           disabled={busy}
           onClick={() => ref.current?.click()}
         >
-          <Upload /> {busy ? 'Uploading…' : block.url ? 'Replace' : 'Upload image'}
+          <Upload />{' '}
+          {busy
+            ? t('common.uploading')
+            : block.url
+              ? t('notes.blocks.replace_image')
+              : t('notes.blocks.upload_image')}
         </Button>
       </div>
       <Input
         value={block.caption}
         onChange={(e) => onChange({ ...block, caption: e.target.value })}
-        placeholder="Caption (optional)"
+        placeholder={t('notes.blocks.caption_placeholder')}
       />
       {err ? <p className="text-destructive text-xs">{err}</p> : null}
     </div>
@@ -100,13 +107,14 @@ function YoutubeBlockEditor({
   block: YoutubeBlock
   onChange: (b: YoutubeBlock) => void
 }) {
+  const { t } = useT()
   const vid = youtubeId(block.url)
   return (
     <div className="grid gap-2">
       <Input
         value={block.url}
         onChange={(e) => onChange({ ...block, url: e.target.value })}
-        placeholder="Paste a YouTube link…"
+        placeholder={t('notes.blocks.youtube_placeholder')}
       />
       {block.url ? (
         vid ? (
@@ -114,14 +122,14 @@ function YoutubeBlockEditor({
             <iframe
               className="h-full w-full"
               src={`https://www.youtube.com/embed/${vid}`}
-              title="YouTube video"
+              title={t('notes.blocks.youtube_title')}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
             />
           </div>
         ) : (
           <p className="text-destructive text-xs">
-            Not a recognised YouTube URL.
+            {t('notes.blocks.youtube_invalid')}
           </p>
         )
       ) : null}
@@ -150,6 +158,7 @@ function BlockCard({
   onMoveUp: () => void
   onMoveDown: () => void
 }) {
+  const { t } = useT()
   return (
     <div className="group relative rounded-lg border p-3">
       <div className="bg-background absolute top-2 right-2 flex items-center rounded-md border opacity-0 shadow-sm group-hover:opacity-100">
@@ -159,7 +168,7 @@ function BlockCard({
           variant="ghost"
           disabled={first}
           onClick={onMoveUp}
-          aria-label="Move up"
+          aria-label={t('notes.blocks.move_up')}
         >
           <ArrowUp />
         </Button>
@@ -169,7 +178,7 @@ function BlockCard({
           variant="ghost"
           disabled={last}
           onClick={onMoveDown}
-          aria-label="Move down"
+          aria-label={t('notes.blocks.move_down')}
         >
           <ArrowDown />
         </Button>
@@ -178,7 +187,7 @@ function BlockCard({
           size="icon-xs"
           variant="ghost"
           onClick={onRemove}
-          aria-label="Remove block"
+          aria-label={t('notes.blocks.remove')}
         >
           <Trash2 />
         </Button>
@@ -187,7 +196,7 @@ function BlockCard({
         <Textarea
           value={block.text}
           onChange={(e) => onChange({ ...block, text: e.target.value })}
-          placeholder="Write…"
+          placeholder={t('notes.blocks.text_placeholder')}
           rows={4}
         />
       ) : block.type === 'image' ? (
@@ -215,6 +224,7 @@ export function BlocksEditor({
   blocks: Block[]
   onChange: (blocks: Block[]) => void
 }) {
+  const { t } = useT()
   const add = (type: BlockType) => onChange([...blocks, newBlock(type)])
   const change = (i: number, b: Block) =>
     onChange(blocks.map((x, idx) => (idx === i ? b : x)))
@@ -231,7 +241,7 @@ export function BlocksEditor({
     <div className="space-y-3">
       {blocks.length === 0 ? (
         <p className="text-muted-foreground text-sm">
-          No content yet. Add a block below.
+          {t('notes.blocks.empty')}
         </p>
       ) : (
         blocks.map((b, i) => (
@@ -251,10 +261,10 @@ export function BlocksEditor({
       )}
       <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" variant="outline" onClick={() => add('text')}>
-          <Plus /> Text
+          <Plus /> {t('notes.blocks.add_text')}
         </Button>
         <Button type="button" size="sm" variant="outline" onClick={() => add('image')}>
-          <ImageIcon /> Image
+          <ImageIcon /> {t('notes.blocks.add_image')}
         </Button>
         <Button type="button" size="sm" variant="outline" onClick={() => add('youtube')}>
           <Video /> YouTube

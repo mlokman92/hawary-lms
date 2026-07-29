@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useT } from '@/lib/i18n'
 import { useCourses } from '@/features/courses/api'
 import { Button } from '@/components/ui/button'
 import {
@@ -32,6 +33,7 @@ export function EnrollCourseDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const { t } = useT()
   const { data: courses } = useCourses(academyId)
   const enroll = useEnrollStudent(academyId, studentId)
   const [courseId, setCourseId] = useState('')
@@ -43,14 +45,14 @@ export function EnrollCourseDialog({
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!courseId) return setError('Select a course.')
+    if (!courseId) return setError(t('students.enroll.required'))
     setError(null)
     try {
       await enroll.mutateAsync(courseId)
       setCourseId('')
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.')
+      setError(err instanceof Error ? err.message : t('common.error'))
     }
   }
 
@@ -58,21 +60,21 @@ export function EnrollCourseDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Enroll in a course</DialogTitle>
+          <DialogTitle>{t('students.enroll.title')}</DialogTitle>
           <DialogDescription>
-            Add this student to one of your academy’s courses.
+            {t('students.enroll.description')}
           </DialogDescription>
         </DialogHeader>
         <form id="enroll-form" className="grid gap-2" onSubmit={onSubmit}>
-          <Label>Course</Label>
+          <Label>{t('common.course')}</Label>
           <Select value={courseId} onValueChange={setCourseId}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select a course" />
+              <SelectValue placeholder={t('students.enroll.select_course')} />
             </SelectTrigger>
             <SelectContent>
               {available.length === 0 ? (
                 <div className="text-muted-foreground px-2 py-1.5 text-sm">
-                  No available courses
+                  {t('students.enroll.none_available')}
                 </div>
               ) : (
                 available.map((c) => (
@@ -92,14 +94,16 @@ export function EnrollCourseDialog({
             onClick={() => onOpenChange(false)}
             disabled={enroll.isPending}
           >
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             type="submit"
             form="enroll-form"
             disabled={enroll.isPending || available.length === 0}
           >
-            {enroll.isPending ? 'Enrolling…' : 'Enroll'}
+            {enroll.isPending
+              ? t('students.enroll.busy')
+              : t('students.enroll.submit')}
           </Button>
         </DialogFooter>
       </DialogContent>

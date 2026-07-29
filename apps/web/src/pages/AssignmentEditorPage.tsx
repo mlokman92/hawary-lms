@@ -4,6 +4,7 @@ import { ArrowLeft, Trash2 } from 'lucide-react'
 import type { Json } from '@hawary/shared'
 import { parseBlocks, type Block } from '@/lib/blocks'
 import { useAcademy } from '@/lib/academy'
+import { useT } from '@/lib/i18n'
 import { BlocksEditor } from '@/components/BlocksEditor'
 import { Button } from '@/components/ui/button'
 import {
@@ -34,6 +35,7 @@ import {
 export function AssignmentEditorPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { t } = useT()
   const { activeAcademyId, active } = useAcademy()
   const academyId = activeAcademyId ?? ''
   const isStaff = active?.role === 'admin' || active?.role === 'trainer'
@@ -68,7 +70,7 @@ export function AssignmentEditorPage() {
     await update.mutateAsync({
       id: assignment.id,
       patch: {
-        title: title.trim() || 'Untitled assignment',
+        title: title.trim() || t('assign.untitled'),
         is_published: published,
         instructions: blocks as unknown as Json,
         due_at: dueDate ? new Date(`${dueDate}T23:59:59`).toISOString() : null,
@@ -82,16 +84,16 @@ export function AssignmentEditorPage() {
   if (isLoading) {
     return (
       <div className="text-muted-foreground py-16 text-center text-sm">
-        Loading…
+        {t('common.loading')}
       </div>
     )
   }
   if (error || !assignment) {
     return (
       <div className="mx-auto max-w-2xl py-16 text-center">
-        <p className="text-muted-foreground text-sm">Assignment not found.</p>
+        <p className="text-muted-foreground text-sm">{t('assign.not_found')}</p>
         <Button asChild variant="outline" className="mt-4">
-          <Link to="/assignments">Back to assignments</Link>
+          <Link to="/courses">{t('assign.back_to_courses')}</Link>
         </Button>
       </div>
     )
@@ -103,8 +105,8 @@ export function AssignmentEditorPage() {
     <div className="mx-auto w-full max-w-4xl space-y-6">
       <div className="flex items-center justify-between gap-2">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link to={`/assignments?course=${courseId}`}>
-            <ArrowLeft /> Assignments
+          <Link to={`/courses/${courseId}`}>
+            <ArrowLeft /> {t('common.course')}
           </Link>
         </Button>
         {isStaff ? (
@@ -117,33 +119,45 @@ export function AssignmentEditorPage() {
                 touch()
               }}
             >
-              {published ? 'Published' : 'Draft'}
+              {published ? t('common.published') : t('common.draft')}
             </Button>
             <Button onClick={onSave} disabled={update.isPending || !dirty}>
-              {update.isPending ? 'Saving…' : dirty ? 'Save' : 'Saved'}
+              {update.isPending
+                ? t('common.saving')
+                : dirty
+                  ? t('common.save')
+                  : t('common.saved')}
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="outline" size="icon" aria-label="Delete assignment">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label={t('assign.delete.action')}
+                >
                   <Trash2 />
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Delete this assignment?</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {t('assign.delete.confirm_title')}
+                  </AlertDialogTitle>
                   <AlertDialogDescription>
-                    “{title || 'Untitled'}” will be permanently deleted.
+                    {t('assign.delete.confirm_body', {
+                      title: title || t('common.untitled'),
+                    })}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={async () => {
                       await del.mutateAsync(assignment.id)
-                      navigate(`/assignments?course=${courseId}`)
+                      navigate(`/courses/${courseId}`)
                     }}
                   >
-                    Delete
+                    {t('common.delete')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -158,18 +172,20 @@ export function AssignmentEditorPage() {
           setTitle(e.target.value)
           touch()
         }}
-        placeholder="Untitled assignment"
+        placeholder={t('assign.untitled')}
         className="h-11 text-lg font-semibold md:text-lg"
         disabled={!isStaff}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>Brief</CardTitle>
+          <CardTitle>{t('assign.section.brief')}</CardTitle>
         </CardHeader>
         <CardContent>
           <BlocksEditor
-            academyId={academyId}
+            // The row's own tenant, not the ambient active academy: storage RLS
+            // checks this path segment, and staff access to this row proves it.
+            academyId={assignment.academy_id}
             bucket="note-media"
             blocks={blocks}
             onChange={(b) => {
@@ -182,11 +198,11 @@ export function AssignmentEditorPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Settings</CardTitle>
+          <CardTitle>{t('assign.section.settings')}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-3">
           <div className="grid gap-2">
-            <Label htmlFor="due">Due date</Label>
+            <Label htmlFor="due">{t('assign.due_date')}</Label>
             <Input
               id="due"
               type="date"
@@ -199,7 +215,7 @@ export function AssignmentEditorPage() {
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="points">Total points</Label>
+            <Label htmlFor="points">{t('assign.total_points')}</Label>
             <Input
               id="points"
               type="number"
@@ -214,7 +230,7 @@ export function AssignmentEditorPage() {
             />
           </div>
           <div className="grid gap-2">
-            <Label>Late submissions</Label>
+            <Label>{t('assign.late.label')}</Label>
             <Button
               type="button"
               variant={allowLate ? 'default' : 'outline'}
@@ -225,7 +241,7 @@ export function AssignmentEditorPage() {
                 touch()
               }}
             >
-              {allowLate ? 'Allowed' : 'Not allowed'}
+              {allowLate ? t('assign.late.allowed') : t('assign.late.not_allowed')}
             </Button>
           </div>
         </CardContent>

@@ -1,19 +1,71 @@
 import { supabase } from './supabase'
+import { translate } from './i18n'
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+type UploadResponse = {
+  ok?: boolean
+  url?: string
+  error?: string
+  code?: string
+  signed_in_as?: string
+  requested_academy?: string
+  your_academies?: string[]
+}
 
 /**
- * Upload an image to a public bucket, scoped under the academy id (first path
- * segment — storage RLS checks it). Returns the public URL.
+ * Upload an image and return its public URL.
+ *
+ * Goes through the `upload-media` Edge Function rather than
+ * `supabase.storage.upload()`: the direct path is authorised by RLS policies on
+ * storage.objects calling app.is_staff(...), and those rejected every upload
+ * ("new row violates row-level security policy") even for a valid staff user on
+ * a correct <academy_id>/... path. The function verifies the caller's JWT,
+ * re-checks staff membership for the target academy, and writes with the
+ * service role — so uploads no longer depend on storage RLS.
+ *
+ * Pass the *record's own* academy_id where there is one, not the ambient active
+ * academy, so the file always lands in the row's tenant.
  */
 export async function uploadPublicImage(
   bucket: string,
   academyId: string,
   file: File,
 ): Promise<string> {
-  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-  const path = `${academyId}/${crypto.randomUUID()}.${ext}`
-  const { error } = await supabase.storage
-    .from(bucket)
-    .upload(path, file, { upsert: true, contentType: file.type })
-  if (error) throw error
-  return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl
+  if (!UUID_RE.test(academyId)) {
+    throw new Error(translate('upload.no_academy'))
+  }
+
+  const body = new FormData()
+  body.append('file', file)
+  body.append('bucket', bucket)
+  body.append('academy_id', academyId)
+
+  // invoke() attaches the caller's access token; FormData sets its own boundary.
+  const { data, error } = await supabase.functions.invoke<UploadResponse>(
+    'upload-media',
+    { body },
+  )
+
+  if (error) {
+    // FunctionsHttpError keeps the JSON body on `context`; surface the real
+    // reason (wrong account, unsupported type, too large) instead of "failed".
+    const ctx = (error as { context?: Response }).context
+    if (ctx && typeof ctx.json === 'function') {
+      const detail = (await ctx.json().catch(() => null)) as UploadResponse | null
+      if (detail?.code === 'not_staff') {
+        throw new Error(
+          translate('upload.not_staff', {
+            account: detail.signed_in_as ?? translate('upload.another_account'),
+          }),
+        )
+      }
+      if (detail?.error) throw new Error(detail.error)
+    }
+    throw error
+  }
+
+  if (!data?.url) throw new Error(data?.error ?? translate('upload.failed'))
+  return data.url
 }

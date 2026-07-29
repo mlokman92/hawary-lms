@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useAuth } from '@/lib/auth'
+import { useT } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import {
   Accordion,
@@ -45,6 +46,7 @@ export function StudentFormDialog({
   onOpenChange: (open: boolean) => void
 }) {
   const isEdit = !!student
+  const { t } = useT()
   const { user } = useAuth()
   const createStudent = useCreateStudent(academyId)
   const updateStudent = useUpdateStudent(academyId)
@@ -76,8 +78,8 @@ export function StudentFormDialog({
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!fullName.trim()) return setError('Name is required.')
-    if (!gender) return setError('Gender is required.')
+    if (!fullName.trim()) return setError(t('students.form.name_required'))
+    if (!gender) return setError(t('students.form.gender_required'))
     setError(null)
 
     const fields = {
@@ -98,7 +100,7 @@ export function StudentFormDialog({
       }
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.')
+      setError(err instanceof Error ? err.message : t('common.error'))
     }
   }
 
@@ -106,56 +108,62 @@ export function StudentFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit student' : 'Add student'}</DialogTitle>
+          <DialogTitle>
+            {isEdit ? t('students.form.edit_title') : t('students.form.add_title')}
+          </DialogTitle>
           <DialogDescription>
             {isEdit
-              ? 'Update this student’s details.'
-              : 'Add a student record. Only name and gender are required — a student ID is generated automatically.'}
+              ? t('students.form.edit_description')
+              : t('students.form.add_description')}
           </DialogDescription>
         </DialogHeader>
 
         <form id="student-form" className="grid gap-4" onSubmit={onSubmit}>
           <div className="grid gap-2">
-            <Label htmlFor="full_name">Name</Label>
+            <Label htmlFor="full_name">{t('common.name')}</Label>
             <Input
               id="full_name"
               required
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              placeholder="Full name"
+              placeholder={t('common.full_name')}
             />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label>Gender</Label>
+              <Label>{t('students.field.gender')}</Label>
               <Select
                 value={gender}
                 onValueChange={(v) => setGender(v as Gender)}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select gender" />
+                  <SelectValue placeholder={t('students.form.select_gender')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
+                  <SelectItem value="male">
+                    {t('students.gender.male')}
+                  </SelectItem>
+                  <SelectItem value="female">
+                    {t('students.gender.female')}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="ic">IC Number</Label>
+              <Label htmlFor="ic">{t('students.field.ic')}</Label>
               <Input
                 id="ic"
                 value={icNumber}
                 onChange={(e) => setIcNumber(e.target.value)}
-                placeholder="e.g. 010203-14-5678"
+                placeholder={t('students.form.ic_placeholder')}
               />
             </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="dob">Date of birth</Label>
+              <Label htmlFor="dob">{t('students.field.dob')}</Label>
               <Input
                 id="dob"
                 type="date"
@@ -164,7 +172,7 @@ export function StudentFormDialog({
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="phone">Phone number</Label>
+              <Label htmlFor="phone">{t('students.field.phone_number')}</Label>
               <Input
                 id="phone"
                 type="tel"
@@ -175,7 +183,7 @@ export function StudentFormDialog({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t('common.email')}</Label>
             <Input
               id="email"
               type="email"
@@ -187,11 +195,11 @@ export function StudentFormDialog({
           <Accordion type="single" collapsible className="border-t">
             <AccordionItem value="more" className="border-b-0">
               <AccordionTrigger className="text-sm">
-                Add more details
+                {t('students.form.more_details')}
               </AccordionTrigger>
               <AccordionContent className="grid gap-4">
                 <div className="grid gap-2">
-                  <Label>Profile picture</Label>
+                  <Label>{t('students.form.profile_picture')}</Label>
                   <AvatarUploader
                     academyId={academyId}
                     value={avatarUrl}
@@ -200,7 +208,7 @@ export function StudentFormDialog({
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="address">Address</Label>
+                  <Label htmlFor="address">{t('students.field.address')}</Label>
                   <Textarea
                     id="address"
                     rows={3}
@@ -222,10 +230,14 @@ export function StudentFormDialog({
             onClick={() => onOpenChange(false)}
             disabled={busy}
           >
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" form="student-form" disabled={busy}>
-            {busy ? 'Saving…' : isEdit ? 'Save changes' : 'Add student'}
+            {busy
+              ? t('common.saving')
+              : isEdit
+                ? t('students.form.save_changes')
+                : t('students.form.add_title')}
           </Button>
         </DialogFooter>
       </DialogContent>

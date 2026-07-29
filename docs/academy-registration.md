@@ -33,8 +33,13 @@ academy.
 as two `SECURITY DEFINER` RPCs (no Edge Functions):
 
 - `create_invitation(student_id)` — staff only; supersedes older pending invites; returns
-  a `token`. The app builds `…/accept-invite?token=…` (shown as a copyable link; email
-  delivery lands when SMTP is configured).
+  a `token`. The app builds `…/accept-invite?token=…` and emails it: right after creating
+  the invite, the **Invite Student** dialog calls the **`send-invitation` Edge Function**
+  (Resend), which re-reads the invitation with a *caller-scoped* client (RLS enforces
+  staff-of-academy) and emails the link to the invitation's stored address. Delivery is
+  best-effort — the copyable link is always shown as a fallback, and if `RESEND_API_KEY`
+  isn't set the function returns `email_not_configured` and the UI just shows the link.
+  See `supabase/functions/send-invitation/README.md` for the secrets.
 - `accept_invitation(token)` — the signed-in invitee. Verifies the caller's email matches
   the invite, sets `students.user_id = auth.uid()` for the invitation's `student_id`, and
   upserts the `academy_members` row. Idempotent. Covers all four cases uniformly:

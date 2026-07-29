@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Enums, Tables, TablesInsert, TablesUpdate } from '@hawary/shared'
 import { supabase } from '@/lib/supabase'
+import { translate } from '@/lib/i18n'
 
 export type Student = Tables<'students'>
 export type StudentStatus = Enums<'student_status'>
@@ -204,6 +205,60 @@ export function useCreateInvitation() {
       return data as unknown as { id: string; token: string }
     },
   })
+}
+
+/**
+ * Result of the `send-invitation` edge function. `ok: false` is a soft outcome
+ * (the invite still exists; only email delivery didn't happen) — the UI falls
+ * back to the copy-link. `code: 'email_not_configured'` means no provider key
+ * is set yet, so we treat it as informational rather than an error.
+ */
+export type SendInvitationResult = {
+  ok: boolean
+  id?: string | null
+  to?: string
+  code?: 'email_not_configured' | 'send_failed'
+  message?: string
+}
+
+/** Email the accept link for an invitation via the send-invitation edge function. */
+export function useSendInvitation() {
+  return useMutation({
+    mutationFn: async (token: string) => {
+      const { data, error } = await supabase.functions.invoke<SendInvitationResult>(
+        'send-invitation',
+        { body: { token, origin: window.location.origin } },
+      )
+      if (error) {
+        // A non-2xx status yields a FunctionsHttpError whose `.message` is a
+        // generic SDK string; the real reason is JSON on `error.context`.
+        const body = await readFunctionError(error)
+        throw new Error(
+          body ??
+            (error instanceof Error
+              ? error.message
+              : translate('students.invite.send_failed')),
+        )
+      }
+      return (data ?? {
+        ok: false,
+        message: translate('students.invite.no_response'),
+      }) as SendInvitationResult
+    },
+  })
+}
+
+async function readFunctionError(error: unknown): Promise<string | null> {
+  const ctx = (error as { context?: unknown })?.context
+  if (ctx && typeof (ctx as Response).json === 'function') {
+    try {
+      const parsed = (await (ctx as Response).json()) as { error?: string; message?: string }
+      return parsed.error ?? parsed.message ?? null
+    } catch {
+      return null
+    }
+  }
+  return null
 }
 
 /** Accept an invitation (invited person, signed in). Links their profile + membership. */

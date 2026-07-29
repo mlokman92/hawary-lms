@@ -14,4 +14,15 @@ export default defineConfig({
     // hooks bind to a duplicate React ("Invalid hook call").
     dedupe: ['react', 'react-dom'],
   },
+  // Tiptap is only reached through a lazy import (RichTextEditor), so Vite would
+  // otherwise discover it mid-session and re-optimize, invalidating in-flight
+  // chunks ("504 Outdated Optimize Dep"). Pre-bundle it at server start instead.
+  optimizeDeps: {
+    include: [
+      '@tiptap/react',
+      '@tiptap/react/menus',
+      '@tiptap/starter-kit',
+      '@tiptap/extension-placeholder',
+    ],
+  },
 })

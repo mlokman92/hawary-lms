@@ -1,6 +1,7 @@
 import { Check, ChevronsUpDown, GraduationCap, Plus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAcademy } from '@/lib/academy'
+import { useT, type TKey } from '@/lib/i18n'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,8 +19,13 @@ import {
 
 export function AcademySwitcher() {
   const navigate = useNavigate()
-  const { memberships, active, setActiveAcademyId } = useAcademy()
+  const { staffMemberships, active, setActiveAcademyId } = useAcademy()
   const { isMobile } = useSidebar()
+  const { t } = useT()
+
+  // Was `capitalize` on the raw enum value, which only reads as a word in
+  // English. Translate it instead.
+  const roleLabel = active?.role ? t(`role.${active.role}` as TKey) : ''
 
   return (
     <SidebarMenu>
@@ -35,10 +41,10 @@ export function AcademySwitcher() {
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">
-                  {active?.academy?.name ?? 'Select academy'}
+                  {active?.academy?.name ?? t('academy.select')}
                 </span>
-                <span className="text-muted-foreground truncate text-xs capitalize">
-                  {active?.role ?? ''}
+                <span className="text-muted-foreground truncate text-xs">
+                  {roleLabel}
                 </span>
               </div>
               <ChevronsUpDown className="ml-auto" />
@@ -51,9 +57,9 @@ export function AcademySwitcher() {
             sideOffset={4}
           >
             <DropdownMenuLabel className="text-muted-foreground text-xs">
-              Academies
+              {t('academy.heading')}
             </DropdownMenuLabel>
-            {memberships.map((m) => (
+            {staffMemberships.map((m) => (
               <DropdownMenuItem
                 key={m.academyId}
                 onClick={() => setActiveAcademyId(m.academyId)}
@@ -79,7 +85,7 @@ export function AcademySwitcher() {
                 <Plus className="size-4" />
               </div>
               <span className="text-muted-foreground font-medium">
-                Add academy
+                {t('academy.add')}
               </span>
             </DropdownMenuItem>
           </DropdownMenuContent>

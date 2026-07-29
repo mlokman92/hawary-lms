@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { useT } from '@/lib/i18n'
 import { AuthCard } from '@/components/AuthCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 export function SignIn() {
+  const { t } = useT()
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const next = params.get('next') || '/'
@@ -30,10 +32,10 @@ export function SignIn() {
   }
 
   return (
-    <AuthCard title="Sign in" subtitle="Welcome back to Hawary LMS">
+    <AuthCard title={t('auth.signin.title')} subtitle={t('auth.signin.subtitle')}>
       <form className="grid gap-4" onSubmit={onSubmit}>
         <div className="grid gap-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t('common.email')}</Label>
           <Input
             id="email"
             type="email"
@@ -44,7 +46,7 @@ export function SignIn() {
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t('common.password')}</Label>
           <Input
             id="password"
             type="password"
@@ -56,7 +58,7 @@ export function SignIn() {
         </div>
         {error ? <p className="text-destructive text-sm">{error}</p> : null}
         <Button type="submit" className="w-full" disabled={busy}>
-          {busy ? 'Signing in…' : 'Sign in'}
+          {busy ? t('auth.signin.busy') : t('auth.signin.title')}
         </Button>
       </form>
       <div className="mt-4 grid gap-2 text-center text-sm">
@@ -64,15 +66,15 @@ export function SignIn() {
           to="/forgot"
           className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
         >
-          Forgot password?
+          {t('auth.signin.forgot')}
         </Link>
         <span className="text-muted-foreground">
-          New here?{' '}
+          {t('auth.signin.new_here')}{' '}
           <Link
             to={signupTo}
             className="text-primary font-medium underline-offset-4 hover:underline"
           >
-            Create an account
+            {t('auth.signin.create_account')}
           </Link>
         </span>
       </div>

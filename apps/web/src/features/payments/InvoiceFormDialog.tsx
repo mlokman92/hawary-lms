@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Check, Plus, Search, Trash2, Users, X } from 'lucide-react'
 import { formatMYR, ringgitToSen } from '@hawary/shared'
 import { useAuth } from '@/lib/auth'
-import { useStudents } from '@/features/students/api'
+import { useT, type TFn } from '@/lib/i18n'
+import { useStudents, type StudentRow } from '@/features/students/api'
+import { useCourses } from '@/features/courses/api'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -22,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useCreateInvoice } from './api'
+import { useCreateInvoices } from './api'
 
 type ItemRow = {
   key: string
@@ -38,22 +41,38 @@ const blankItem = (): ItemRow => ({
   unitPrice: '',
 })
 
+const studentLabel = (s: StudentRow, t: TFn) =>
+  s.full_name || s.email || t('common.unnamed')
+
+// Cap rendered rows so a very large academy doesn't paint thousands of nodes;
+// search narrows past this.
+const MAX_ROWS = 300
+
 export function InvoiceFormDialog({
   academyId,
   open,
   onOpenChange,
   onCreated,
+  initialStudentId,
 }: {
   academyId: string
   open: boolean
   onOpenChange: (open: boolean) => void
   onCreated: (id: string) => void
+  initialStudentId?: string
 }) {
   const { user } = useAuth()
-  const { data: students } = useStudents(academyId || null)
-  const createInvoice = useCreateInvoice(academyId)
+  const { t, tn } = useT()
+  const { data: students, isLoading: studentsLoading } = useStudents(
+    academyId || null,
+  )
+  const { data: courses } = useCourses(academyId || null)
+  const createInvoices = useCreateInvoices(academyId)
 
-  const [studentId, setStudentId] = useState('')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [courseFilter, setCourseFilter] = useState('all')
+  const [showAllCourses, setShowAllCourses] = useState(false)
+  const [search, setSearch] = useState('')
   const [items, setItems] = useState<ItemRow[]>([blankItem()])
   const [tax, setTax] = useState('')
   const [dueDate, setDueDate] = useState('')
@@ -62,39 +81,100 @@ export function InvoiceFormDialog({
 
   useEffect(() => {
     if (!open) return
-    setStudentId('')
+    setSelected(initialStudentId ? new Set([initialStudentId]) : new Set())
+    setCourseFilter('all')
+    setShowAllCourses(false)
+    setSearch('')
     setItems([blankItem()])
     setTax('')
     setDueDate('')
     setNotes('')
     setError(null)
-  }, [open])
+  }, [open, initialStudentId])
+
+  const all = useMemo(() => students ?? [], [students])
+  const byId = useMemo(() => new Map(all.map((s) => [s.id, s])), [all])
+
+  // Course filter shows PUBLISHED courses by default; "show all" reveals
+  // draft/archived for the occasional remote case.
+  const allCourses = useMemo(() => courses ?? [], [courses])
+  const published = useMemo(
+    () => allCourses.filter((c) => c.status === 'published'),
+    [allCourses],
+  )
+  const unpublishedCount = allCourses.length - published.length
+  const courseOptions = showAllCourses ? allCourses : published
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return all.filter((s) => {
+      if (
+        courseFilter !== 'all' &&
+        !s.enrollments.some((e) => e.courses?.id === courseFilter)
+      )
+        return false
+      if (!q) return true
+      return (
+        (s.full_name ?? '').toLowerCase().includes(q) ||
+        (s.email ?? '').toLowerCase().includes(q) ||
+        s.student_no.toLowerCase().includes(q)
+      )
+    })
+  }, [all, courseFilter, search])
+  const shown = filtered.slice(0, MAX_ROWS)
+
+  const toggle = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+
+  const selectAllFiltered = () =>
+    setSelected((prev) => {
+      const next = new Set(prev)
+      filtered.forEach((s) => next.add(s.id))
+      return next
+    })
+
+  const toggleShowAllCourses = () =>
+    setShowAllCourses((prev) => {
+      const next = !prev
+      // If we're hiding unpublished courses and one is selected, reset the filter.
+      if (
+        !next &&
+        courseFilter !== 'all' &&
+        !published.some((c) => c.id === courseFilter)
+      )
+        setCourseFilter('all')
+      return next
+    })
 
   const subtotalSen = useMemo(
-    () =>
-      items.reduce(
-        (s, it) => s + it.quantity * ringgitToSen(it.unitPrice),
-        0,
-      ),
+    () => items.reduce((s, it) => s + it.quantity * ringgitToSen(it.unitPrice), 0),
     [items],
   )
   const taxSen = ringgitToSen(tax)
-  const totalSen = subtotalSen + taxSen
+  const perStudentSen = subtotalSen + taxSen
+  const grandTotalSen = perStudentSen * selected.size
 
   const changeItem = (key: string, patch: Partial<ItemRow>) =>
     setItems((its) => its.map((it) => (it.key === key ? { ...it, ...patch } : it)))
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!studentId) return setError('Select a student.')
-    if (totalSen <= 0) return setError('Add at least one line item with an amount.')
+    if (selected.size === 0) return setError(t('payments.form.error_no_student'))
+    if (perStudentSen <= 0)
+      return setError(t('payments.form.error_no_amount'))
     setError(null)
     try {
-      const inv = await createInvoice.mutateAsync({
-        studentId,
+      const created = await createInvoices.mutateAsync({
+        studentIds: [...selected],
         dueDate,
         taxSen,
         notes,
+        courseId: courseFilter === 'all' ? null : courseFilter,
         createdBy: user?.id ?? null,
         items: items
           .filter((it) => it.description.trim() || ringgitToSen(it.unitPrice) > 0)
@@ -105,160 +185,329 @@ export function InvoiceFormDialog({
           })),
       })
       onOpenChange(false)
-      onCreated(inv.id)
+      if (created.length === 1) onCreated(created[0].id)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.')
+      setError(err instanceof Error ? err.message : t('common.error'))
     }
   }
 
+  const selectedList = [...selected]
+    .map((id) => byId.get(id))
+    .filter(Boolean) as StudentRow[]
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>New invoice</DialogTitle>
-          <DialogDescription>
-            Bill a student. The invoice number is generated automatically.
-          </DialogDescription>
+      <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl md:h-[85vh]">
+        <DialogHeader className="border-b px-6 py-4">
+          <DialogTitle>{t('payments.new_invoice')}</DialogTitle>
+          <DialogDescription>{t('payments.form.description')}</DialogDescription>
         </DialogHeader>
 
-        <form id="invoice-form" className="grid gap-4" onSubmit={onSubmit}>
-          <div className="grid gap-2">
-            <Label>Student</Label>
-            <Select value={studentId} onValueChange={setStudentId}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a student" />
-              </SelectTrigger>
-              <SelectContent>
-                {(students ?? []).map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.full_name || s.email || 'Unnamed'} · {s.student_no}
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
+          {/* LEFT — dedicated student panel */}
+          <div className="flex flex-col gap-3 border-b p-4 md:min-h-0 md:w-2/5 md:border-r md:border-b-0">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-sm font-medium">
+                <Users className="size-3.5" /> {t('payments.form.recipients')}
+                {selected.size > 0 ? (
+                  <span className="text-muted-foreground font-normal">
+                    · {t('payments.form.selected', { count: selected.size })}
+                  </span>
+                ) : null}
+              </span>
+              {selected.size > 0 ? (
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground text-xs underline"
+                  onClick={() => setSelected(new Set())}
+                >
+                  {t('common.clear')}
+                </button>
+              ) : null}
+            </div>
+
+            {/* Course: filters the list to enrolled students AND tags the
+                invoices so payments can be tracked per course. */}
+            <div className="grid gap-1.5">
+              <Select value={courseFilter} onValueChange={setCourseFilter}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t('payments.form.all_students')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    {t('payments.form.all_students')}
                   </SelectItem>
+                  {courseOptions.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.title}
+                      {c.status !== 'published'
+                        ? ` · ${t(
+                            c.status === 'draft'
+                              ? 'common.draft'
+                              : 'payments.course_status.archived',
+                          )}`
+                        : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground text-xs">
+                {courseFilter === 'all'
+                  ? t('payments.form.course_hint_none')
+                  : t('payments.form.course_hint_selected')}
+              </p>
+              {unpublishedCount > 0 ? (
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground justify-self-start text-xs underline"
+                  onClick={toggleShowAllCourses}
+                >
+                  {showAllCourses
+                    ? t('payments.form.show_published_only')
+                    : t('payments.form.show_all_courses', {
+                        count: unpublishedCount,
+                      })}
+                </button>
+              ) : null}
+            </div>
+
+            {/* Search */}
+            <div className="relative">
+              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t('payments.form.search_placeholder')}
+                className="pl-8"
+              />
+            </div>
+
+            {/* Selected chips (compact) */}
+            {selectedList.length > 0 ? (
+              <div className="flex max-h-16 flex-wrap gap-1.5 overflow-y-auto">
+                {selectedList.map((s) => (
+                  <Badge key={s.id} variant="secondary" className="gap-1 pr-1">
+                    <span className="max-w-[9rem] truncate">
+                      {studentLabel(s, t)}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label={t('payments.form.remove_recipient', {
+                        name: studentLabel(s, t),
+                      })}
+                      onClick={() => toggle(s.id)}
+                      className="hover:bg-muted-foreground/20 rounded-sm"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </Badge>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
+              </div>
+            ) : null}
 
-          <div className="grid gap-2">
-            <Label>Line items</Label>
-            <div className="grid gap-2">
-              {items.map((it) => (
-                <div key={it.key} className="flex items-center gap-2">
-                  <Input
-                    value={it.description}
-                    onChange={(e) =>
-                      changeItem(it.key, { description: e.target.value })
-                    }
-                    placeholder="Description"
-                    className="flex-1"
-                  />
-                  <Input
-                    type="number"
-                    min="1"
-                    value={it.quantity}
-                    onChange={(e) =>
-                      changeItem(it.key, {
-                        quantity: Math.max(1, Number(e.target.value) || 1),
-                      })
-                    }
-                    className="w-16"
-                    aria-label="Quantity"
-                  />
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={it.unitPrice}
-                    onChange={(e) =>
-                      changeItem(it.key, { unitPrice: e.target.value })
-                    }
-                    placeholder="Unit (RM)"
-                    className="w-28"
-                    aria-label="Unit price"
-                  />
-                  <Button
+            {/* The list */}
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border">
+              <div className="text-muted-foreground flex items-center justify-between border-b px-3 py-1.5 text-xs">
+                <span>{tn('payments.form.matches', filtered.length)}</span>
+                {filtered.length > 0 ? (
+                  <button
                     type="button"
-                    size="icon-sm"
-                    variant="ghost"
-                    onClick={() =>
-                      setItems((its) =>
-                        its.length > 1
-                          ? its.filter((x) => x.key !== it.key)
-                          : its,
-                      )
-                    }
-                    aria-label="Remove item"
+                    className="hover:text-foreground underline"
+                    onClick={selectAllFiltered}
                   >
-                    <Trash2 />
-                  </Button>
-                </div>
-              ))}
+                    {t('payments.form.select_all')}
+                  </button>
+                ) : null}
+              </div>
+              <div className="max-h-64 flex-1 overflow-y-auto md:max-h-none">
+                {studentsLoading ? (
+                  <p className="text-muted-foreground p-3 text-sm">
+                    {t('common.loading')}
+                  </p>
+                ) : filtered.length === 0 ? (
+                  <p className="text-muted-foreground p-3 text-sm">
+                    {t('payments.form.no_matches')}
+                  </p>
+                ) : (
+                  <>
+                    {shown.map((s) => {
+                      const on = selected.has(s.id)
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => toggle(s.id)}
+                          className="hover:bg-accent flex w-full items-center gap-3 px-3 py-2 text-left text-sm"
+                        >
+                          <span
+                            className={`flex size-4 shrink-0 items-center justify-center rounded border ${
+                              on
+                                ? 'bg-primary border-primary text-primary-foreground'
+                                : 'border-input'
+                            }`}
+                          >
+                            {on ? <Check className="size-3" /> : null}
+                          </span>
+                          <span className="min-w-0 flex-1 truncate">
+                            {studentLabel(s, t)}
+                          </span>
+                          <span className="text-muted-foreground shrink-0 text-xs">
+                            {s.student_no}
+                          </span>
+                        </button>
+                      )
+                    })}
+                    {filtered.length > shown.length ? (
+                      <p className="text-muted-foreground px-3 py-2 text-xs">
+                        {t('payments.form.truncated', { count: shown.length })}
+                      </p>
+                    ) : null}
+                  </>
+                )}
+              </div>
             </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="justify-self-start"
-              onClick={() => setItems((its) => [...its, blankItem()])}
-            >
-              <Plus /> Add item
-            </Button>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          {/* RIGHT — invoice details */}
+          <form
+            id="invoice-form"
+            onSubmit={onSubmit}
+            className="flex flex-col gap-4 p-4 md:min-h-0 md:flex-1 md:overflow-y-auto"
+          >
             <div className="grid gap-2">
-              <Label htmlFor="due">Due date (optional)</Label>
-              <Input
-                id="due"
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
+              <Label>{t('payments.form.line_items')}</Label>
+              <div className="grid gap-2">
+                {items.map((it) => (
+                  <div key={it.key} className="flex items-center gap-2">
+                    <Input
+                      value={it.description}
+                      onChange={(e) =>
+                        changeItem(it.key, { description: e.target.value })
+                      }
+                      placeholder={t('common.description')}
+                      className="flex-1"
+                    />
+                    <Input
+                      type="number"
+                      min="1"
+                      value={it.quantity}
+                      onChange={(e) =>
+                        changeItem(it.key, {
+                          quantity: Math.max(1, Number(e.target.value) || 1),
+                        })
+                      }
+                      className="w-16"
+                      aria-label={t('payments.form.quantity')}
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={it.unitPrice}
+                      onChange={(e) =>
+                        changeItem(it.key, { unitPrice: e.target.value })
+                      }
+                      placeholder={t('payments.form.unit_placeholder')}
+                      className="w-28"
+                      aria-label={t('payments.form.unit_price')}
+                    />
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant="ghost"
+                      onClick={() =>
+                        setItems((its) =>
+                          its.length > 1 ? its.filter((x) => x.key !== it.key) : its,
+                        )
+                      }
+                      aria-label={t('payments.form.remove_item')}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="justify-self-start"
+                onClick={() => setItems((its) => [...its, blankItem()])}
+              >
+                <Plus /> {t('payments.form.add_item')}
+              </Button>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="due">{t('payments.form.due_date')}</Label>
+                <Input
+                  id="due"
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="tax">{t('payments.form.tax')}</Label>
+                <Input
+                  id="tax"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={tax}
+                  onChange={(e) => setTax(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="notes">{t('payments.form.notes')}</Label>
+              <Textarea
+                id="notes"
+                rows={2}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="tax">Tax / SST (RM, optional)</Label>
-              <Input
-                id="tax"
-                type="number"
-                min="0"
-                step="0.01"
-                value={tax}
-                onChange={(e) => setTax(e.target.value)}
-                placeholder="0.00"
-              />
+
+            <div className="bg-muted mt-auto flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
+              <span className="text-muted-foreground">
+                {tn('payments.form.per_student', selected.size, {
+                  amount: formatMYR(perStudentSen),
+                })}
+              </span>
+              <span className="font-semibold">
+                {t('payments.form.grand_total', {
+                  amount: formatMYR(grandTotalSen),
+                })}
+              </span>
             </div>
-          </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="notes">Notes (optional)</Label>
-            <Textarea
-              id="notes"
-              rows={2}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
+            {error ? <p className="text-destructive text-sm">{error}</p> : null}
+          </form>
+        </div>
 
-          <div className="bg-muted flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-            <span className="text-muted-foreground">
-              Subtotal {formatMYR(subtotalSen)} · Tax {formatMYR(taxSen)}
-            </span>
-            <span className="font-semibold">Total {formatMYR(totalSen)}</span>
-          </div>
-
-          {error ? <p className="text-destructive text-sm">{error}</p> : null}
-        </form>
-
-        <DialogFooter>
+        <DialogFooter className="border-t px-6 py-4">
           <Button
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={createInvoice.isPending}
+            disabled={createInvoices.isPending}
           >
-            Cancel
+            {t('common.cancel')}
           </Button>
-          <Button type="submit" form="invoice-form" disabled={createInvoice.isPending}>
-            {createInvoice.isPending ? 'Creating…' : 'Create invoice'}
+          <Button
+            type="submit"
+            form="invoice-form"
+            disabled={createInvoices.isPending || selected.size === 0}
+          >
+            {createInvoices.isPending
+              ? t('common.creating')
+              : selected.size > 1
+                ? t('payments.form.submit_many', { count: selected.size })
+                : t('payments.form.submit')}
           </Button>
         </DialogFooter>
       </DialogContent>

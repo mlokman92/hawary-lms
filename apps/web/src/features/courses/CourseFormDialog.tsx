@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { senToRinggit, ringgitToSen } from '@hawary/shared'
 import { useAuth } from '@/lib/auth'
+import { useT } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -40,6 +41,7 @@ export function CourseFormDialog({
 }) {
   const isEdit = !!course
   const { user } = useAuth()
+  const { t } = useT()
   const createCourse = useCreateCourse(academyId)
   const updateCourse = useUpdateCourse(academyId)
 
@@ -65,7 +67,7 @@ export function CourseFormDialog({
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     if (!title.trim()) {
-      setError('Title is required.')
+      setError(t('courses.form.title_required'))
       return
     }
     setError(null)
@@ -85,7 +87,7 @@ export function CourseFormDialog({
       }
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.')
+      setError(err instanceof Error ? err.message : t('common.error'))
     }
   }
 
@@ -93,37 +95,39 @@ export function CourseFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit course' : 'New course'}</DialogTitle>
+          <DialogTitle>
+            {isEdit ? t('courses.edit') : t('courses.new')}
+          </DialogTitle>
           <DialogDescription>
             {isEdit
-              ? 'Update this course’s details.'
-              : 'Create a course for your academy.'}
+              ? t('courses.form.description_edit')
+              : t('courses.form.description_new')}
           </DialogDescription>
         </DialogHeader>
 
         <form id="course-form" className="grid gap-4" onSubmit={onSubmit}>
           <div className="grid gap-2">
-            <Label htmlFor="title">Title</Label>
+            <Label htmlFor="title">{t('common.title')}</Label>
             <Input
               id="title"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Certified Welding — Level 1"
+              placeholder={t('courses.form.title_placeholder')}
             />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="code">Code (optional)</Label>
+              <Label htmlFor="code">{t('courses.form.code')}</Label>
               <Input
                 id="code"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                placeholder="WELD-101"
+                placeholder={t('courses.form.code_placeholder')}
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="price">Price (RM)</Label>
+              <Label htmlFor="price">{t('courses.form.price')}</Label>
               <Input
                 id="price"
                 type="number"
@@ -137,17 +141,17 @@ export function CourseFormDialog({
             </div>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="description">Description (optional)</Label>
+            <Label htmlFor="description">{t('courses.form.description')}</Label>
             <Textarea
               id="description"
               rows={4}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="What this course covers…"
+              placeholder={t('courses.form.description_placeholder')}
             />
           </div>
           <div className="grid gap-2">
-            <Label>Status</Label>
+            <Label>{t('common.status')}</Label>
             <Select
               value={status}
               onValueChange={(v) => setStatus(v as CourseStatus)}
@@ -156,9 +160,13 @@ export function CourseFormDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="published">Published</SelectItem>
-                <SelectItem value="archived">Archived</SelectItem>
+                <SelectItem value="draft">{t('common.draft')}</SelectItem>
+                <SelectItem value="published">
+                  {t('common.published')}
+                </SelectItem>
+                <SelectItem value="archived">
+                  {t('courses.status.archived')}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -172,10 +180,14 @@ export function CourseFormDialog({
             onClick={() => onOpenChange(false)}
             disabled={busy}
           >
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" form="course-form" disabled={busy}>
-            {busy ? 'Saving…' : isEdit ? 'Save changes' : 'Create course'}
+            {busy
+              ? t('common.saving')
+              : isEdit
+                ? t('courses.form.save_changes')
+                : t('courses.form.create')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -8,6 +8,8 @@ import {
 } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from './supabase'
+import { clearPendingInvite } from './invite'
+import { clearActiveAcademyId, clearLearnAcademyId } from './activeAcademy'
 
 type AuthContextValue = {
   session: Session | null
@@ -44,6 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user: session?.user ?? null,
       loading,
       signOut: async () => {
+        clearPendingInvite()
+        // Don't let the next account inherit this one's tenant.
+        clearActiveAcademyId()
+        clearLearnAcademyId()
         await supabase.auth.signOut()
       },
     }),

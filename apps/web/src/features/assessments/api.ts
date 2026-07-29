@@ -30,7 +30,8 @@ export function useAssessments(academyId: string | null, courseId: string | null
         .select('*, questions:assessment_questions(count)')
         .eq('academy_id', academyId!)
         .eq('course_id', courseId!)
-        .order('created_at', { ascending: false })
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true })
       if (error) throw error
       return (data ?? []) as unknown as AssessmentRow[]
     },
@@ -72,21 +73,31 @@ export function useQuestions(assessmentId: string | undefined) {
 export function useCreateAssessment(academyId: string, courseId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (input: { title: string; created_by?: string | null }) => {
+    mutationFn: async (input: {
+      title: string
+      module_id: string
+      created_by?: string | null
+      sort_order?: number
+    }) => {
       const { data, error } = await supabase
         .from('assessments')
         .insert({
           academy_id: academyId,
           course_id: courseId,
+          module_id: input.module_id,
           title: input.title,
           created_by: input.created_by ?? null,
+          sort_order: input.sort_order ?? 0,
         })
         .select()
         .single()
       if (error) throw error
       return data
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: listKey(academyId, courseId) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: listKey(academyId, courseId) })
+      qc.invalidateQueries({ queryKey: ['courses', academyId] })
+    },
   })
 }
 
@@ -98,7 +109,10 @@ export function useDeleteAssessment(academyId: string, courseId: string) {
       if (error) throw error
       return id
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: listKey(academyId, courseId) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: listKey(academyId, courseId) })
+      qc.invalidateQueries({ queryKey: ['courses', academyId] })
+    },
   })
 }
 

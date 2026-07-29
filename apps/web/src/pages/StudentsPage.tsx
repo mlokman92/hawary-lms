@@ -1,8 +1,25 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Search, UserPlus, Plus } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import {
+  BookX,
+  Hourglass,
+  Plus,
+  Search,
+  UserCheck,
+  UserMinus,
+  UserPlus,
+  UserX,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
 import { useAcademy } from '@/lib/academy'
+import { fmtMonthYear } from '@/lib/format'
+import { useT } from '@/lib/i18n'
+import type { Tone } from '@/lib/tone'
+import { PageHeader } from '@/components/patterns/PageHeader'
+import { FilterStatCard } from '@/components/patterns/FilterStatCard'
+import { EmptyState } from '@/components/patterns/EmptyState'
+import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,8 +40,10 @@ import {
 } from '@/components/ui/table'
 import { StudentFormDialog } from '@/features/students/StudentFormDialog'
 import { InviteStudentDialog } from '@/features/students/InviteStudentDialog'
+import { PendingInvitations } from '@/features/invitations/PendingInvitations'
 import { MANUAL_STATUSES, STATUS_META } from '@/features/students/status'
 import {
+  STUDENT_STATUSES,
   studentStats,
   useStudents,
   type StudentRow,
@@ -34,38 +53,8 @@ import {
 type Sort = 'name_asc' | 'name_desc' | 'joined_desc' | 'joined_asc'
 type Filter = 'all' | StudentStatus
 
-function StatCard({
-  label,
-  value,
-  active,
-  onClick,
-}: {
-  label: string
-  value: number
-  active: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'hover:bg-accent rounded-xl border p-4 text-left transition-colors',
-        active && 'border-primary ring-primary/40 ring-1',
-      )}
-    >
-      <div className="text-muted-foreground text-xs">{label}</div>
-      <div className="mt-1 text-2xl font-semibold tabular-nums">{value}</div>
-    </button>
-  )
-}
-
-function joinedLabel(iso: string) {
-  return new Date(iso).toLocaleDateString('en-MY', {
-    month: 'short',
-    year: 'numeric',
-  })
-}
+// Whitelist for the ?status= param — anything else falls back to 'all'.
+const FILTERS: Filter[] = ['all', ...STUDENT_STATUSES]
 
 function courseLabel(s: StudentRow) {
   const titles = s.enrollments
@@ -78,12 +67,22 @@ function courseLabel(s: StudentRow) {
 
 export function StudentsPage() {
   const navigate = useNavigate()
+  const { t } = useT()
   const { activeAcademyId, active } = useAcademy()
   const isStaff = active?.role === 'admin' || active?.role === 'trainer'
   const { data: students, isLoading, error } = useStudents(activeAcademyId)
 
   const [search, setSearch] = useState('')
-  const [filter, setFilter] = useState<Filter>('all')
+  // The status filter lives in the URL so other pages can deep-link into it
+  // (the dashboard's "No course yet" tile points at ?status=unenrolled).
+  const [params, setParams] = useSearchParams()
+  const requested = params.get('status')
+  const filter: Filter =
+    requested && FILTERS.includes(requested as Filter)
+      ? (requested as Filter)
+      : 'all'
+  const setFilter = (f: Filter) =>
+    setParams(f === 'all' ? {} : { status: f }, { replace: true })
   const [sort, setSort] = useState<Sort>('joined_desc')
   const [addOpen, setAddOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
@@ -119,43 +118,84 @@ export function StudentsPage() {
     })
   }, [students, filter, search, sort])
 
-  const cards: { label: string; value: number; key: Filter }[] = [
-    { label: 'Total', value: stats.total, key: 'all' },
-    { label: 'Active', value: stats.active, key: 'active' },
-    { label: 'Trial', value: stats.trial, key: 'trial' },
-    { label: 'Inactive', value: stats.inactive, key: 'inactive' },
-    { label: 'Withdrawn', value: stats.withdrawn, key: 'withdrawn' },
-    { label: 'Unenrolled', value: stats.unenrolled, key: 'unenrolled' },
+  const cards: {
+    label: string
+    value: number
+    key: Filter
+    icon: LucideIcon
+    tone: Tone
+  }[] = [
+    {
+      label: t('common.total'),
+      value: stats.total,
+      key: 'all',
+      icon: Users,
+      tone: 'info',
+    },
+    {
+      label: t('status.student.active'),
+      value: stats.active,
+      key: 'active',
+      icon: UserCheck,
+      tone: 'positive',
+    },
+    {
+      label: t('status.student.trial'),
+      value: stats.trial,
+      key: 'trial',
+      icon: Hourglass,
+      tone: 'warning',
+    },
+    {
+      label: t('status.student.inactive'),
+      value: stats.inactive,
+      key: 'inactive',
+      icon: UserMinus,
+      tone: 'muted',
+    },
+    {
+      label: t('status.student.withdrawn'),
+      value: stats.withdrawn,
+      key: 'withdrawn',
+      icon: UserX,
+      tone: 'danger',
+    },
+    {
+      label: t('status.student.unenrolled'),
+      value: stats.unenrolled,
+      key: 'unenrolled',
+      icon: BookX,
+      tone: 'accent',
+    },
   ]
 
   return (
     <div className="mx-auto w-full max-w-6xl">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Students</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Manage your academy’s students and enrollment.
-          </p>
-        </div>
+      <PageHeader
+        title={t('common.students')}
+        description={t('students.page.description')}
+      >
         {isStaff ? (
-          <div className="flex items-center gap-2">
+          <>
             <Button variant="outline" onClick={() => setInviteOpen(true)}>
-              <UserPlus /> Invite Student
+              <UserPlus /> {t('students.action.invite')}
             </Button>
             <Button onClick={() => setAddOpen(true)}>
-              <Plus /> Add Student
+              <Plus /> {t('students.action.add')}
             </Button>
-          </div>
+          </>
         ) : null}
-      </div>
+      </PageHeader>
 
       {/* Stat cards */}
-      <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+      <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-3 2xl:grid-cols-6">
         {cards.map((c) => (
-          <StatCard
+          <FilterStatCard
             key={c.key}
             label={c.label}
             value={c.value}
+            icon={c.icon}
+            tone={c.tone}
             active={filter === c.key}
             onClick={() => setFilter(c.key)}
           />
@@ -170,60 +210,70 @@ export function StudentsPage() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search name, email, phone, IC…"
+              placeholder={t('students.search_placeholder')}
               className="pl-8"
             />
           </div>
           <Select value={filter} onValueChange={(v) => setFilter(v as Filter)}>
             <SelectTrigger className="w-40">
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder={t('common.status')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="all">
+                {t('students.filter.all_statuses')}
+              </SelectItem>
               {MANUAL_STATUSES.map((s) => (
                 <SelectItem key={s} value={s}>
-                  {STATUS_META[s].label}
+                  {t(STATUS_META[s].labelKey)}
                 </SelectItem>
               ))}
-              <SelectItem value="unenrolled">Unenrolled</SelectItem>
+              <SelectItem value="unenrolled">
+                {t('status.student.unenrolled')}
+              </SelectItem>
             </SelectContent>
           </Select>
           <Select value={sort} onValueChange={(v) => setSort(v as Sort)}>
             <SelectTrigger className="w-44">
-              <SelectValue placeholder="Sort by" />
+              <SelectValue placeholder={t('common.sort')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="name_asc">Name A–Z</SelectItem>
-              <SelectItem value="name_desc">Name Z–A</SelectItem>
-              <SelectItem value="joined_desc">Join date: newest</SelectItem>
-              <SelectItem value="joined_asc">Join date: oldest</SelectItem>
+              <SelectItem value="name_asc">
+                {t('students.sort.name_asc')}
+              </SelectItem>
+              <SelectItem value="name_desc">
+                {t('students.sort.name_desc')}
+              </SelectItem>
+              <SelectItem value="joined_desc">
+                {t('students.sort.joined_desc')}
+              </SelectItem>
+              <SelectItem value="joined_asc">
+                {t('students.sort.joined_asc')}
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         {isLoading ? (
-          <div className="text-muted-foreground rounded-xl border p-8 text-center text-sm">
-            Loading students…
-          </div>
+          <LoadingBlock />
         ) : error ? (
-          <div className="text-destructive rounded-xl border p-8 text-center text-sm">
-            {error.message}
-          </div>
+          <ErrorBlock error={error} />
         ) : rows.length === 0 ? (
-          <div className="text-muted-foreground rounded-xl border border-dashed p-10 text-center text-sm">
-            {students && students.length > 0
-              ? 'No students match your filters.'
-              : 'No students yet. Add your first student to get started.'}
-          </div>
+          <EmptyState
+            title={
+              students && students.length > 0
+                ? t('students.empty.no_match')
+                : t('students.empty.none')
+            }
+          />
         ) : (
           <div className="rounded-xl border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Course</TableHead>
-                  <TableHead>Contact</TableHead>
+                  <TableHead>{t('common.student')}</TableHead>
+                  <TableHead>{t('common.status')}</TableHead>
+                  <TableHead>{t('common.course')}</TableHead>
+                  <TableHead>{t('students.table.contact')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -239,17 +289,20 @@ export function StudentsPage() {
                         <div className="font-medium">
                           {s.full_name ?? (
                             <span className="text-muted-foreground italic">
-                              Unnamed
+                              {t('common.unnamed')}
                             </span>
                           )}
                         </div>
                         <div className="text-muted-foreground text-xs">
-                          Joined {joinedLabel(s.created_at)} · {s.student_no}
+                          {t('students.row.joined', {
+                            date: fmtMonthYear(s.created_at),
+                            no: s.student_no,
+                          })}
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant={STATUS_META[s.status].variant}>
-                          {STATUS_META[s.status].label}
+                          {t(STATUS_META[s.status].labelKey)}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -277,6 +330,8 @@ export function StudentsPage() {
           </div>
         )}
       </div>
+
+      <PendingInvitations academyId={activeAcademyId} kind="student" />
 
       {activeAcademyId ? (
         <>

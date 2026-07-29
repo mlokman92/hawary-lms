@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { useAcademy } from '@/lib/academy'
 import { slugify } from '@/lib/slug'
+import { useT } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -23,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
+// Proper nouns, and the value stored in `academies.state` — never translated.
 const MY_STATES = [
   'Johor', 'Kedah', 'Kelantan', 'Melaka', 'Negeri Sembilan', 'Pahang',
   'Perak', 'Perlis', 'Pulau Pinang', 'Sabah', 'Sarawak', 'Selangor',
@@ -30,6 +32,7 @@ const MY_STATES = [
 ]
 
 export function Onboarding() {
+  const { t } = useT()
   const navigate = useNavigate()
   const { user } = useAuth()
   const { refresh } = useAcademy()
@@ -52,7 +55,7 @@ export function Onboarding() {
     if (!user) return
     const finalSlug = slugify(derivedSlug)
     if (!finalSlug) {
-      setError('Please enter a valid academy name / URL.')
+      setError(t('auth.onboarding.invalid_slug'))
       return
     }
     setBusy(true)
@@ -71,7 +74,7 @@ export function Onboarding() {
     if (error) {
       setError(
         error.code === '23505'
-          ? 'That URL is already taken — try a different one.'
+          ? t('auth.onboarding.slug_taken')
           : error.message,
       )
       return
@@ -85,25 +88,25 @@ export function Onboarding() {
       <div className="w-full max-w-lg">
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">Create your academy</CardTitle>
-            <CardDescription>
-              You’ll be the admin. Invite trainers and students next.
-            </CardDescription>
+            <CardTitle className="text-2xl">
+              {t('auth.onboarding.title')}
+            </CardTitle>
+            <CardDescription>{t('auth.onboarding.subtitle')}</CardDescription>
           </CardHeader>
           <CardContent>
             <form className="grid gap-4" onSubmit={onSubmit}>
               <div className="grid gap-2">
-                <Label htmlFor="name">Academy name</Label>
+                <Label htmlFor="name">{t('auth.onboarding.name')}</Label>
                 <Input
                   id="name"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Cemerlang Skills Academy"
+                  placeholder={t('auth.onboarding.name_placeholder')}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="slug">URL (slug)</Label>
+                <Label htmlFor="slug">{t('auth.onboarding.slug')}</Label>
                 <Input
                   id="slug"
                   required
@@ -114,12 +117,12 @@ export function Onboarding() {
                   }}
                 />
                 <p className="text-muted-foreground text-xs">
-                  hawary.app/{derivedSlug || 'your-academy'}
+                  {`hawary.app/${derivedSlug || t('auth.onboarding.slug_placeholder')}`}
                 </p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label htmlFor="phone">Phone (optional)</Label>
+                  <Label htmlFor="phone">{t('auth.field.phone_optional')}</Label>
                   <Input
                     id="phone"
                     type="tel"
@@ -128,10 +131,12 @@ export function Onboarding() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label>State (optional)</Label>
+                  <Label>{t('auth.onboarding.state')}</Label>
                   <Select value={state} onValueChange={setState}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select state" />
+                      <SelectValue
+                        placeholder={t('auth.onboarding.state_placeholder')}
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       {MY_STATES.map((s) => (
@@ -145,7 +150,7 @@ export function Onboarding() {
               </div>
               {error ? <p className="text-destructive text-sm">{error}</p> : null}
               <Button type="submit" className="w-full" disabled={busy}>
-                {busy ? 'Creating…' : 'Create academy'}
+                {busy ? t('common.creating') : t('auth.onboarding.submit')}
               </Button>
             </form>
           </CardContent>

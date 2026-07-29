@@ -1,6 +1,7 @@
 import { useRef, useState, type ChangeEvent } from 'react'
 import { Upload, X } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { useT } from '@/lib/i18n'
+import { uploadPublicImage } from '@/lib/storage'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 
@@ -15,6 +16,7 @@ export function AvatarUploader({
   onChange: (url: string) => void
   fallback?: string
 }) {
+  const { t } = useT()
   const inputRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -25,17 +27,11 @@ export function AvatarUploader({
     setBusy(true)
     setError(null)
     try {
-      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-      // First path segment must be the academy id (storage RLS scopes on it).
-      const path = `${academyId}/${crypto.randomUUID()}.${ext}`
-      const { error: upErr } = await supabase.storage
-        .from('avatars')
-        .upload(path, file, { upsert: true, contentType: file.type })
-      if (upErr) throw upErr
-      const { data } = supabase.storage.from('avatars').getPublicUrl(path)
-      onChange(data.publicUrl)
+      // Same path as note media: the upload-media Edge Function scopes the
+      // object under <academy_id>/ and checks staff membership server-side.
+      onChange(await uploadPublicImage('avatars', academyId, file))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed')
+      setError(err instanceof Error ? err.message : t('upload.failed'))
     } finally {
       setBusy(false)
       if (inputRef.current) inputRef.current.value = ''
@@ -64,7 +60,12 @@ export function AvatarUploader({
             disabled={busy}
             onClick={() => inputRef.current?.click()}
           >
-            <Upload /> {busy ? 'Uploading…' : value ? 'Change' : 'Upload'}
+            <Upload />{' '}
+            {busy
+              ? t('common.uploading')
+              : value
+                ? t('students.avatar.change')
+                : t('common.upload')}
           </Button>
           {value ? (
             <Button
@@ -72,7 +73,7 @@ export function AvatarUploader({
               variant="ghost"
               size="icon-sm"
               onClick={() => onChange('')}
-              aria-label="Remove picture"
+              aria-label={t('students.avatar.remove')}
             >
               <X />
             </Button>

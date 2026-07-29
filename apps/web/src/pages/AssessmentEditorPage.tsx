@@ -4,6 +4,7 @@ import { ArrowDown, ArrowLeft, ArrowUp, Plus, Trash2 } from 'lucide-react'
 import type { Json } from '@hawary/shared'
 import { parseBlocks, type Block } from '@/lib/blocks'
 import { useAcademy } from '@/lib/academy'
+import { useT } from '@/lib/i18n'
 import { BlocksEditor } from '@/components/BlocksEditor'
 import { Button } from '@/components/ui/button'
 import {
@@ -37,6 +38,7 @@ import {
 export function AssessmentEditorPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { t, tn } = useT()
   const { activeAcademyId, active } = useAcademy()
   const academyId = activeAcademyId ?? ''
   const isStaff = active?.role === 'admin' || active?.role === 'trainer'
@@ -99,7 +101,7 @@ export function AssessmentEditorPage() {
   async function onSave() {
     const res = await save.mutateAsync({
       patch: {
-        title: title.trim() || 'Untitled assessment',
+        title: title.trim() || t('assess.title_placeholder'),
         is_published: published,
         instructions: blocks as unknown as Json,
       },
@@ -119,16 +121,16 @@ export function AssessmentEditorPage() {
   if (isLoading) {
     return (
       <div className="text-muted-foreground py-16 text-center text-sm">
-        Loading…
+        {t('common.loading')}
       </div>
     )
   }
   if (error || !assessment) {
     return (
       <div className="mx-auto max-w-2xl py-16 text-center">
-        <p className="text-muted-foreground text-sm">Assessment not found.</p>
+        <p className="text-muted-foreground text-sm">{t('assess.not_found')}</p>
         <Button asChild variant="outline" className="mt-4">
-          <Link to="/assessments">Back to assessments</Link>
+          <Link to="/courses">{t('assess.not_found.back')}</Link>
         </Button>
       </div>
     )
@@ -140,8 +142,8 @@ export function AssessmentEditorPage() {
     <div className="mx-auto w-full max-w-4xl space-y-6">
       <div className="flex items-center justify-between gap-2">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link to={`/assessments?course=${courseId}`}>
-            <ArrowLeft /> Assessments
+          <Link to={`/courses/${courseId}`}>
+            <ArrowLeft /> {t('common.course')}
           </Link>
         </Button>
         {isStaff ? (
@@ -154,34 +156,43 @@ export function AssessmentEditorPage() {
                 setDirty(true)
               }}
             >
-              {published ? 'Published' : 'Draft'}
+              {published ? t('common.published') : t('common.draft')}
             </Button>
             <Button onClick={onSave} disabled={save.isPending || !dirty}>
-              {save.isPending ? 'Saving…' : dirty ? 'Save' : 'Saved'}
+              {save.isPending
+                ? t('common.saving')
+                : dirty
+                  ? t('common.save')
+                  : t('common.saved')}
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="outline" size="icon" aria-label="Delete assessment">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label={t('assess.delete.aria')}
+                >
                   <Trash2 />
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Delete this assessment?</AlertDialogTitle>
+                  <AlertDialogTitle>{t('assess.delete.title')}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    “{title || 'Untitled'}” and its questions will be permanently
-                    deleted.
+                    {t('assess.delete.body', {
+                      title: title || t('common.untitled'),
+                    })}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={async () => {
                       await del.mutateAsync(assessment.id)
-                      navigate(`/assessments?course=${courseId}`)
+                      navigate(`/courses/${courseId}`)
                     }}
                   >
-                    Delete
+                    {t('common.delete')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -196,21 +207,21 @@ export function AssessmentEditorPage() {
           setTitle(e.target.value)
           setDirty(true)
         }}
-        placeholder="Untitled assessment"
+        placeholder={t('assess.title_placeholder')}
         className="h-11 text-lg font-semibold md:text-lg"
         disabled={!isStaff}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>Instructions</CardTitle>
-          <CardDescription>
-            Explanation, directives and any reference material.
-          </CardDescription>
+          <CardTitle>{t('assess.instructions.title')}</CardTitle>
+          <CardDescription>{t('assess.instructions.desc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <BlocksEditor
-            academyId={academyId}
+            // The row's own tenant, not the ambient active academy: storage RLS
+            // checks this path segment, and staff access to this row proves it.
+            academyId={assessment.academy_id}
             bucket="note-media"
             blocks={blocks}
             onChange={(b) => {
@@ -223,21 +234,25 @@ export function AssessmentEditorPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Questions</CardTitle>
+          <CardTitle>{t('assess.questions.title')}</CardTitle>
           <CardDescription>
-            Open-ended questions · {questions.length} question(s) ·{' '}
-            {totalPoints} point(s)
+            {t('assess.questions.meta', {
+              questions: tn('assess.questions.count', questions.length),
+              points: tn('assess.points.count', totalPoints),
+            })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {questions.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No questions yet.</p>
+            <p className="text-muted-foreground text-sm">
+              {t('assess.questions.empty')}
+            </p>
           ) : (
             questions.map((q, i) => (
               <div key={q.key} className="rounded-lg border p-3">
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <span className="text-muted-foreground text-xs font-medium">
-                    Question {i + 1}
+                    {t('assess.question.n', { n: i + 1 })}
                   </span>
                   <div className="flex items-center gap-1">
                     <Button
@@ -246,7 +261,7 @@ export function AssessmentEditorPage() {
                       variant="ghost"
                       disabled={i === 0}
                       onClick={() => moveQuestion(i, -1)}
-                      aria-label="Move up"
+                      aria-label={t('assess.question.move_up')}
                     >
                       <ArrowUp />
                     </Button>
@@ -256,7 +271,7 @@ export function AssessmentEditorPage() {
                       variant="ghost"
                       disabled={i === questions.length - 1}
                       onClick={() => moveQuestion(i, 1)}
-                      aria-label="Move down"
+                      aria-label={t('assess.question.move_down')}
                     >
                       <ArrowDown />
                     </Button>
@@ -265,7 +280,7 @@ export function AssessmentEditorPage() {
                       size="icon-xs"
                       variant="ghost"
                       onClick={() => removeQuestion(q)}
-                      aria-label="Remove question"
+                      aria-label={t('assess.question.remove')}
                     >
                       <Trash2 />
                     </Button>
@@ -276,12 +291,14 @@ export function AssessmentEditorPage() {
                   onChange={(e) =>
                     changeQuestion(q.key, { prompt: e.target.value })
                   }
-                  placeholder="Question prompt…"
+                  placeholder={t('assess.question.prompt_placeholder')}
                   rows={2}
                   disabled={!isStaff}
                 />
                 <div className="mt-2 flex items-center gap-2">
-                  <span className="text-muted-foreground text-xs">Points</span>
+                  <span className="text-muted-foreground text-xs">
+                    {t('assess.question.points')}
+                  </span>
                   <Input
                     type="number"
                     min="0"
@@ -300,8 +317,13 @@ export function AssessmentEditorPage() {
             ))
           )}
           {isStaff ? (
-            <Button type="button" variant="outline" size="sm" onClick={addQuestion}>
-              <Plus /> Add question
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addQuestion}
+            >
+              <Plus /> {t('assess.question.add')}
             </Button>
           ) : null}
         </CardContent>

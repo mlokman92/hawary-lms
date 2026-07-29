@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { supabase } from './supabase'
 import { useAuth } from './auth'
+import { readActiveAcademyId, writeActiveAcademyId } from './activeAcademy'
 
 export type Role = 'admin' | 'trainer' | 'student'
 
@@ -20,16 +21,21 @@ export type Membership = {
 
 type AcademyContextValue = {
   memberships: Membership[]
+  /** admin/trainer memberships — the web back-office operates on these. */
+  staffMemberships: Membership[]
+  /** student-role memberships — serviced by the (future) mobile student app. */
+  studentMemberships: Membership[]
   loading: boolean
   activeAcademyId: string | null
   setActiveAcademyId: (id: string) => void
+  /** The active STAFF membership (the back-office is staff-only). */
   active: Membership | null
   refresh: () => Promise<void>
 }
 
-const AcademyContext = createContext<AcademyContextValue | undefined>(undefined)
+const isStaffRole = (r: Role) => r === 'admin' || r === 'trainer'
 
-const ACTIVE_KEY = 'hawary.activeAcademyId'
+const AcademyContext = createContext<AcademyContextValue | undefined>(undefined)
 
 // Shape of the PostgREST embed; cast the query result to this.
 type MemberRow = {
@@ -43,7 +49,7 @@ export function AcademyProvider({ children }: { children: ReactNode }) {
   const [memberships, setMemberships] = useState<Membership[]>([])
   const [loading, setLoading] = useState(true)
   const [activeAcademyId, setActive] = useState<string | null>(
-    () => localStorage.getItem(ACTIVE_KEY),
+    readActiveAcademyId,
   )
 
   const refresh = useCallback(async () => {
@@ -80,31 +86,53 @@ export function AcademyProvider({ children }: { children: ReactNode }) {
   }, [authLoading, refresh])
 
   const setActiveAcademyId = useCallback((id: string) => {
-    localStorage.setItem(ACTIVE_KEY, id)
+    writeActiveAcademyId(id)
     setActive(id)
   }, [])
 
-  // Keep the active academy valid: default to the first membership.
+  const staffMemberships = useMemo(
+    () => memberships.filter((m) => isStaffRole(m.role)),
+    [memberships],
+  )
+  const studentMemberships = useMemo(
+    () => memberships.filter((m) => !isStaffRole(m.role)),
+    [memberships],
+  )
+
+  // Keep the active academy valid and STAFF-scoped: the back-office must never
+  // point at an academy where the user is only a student (RLS would blank it).
   useEffect(() => {
-    if (memberships.length === 0) return
-    const stillValid = memberships.some((m) => m.academyId === activeAcademyId)
-    if (!stillValid) setActiveAcademyId(memberships[0].academyId)
-  }, [memberships, activeAcademyId, setActiveAcademyId])
+    if (staffMemberships.length === 0) return
+    const stillValid = staffMemberships.some(
+      (m) => m.academyId === activeAcademyId,
+    )
+    if (!stillValid) setActiveAcademyId(staffMemberships[0].academyId)
+  }, [staffMemberships, activeAcademyId, setActiveAcademyId])
 
   const value = useMemo<AcademyContextValue>(() => {
     const active =
-      memberships.find((m) => m.academyId === activeAcademyId) ??
-      memberships[0] ??
+      staffMemberships.find((m) => m.academyId === activeAcademyId) ??
+      staffMemberships[0] ??
       null
     return {
       memberships,
+      staffMemberships,
+      studentMemberships,
       loading,
       activeAcademyId,
       setActiveAcademyId,
       active,
       refresh,
     }
-  }, [memberships, loading, activeAcademyId, setActiveAcademyId, refresh])
+  }, [
+    memberships,
+    staffMemberships,
+    studentMemberships,
+    loading,
+    activeAcademyId,
+    setActiveAcademyId,
+    refresh,
+  ])
 
   return <AcademyContext.Provider value={value}>{children}</AcademyContext.Provider>
 }

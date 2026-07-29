@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { formatMYR, ringgitToSen, senToRinggit } from '@hawary/shared'
 import { useAuth } from '@/lib/auth'
+import { useT } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -19,7 +20,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { PAYMENT_METHODS, useRecordPayment, type PaymentMethod } from './api'
+import {
+  PAYMENT_METHOD_LABEL,
+  PAYMENT_METHODS,
+  useRecordPayment,
+  type PaymentMethod,
+} from './api'
 
 export function RecordPaymentDialog({
   academyId,
@@ -39,6 +45,7 @@ export function RecordPaymentDialog({
   onOpenChange: (open: boolean) => void
 }) {
   const { user } = useAuth()
+  const { t } = useT()
   const record = useRecordPayment(academyId)
   const remaining = Math.max(0, totalSen - paidSen)
 
@@ -58,7 +65,7 @@ export function RecordPaymentDialog({
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     const amountSen = ringgitToSen(amount)
-    if (amountSen <= 0) return setError('Enter an amount greater than zero.')
+    if (amountSen <= 0) return setError(t('payments.record.error_amount'))
     setError(null)
     try {
       await record.mutateAsync({
@@ -73,7 +80,7 @@ export function RecordPaymentDialog({
       })
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.')
+      setError(err instanceof Error ? err.message : t('common.error'))
     }
   }
 
@@ -81,15 +88,15 @@ export function RecordPaymentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Record payment</DialogTitle>
+          <DialogTitle>{t('payments.record.title')}</DialogTitle>
           <DialogDescription>
-            Balance due: {formatMYR(remaining)}
+            {t('payments.record.balance_due', { amount: formatMYR(remaining) })}
           </DialogDescription>
         </DialogHeader>
         <form id="payment-form" className="grid gap-4" onSubmit={onSubmit}>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="amount">Amount (RM)</Label>
+              <Label htmlFor="amount">{t('payments.record.amount')}</Label>
               <Input
                 id="amount"
                 type="number"
@@ -100,7 +107,7 @@ export function RecordPaymentDialog({
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="paid">Date</Label>
+              <Label htmlFor="paid">{t('common.date')}</Label>
               <Input
                 id="paid"
                 type="date"
@@ -110,15 +117,15 @@ export function RecordPaymentDialog({
             </div>
           </div>
           <div className="grid gap-2">
-            <Label>Method</Label>
+            <Label>{t('payments.record.method')}</Label>
             <Select value={method} onValueChange={(v) => setMethod(v as PaymentMethod)}>
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {PAYMENT_METHODS.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    {m.label}
+                  <SelectItem key={m} value={m}>
+                    {t(PAYMENT_METHOD_LABEL[m])}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -133,10 +140,12 @@ export function RecordPaymentDialog({
             onClick={() => onOpenChange(false)}
             disabled={record.isPending}
           >
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" form="payment-form" disabled={record.isPending}>
-            {record.isPending ? 'Recording…' : 'Record payment'}
+            {record.isPending
+              ? t('payments.record.submitting')
+              : t('payments.record.title')}
           </Button>
         </DialogFooter>
       </DialogContent>

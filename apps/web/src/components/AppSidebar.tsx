@@ -1,66 +1,47 @@
-import { Link, useLocation } from 'react-router-dom'
 import {
   BookOpen,
-  ClipboardList,
-  FileCheck2,
-  FileText,
   LayoutDashboard,
+  Presentation,
   Receipt,
+  Settings,
+  ShieldCheck,
   Users,
-  type LucideIcon,
 } from 'lucide-react'
+import { useAcademy } from '@/lib/academy'
+import { useT, type TFn } from '@/lib/i18n'
 import { AcademySwitcher } from './AcademySwitcher'
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarRail,
-} from '@/components/ui/sidebar'
+import { ShellSidebar } from './shell/ShellSidebar'
+import type { NavGroup, NavItem } from './shell/nav'
 
-const NAV: { title: string; to: string; icon: LucideIcon }[] = [
-  { title: 'Dashboard', to: '/', icon: LayoutDashboard },
-  { title: 'Courses', to: '/courses', icon: BookOpen },
-  { title: 'Students', to: '/students', icon: Users },
-  { title: 'Notes', to: '/notes', icon: FileText },
-  { title: 'Assessments', to: '/assessments', icon: ClipboardList },
-  { title: 'Assignments', to: '/assignments', icon: FileCheck2 },
-  { title: 'Payments', to: '/payments', icon: Receipt },
+// Notes, assessments and assignments are not destinations: they live inside a
+// course module and are reached from the course page.
+//
+// Built per render rather than held as a module constant: the titles are
+// translated, so they have to be read after the language is known.
+const nav = (t: TFn): NavItem[] => [
+  { title: t('nav.dashboard'), to: '/', icon: LayoutDashboard, exact: true },
+  { title: t('nav.courses'), to: '/courses', icon: BookOpen },
+  { title: t('nav.students'), to: '/students', icon: Users },
+  { title: t('nav.instructors'), to: '/instructors', icon: Presentation },
+  { title: t('nav.payments'), to: '/payments', icon: Receipt },
+]
+
+const adminNav = (t: TFn): NavItem[] => [
+  { title: t('nav.members'), to: '/members', icon: ShieldCheck },
+  { title: t('nav.settings'), to: '/settings', icon: Settings },
 ]
 
 export function AppSidebar() {
-  const { pathname } = useLocation()
+  const { active } = useAcademy()
+  const { t } = useT()
 
-  const isActive = (to: string) =>
-    to === '/' ? pathname === '/' : pathname.startsWith(to)
+  const items = nav(t)
+  const groups: NavGroup[] = [
+    {
+      label: t('nav.group.platform'),
+      items: active?.role === 'admin' ? [...items, ...adminNav(t)] : items,
+    },
+  ]
 
-  return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <AcademySwitcher />
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Platform</SidebarGroupLabel>
-          <SidebarMenu>
-            {NAV.map(({ title, to, icon: Icon }) => (
-              <SidebarMenuItem key={to}>
-                <SidebarMenuButton asChild isActive={isActive(to)} tooltip={title}>
-                  <Link to={to}>
-                    <Icon />
-                    <span>{title}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarGroup>
-      </SidebarContent>
-      <SidebarRail />
-    </Sidebar>
-  )
+  return <ShellSidebar switcher={<AcademySwitcher />} groups={groups} />
 }

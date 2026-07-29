@@ -1,0 +1,73 @@
+import type { SettingsDict } from '../en/settings'
+
+export const settings: SettingsDict = {
+  // Halaman tetapan
+  'settings.title': 'Tetapan',
+  'settings.subtitle': 'Konfigurasikan integrasi akademi anda.',
+  'settings.admin_only': 'Hanya pentadbir akademi boleh mengurus tetapan.',
+
+  // Kad gerbang pembayaran ToyyibPay. "Sandbox" dan "Live" ialah nama mod
+  // ToyyibPay sendiri, jadi ia dikekalkan.
+  'settings.toyyibpay.title': 'Pembayaran dalam talian · ToyyibPay',
+  'settings.toyyibpay.description':
+    'Tambah kunci rahsia ToyyibPay akademi anda supaya pelajar boleh membayar invois dalam talian melalui FPX — dana masuk terus ke akaun ToyyibPay anda.',
+  'settings.toyyibpay.connected': 'Kunci telah disambungkan',
+  'settings.toyyibpay.mode.sandbox': 'Sandbox',
+  'settings.toyyibpay.mode.live': 'Live',
+  'settings.toyyibpay.secret_masked': 'Kunci rahsia ••••{last4}',
+  'settings.toyyibpay.secret_masked_category':
+    'Kunci rahsia ••••{last4} · Kategori {code}',
+  'settings.toyyibpay.replace_key': 'Ganti kunci',
+  'settings.toyyibpay.remove_key': 'Buang kunci',
+  'settings.toyyibpay.removing': 'Membuang…',
+  'settings.toyyibpay.remove_confirm.title': 'Buang kunci ToyyibPay?',
+  'settings.toyyibpay.remove_confirm.body':
+    'Tindakan ini memadam kunci rahsia yang tersimpan dan mematikan pembayaran dalam talian. Invois sedia ada dan bayaran yang telah direkodkan akan dikekalkan. Anda boleh menambah kunci semula pada bila-bila masa.',
+
+  'settings.toyyibpay.accept_online': 'Terima pembayaran dalam talian',
+  'settings.toyyibpay.accept_online.hint':
+    'Paparkan butang “Bayar dalam talian” pada pautan bayaran invois.',
+
+  'settings.toyyibpay.secret_label': 'Kunci rahsia ToyyibPay',
+  'settings.toyyibpay.secret_placeholder': 'userSecretKey anda',
+  'settings.toyyibpay.secret_hint':
+    'Dapatkannya di papan pemuka ToyyibPay anda, di bawah Settings → Secret Key. Kami akan mengesahkannya dan mencipta kategori bil untuk anda.',
+  'settings.toyyibpay.sandbox_label': 'Mod sandbox',
+  'settings.toyyibpay.sandbox_hint':
+    'Gunakan dev.toyyibpay.com untuk ujian. Biarkan dimatikan untuk pembayaran sebenar.',
+  'settings.toyyibpay.category_label': 'Kod kategori (pilihan)',
+  'settings.toyyibpay.category_placeholder':
+    'Biarkan kosong untuk cipta automatik',
+  'settings.toyyibpay.advanced': 'Pilihan lanjutan',
+
+  'settings.toyyibpay.verifying': 'Mengesahkan…',
+  'settings.toyyibpay.save_new_key': 'Simpan kunci baharu',
+  'settings.toyyibpay.connect': 'Sambung ToyyibPay',
+
+  'settings.toyyibpay.error.key_required':
+    'Masukkan kunci rahsia ToyyibPay anda.',
+  'settings.toyyibpay.error.verify_failed':
+    'Kunci tidak dapat disahkan dengan ToyyibPay.',
+  'settings.toyyibpay.error.save_failed': 'Kunci tidak dapat disimpan.',
+  'settings.toyyibpay.error.no_response': 'Tiada respons daripada pelayan.',
+
+  // Halaman ahli
+  'settings.members.title': 'Ahli',
+  'settings.members.subtitle':
+    'Semua orang yang mempunyai akses kepada akademi ini, dan apa yang boleh mereka lakukan.',
+  'settings.members.col.person': 'Individu',
+  'settings.members.you': '(anda)',
+  'settings.members.actions': 'Tindakan ahli',
+  'settings.members.make_admin': 'Jadikan pentadbir',
+  'settings.members.make_trainer': 'Jadikan jurulatih',
+  'settings.members.make_student': 'Jadikan pelajar',
+  'settings.members.suspend': 'Gantung akses',
+  'settings.members.restore': 'Pulihkan akses',
+  'settings.members.footnote':
+    'Menggantung seseorang ahli akan menarik balik akses kursusnya serta-merta — pendaftaran kursus sahaja tidak lagi memberikan akses.',
+
+  // academy_members.status
+  'settings.members.status.active': 'Aktif',
+  'settings.members.status.invited': 'Dijemput',
+  'settings.members.status.suspended': 'Digantung',
+}
