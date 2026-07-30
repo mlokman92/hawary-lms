@@ -29,16 +29,29 @@ different content, so they can't share the `apps/web` site.
 
 1. Netlify → **Add new site** → same repo as the rest of the monorepo.
 2. **Base directory**: `apps/landing` (Netlify finds `netlify.toml` here,
-   which sets the build command and `publish = "out"`). See the comment at
-   the top of `netlify.toml` for why this differs from `apps/web`'s site,
-   and the fallback if pnpm/workspace resolution ever misbehaves with a
-   subdirectory base.
-3. **Domain management** → add `hawary.my` and `www.hawary.my` as custom
+   which sets the build command and `publish = "apps/landing/out"`). See the
+   comment at the top of `netlify.toml` for why this differs from
+   `apps/web`'s site, and the fallback if pnpm/workspace resolution ever
+   misbehaves with a subdirectory base.
+3. **Remove the auto-attached Next.js plugin** — Netlify detects
+   `next.config.ts` and self-installs `@netlify/plugin-nextjs` (its SSR/ISR
+   Next.js Runtime) on site creation. This app is a static export with no
+   server, so that plugin only gets in the way — it takes over the deploy
+   and looks for a `.next` build it can manage instead of reading `out`,
+   which fails the deploy (`Your publish directory was not found at
+   .../out`). Go to **Site configuration → Build & deploy → Build
+   plugins**, remove **Next.js Runtime** / `@netlify/plugin-nextjs`, then
+   redeploy. (If you'd rather use that plugin for real SSR/ISR hosting
+   instead of a static export, that's a legitimate alternative — but then
+   drop `output: 'export'` from `next.config.ts` and the custom `publish`
+   path too, and let the plugin manage the build; ask if you want that
+   version instead.)
+4. **Domain management** → add `hawary.my` and `www.hawary.my` as custom
    domains on *this* site; Netlify offers to redirect one to the other once
    both are verified. Follow the DNS records Netlify shows for the apex
    domain — exact steps depend on your registrar / whether you delegate to
    Netlify DNS.
-4. Do **not** add `hawary.my` to the `apps/web` site — each hostname can
+5. Do **not** add `hawary.my` to the `apps/web` site — each hostname can
    only be attached to one Netlify site at a time.
 
 No environment variables needed — this app makes no Supabase calls.

@@ -2,7 +2,9 @@
 # SEPARATE Netlify site from apps/web (app.hawary.my) — create a new site
 # pointed at this repo with Base directory = apps/landing (Netlify's
 # documented pattern for a monorepo with more than one deployed app). See
-# README.md for the one-time setup.
+# README.md for the one-time setup — including a manual dashboard step
+# (removing the auto-attached Next.js Runtime plugin) that this file cannot
+# do on its own.
 #
 # Base directory = apps/landing, not repo root, unlike apps/web's netlify.toml
 # — that one has to root itself because apps/web resolves @hawary/shared via
@@ -17,8 +19,11 @@
 
 [build]
   command = "pnpm turbo run build --filter=landing..."
-  # Next static export output, relative to Base directory.
-  publish = "out"
+  # Full repo-root-relative path, NOT "out". In production this resolved
+  # against the repo root (/opt/build/repo/out) rather than Base directory
+  # even with base = apps/landing — observed directly in a failed deploy log,
+  # so don't rely on base-relative resolution for `publish` here.
+  publish = "apps/landing/out"
   # Skip the deploy when this commit didn't touch apps/landing or its deps.
   ignore = "npx --yes turbo-ignore landing"
 
