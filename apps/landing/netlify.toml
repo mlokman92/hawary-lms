@@ -1,9 +1,26 @@
 # Netlify build config for the hawary.my marketing/landing page.
-# This is a SEPARATE Netlify site from apps/web (app.hawary.my) — create a
-# new site pointed at this repo with Base directory = apps/landing. See
-# README.md for the one-time setup. Static HTML, no build step.
+# SEPARATE Netlify site from apps/web (app.hawary.my) — create a new site
+# pointed at this repo with Base directory = apps/landing (Netlify's
+# documented pattern for a monorepo with more than one deployed app). See
+# README.md for the one-time setup.
+#
+# Base directory = apps/landing, not repo root, unlike apps/web's netlify.toml
+# — that one has to root itself because apps/web resolves @hawary/shared via
+# a workspace:* link. apps/landing has no workspace-local dependencies (every
+# dependency is an ordinary registry package), so there's nothing that needs
+# repo-root-scoped resolution; pnpm still walks up to the root
+# pnpm-workspace.yaml/pnpm-lock.yaml from here on its own. If that ever stops
+# being true (e.g. this app starts depending on @hawary/shared), switch this
+# site to Base directory = repo root and set Build command / Publish
+# directory as Netlify UI overrides instead (Site settings → Build & deploy),
+# the same way apps/web's site is configured.
 
 [build]
-  publish = "."
-  # Skip the deploy when this commit didn't touch apps/landing.
-  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- apps/landing"
+  command = "pnpm turbo run build --filter=landing..."
+  # Next static export output, relative to Base directory.
+  publish = "out"
+  # Skip the deploy when this commit didn't touch apps/landing or its deps.
+  ignore = "npx --yes turbo-ignore landing"
+
+[build.environment]
+  NODE_VERSION = "22"
