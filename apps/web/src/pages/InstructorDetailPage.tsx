@@ -7,6 +7,8 @@ import { getLang, useT, type TKey } from '@/lib/i18n'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import {
   Card,
   CardAction,
@@ -48,6 +50,7 @@ import {
   type InstructorStatus,
 } from '@/features/instructors/api'
 import { useSendInvitation } from '@/features/students/api'
+import { useStaffMembers, useUpdateMember } from '@/features/members/api'
 import type { Enums } from '@hawary/shared'
 
 /** The status of a course this instructor teaches, shown under its title. */
@@ -105,8 +108,13 @@ export function InstructorDetailPage() {
   const { activeAcademyId, active } = useAcademy()
   const academyId = activeAcademyId ?? ''
   const isStaff = active?.role === 'admin' || active?.role === 'trainer'
+  const isAdmin = active?.role === 'admin'
 
   const { data: instructor, isLoading, error } = useInstructor(id)
+  // Admin-only RPC, so it is only ever requested for an admin — passing null
+  // leaves the query disabled for a trainer rather than failing it.
+  const { data: staff } = useStaffMembers(isAdmin ? activeAcademyId : null)
+  const updateMember = useUpdateMember(activeAcademyId)
   const { data: assignments } = useInstructorCourses(id)
   const updateInstructor = useUpdateInstructor(academyId)
   const archiveInstructor = useArchiveInstructor(academyId)
@@ -139,6 +147,19 @@ export function InstructorDetailPage() {
     )
   }
 
+  // The membership behind this record, when it has an account at all.
+  const member = instructor.user_id
+    ? (staff ?? []).find((m) => m.user_id === instructor.user_id)
+    : undefined
+  // Never let the last active admin demote or suspend themselves out of the
+  // academy — that state needs database access to undo.
+  const lastAdmin =
+    !!member &&
+    member.role === 'admin' &&
+    member.status === 'active' &&
+    (staff ?? []).filter((m) => m.role === 'admin' && m.status === 'active')
+      .length <= 1
+
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6">
       <Button asChild variant="ghost" size="sm" className="-ml-2">
@@ -169,9 +190,29 @@ export function InstructorDetailPage() {
               </p>
               <div className="mt-2 flex items-center gap-2">
                 {instructor.user_id ? (
-                  <Badge variant="secondary">
-                    {t('instructors.account_linked')}
-                  </Badge>
+                  <>
+                    <Badge variant="secondary">
+                      {t('instructors.account_linked')}
+                    </Badge>
+                    {/* The one access control worth having here: everything
+                        else about a membership (suspending, detaching the
+                        record) lives on /members. */}
+                    {isAdmin && member ? (
+                      <Label className="flex items-center gap-2 font-normal">
+                        <Checkbox
+                          checked={member.role === 'admin'}
+                          disabled={lastAdmin || updateMember.isPending}
+                          onCheckedChange={(v) =>
+                            updateMember.mutate({
+                              userId: member.user_id,
+                              patch: { role: v === true ? 'admin' : 'trainer' },
+                            })
+                          }
+                        />
+                        {t('members.make_admin')}
+                      </Label>
+                    ) : null}
+                  </>
                 ) : instructor.email ? (
                   isStaff ? (
                     <Button
@@ -250,9 +291,16 @@ export function InstructorDetailPage() {
               </Badge>
             )}
           </div>
-          {createInvitation.error ? (
+          {lastAdmin ? (
+            <p className="text-muted-foreground text-xs">
+              {t('members.last_admin')}
+            </p>
+          ) : null}
+          {createInvitation.error || updateMember.error ? (
             <p className="text-destructive text-sm">
-              {createInvitation.error.message}
+              {createInvitation.error?.message ??
+                updateMember.error?.message ??
+                t('members.access.failed')}
             </p>
           ) : null}
       {activeAcademyId ? (

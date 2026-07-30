@@ -5,10 +5,28 @@ export const courses: CoursesDict = {
   'courses.subtitle': 'Buka kursus untuk mengurus modul dan kandungannya.',
   'courses.new': 'Kursus baharu',
   'courses.edit': 'Sunting kursus',
+  'courses.materials': 'Bahan',
   'courses.assessments': 'Penilaian',
   'courses.assignments': 'Tugasan',
   'courses.menu.edit_details': 'Sunting butiran',
   'courses.menu.archive': 'Arkibkan',
+
+  // Salin untuk kemasukan baharu
+  'courses.duplicate': 'Salin',
+  'courses.duplicate.description':
+    'Salin kursus ini untuk kemasukan baharu. Namakan salinan supaya kedua-duanya boleh dibezakan — kebanyakan akademi meletakkan kemasukan pada tajuk.',
+  'courses.duplicate.title_default': '{title} (salinan)',
+  'courses.duplicate.code_hint':
+    'Kod kursus mesti unik, jadi salinan bermula tanpa kod. Kod asal ialah “{code}”.',
+  'courses.duplicate.code_hint_none':
+    'Kod kursus mesti unik dalam sesebuah akademi. Pilihan.',
+  'courses.duplicate.copies.title': 'Apa yang disalin',
+  'courses.duplicate.copies.body':
+    'Modul, nota, bahan, penilaian berserta soalan dan jawapannya, tugasan, dan pengajar yang ditugaskan. Salinan dicipta sebagai draf.',
+  'courses.duplicate.skips.body':
+    'Pelajar, pendaftaran, penghantaran, percubaan dan invois tidak disalin. Tarikh buka dan tarikh akhir dikosongkan supaya anda boleh menetapkan tarikh kemasukan ini.',
+  'courses.duplicate.confirm': 'Salin kursus',
+  'courses.duplicate.working': 'Menyalin…',
   'courses.status.archived': 'Diarkibkan',
   'courses.empty.none': 'Tiada kursus lagi.',
   'courses.empty.create_first': 'Cipta kursus pertama anda',
@@ -33,6 +51,8 @@ export const courses: CoursesDict = {
   // Modul dalam kursus
   'courses.module.new': 'Modul baharu',
   'courses.module.hidden': 'Tersembunyi',
+  'courses.module.item_count_one': '{count} item',
+  'courses.module.item_count_other': '{count} item',
   'courses.module.actions': 'Tindakan modul',
   'courses.module.edit': 'Sunting modul',
   'courses.module.hide': 'Sembunyikan daripada pelajar',
@@ -48,6 +68,7 @@ export const courses: CoursesDict = {
   // Kandungan dalam modul
   'courses.section.empty': 'Tiada lagi.',
   'courses.item.note': 'Nota',
+  'courses.item.material': 'Bahan',
   'courses.item.assessment': 'Penilaian',
   'courses.item.assignment': 'Tugasan',
   'courses.item.actions': 'Tindakan untuk {title}',
@@ -63,6 +84,7 @@ export const courses: CoursesDict = {
 
   // Pengesahan pemadaman
   'courses.delete.note.title': 'Padam nota ini?',
+  'courses.delete.material.title': 'Buang bahan ini?',
   'courses.delete.assessment.title': 'Padam penilaian ini?',
   'courses.delete.assignment.title': 'Padam tugasan ini?',
   'courses.delete.module.title': 'Padam modul ini?',

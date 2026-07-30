@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   BookX,
   CalendarOff,
+  FileUp,
   Plus,
   Search,
   UserCheck,
@@ -40,9 +41,12 @@ import {
 import { InstructorFormDialog } from '@/features/instructors/InstructorFormDialog'
 import { InviteInstructorDialog } from '@/features/instructors/InviteInstructorDialog'
 import { PendingInvitations } from '@/features/invitations/PendingInvitations'
+import { ImportDialog } from '@/features/import/ImportDialog'
+import { instructorImportSpec } from '@/features/instructors/importSpec'
 import { MANUAL_STATUSES, STATUS_META } from '@/features/instructors/status'
 import {
   instructorStats,
+  useImportInstructors,
   useInstructors,
   type InstructorRow,
   type InstructorStatus,
@@ -72,6 +76,8 @@ export function InstructorsPage() {
   const [sort, setSort] = useState<Sort>('joined_desc')
   const [addOpen, setAddOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
+  const importInstructors = useImportInstructors(activeAcademyId ?? '')
 
   const stats = instructorStats(instructors ?? [])
 
@@ -156,6 +162,9 @@ export function InstructorsPage() {
       >
         {isStaff ? (
           <>
+            <Button variant="outline" onClick={() => setImportOpen(true)}>
+              <FileUp /> {t('import.instructors')}
+            </Button>
             <Button variant="outline" onClick={() => setInviteOpen(true)}>
               <UserPlus /> {t('instructors.invite')}
             </Button>
@@ -329,6 +338,15 @@ export function InstructorsPage() {
             academyId={activeAcademyId}
             open={inviteOpen}
             onOpenChange={setInviteOpen}
+          />
+          <ImportDialog
+            open={importOpen}
+            onOpenChange={setImportOpen}
+            spec={instructorImportSpec}
+            existing={instructors ?? []}
+            onImport={(payload) => importInstructors.mutateAsync(payload)}
+            titleKey="import.instructors.title"
+            descriptionKey="import.instructors.description"
           />
         </>
       ) : null}

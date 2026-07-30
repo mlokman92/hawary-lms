@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Enums, Tables, TablesInsert, TablesUpdate } from '@hawary/shared'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/auth'
 import { translate } from '@/lib/i18n'
 
 export type Student = Tables<'students'>
@@ -75,6 +76,54 @@ export function useCreateStudent(academyId: string) {
         .single()
       if (error) throw error
       return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: studentsKey(academyId) }),
+  })
+}
+
+/**
+ * One round trip per 100 rows. A single insert of an 800-row roster is a large
+ * payload to lose to one bad cell, and PostgREST rejects the whole statement on
+ * any row's failure — chunking bounds what a failure costs.
+ */
+const IMPORT_CHUNK = 100
+
+/**
+ * Bulk create from a parsed CSV (see `features/import`). Rows arrive already
+ * validated and normalised, so this only stamps the tenant fields and batches.
+ *
+ * On a mid-way failure it reports how many rows were already written: the
+ * batches are separate statements, so the earlier ones are committed and the
+ * user needs to know not to re-import the whole file.
+ */
+export function useImportStudents(academyId: string) {
+  const qc = useQueryClient()
+  const { user } = useAuth()
+  return useMutation({
+    mutationFn: async (rows: Record<string, string | null>[]) => {
+      const payload = rows.map((row) => ({
+        ...row,
+        academy_id: academyId,
+        // student_no: '' triggers the DB to generate a unique 8-char code —
+        // the trigger is BEFORE INSERT per row, so a batch gets one each.
+        student_no: '',
+        created_by: user?.id ?? null,
+      })) as unknown as TablesInsert<'students'>[]
+
+      let inserted = 0
+      for (let i = 0; i < payload.length; i += IMPORT_CHUNK) {
+        const { data, error } = await supabase
+          .from('students')
+          .insert(payload.slice(i, i + IMPORT_CHUNK))
+          .select('id')
+        if (error) {
+          throw new Error(
+            `${translate('import.partial', { count: inserted })} ${error.message}`,
+          )
+        }
+        inserted += data?.length ?? 0
+      }
+      return inserted
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: studentsKey(academyId) }),
   })

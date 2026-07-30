@@ -9,6 +9,9 @@ export const nav: NavDict = {
   // Destinasi pejabat belakang
   'nav.dashboard': 'Papan Pemuka',
   'nav.courses': 'Kursus',
+  // Sub-navigasi di bawah Kursus, dikongsi oleh kedua-dua shell.
+  'nav.assessments': 'Penilaian',
+  'nav.assignments': 'Tugasan',
   'nav.students': 'Pelajar',
   'nav.instructors': 'Pengajar',
   'nav.payments': 'Pembayaran',
@@ -22,9 +25,17 @@ export const nav: NavDict = {
   'nav.learn.billing': 'Bil',
   'nav.learn.profile': 'Profil saya',
 
-  // Pengepala
-  'nav.search_placeholder': 'Cari…',
-  'nav.search_label': 'Cari',
+  // Carian pengepala
+  'nav.search_placeholder': 'Cari pelajar dan pengajar…',
+  'nav.search_label': 'Cari pelajar dan pengajar',
+  'search.group.students': 'Pelajar',
+  'search.group.instructors': 'Pengajar',
+  'search.searching': 'Mencari…',
+  'search.no_results': 'Tiada padanan untuk “{query}”.',
+  'search.hint': 'Teruskan menaip — dua aksara atau lebih.',
+  'search.failed': 'Carian gagal.',
+  'search.clear': 'Kosongkan carian',
+
   'nav.toggle_sidebar': 'Togol bar sisi',
   'nav.sidebar': 'Bar sisi',
   'nav.sidebar_description': 'Memaparkan bar sisi mudah alih.',
@@ -43,6 +54,8 @@ export const nav: NavDict = {
 
   // Menu pengguna
   'user.account': 'Akaun',
+  'user.profile': 'Profil saya',
+  'nav.profile': 'Profil saya',
   'user.theme': 'Tema',
   'user.theme.light': 'Cerah',
   'user.theme.dark': 'Gelap',

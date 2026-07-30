@@ -8,6 +8,8 @@ export const pay: PayDict = {
   'pay.fully_paid': 'Invois ini telah dijelaskan sepenuhnya. Terima kasih!',
 
   // Pay action
+  'pay.charge_notice':
+    'Caj FPX {fee} ditambah semasa pembayaran — {total} akan didebitkan.',
   'pay.pay_with_fpx': 'Bayar {amount} dengan FPX',
   'pay.starting': 'Memulakan…',
   'pay.secured_by': 'Dilindungi oleh ToyyibPay',

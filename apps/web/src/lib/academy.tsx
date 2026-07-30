@@ -17,6 +17,12 @@ export type Membership = {
   academyId: string
   role: Role
   academy: { id: string; name: string; slug: string } | null
+  /**
+   * This user created the academy. Surfaced as "Director" — a name for the
+   * founder, not a fourth role: the permissions are an admin's, and
+   * `academies.created_by` is the only thing that distinguishes them.
+   */
+  isCreator: boolean
 }
 
 type AcademyContextValue = {
@@ -41,7 +47,12 @@ const AcademyContext = createContext<AcademyContextValue | undefined>(undefined)
 type MemberRow = {
   academy_id: string
   role: Role
-  academies: { id: string; name: string; slug: string } | null
+  academies: {
+    id: string
+    name: string
+    slug: string
+    created_by: string | null
+  } | null
 }
 
 export function AcademyProvider({ children }: { children: ReactNode }) {
@@ -61,7 +72,7 @@ export function AcademyProvider({ children }: { children: ReactNode }) {
     setLoading(true)
     const { data, error } = await supabase
       .from('academy_members')
-      .select('academy_id, role, academies(id, name, slug)')
+      .select('academy_id, role, academies(id, name, slug, created_by)')
       .eq('user_id', user.id)
       .eq('status', 'active')
 
@@ -74,6 +85,7 @@ export function AcademyProvider({ children }: { children: ReactNode }) {
           academyId: r.academy_id,
           role: r.role,
           academy: r.academies,
+          isCreator: !!r.academies?.created_by && r.academies.created_by === user.id,
         })),
       )
     }

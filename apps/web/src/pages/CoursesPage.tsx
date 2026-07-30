@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   Archive,
   ClipboardList,
+  Copy,
   FileCheck2,
   FileText,
   Layers,
@@ -31,6 +32,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { CourseFormDialog } from '@/features/courses/CourseFormDialog'
+import { DuplicateCourseDialog } from '@/features/courses/DuplicateCourseDialog'
 import {
   countOf,
   useActiveStudentCounts,
@@ -78,6 +80,7 @@ export function CoursesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [archivedOpen, setArchivedOpen] = useState(false)
   const [editing, setEditing] = useState<Course | null>(null)
+  const [duplicating, setDuplicating] = useState<Course | null>(null)
 
   // Archived courses are kept out of the grid entirely; they stay reachable
   // through the "Archived" dialog, which is the only place they render.
@@ -216,6 +219,9 @@ export function CoursesPage() {
                           <DropdownMenuItem onClick={() => openEdit(c)}>
                             {t('courses.menu.edit_details')}
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setDuplicating(c)}>
+                            <Copy /> {t('courses.duplicate')}
+                          </DropdownMenuItem>
                           {c.status === 'draft' ? (
                             <DropdownMenuItem
                               onClick={() => setStatus(c, 'published')}
@@ -295,12 +301,22 @@ export function CoursesPage() {
       </div>
 
       {activeAcademyId ? (
-        <CourseFormDialog
-          academyId={activeAcademyId}
-          course={editing}
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-        />
+        <>
+          <CourseFormDialog
+            academyId={activeAcademyId}
+            course={editing}
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
+          />
+          <DuplicateCourseDialog
+            academyId={activeAcademyId}
+            course={duplicating}
+            open={!!duplicating}
+            onOpenChange={(o) => {
+              if (!o) setDuplicating(null)
+            }}
+          />
+        </>
       ) : null}
 
       <Dialog open={archivedOpen} onOpenChange={setArchivedOpen}>

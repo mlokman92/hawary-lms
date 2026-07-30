@@ -19,7 +19,7 @@ export const assessments: AssessmentsDict = {
 
   // Kad soalan
   'assess.questions.title': 'Soalan',
-  'assess.questions.meta': 'Soalan terbuka · {questions} · {points}',
+  'assess.questions.meta': '{questions} · {points}',
   'assess.questions.count_one': '{count} soalan',
   'assess.questions.count_other': '{count} soalan',
   'assess.points.count_one': '{count} markah',
@@ -34,4 +34,22 @@ export const assessments: AssessmentsDict = {
   'assess.question.prompt_placeholder': 'Teks soalan…',
   'assess.question.points': 'Markah',
   'assess.question.add': 'Tambah soalan',
+
+  // Tetapan mengikut jenis soalan
+  'qtype.label': 'Jenis soalan',
+  'qedit.auto_marked': 'Dinilai automatik',
+  'qedit.correct_answer': 'Jawapan betul',
+  'qedit.choices.single': 'Pilihan — tandakan yang betul',
+  'qedit.choices.multi': 'Pilihan — tandakan semua yang betul',
+  'qedit.mark_correct': 'Tandakan sebagai betul',
+  'qedit.option_placeholder': 'Pilihan {n}',
+  'qedit.add_option': 'Tambah pilihan',
+  'qedit.remove_option': 'Buang pilihan',
+  'qedit.no_key_hint':
+    'Tiada jawapan betul ditetapkan — soalan ini dinilai oleh pengajar.',
+  'qedit.pairs': 'Pasangan — item dan padanannya',
+  'qedit.pair_left_placeholder': 'Item {n}',
+  'qedit.pair_right_placeholder': 'Padanan dengan…',
+  'qedit.add_pair': 'Tambah pasangan',
+  'qedit.remove_pair': 'Buang pasangan',
 }

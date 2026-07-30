@@ -107,6 +107,37 @@ export function useCreateCourse(academyId: string) {
   })
 }
 
+/**
+ * Deep-copy a course for a new intake — see docs/course-duplication.md.
+ *
+ * Title and code are asked for rather than derived: two courses with the same
+ * title are indistinguishable in every list, and `code` is uniquely indexed per
+ * academy so copying it verbatim is a constraint violation.
+ */
+export function useDuplicateCourse(academyId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      courseId,
+      title,
+      code,
+    }: {
+      courseId: string
+      title: string
+      code: string | null
+    }) => {
+      const { data, error } = await supabase.rpc('duplicate_course', {
+        _course_id: courseId,
+        _title: title,
+        _code: code ?? undefined,
+      })
+      if (error) throw error
+      return data as string
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: coursesKey(academyId) }),
+  })
+}
+
 export function useUpdateCourse(academyId: string) {
   const qc = useQueryClient()
   return useMutation({

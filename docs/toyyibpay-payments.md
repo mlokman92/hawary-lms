@@ -131,16 +131,32 @@ The callback is unsigned and public. Rules (as implemented):
    ToyyibPay account), only a real payment on it yields `billpaymentStatus=1` — a
    forger cannot fabricate that.
 
-### H3 — Lock the amount unit + assert exact match
+### H3 — Lock the amount unit + bound the accepted amount
 `createBill.billAmount` / callback `amount` are cents; `getBillTransactions.billpaymentAmount`
 is (per most deployments) an **RM-decimal string**. Lock this empirically in sandbox
 and record it here. Because `billPriceSetting='1'` is fixed-price, the paid amount
-must equal `intent.amount_sen` **exactly** — `record_gateway_payment` rejects/flags
-any mismatch rather than trusting the number.
+is bounded rather than trusted — `record_gateway_payment` rejects/flags anything
+outside the band.
 
 > **Confirmed in sandbox:** `getBillTransactions.billpaymentAmount` is an
-> **RM-decimal string** (e.g. `"1.00"` for RM1.00). The callback normalizes it to
-> sen and the RPC asserts an exact match against the fixed bill.
+> **RM-decimal string** (e.g. `"1.00"` for RM1.00). The reconcilers normalize it
+> to sen before calling the RPC.
+
+**Amended for charge-to-payor** (see "Passing the FPX charge to the payer"). The
+check was an exact match against `intent.amount_sen`. When the charge is passed
+on, ToyyibPay may report the amount the payer was *debited* — bill + surcharge —
+and their API reference does not say which. An exact match would have left a
+genuinely paid invoice unpaid, which is the worse failure. The rule is now:
+
+```
+accept   intent.amount_sen  <=  reported  <=  intent.amount_sen + intent.fee_sen
+credit   intent.amount_sen                       (never the surcharge)
+```
+
+`fee_sen` is 0 unless the charge was passed on, so with the feature off the band
+collapses to the original equality. Underpayment, and overpayment beyond the
+surcharge, still flag `needs_reconciliation` without recording a payment — the
+control that stops a short payment settling an invoice is unchanged.
 
 ### H4 — A paid callback on a voided invoice must not un-void
 If an invoice is voided/cancelled after a bill was minted, the bill stays payable.
@@ -384,11 +400,55 @@ and `generate_typescript_types` → wire.
       `"No data found!"`); callback compensates with nonce + `billExternalReferenceNo`
       match (H2). **Verified end-to-end in sandbox.**
 - [x] `billpaymentAmount` unit = **RM-decimal string** (`"1.00"`); normalized to sen +
-      exact-match assertion (H3). **Verified: RM1 bill settled correctly.**
+      bounded-amount assertion (H3). **Verified: RM1 bill settled correctly.**
 - [x] Callback `order_id` == `billExternalReferenceNo` (`intent.id`) — confirmed.
 - [ ] Replayed/duplicate callback produces no double credit (M1) — covered by the
       `provider_ref` unique index; spot-check when convenient.
 - [ ] Paid callback on a voided invoice persists money but does not un-void (H4).
+- [ ] **Charge-to-payor: does `billpaymentAmount` report the bill amount or the
+      debited amount?** The band accepts both, so settlement is safe either way,
+      but knowing which lets the band be tightened back to an equality. Turn the
+      setting on in sandbox, pay an RM1 bill, and read the value.
+
+## Passing the FPX charge to the payer
+
+ToyyibPay's standard B2C rate is a **flat RM1.00 per FPX transaction** (cards are
+2%, and we do not open that channel). `createBill` takes `billChargeToCustomer`:
+
+| Value | Meaning |
+|---|---|
+| *(blank / omitted)* | bill owner pays both FPX and card — the original behaviour |
+| `0` | **FPX to the customer**, card to the owner |
+| `1` | card to the customer, FPX to the owner |
+| `2` | both to the customer |
+
+`billPaymentChannel` is fixed at `'0'` (FPX only), so `create-bill` sends `'0'`
+when the charge is passed on and omits the field entirely otherwise.
+
+**Two levels.** `academy_payment_settings.toyyibpay_charge_to_payor` is the
+academy default; `invoices.charge_to_payor` overrides it per invoice, with `NULL`
+meaning "follow the default". `create-bill` resolves
+`invoice.charge_to_payor ?? settings.toyyibpay_charge_to_payor ?? false`, and
+`get_public_invoice` returns the same `coalesce` so the pay page can warn the
+payer before they click. NULL rather than a NOT NULL default so pre-existing
+invoices track the setting instead of being frozen off by the backfill.
+
+**The terms are pinned at bill time.** `payment_intents.charge_to_payor` and
+`.fee_sen` record what we actually sent ToyyibPay, and settlement is judged
+against the intent, not against a setting an admin may have flipped since. On a
+reused intent, `create-bill` restates both alongside `bill_code`.
+
+**The surcharge is never our money.** `record_gateway_payment` credits
+`intent.amount_sen` regardless of what arrives inside the accepted band — the
+RM1 is ToyyibPay's revenue and must not inflate `payments.amount_sen` or make an
+invoice look overpaid. So with the charge on, the academy receives the full
+invoice amount and the student pays invoice + RM1; with it off, the student pays
+the invoice amount and the academy nets RM1 less.
+
+`FPX_FEE_SEN` in `create-bill` is authoritative (it sets the tolerance);
+`TOYYIBPAY_FPX_FEE_SEN` in `features/payments/api.ts` mirrors it for display
+only. If ToyyibPay reprices, a stale constant surfaces as
+`needs_reconciliation` on the intent — never as a wrongly settled invoice.
 
 ## Sources
 

@@ -9,7 +9,11 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { useCreateBill, usePublicInvoice } from '@/features/payments/api'
+import {
+  useCreateBill,
+  usePublicInvoice,
+  TOYYIBPAY_FPX_FEE_SEN,
+} from '@/features/payments/api'
 import { useT } from '@/lib/i18n'
 import { useNoReferrer } from '@/lib/useNoReferrer'
 
@@ -115,6 +119,17 @@ export function PublicPayPage() {
             </p>
           ) : canPay ? (
             <>
+              {/* Say it before they click: with the charge passed on, FPX debits
+                  more than the amount above, and a surprise at the bank page is
+                  how a payment gets abandoned. */}
+              {invoice.charge_to_payor ? (
+                <p className="text-muted-foreground rounded-md border border-dashed p-3 text-center text-xs">
+                  {t('pay.charge_notice', {
+                    fee: formatMYR(TOYYIBPAY_FPX_FEE_SEN),
+                    total: formatMYR(invoice.due_sen + TOYYIBPAY_FPX_FEE_SEN),
+                  })}
+                </p>
+              ) : null}
               <Button
                 className="w-full"
                 size="lg"

@@ -50,12 +50,13 @@ Deno.serve(async (req) => {
 
   // 1. Our own intent is the tenancy anchor.
   const cols =
-    'id, academy_id, invoice_id, amount_sen, bill_code, nonce, host, status'
+    'id, academy_id, invoice_id, amount_sen, fee_sen, bill_code, nonce, host, status'
   let intent: {
     id: string
     academy_id: string
     invoice_id: string
     amount_sen: number
+    fee_sen: number | null
     bill_code: string | null
     nonce: string | null
     host: string | null
@@ -123,7 +124,11 @@ Deno.serve(async (req) => {
     return ok()
   }
 
-  const amountSen = normalizeSen(success.billpaymentAmount, intent.amount_sen)
+  const amountSen = normalizeSen(
+    success.billpaymentAmount,
+    intent.amount_sen,
+    intent.amount_sen + (intent.fee_sen ?? 0),
+  )
   const providerRef =
     str(success.billpaymentInvoiceNo) ||
     str(fields.transaction_id) ||
@@ -166,13 +171,21 @@ function str(v: unknown): string {
   return v == null ? '' : String(v).trim()
 }
 
-function normalizeSen(raw: unknown, expected: number): number {
+/**
+ * ToyyibPay reports the paid amount without declaring whether it is ringgit
+ * ("100.00") or sen ("10000"), so the unit is inferred by matching an amount we
+ * expect. When the FPX charge is passed to the payer there are two candidates —
+ * the bill amount, and the bill amount plus the surcharge — because their API
+ * reference does not say which one `billpaymentAmount` carries. If neither
+ * matches, read it as ringgit and let record_gateway_payment reject it.
+ */
+function normalizeSen(raw: unknown, ...expected: number[]): number {
   const n = parseFloat(str(raw).replace(/,/g, ''))
   if (!Number.isFinite(n)) return -1
   const asDecimal = Math.round(n * 100)
   const asCents = Math.round(n)
-  if (asCents === expected) return asCents
-  if (asDecimal === expected) return asDecimal
+  if (expected.includes(asCents)) return asCents
+  if (expected.includes(asDecimal)) return asDecimal
   return asDecimal
 }
 

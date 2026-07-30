@@ -16,6 +16,8 @@ import {
   type AttemptPayload,
 } from '@/features/learn/api'
 import { ATTEMPT_STATUS_META } from '@/features/learn/status'
+import { isAnswered, type AnswerValue } from '@/lib/questions'
+import { AnswerInput } from '@/components/learn/AnswerInput'
 import { BackLink } from '@/components/patterns/BackLink'
 import { ListCard } from '@/components/patterns/ListCard'
 import { NotFoundBlock, RouteLoading } from '@/components/patterns/QueryState'
@@ -23,7 +25,6 @@ import { BlocksView } from '@/components/BlocksView'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Textarea } from '@/components/ui/textarea'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -272,7 +273,9 @@ function AttemptView({
   const { t, tn } = useT()
   const save = useSaveAnswers(attempt.id)
   const submit = useSubmitAttempt(attempt.id)
-  const [answers, setAnswers] = useState<Record<string, string>>(attempt.answers)
+  const [answers, setAnswers] = useState<Record<string, AnswerValue>>(
+    attempt.answers,
+  )
   const [err, setErr] = useState<string | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -305,7 +308,9 @@ function AttemptView({
   }, [syncKey, attempt.answers])
 
   /** Returns whether the save landed — the submit path depends on knowing. */
-  const persist = async (next: Record<string, string>): Promise<boolean> => {
+  const persist = async (
+    next: Record<string, AnswerValue>,
+  ): Promise<boolean> => {
     setErr(null)
     try {
       await save.mutateAsync(next)
@@ -318,7 +323,7 @@ function AttemptView({
 
   // Debounced autosave alongside the on-blur persist: a timed attempt that only
   // saves on blur loses everything typed in the last focused field.
-  const queueSave = (next: Record<string, string>) => {
+  const queueSave = (next: Record<string, AnswerValue>) => {
     if (readOnly) return
     if (timer.current) clearTimeout(timer.current)
     timer.current = setTimeout(() => {
@@ -423,20 +428,27 @@ function AttemptView({
                 </div>
               </CardHeader>
               <CardContent>
-                <Textarea
-                  rows={6}
-                  disabled={readOnly}
-                  value={answers[q.id] ?? ''}
-                  onChange={(e) => {
-                    const next = { ...answers, [q.id]: e.target.value }
+                <AnswerInput
+                  question={q}
+                  value={answers[q.id]}
+                  readOnly={readOnly}
+                  onDraft={(v) => {
+                    const next = { ...answers, [q.id]: v }
                     setAnswers(next)
                     queueSave(next)
+                  }}
+                  // A click is a finished answer, so it saves at once rather
+                  // than waiting out the typing debounce.
+                  onCommit={(v) => {
+                    const next = { ...answers, [q.id]: v }
+                    setAnswers(next)
+                    flush()
+                    if (!readOnly) void persist(next)
                   }}
                   onBlur={() => {
                     flush()
                     if (!readOnly) void persist(answers)
                   }}
-                  placeholder={t('lwork.assessment.answer_placeholder')}
                 />
               </CardContent>
             </Card>
@@ -446,7 +458,17 @@ function AttemptView({
         {err ? <p className="text-destructive text-sm">{err}</p> : null}
 
         {!done ? (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* A choice question left blank looks the same as one answered, so
+                say the count out loud before the one-way submit. */}
+            <span className="text-muted-foreground mr-auto text-sm">
+              {t('lwork.assessment.answered', {
+                n: questions.filter((q) =>
+                  isAnswered(q.question_type, answers[q.id]),
+                ).length,
+                total: questions.length,
+              })}
+            </span>
             <Button
               variant="outline"
               disabled={save.isPending || readOnly}

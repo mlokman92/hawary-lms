@@ -7,6 +7,8 @@ export const pay = {
   'pay.fully_paid': 'This invoice is fully paid. Thank you!',
 
   // Pay action
+  'pay.charge_notice':
+    'A {fee} FPX charge is added at checkout — {total} will be debited.',
   'pay.pay_with_fpx': 'Pay {amount} with FPX',
   'pay.starting': 'Starting…',
   'pay.secured_by': 'Secured by ToyyibPay',

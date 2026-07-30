@@ -26,6 +26,13 @@ export type InvoiceDetail = Invoice & {
   payments: Payment[]
 }
 export type StudentInvoiceRow = Invoice & { course: CourseBrief | null }
+
+/**
+ * ToyyibPay's standard B2C FPX rate — a flat RM1.00 per transaction whatever the
+ * amount. Display only: the authoritative copy is `FPX_FEE_SEN` in the
+ * `create-bill` Edge Function, which is what settlement is judged against.
+ */
+export const TOYYIBPAY_FPX_FEE_SEN = 100
 export type NewItem = {
   description: string
   quantity: number
@@ -53,21 +60,25 @@ export function useInvoices(academyId: string | null) {
   })
 }
 
+const DETAIL_SELECT =
+  '*, student:students(full_name, student_no, email), course:courses(id, title), items:invoice_items(*), payments(*)'
+
+/** The same read outside React — the PDF helpers need it on click, not on render. */
+export async function fetchInvoiceDetail(id: string): Promise<InvoiceDetail> {
+  const { data, error } = await supabase
+    .from('invoices')
+    .select(DETAIL_SELECT)
+    .eq('id', id)
+    .single()
+  if (error) throw error
+  return data as unknown as InvoiceDetail
+}
+
 export function useInvoice(id: string | undefined) {
   return useQuery({
     queryKey: oneKey(id ?? ''),
     enabled: !!id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('invoices')
-        .select(
-          '*, student:students(full_name, student_no, email), course:courses(id, title), items:invoice_items(*), payments(*)',
-        )
-        .eq('id', id!)
-        .single()
-      if (error) throw error
-      return data as unknown as InvoiceDetail
-    },
+    queryFn: () => fetchInvoiceDetail(id!),
   })
 }
 
@@ -171,6 +182,8 @@ export function useCreateInvoices(academyId: string) {
       items: NewItem[]
       courseId?: string | null
       createdBy?: string | null
+      /** null = follow the academy's ToyyibPay default at pay time. */
+      chargeToPayor?: boolean | null
     }) => {
       const subtotal = input.items.reduce(
         (s, it) => s + it.quantity * it.unitPriceSen,
@@ -201,6 +214,7 @@ export function useCreateInvoices(academyId: string) {
             due_at: dueAt,
             notes: input.notes || null,
             created_by: input.createdBy ?? null,
+            charge_to_payor: input.chargeToPayor ?? null,
           })
           .select()
           .single()
@@ -394,6 +408,8 @@ export type PublicInvoice = {
   due_sen: number
   status: InvoiceStatus
   gateway_enabled: boolean
+  /** Resolved server-side: the invoice's own flag, else the academy default. */
+  charge_to_payor: boolean
 }
 
 /** Read-only invoice by public pay token (anon RPC; minimal fields, no PII). */

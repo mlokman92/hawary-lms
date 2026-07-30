@@ -48,6 +48,23 @@ export function fmtMonthYear(iso: string | null | undefined): string {
     : '—'
 }
 
+/**
+ * Avatar fallback initials. Language-neutral, but it belongs with the other
+ * display helpers: several surfaces render the same person and should not each
+ * decide what a two-word name collapses to.
+ */
+export function initialsOf(
+  name: string | null | undefined,
+  email?: string | null,
+): string {
+  const src = (name || email || '').trim()
+  if (!src) return '—'
+  const parts = src.split(/\s+/).filter(Boolean)
+  if (parts.length >= 2)
+    return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase()
+  return src.slice(0, 2).toUpperCase()
+}
+
 /** A row can be overdue by status alone, with no due date to measure from. */
 export function fmtDays(days: number | null): string {
   if (days === null) return '—'

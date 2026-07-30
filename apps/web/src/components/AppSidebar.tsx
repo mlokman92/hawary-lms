@@ -1,5 +1,7 @@
 import {
   BookOpen,
+  ClipboardList,
+  FileCheck2,
   LayoutDashboard,
   Presentation,
   Receipt,
@@ -13,14 +15,33 @@ import { AcademySwitcher } from './AcademySwitcher'
 import { ShellSidebar } from './shell/ShellSidebar'
 import type { NavGroup, NavItem } from './shell/nav'
 
-// Notes, assessments and assignments are not destinations: they live inside a
-// course module and are reached from the course page.
+// Assessments and assignments hang off Courses as sub-navigation. They belong
+// to a course module and are still created there, but finding one used to mean
+// remembering which module it was in and expanding that course; the sub-items
+// give the academy-wide list a permanent address. Notes stay module-only —
+// they are reading material, not work with a deadline attached.
 //
 // Built per render rather than held as a module constant: the titles are
 // translated, so they have to be read after the language is known.
 const nav = (t: TFn): NavItem[] => [
   { title: t('nav.dashboard'), to: '/', icon: LayoutDashboard, exact: true },
-  { title: t('nav.courses'), to: '/courses', icon: BookOpen },
+  {
+    title: t('nav.courses'),
+    to: '/courses',
+    icon: BookOpen,
+    children: [
+      {
+        title: t('nav.assessments'),
+        to: '/assessments',
+        icon: ClipboardList,
+      },
+      {
+        title: t('nav.assignments'),
+        to: '/assignments',
+        icon: FileCheck2,
+      },
+    ],
+  },
   { title: t('nav.students'), to: '/students', icon: Users },
   { title: t('nav.instructors'), to: '/instructors', icon: Presentation },
   { title: t('nav.payments'), to: '/payments', icon: Receipt },
@@ -43,5 +64,11 @@ export function AppSidebar() {
     },
   ]
 
-  return <ShellSidebar switcher={<AcademySwitcher />} groups={groups} />
+  return (
+    <ShellSidebar
+      switcher={<AcademySwitcher />}
+      groups={groups}
+      profileTo="/profile"
+    />
+  )
 }

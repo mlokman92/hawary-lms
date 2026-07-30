@@ -6,6 +6,16 @@ export type NavItem = {
   icon: LucideIcon
   /** Match the path exactly. Needed for index routes like '/' and '/learn'. */
   exact?: boolean
+  /**
+   * One level of sub-navigation, rendered permanently rather than behind a
+   * disclosure. Assessments and assignments are destinations in their own right
+   * — they were previously reachable only by opening a course and scanning its
+   * modules — but they are still *of* a course, so they hang off it instead of
+   * becoming top-level peers of Students and Payments.
+   *
+   * One level only: a nested tree in a 16rem rail is a worse index than a list.
+   */
+  children?: NavItem[]
 }
 
 export type NavGroup = {
@@ -20,4 +30,16 @@ export type NavGroup = {
  */
 export function isNavActive(pathname: string, item: NavItem): boolean {
   return item.exact ? pathname === item.to : pathname.startsWith(item.to)
+}
+
+/**
+ * A parent counts as active when it or any child matches. Without this, opening
+ * /assessments would light up the sub-item while "Courses" above it went dark —
+ * the highlight would say you had left the section you are standing in.
+ */
+export function isBranchActive(pathname: string, item: NavItem): boolean {
+  return (
+    isNavActive(pathname, item) ||
+    (item.children ?? []).some((c) => isNavActive(pathname, c))
+  )
 }

@@ -227,6 +227,7 @@ export type Database = {
           created_at: string
           provider: Database["public"]["Enums"]["payment_provider"]
           toyyibpay_category_code: string | null
+          toyyibpay_charge_to_payor: boolean
           toyyibpay_enabled: boolean
           toyyibpay_has_secret: boolean
           toyyibpay_is_sandbox: boolean
@@ -240,6 +241,7 @@ export type Database = {
           created_at?: string
           provider?: Database["public"]["Enums"]["payment_provider"]
           toyyibpay_category_code?: string | null
+          toyyibpay_charge_to_payor?: boolean
           toyyibpay_enabled?: boolean
           toyyibpay_has_secret?: boolean
           toyyibpay_is_sandbox?: boolean
@@ -253,6 +255,7 @@ export type Database = {
           created_at?: string
           provider?: Database["public"]["Enums"]["payment_provider"]
           toyyibpay_category_code?: string | null
+          toyyibpay_charge_to_payor?: boolean
           toyyibpay_enabled?: boolean
           toyyibpay_has_secret?: boolean
           toyyibpay_is_sandbox?: boolean
@@ -709,6 +712,86 @@ export type Database = {
           },
         ]
       }
+      course_materials: {
+        Row: {
+          academy_id: string
+          course_id: string
+          created_at: string
+          created_by: string | null
+          file_name: string
+          file_path: string
+          id: string
+          is_published: boolean
+          mime_type: string | null
+          module_id: string
+          size_bytes: number | null
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          academy_id: string
+          course_id: string
+          created_at?: string
+          created_by?: string | null
+          file_name: string
+          file_path: string
+          id?: string
+          is_published?: boolean
+          mime_type?: string | null
+          module_id: string
+          size_bytes?: number | null
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          academy_id?: string
+          course_id?: string
+          created_at?: string
+          created_by?: string | null
+          file_name?: string
+          file_path?: string
+          id?: string
+          is_published?: boolean
+          mime_type?: string | null
+          module_id?: string
+          size_bytes?: number | null
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_materials_academy_id_course_id_fkey"
+            columns: ["academy_id", "course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "course_materials_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_materials_course_id_module_id_fkey"
+            columns: ["course_id", "module_id"]
+            isOneToOne: false
+            referencedRelation: "course_modules"
+            referencedColumns: ["course_id", "id"]
+          },
+          {
+            foreignKeyName: "course_materials_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_modules: {
         Row: {
           academy_id: string
@@ -1028,6 +1111,7 @@ export type Database = {
         Row: {
           academy_id: string
           amount_paid_sen: number
+          charge_to_payor: boolean | null
           course_id: string | null
           created_at: string
           created_by: string | null
@@ -1050,6 +1134,7 @@ export type Database = {
         Insert: {
           academy_id: string
           amount_paid_sen?: number
+          charge_to_payor?: boolean | null
           course_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -1072,6 +1157,7 @@ export type Database = {
         Update: {
           academy_id?: string
           amount_paid_sen?: number
+          charge_to_payor?: boolean | null
           course_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -1208,8 +1294,10 @@ export type Database = {
           academy_id: string
           amount_sen: number
           bill_code: string | null
+          charge_to_payor: boolean
           created_at: string
           expires_at: string | null
+          fee_sen: number
           host: string
           id: string
           invoice_id: string
@@ -1224,8 +1312,10 @@ export type Database = {
           academy_id: string
           amount_sen: number
           bill_code?: string | null
+          charge_to_payor?: boolean
           created_at?: string
           expires_at?: string | null
+          fee_sen?: number
           host: string
           id?: string
           invoice_id: string
@@ -1240,8 +1330,10 @@ export type Database = {
           academy_id?: string
           amount_sen?: number
           bill_code?: string | null
+          charge_to_payor?: boolean
           created_at?: string
           expires_at?: string | null
+          fee_sen?: number
           host?: string
           id?: string
           invoice_id?: string
@@ -1491,7 +1583,15 @@ export type Database = {
         Returns: Json
       }
       create_invitation: { Args: { _student_id: string }; Returns: Json }
+      duplicate_course: {
+        Args: { _code?: string; _course_id: string; _title?: string }
+        Returns: string
+      }
       ensure_pay_token: { Args: { _invoice: string }; Returns: string }
+      material_download: {
+        Args: { _material_id: string }
+        Returns: { file_name: string; file_path: string; mime_type: string }[]
+      }
       get_attempt: { Args: { _attempt_id: string }; Returns: Json }
       get_pay_status: {
         Args: { _token: string }
@@ -1506,6 +1606,7 @@ export type Database = {
           academy_logo_url: string
           academy_name: string
           amount_paid_sen: number
+          charge_to_payor: boolean
           currency: string
           due_sen: number
           gateway_enabled: boolean
@@ -1522,6 +1623,26 @@ export type Database = {
       link_student_account: {
         Args: { _email: string; _student_id: string }
         Returns: Json
+      }
+      list_academy_staff: {
+        Args: { _academy_id: string }
+        Returns: {
+          avatar_url: string
+          courses_taught: number
+          email: string
+          full_name: string
+          instructor_id: string
+          instructor_no: string
+          instructor_status: Database["public"]["Enums"]["instructor_status"]
+          is_creator: boolean
+          joined_at: string
+          phone: string
+          role: "admin" | "trainer" | "student"
+          status: Database["public"]["Enums"]["member_status"]
+          student_id: string
+          student_no: string
+          user_id: string
+        }[]
       }
       record_gateway_payment: {
         Args: {
@@ -1565,6 +1686,10 @@ export type Database = {
       }
       start_attempt: { Args: { _assessment_id: string }; Returns: Json }
       submit_attempt: { Args: { _attempt_id: string }; Returns: Json }
+      unlink_instructor_account: {
+        Args: { _instructor_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       academy_status: "active" | "suspended" | "cancelled"
@@ -1604,6 +1729,7 @@ export type Database = {
         | "true_false"
         | "short_text"
         | "essay"
+        | "matching"
       student_status:
         | "active"
         | "trial"
@@ -1778,6 +1904,7 @@ export const Constants = {
         "true_false",
         "short_text",
         "essay",
+        "matching",
       ],
       student_status: [
         "active",

@@ -3,6 +3,7 @@ import type { Enums, Json, Tables } from '@hawary/shared'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { translate } from '@/lib/i18n'
+import type { AnswerValue } from '@/lib/questions'
 
 export type Student = Tables<'students'>
 export type Submission = Tables<'assignment_submissions'>
@@ -103,7 +104,8 @@ export function useLearnCourseContent(
     queryFn: async () => {
       // RLS already restricts these to published rows in visible modules of
       // enrolled courses; the filters are for clarity and a smaller payload.
-      const [modules, notes, assessments, assignments] = await Promise.all([
+      const [modules, notes, materials, assessments, assignments] =
+        await Promise.all([
         supabase
           .from('course_modules')
           .select('id, title, description, sort_order')
@@ -114,6 +116,16 @@ export function useLearnCourseContent(
         supabase
           .from('notes')
           .select('id, title, module_id, sort_order')
+          .eq('academy_id', academyId!)
+          .eq('course_id', courseId!)
+          .eq('is_published', true)
+          .order('sort_order', { ascending: true }),
+        // file_path is deliberately NOT selected: it is of no use to a client
+        // (the bucket is private) and the row is the id the signing function
+        // wants.
+        supabase
+          .from('course_materials')
+          .select('id, title, module_id, sort_order, file_name, mime_type, size_bytes')
           .eq('academy_id', academyId!)
           .eq('course_id', courseId!)
           .eq('is_published', true)
@@ -134,11 +146,16 @@ export function useLearnCourseContent(
           .order('sort_order', { ascending: true }),
       ])
       const err =
-        modules.error ?? notes.error ?? assessments.error ?? assignments.error
+        modules.error ??
+        notes.error ??
+        materials.error ??
+        assessments.error ??
+        assignments.error
       if (err) throw err
       return {
         modules: modules.data ?? [],
         notes: notes.data ?? [],
+        materials: materials.data ?? [],
         assessments: assessments.data ?? [],
         assignments: assignments.data ?? [],
       }
@@ -331,6 +348,12 @@ export type AttemptQuestion = {
   prompt: string
   points: number
   sort_order: number
+  /**
+   * Public per-type configuration — choices, or a matching question's two
+   * columns. app.attempt_questions builds this by hand and never includes
+   * correct_answer; for matching it also reshuffles the right column, because
+   * authoring order is itself the answer key. Shapes: lib/questions.ts.
+   */
   options: Json | null
 }
 
@@ -340,7 +363,12 @@ export type AttemptPayload = {
     assessment_id: string
     attempt_no: number
     status: Enums<'attempt_status'>
-    answers: Record<string, string>
+    /**
+     * Keyed by question id. The value's JSON shape IS the question type —
+     * string for free text (which is every answer written before question
+     * types existed), boolean, array of option ids, or {leftId: rightId}.
+     */
+    answers: Record<string, AnswerValue>
     started_at: string
     submitted_at: string | null
     score: number | null
@@ -420,7 +448,7 @@ export function useSaveAnswers(attemptId: string) {
     // a newer on-blur one would erase whatever the newer one added. Same
     // scope.id makes TanStack run them FIFO, one at a time.
     scope: { id: `save-attempt-${attemptId}` },
-    mutationFn: async (answers: Record<string, string>) => {
+    mutationFn: async (answers: Record<string, AnswerValue>) => {
       const { data, error } = await supabase.rpc('save_attempt_answers', {
         _attempt_id: attemptId,
         _answers: answers as unknown as Json,

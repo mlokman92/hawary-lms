@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Check, Plus, Search, Trash2, Users, X } from 'lucide-react'
 import { formatMYR, ringgitToSen } from '@hawary/shared'
 import { useAuth } from '@/lib/auth'
 import { useT, type TFn } from '@/lib/i18n'
 import { useStudents, type StudentRow } from '@/features/students/api'
 import { useCourses } from '@/features/courses/api'
+import { usePaymentSettings } from '@/features/settings/api'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -18,6 +19,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
 import {
   Select,
   SelectContent,
@@ -25,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useCreateInvoices } from './api'
+import { useCreateInvoices, TOYYIBPAY_FPX_FEE_SEN } from './api'
 
 type ItemRow = {
   key: string
@@ -67,6 +69,7 @@ export function InvoiceFormDialog({
     academyId || null,
   )
   const { data: courses } = useCourses(academyId || null)
+  const { data: paymentSettings } = usePaymentSettings(academyId || null)
   const createInvoices = useCreateInvoices(academyId)
 
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -77,7 +80,11 @@ export function InvoiceFormDialog({
   const [tax, setTax] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [notes, setNotes] = useState('')
+  const [chargeToPayor, setChargeToPayor] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const gatewayOn = !!paymentSettings?.toyyibpay_enabled
+  const chargeDefault = !!paymentSettings?.toyyibpay_charge_to_payor
 
   useEffect(() => {
     if (!open) return
@@ -91,6 +98,21 @@ export function InvoiceFormDialog({
     setNotes('')
     setError(null)
   }, [open, initialStudentId])
+
+  // Seed from the academy default exactly once per opening, then let the form
+  // own it. The settings query may resolve after the dialog is already open, so
+  // a plain effect on `chargeDefault` would clobber a switch the admin had
+  // already flipped.
+  const seeded = useRef(false)
+  useEffect(() => {
+    if (!open) {
+      seeded.current = false
+      return
+    }
+    if (seeded.current || paymentSettings === undefined) return
+    setChargeToPayor(chargeDefault)
+    seeded.current = true
+  }, [open, paymentSettings, chargeDefault])
 
   const all = useMemo(() => students ?? [], [students])
   const byId = useMemo(() => new Map(all.map((s) => [s.id, s])), [all])
@@ -176,6 +198,10 @@ export function InvoiceFormDialog({
         notes,
         courseId: courseFilter === 'all' ? null : courseFilter,
         createdBy: user?.id ?? null,
+        // Only decide per invoice when the gateway is actually on; otherwise
+        // leave NULL so the invoice picks up whatever default is in force if
+        // the academy connects ToyyibPay later.
+        chargeToPayor: gatewayOn ? chargeToPayor : null,
         items: items
           .filter((it) => it.description.trim() || ringgitToSen(it.unitPrice) > 0)
           .map((it) => ({
@@ -471,6 +497,28 @@ export function InvoiceFormDialog({
                 onChange={(e) => setNotes(e.target.value)}
               />
             </div>
+
+            {/* Only meaningful once ToyyibPay is connected and switched on —
+                there is no online charge to pass on otherwise. */}
+            {gatewayOn ? (
+              <div className="flex items-center justify-between gap-4 rounded-md border p-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="charge-to-payor-invoice">
+                    {t('payments.form.charge_to_payor')}
+                  </Label>
+                  <p className="text-muted-foreground text-xs">
+                    {t('payments.form.charge_to_payor.hint', {
+                      amount: formatMYR(TOYYIBPAY_FPX_FEE_SEN),
+                    })}
+                  </p>
+                </div>
+                <Switch
+                  id="charge-to-payor-invoice"
+                  checked={chargeToPayor}
+                  onCheckedChange={setChargeToPayor}
+                />
+              </div>
+            ) : null}
 
             <div className="bg-muted mt-auto flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
               <span className="text-muted-foreground">

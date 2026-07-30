@@ -4,6 +4,7 @@ import {
   FileCheck2,
   FileText,
   Layers,
+  Paperclip,
   type LucideIcon,
 } from 'lucide-react'
 import { fmtDate } from '@/lib/format'
@@ -15,6 +16,7 @@ import {
   useMyStudent,
 } from '@/features/learn/api'
 import { useLearnDashboard } from '@/features/learn/dashboard'
+import { formatBytes, useOpenMaterial } from '@/features/materials/api'
 import { BackLink } from '@/components/patterns/BackLink'
 import { EmptyState } from '@/components/patterns/EmptyState'
 import {
@@ -27,13 +29,19 @@ import { NoStudentRecord } from '@/components/learn/NoStudentRecord'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 
+/**
+ * One item in a module. `to` routes; `onClick` is for a material, which has no
+ * page of its own — it resolves to a short-lived signed URL and opens the file.
+ */
 function Row({
   to,
+  onClick,
   icon: Icon,
   title,
   meta,
 }: {
-  to: string
+  to?: string
+  onClick?: () => void
   icon: LucideIcon
   title: string
   meta?: string | null
@@ -41,9 +49,19 @@ function Row({
   return (
     <li className="hover:bg-muted/50 flex items-center gap-2 px-3 py-2 transition-colors">
       <Icon className="text-muted-foreground size-4 shrink-0" aria-hidden />
-      <Link to={to} className="min-w-0 flex-1 truncate text-sm hover:underline">
-        {title}
-      </Link>
+      {to ? (
+        <Link to={to} className="min-w-0 flex-1 truncate text-sm hover:underline">
+          {title}
+        </Link>
+      ) : (
+        <button
+          type="button"
+          onClick={onClick}
+          className="min-w-0 flex-1 truncate text-left text-sm hover:underline"
+        >
+          {title}
+        </button>
+      )}
       {meta ? (
         <span className="text-muted-foreground shrink-0 text-xs">{meta}</span>
       ) : null}
@@ -55,6 +73,7 @@ export function LearnCoursePage() {
   const { id: courseId = '' } = useParams<{ id: string }>()
   const { t, tn } = useT()
   const { academyId } = useStudentAcademy()
+  const openMaterial = useOpenMaterial()
   const {
     data: student,
     isLoading: studentLoading,
@@ -167,6 +186,9 @@ export function LearnCoursePage() {
         ) : (
           data.modules.map((m) => {
             const notes = data.notes.filter((n) => n.module_id === m.id)
+            const materials = data.materials.filter(
+              (x) => x.module_id === m.id,
+            )
             const assessments = data.assessments.filter(
               (a) => a.module_id === m.id,
             )
@@ -174,7 +196,11 @@ export function LearnCoursePage() {
               (a) => a.module_id === m.id,
             )
             const empty =
-              notes.length + assessments.length + assignments.length === 0
+              notes.length +
+                materials.length +
+                assessments.length +
+                assignments.length ===
+              0
             return (
               <Card key={m.id} className="gap-4">
                 <CardHeader className="gap-1">
@@ -204,6 +230,15 @@ export function LearnCoursePage() {
                           to={`/learn/notes/${n.id}`}
                           icon={FileText}
                           title={n.title || t('common.untitled')}
+                        />
+                      ))}
+                      {materials.map((x) => (
+                        <Row
+                          key={x.id}
+                          onClick={() => openMaterial.mutate({ id: x.id })}
+                          icon={Paperclip}
+                          title={x.title || x.file_name}
+                          meta={formatBytes(x.size_bytes) || null}
                         />
                       ))}
                       {assessments.map((a) => (

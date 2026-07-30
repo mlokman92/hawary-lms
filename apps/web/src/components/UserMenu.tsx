@@ -7,6 +7,7 @@ import {
   Palette,
   Sun,
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
 import { useTheme, type Theme } from '@/lib/theme'
 import { LANGS, useT, type Lang } from '@/lib/i18n'
@@ -15,7 +16,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
@@ -41,7 +41,13 @@ function getInitials(name: string, email: string): string {
   return source.slice(0, 2).toUpperCase()
 }
 
-export function UserMenu() {
+/**
+ * `profileTo` differs per shell — `/profile` for staff, `/learn/profile` for
+ * the learner — because the two pages frame the same `profiles` row around
+ * different things. It is a prop rather than a route sniff so the menu stays
+ * role-agnostic; that is what lets both shells mount it unchanged.
+ */
+export function UserMenu({ profileTo }: { profileTo: string }) {
   const { user, signOut } = useAuth()
   const { theme, setTheme } = useTheme()
   const { lang, setLang, t } = useT()
@@ -84,18 +90,27 @@ export function UserMenu() {
             side={isMobile ? 'bottom' : 'right'}
             sideOffset={4}
           >
-            <DropdownMenuLabel className="font-normal">
-              <div className="grid gap-0.5">
-                <span className="truncate text-sm font-medium">
-                  {displayName}
-                </span>
-                {email ? (
-                  <span className="text-muted-foreground truncate text-xs">
-                    {email}
+            {/* The identity block is the link to your own profile, not a
+                static label: clicking your name is where people look for
+                "edit me", and a separate menu row for it reads as a second,
+                unrelated destination. */}
+            <DropdownMenuItem asChild className="py-2">
+              <Link to={profileTo}>
+                <Avatar className="size-8 rounded-lg">
+                  <AvatarFallback className="rounded-lg text-xs">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="grid min-w-0 gap-0.5">
+                  <span className="truncate text-sm font-medium">
+                    {displayName}
                   </span>
-                ) : null}
-              </div>
-            </DropdownMenuLabel>
+                  <span className="text-muted-foreground truncate text-xs">
+                    {email || t('user.profile')}
+                  </span>
+                </div>
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>

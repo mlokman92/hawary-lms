@@ -110,6 +110,29 @@ export function useSetGatewayEnabled(academyId: string) {
   })
 }
 
+/**
+ * Toggle the academy's *default* for who absorbs the ToyyibPay FPX charge.
+ *
+ * Only a default: each invoice carries its own `charge_to_payor`, and
+ * `create-bill` reads `invoice.charge_to_payor ?? this`. Flipping it therefore
+ * changes future invoices left on "follow the default", never a bill a payer has
+ * already been shown.
+ */
+export function useSetChargeToPayor(academyId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (chargeToPayor: boolean) => {
+      const { error } = await supabase
+        .from('academy_payment_settings')
+        .update({ toyyibpay_charge_to_payor: chargeToPayor })
+        .eq('academy_id', academyId)
+      if (error) throw error
+      return chargeToPayor
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: settingsKey(academyId) }),
+  })
+}
+
 async function readFunctionError(error: unknown): Promise<string | null> {
   const ctx = (error as { context?: unknown })?.context
   if (ctx && typeof (ctx as Response).json === 'function') {

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Receipt, Wallet } from 'lucide-react'
+import { Download, FileText, Loader2, Receipt, Wallet } from 'lucide-react'
 import { formatMYR } from '@hawary/shared'
 import { fmtDate } from '@/lib/format'
 import { useT } from '@/lib/i18n'
@@ -7,12 +7,23 @@ import { useStudentAcademy } from '@/lib/studentAcademy'
 import { useMyStudent } from '@/features/learn/api'
 import { INVOICE_STATUS_KEY, useMyInvoices } from '@/features/learn/billing'
 import { INVOICE_STATUS_VARIANT } from '@/features/payments/api'
+import {
+  hasReceipt,
+  useInvoiceDocuments,
+} from '@/features/payments/documents'
 import { PageHeader } from '@/components/patterns/PageHeader'
 import { StatCard } from '@/components/patterns/StatCard'
 import { EmptyState } from '@/components/patterns/EmptyState'
 import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
 import { NoStudentRecord } from '@/components/learn/NoStudentRecord'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Table,
   TableBody,
@@ -35,6 +46,7 @@ export function LearnBillingPage() {
     academyId,
     student?.id,
   )
+  const docs = useInvoiceDocuments(academyId)
 
   // Rendered in every branch so the h1 never pops in — same as /payments.
   const header = (
@@ -118,6 +130,11 @@ export function LearnBillingPage() {
                   <TableHead className="text-right">
                     {t('lacct.amount.balance')}
                   </TableHead>
+                  <TableHead className="w-12 text-right">
+                    <span className="sr-only">
+                      {t('lacct.billing.documents')}
+                    </span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -157,6 +174,46 @@ export function LearnBillingPage() {
                       <TableCell className="text-right tabular-nums">
                         {formatMYR(balance)}
                       </TableCell>
+                      {/* The row navigates; the menu must not. */}
+                      <TableCell
+                        className="text-right"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              disabled={docs.busy?.endsWith(`:${inv.id}`)}
+                              aria-label={t('lacct.billing.documents')}
+                            >
+                              {docs.busy?.endsWith(`:${inv.id}`) ? (
+                                <Loader2 className="animate-spin" />
+                              ) : (
+                                <Download />
+                              )}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onSelect={() =>
+                                void docs.download('invoice', inv.id)
+                              }
+                            >
+                              <FileText /> {t('doc.download.invoice')}
+                            </DropdownMenuItem>
+                            {hasReceipt(inv) ? (
+                              <DropdownMenuItem
+                                onSelect={() =>
+                                  void docs.download('receipt', inv.id)
+                                }
+                              >
+                                <Receipt /> {t('doc.download.receipt')}
+                              </DropdownMenuItem>
+                            ) : null}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
                     </TableRow>
                   )
                 })}
@@ -164,6 +221,9 @@ export function LearnBillingPage() {
             </Table>
           </div>
         )}
+        {docs.error ? (
+          <p className="text-destructive mt-3 text-sm">{docs.error}</p>
+        ) : null}
       </div>
     </div>
   )

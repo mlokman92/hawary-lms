@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   BookX,
+  FileUp,
   Hourglass,
   Plus,
   Search,
@@ -40,11 +41,14 @@ import {
 } from '@/components/ui/table'
 import { StudentFormDialog } from '@/features/students/StudentFormDialog'
 import { InviteStudentDialog } from '@/features/students/InviteStudentDialog'
+import { ImportDialog } from '@/features/import/ImportDialog'
+import { studentImportSpec } from '@/features/students/importSpec'
 import { PendingInvitations } from '@/features/invitations/PendingInvitations'
 import { MANUAL_STATUSES, STATUS_META } from '@/features/students/status'
 import {
   STUDENT_STATUSES,
   studentStats,
+  useImportStudents,
   useStudents,
   type StudentRow,
   type StudentStatus,
@@ -86,6 +90,8 @@ export function StudentsPage() {
   const [sort, setSort] = useState<Sort>('joined_desc')
   const [addOpen, setAddOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
+  const importStudents = useImportStudents(activeAcademyId ?? '')
 
   const stats = studentStats(students ?? [])
 
@@ -177,6 +183,9 @@ export function StudentsPage() {
       >
         {isStaff ? (
           <>
+            <Button variant="outline" onClick={() => setImportOpen(true)}>
+              <FileUp /> {t('import.students')}
+            </Button>
             <Button variant="outline" onClick={() => setInviteOpen(true)}>
               <UserPlus /> {t('students.action.invite')}
             </Button>
@@ -344,6 +353,17 @@ export function StudentsPage() {
             academyId={activeAcademyId}
             open={inviteOpen}
             onOpenChange={setInviteOpen}
+          />
+          {/* `existing` is the loaded roster, so duplicate detection costs no
+              extra round trip — it compares against what the page already has. */}
+          <ImportDialog
+            open={importOpen}
+            onOpenChange={setImportOpen}
+            spec={studentImportSpec}
+            existing={students ?? []}
+            onImport={(payload) => importStudents.mutateAsync(payload)}
+            titleKey="import.students.title"
+            descriptionKey="import.students.description"
           />
         </>
       ) : null}

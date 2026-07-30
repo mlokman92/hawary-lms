@@ -40,6 +40,11 @@ export const grading = {
   'grading.attempt.meta': '{title} · attempt {no} · submitted {when}',
   'grading.attempt.no_answer': 'No answer given.',
   'grading.attempt.no_questions': 'This assessment has no questions.',
+  'grading.attempt.manual': 'You mark this',
+  'grading.attempt.auto_earned': '{earned} / {max}',
+  'grading.attempt.auto_summary':
+    'Marked automatically: {scored} of {auto}. The remaining {manual} are yours to award.',
+  'grading.attempt.use_auto': 'Start from {scored}',
   'grading.attempt.release_hint':
     'Marking an attempt makes the score visible to the student.',
   'grading.score_out_of': 'Score (out of {max})',

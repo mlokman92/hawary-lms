@@ -5,8 +5,16 @@ import { supabase } from '@/lib/supabase'
 export type CourseModule = Tables<'course_modules'>
 export type CourseModulePatch = TablesUpdate<'course_modules'>
 
-/** The three content kinds a module can hold. Matches reorder_module_items(p_kind). */
-export type ItemKind = 'note' | 'assessment' | 'assignment'
+/** The content kinds a module can hold. Matches reorder_module_items(p_kind). */
+export type ItemKind = 'note' | 'material' | 'assessment' | 'assignment'
+
+/** ItemKind → the table it lives in. */
+const KIND_TABLE = {
+  note: 'notes',
+  material: 'course_materials',
+  assessment: 'assessments',
+  assignment: 'assignments',
+} as const satisfies Record<ItemKind, string>
 
 const modulesKey = (academyId: string | null, courseId: string | null) =>
   ['course-modules', academyId, courseId] as const
@@ -103,9 +111,59 @@ export function useDeleteModule(academyId: string, courseId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: modulesKey(academyId, courseId) })
       qc.invalidateQueries({ queryKey: ['notes', academyId, courseId] })
+      qc.invalidateQueries({ queryKey: ['materials', academyId, courseId] })
       qc.invalidateQueries({ queryKey: ['assessments', academyId, courseId] })
       qc.invalidateQueries({ queryKey: ['assignments', academyId, courseId] })
       qc.invalidateQueries({ queryKey: ['courses', academyId] })
+    },
+  })
+}
+
+/**
+ * Publish / unpublish one content row, whatever kind it is.
+ *
+ * One hook for all three tables because the three list pages that mount the
+ * toggle (the course page, and the two academy-wide libraries) would otherwise
+ * each need three near-identical mutations. Invalidation is by table prefix, so
+ * it does not need to know which academy or course the caller is looking at —
+ * `['assessments']` matches `['assessments', academyId, courseId]`.
+ */
+export function useTogglePublished(academyId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      kind,
+      id,
+      next,
+    }: {
+      kind: ItemKind
+      id: string
+      next: boolean
+    }) => {
+      // Written out per kind rather than indexing a table name: supabase-js
+      // resolves the row types from the literal, and a union of builders loses
+      // them.
+      const patch = { is_published: next }
+      const { error } =
+        kind === 'note'
+          ? await supabase.from('notes').update(patch).eq('id', id)
+          : kind === 'material'
+            ? await supabase.from('course_materials').update(patch).eq('id', id)
+            : kind === 'assessment'
+              ? await supabase.from('assessments').update(patch).eq('id', id)
+              : await supabase.from('assignments').update(patch).eq('id', id)
+      if (error) throw error
+      return { kind, id, next }
+    },
+    onSuccess: ({ kind }) => {
+      // `materials` rather than KIND_TABLE's `course_materials`: the query key
+      // is the feature's, not the table's.
+      void qc.invalidateQueries({
+        queryKey: [kind === 'material' ? 'materials' : KIND_TABLE[kind]],
+      })
+      void qc.invalidateQueries({ queryKey: ['library'] })
+      void qc.invalidateQueries({ queryKey: ['courses', academyId] })
+      void qc.invalidateQueries({ queryKey: ['learn-content'] })
     },
   })
 }
@@ -176,13 +234,8 @@ export function useReorderModuleItems(academyId: string, courseId: string) {
       return kind
     },
     onSuccess: (kind) => {
-      const table =
-        kind === 'note'
-          ? 'notes'
-          : kind === 'assessment'
-            ? 'assessments'
-            : 'assignments'
-      qc.invalidateQueries({ queryKey: [table, academyId, courseId] })
+      const key = kind === 'material' ? 'materials' : KIND_TABLE[kind]
+      qc.invalidateQueries({ queryKey: [key, academyId, courseId] })
     },
   })
 }

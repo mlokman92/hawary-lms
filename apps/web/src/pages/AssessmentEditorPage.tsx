@@ -6,6 +6,9 @@ import { parseBlocks, type Block } from '@/lib/blocks'
 import { useAcademy } from '@/lib/academy'
 import { useT } from '@/lib/i18n'
 import { BlocksEditor } from '@/components/BlocksEditor'
+import { QuestionEditor } from '@/components/QuestionEditor'
+import { QUESTION_TYPE_META, blankQuestionConfig } from '@/lib/questions'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -15,7 +18,6 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,8 +68,11 @@ export function AssessmentEditorPage() {
       serverQuestions.map((q) => ({
         key: q.id,
         id: q.id,
+        question_type: q.question_type,
         prompt: q.prompt,
         points: Number(q.points),
+        options: q.options,
+        correct_answer: q.correct_answer,
       })),
     )
     setSeeded(true)
@@ -76,7 +81,15 @@ export function AssessmentEditorPage() {
   const addQuestion = () => {
     setQuestions((qs) => [
       ...qs,
-      { key: crypto.randomUUID(), id: null, prompt: '', points: 1 },
+      {
+        key: crypto.randomUUID(),
+        id: null,
+        prompt: '',
+        points: 1,
+        // New questions default to the v1 type, so the existing habit of
+        // "type a prompt, save" still works without touching the picker.
+        ...blankQuestionConfig('essay'),
+      } as QuestionDraft,
     ])
     setDirty(true)
   }
@@ -251,8 +264,14 @@ export function AssessmentEditorPage() {
             questions.map((q, i) => (
               <div key={q.key} className="rounded-lg border p-3">
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <span className="text-muted-foreground text-xs font-medium">
+                  <span className="text-muted-foreground flex items-center gap-2 text-xs font-medium">
                     {t('assess.question.n', { n: i + 1 })}
+                    {QUESTION_TYPE_META[q.question_type].autoGraded &&
+                    q.correct_answer !== null ? (
+                      <Badge variant="secondary" className="font-normal">
+                        {t('qedit.auto_marked')}
+                      </Badge>
+                    ) : null}
                   </span>
                   <div className="flex items-center gap-1">
                     <Button
@@ -286,33 +305,11 @@ export function AssessmentEditorPage() {
                     </Button>
                   </div>
                 </div>
-                <Textarea
-                  value={q.prompt}
-                  onChange={(e) =>
-                    changeQuestion(q.key, { prompt: e.target.value })
-                  }
-                  placeholder={t('assess.question.prompt_placeholder')}
-                  rows={2}
+                <QuestionEditor
+                  question={q}
                   disabled={!isStaff}
+                  onChange={(patch) => changeQuestion(q.key, patch)}
                 />
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="text-muted-foreground text-xs">
-                    {t('assess.question.points')}
-                  </span>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={q.points}
-                    onChange={(e) =>
-                      changeQuestion(q.key, {
-                        points: Number(e.target.value) || 0,
-                      })
-                    }
-                    className="h-8 w-24"
-                    disabled={!isStaff}
-                  />
-                </div>
               </div>
             ))
           )}

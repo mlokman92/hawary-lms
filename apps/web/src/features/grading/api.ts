@@ -194,7 +194,14 @@ export function useGradingAttempt(id: string | undefined) {
   })
 }
 
-/** Questions with marks, for grading. Readable only by graders of the course. */
+/**
+ * Questions with marks and their answer key, for grading.
+ *
+ * This is the one client surface allowed to read `correct_answer` — the
+ * assessment_questions SELECT policy is app.can_grade_assessment, so RLS, not
+ * this column list, is what keeps it away from students. Graders need it to see
+ * which objective answers the server scored right.
+ */
 export function useAttemptQuestions(assessmentId: string | undefined) {
   return useQuery({
     queryKey: ['grading-questions', assessmentId] as const,
@@ -202,7 +209,9 @@ export function useAttemptQuestions(assessmentId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('assessment_questions')
-        .select('id, prompt, points, sort_order')
+        .select(
+          'id, prompt, points, sort_order, question_type, options, correct_answer',
+        )
         .eq('assessment_id', assessmentId!)
         .order('sort_order')
       if (error) throw error

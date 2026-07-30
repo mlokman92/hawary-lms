@@ -81,6 +81,7 @@ export const common: CommonDict = {
   'common.draft': 'Draf',
   'common.publish': 'Terbitkan',
   'common.unpublish': 'Nyahterbit',
+  'common.publish_aria': 'Diterbitkan — {title}',
   'common.visible_to_students': 'Boleh dilihat pelajar',
 
   // Masa
@@ -120,6 +121,24 @@ export const common: CommonDict = {
   'status.attempt.in_progress': 'Sedang dijawab',
   'status.attempt.submitted': 'Telah dihantar',
   'status.attempt.graded': 'Telah dinilai',
+
+  // Jenis soalan
+  'qtype.essay': 'Jawapan panjang',
+  'qtype.essay.hint': 'Teks bebas. Dinilai oleh pengajar.',
+  'qtype.short_text': 'Jawapan pendek',
+  'qtype.short_text.hint': 'Satu baris teks bebas. Dinilai oleh pengajar.',
+  'qtype.true_false': 'Betul atau salah',
+  'qtype.true_false.hint': 'Dinilai secara automatik.',
+  'qtype.single_choice': 'Aneka pilihan (satu jawapan)',
+  'qtype.single_choice.hint': 'Dinilai secara automatik.',
+  'qtype.multiple_choice': 'Aneka pilihan (beberapa jawapan)',
+  'qtype.multiple_choice.hint':
+    'Dinilai secara automatik. Semua pilihan yang betul dan tiada yang salah.',
+  'qtype.matching': 'Padanan',
+  'qtype.matching.hint':
+    'Dinilai secara automatik, dengan markah sebahagian bagi setiap pasangan yang betul.',
+  'qtype.true': 'Betul',
+  'qtype.false': 'Salah',
 
   // Muat naik imej
   'upload.no_academy':

@@ -83,6 +83,9 @@ export const common = {
   'common.draft': 'Draft',
   'common.publish': 'Publish',
   'common.unpublish': 'Unpublish',
+  // Accessible name for the inline publish switch — a row of unlabelled
+  // switches tells a screen reader nothing about which one it is on.
+  'common.publish_aria': 'Published — {title}',
   'common.visible_to_students': 'Visible to students',
 
   // Time
@@ -124,6 +127,27 @@ export const common = {
   'status.attempt.in_progress': 'In progress',
   'status.attempt.submitted': 'Handed in',
   'status.attempt.graded': 'Marked',
+
+  // Question types. Here rather than in `assessments` for the same reason as
+  // the statuses above: the author picks one, the student answers one and the
+  // grader reads one, on three unrelated surfaces. The map is
+  // QUESTION_TYPE_META in lib/questions.ts.
+  'qtype.essay': 'Long answer',
+  'qtype.essay.hint': 'Free text. Marked by a person.',
+  'qtype.short_text': 'Short answer',
+  'qtype.short_text.hint': 'One line of free text. Marked by a person.',
+  'qtype.true_false': 'True or false',
+  'qtype.true_false.hint': 'Marked automatically.',
+  'qtype.single_choice': 'Multiple choice (one answer)',
+  'qtype.single_choice.hint': 'Marked automatically.',
+  'qtype.multiple_choice': 'Multiple choice (several answers)',
+  'qtype.multiple_choice.hint':
+    'Marked automatically. All the right options and none of the wrong ones.',
+  'qtype.matching': 'Matching',
+  'qtype.matching.hint':
+    'Marked automatically, with part marks for each correct pair.',
+  'qtype.true': 'True',
+  'qtype.false': 'False',
 
   // Image upload (lib/storage.ts — shared by avatars and note media)
   'upload.no_academy':

@@ -1,14 +1,16 @@
 import { Link, useParams } from 'react-router-dom'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, FileText, Loader2, Receipt } from 'lucide-react'
 import { formatMYR } from '@hawary/shared'
 import { fmtDate } from '@/lib/format'
 import { useT } from '@/lib/i18n'
+import { useStudentAcademy } from '@/lib/studentAcademy'
 import {
   INVOICE_STATUS_KEY,
   PAYMENT_METHOD_KEY,
   useMyInvoice,
 } from '@/features/learn/billing'
 import { INVOICE_STATUS_VARIANT } from '@/features/payments/api'
+import { hasReceipt, useInvoiceDocuments } from '@/features/payments/documents'
 import { BackLink } from '@/components/patterns/BackLink'
 import { NotFoundBlock, RouteLoading } from '@/components/patterns/QueryState'
 import { Badge } from '@/components/ui/badge'
@@ -49,11 +51,16 @@ function Amount({
  * `ensure_pay_token` raises "Not authorized" for a non-admin, so a "generate
  * pay link" button could only ever fail. An existing pay_token is different —
  * get_public_invoice is granted to anon, so that link genuinely works.
+ *
+ * The PDFs are the same shape: drawn in the browser from rows the learner can
+ * already read, so downloading one needs no privileged endpoint either.
  */
 export function LearnInvoicePage() {
   const { id } = useParams<{ id: string }>()
   const { t } = useT()
+  const { academyId } = useStudentAcademy()
   const { data: invoice, isLoading, error } = useMyInvoice(id)
+  const docs = useInvoiceDocuments(academyId)
 
   if (isLoading) return <RouteLoading />
 
@@ -104,15 +111,53 @@ export function LearnInvoicePage() {
                 })}
               </p>
             </div>
-            {payable ? (
-              <Button asChild variant="outline">
-                <Link to={`/pay/${invoice.pay_token}`}>
-                  {t('lacct.invoice.pay_online')} <ExternalLink />
-                </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              {payable ? (
+                <Button asChild>
+                  <Link to={`/pay/${invoice.pay_token}`}>
+                    {t('lacct.invoice.pay_online')} <ExternalLink />
+                  </Link>
+                </Button>
+              ) : null}
+              {/* Both documents are built from `invoice`, which is already
+                  loaded here — no second fetch on this screen. */}
+              <Button
+                variant="outline"
+                disabled={docs.busy === `invoice:${invoice.id}`}
+                onClick={() => void docs.download('invoice', invoice)}
+              >
+                {docs.busy === `invoice:${invoice.id}` ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <FileText />
+                )}
+                {docs.busy === `invoice:${invoice.id}`
+                  ? t('doc.download.preparing')
+                  : t('doc.download.invoice')}
               </Button>
-            ) : null}
+              {hasReceipt(invoice) ? (
+                <Button
+                  variant="outline"
+                  disabled={docs.busy === `receipt:${invoice.id}`}
+                  onClick={() => void docs.download('receipt', invoice)}
+                >
+                  {docs.busy === `receipt:${invoice.id}` ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    <Receipt />
+                  )}
+                  {docs.busy === `receipt:${invoice.id}`
+                    ? t('doc.download.preparing')
+                    : t('doc.download.receipt')}
+                </Button>
+              ) : null}
+            </div>
           </CardContent>
         </Card>
+
+        {docs.error ? (
+          <p className="text-destructive text-sm">{docs.error}</p>
+        ) : null}
 
         <div className="grid gap-6 md:grid-cols-3">
           <Card className="md:col-span-2">

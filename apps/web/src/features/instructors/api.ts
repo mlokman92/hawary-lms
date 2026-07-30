@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Enums, Tables, TablesInsert, TablesUpdate } from '@hawary/shared'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/auth'
+import { translate } from '@/lib/i18n'
 
 export type Instructor = Tables<'instructors'>
 export type InstructorStatus = Enums<'instructor_status'>
@@ -74,6 +76,47 @@ export function useCreateInstructor(academyId: string) {
         .single()
       if (error) throw error
       return data
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: instructorsKey(academyId) }),
+  })
+}
+
+/** See the note on the student importer — same reasoning, same batch size. */
+const IMPORT_CHUNK = 100
+
+/**
+ * Bulk create instructor *records* from a parsed CSV. Deliberately not accounts:
+ * `instructors.user_id` is only ever written by accept_invitation or
+ * link_instructor_account, and granting back-office access to a row in a
+ * spreadsheet is not something an import should do quietly.
+ */
+export function useImportInstructors(academyId: string) {
+  const qc = useQueryClient()
+  const { user } = useAuth()
+  return useMutation({
+    mutationFn: async (rows: Record<string, string | null>[]) => {
+      const payload = rows.map((row) => ({
+        ...row,
+        academy_id: academyId,
+        instructor_no: '',
+        created_by: user?.id ?? null,
+      })) as unknown as TablesInsert<'instructors'>[]
+
+      let inserted = 0
+      for (let i = 0; i < payload.length; i += IMPORT_CHUNK) {
+        const { data, error } = await supabase
+          .from('instructors')
+          .insert(payload.slice(i, i + IMPORT_CHUNK))
+          .select('id')
+        if (error) {
+          throw new Error(
+            `${translate('import.partial', { count: inserted })} ${error.message}`,
+          )
+        }
+        inserted += data?.length ?? 0
+      }
+      return inserted
     },
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: instructorsKey(academyId) }),

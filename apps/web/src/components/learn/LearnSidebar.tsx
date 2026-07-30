@@ -1,7 +1,9 @@
 import {
   BookOpen,
   ClipboardList,
+  FileCheck2,
   LayoutDashboard,
+  ListTodo,
   Receipt,
   UserRound,
 } from 'lucide-react'
@@ -11,9 +13,12 @@ import type { NavGroup } from '@/components/shell/nav'
 import { LearnAcademySwitcher } from './LearnAcademySwitcher'
 
 /**
- * Notes, assessments and assignments are not destinations here either — they
- * live inside a course module and are reached from the course page, exactly as
- * on the staff side.
+ * Assessments and assignments sit under My courses as sub-navigation, mirroring
+ * the staff rail. Notes stay reachable only through their module.
+ *
+ * My work is still its own item and is not the same list: it is the deadline
+ * view across both kinds, filtered to what is outstanding. The sub-items are
+ * the complete inventory of one kind, done or not.
  *
  * Every item is backed by something RLS actually admits for a student:
  *   Dashboard/My courses/My work — enrollments + published content
@@ -33,8 +38,24 @@ export function LearnSidebar() {
           icon: LayoutDashboard,
           exact: true,
         },
-        { title: t('nav.learn.courses'), to: '/learn/courses', icon: BookOpen },
-        { title: t('nav.learn.work'), to: '/learn/work', icon: ClipboardList },
+        {
+          title: t('nav.learn.courses'),
+          to: '/learn/courses',
+          icon: BookOpen,
+          children: [
+            {
+              title: t('nav.assessments'),
+              to: '/learn/assessments',
+              icon: ClipboardList,
+            },
+            {
+              title: t('nav.assignments'),
+              to: '/learn/assignments',
+              icon: FileCheck2,
+            },
+          ],
+        },
+        { title: t('nav.learn.work'), to: '/learn/work', icon: ListTodo },
       ],
     },
     {
@@ -46,5 +67,11 @@ export function LearnSidebar() {
     },
   ]
 
-  return <ShellSidebar switcher={<LearnAcademySwitcher />} groups={groups} />
+  return (
+    <ShellSidebar
+      switcher={<LearnAcademySwitcher />}
+      groups={groups}
+      profileTo="/learn/profile"
+    />
+  )
 }

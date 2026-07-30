@@ -24,10 +24,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { formatMYR } from '@hawary/shared'
+import { TOYYIBPAY_FPX_FEE_SEN } from '@/features/payments/api'
 import {
   usePaymentSettings,
   useRemoveToyyibpay,
   useSaveToyyibpay,
+  useSetChargeToPayor,
   useSetGatewayEnabled,
 } from './api'
 
@@ -36,6 +39,7 @@ export function ToyyibPaySettingsCard({ academyId }: { academyId: string }) {
   const { data: settings, isLoading } = usePaymentSettings(academyId)
   const save = useSaveToyyibpay(academyId)
   const setEnabled = useSetGatewayEnabled(academyId)
+  const setChargeToPayor = useSetChargeToPayor(academyId)
   const remove = useRemoveToyyibpay(academyId)
 
   const connected = !!settings?.toyyibpay_has_secret
@@ -193,6 +197,27 @@ export function ToyyibPaySettingsCard({ academyId }: { academyId: string }) {
                   checked={!!settings?.toyyibpay_enabled}
                   disabled={setEnabled.isPending}
                   onCheckedChange={(v) => setEnabled.mutate(v)}
+                />
+              </div>
+            ) : null}
+
+            {connected ? (
+              <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="charge-to-payor">
+                    {t('settings.toyyibpay.charge_to_payor')}
+                  </Label>
+                  <p className="text-muted-foreground text-xs">
+                    {t('settings.toyyibpay.charge_to_payor.hint', {
+                      amount: formatMYR(TOYYIBPAY_FPX_FEE_SEN),
+                    })}
+                  </p>
+                </div>
+                <Switch
+                  id="charge-to-payor"
+                  checked={!!settings?.toyyibpay_charge_to_payor}
+                  disabled={setChargeToPayor.isPending}
+                  onCheckedChange={(v) => setChargeToPayor.mutate(v)}
                 />
               </div>
             ) : null}

@@ -9,6 +9,12 @@ import {
   useGradingAttempt,
 } from '@/features/grading/api'
 import { ATTEMPT_STATUS_META } from '@/features/learn/status'
+import {
+  QUESTION_TYPE_META,
+  earnedPoints,
+  type AnswerValue,
+} from '@/lib/questions'
+import { AnswerReview, type ReviewQuestion } from '@/components/AnswerReview'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -32,6 +38,29 @@ export function GradeAttemptPage() {
     () => (questions ?? []).reduce((sum, q) => sum + Number(q.points ?? 0), 0),
     [questions],
   )
+
+  const answers = useMemo(
+    () => (attempt?.answers ?? {}) as Record<string, AnswerValue>,
+    [attempt],
+  )
+
+  // What the server already banked on submit, re-derived per question so the
+  // grader can see the split rather than one opaque number.
+  const auto = useMemo(() => {
+    let scored = 0
+    let manual = 0
+    for (const q of (questions ?? []) as ReviewQuestion[]) {
+      const earned = earnedPoints(
+        q.question_type,
+        q.correct_answer,
+        answers[q.id],
+        q.points,
+      )
+      if (earned === null) manual += Number(q.points ?? 0)
+      else scored += earned
+    }
+    return { scored: Math.round(scored * 100) / 100, manual }
+  }, [questions, answers])
 
   useEffect(() => {
     if (seeded || !attempt) return
@@ -62,7 +91,6 @@ export function GradeAttemptPage() {
   const student = attempt.students
   const name =
     student?.full_name?.trim() || student?.student_no || t('common.student')
-  const answers = (attempt.answers ?? {}) as Record<string, string>
 
   async function save() {
     setErr(null)
@@ -103,26 +131,51 @@ export function GradeAttemptPage() {
       </div>
 
       <div className="space-y-4">
-        {(questions ?? []).map((q, i) => (
-          <Card key={q.id}>
-            <CardHeader className="gap-1">
-              <div className="flex items-start justify-between gap-3">
-                <CardTitle className="text-base">
-                  {i + 1}. {q.prompt}
-                </CardTitle>
-                <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-                  {tn('grading.points', q.points)}
-                </span>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* Student-authored: plain text only. */}
-              <p className="bg-muted/40 rounded-md border p-3 text-sm leading-7 whitespace-pre-line">
-                {answers[q.id]?.trim() || t('grading.attempt.no_answer')}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+        {((questions ?? []) as ReviewQuestion[]).map((q, i) => {
+          const earned = earnedPoints(
+            q.question_type,
+            q.correct_answer,
+            answers[q.id],
+            q.points,
+          )
+          return (
+            <Card key={q.id}>
+              <CardHeader className="gap-1">
+                <div className="flex items-start justify-between gap-3">
+                  <CardTitle className="text-base">
+                    {i + 1}. {q.prompt}
+                  </CardTitle>
+                  <span className="flex shrink-0 items-center gap-2">
+                    {earned === null ? (
+                      <Badge variant="outline" className="font-normal">
+                        {t('grading.attempt.manual')}
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant={earned > 0 ? 'default' : 'destructive'}
+                        className="tabular-nums"
+                      >
+                        {t('grading.attempt.auto_earned', {
+                          earned,
+                          max: q.points,
+                        })}
+                      </Badge>
+                    )}
+                    <span className="text-muted-foreground text-xs tabular-nums">
+                      {tn('grading.points', q.points)}
+                    </span>
+                  </span>
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  {t(QUESTION_TYPE_META[q.question_type].labelKey)}
+                </p>
+              </CardHeader>
+              <CardContent>
+                <AnswerReview question={q} answer={answers[q.id]} />
+              </CardContent>
+            </Card>
+          )
+        })}
         {(questions ?? []).length === 0 ? (
           <p className="text-muted-foreground rounded-xl border border-dashed p-8 text-center text-sm">
             {t('grading.attempt.no_questions')}
@@ -135,6 +188,15 @@ export function GradeAttemptPage() {
           <CardTitle>{t('grading.mark')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {auto.manual < maxScore ? (
+            <p className="text-muted-foreground text-sm">
+              {t('grading.attempt.auto_summary', {
+                scored: auto.scored,
+                auto: Math.round((maxScore - auto.manual) * 100) / 100,
+                manual: auto.manual,
+              })}
+            </p>
+          ) : null}
           <div className="grid gap-2 sm:max-w-48">
             <Label htmlFor="score">
               {t('grading.score_out_of', { max: maxScore })}
@@ -148,6 +210,18 @@ export function GradeAttemptPage() {
               onChange={(e) => setScore(e.target.value)}
             />
           </div>
+          {/* The objective marks are already computed; retyping them by hand is
+              a transcription error waiting to happen. */}
+          {auto.manual > 0 && auto.manual < maxScore ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setScore(String(auto.scored))}
+            >
+              {t('grading.attempt.use_auto', { scored: auto.scored })}
+            </Button>
+          ) : null}
           {err ? <p className="text-destructive text-sm">{err}</p> : null}
           <Button disabled={grade.isPending} onClick={() => void save()}>
             {grade.isPending ? t('common.saving') : t('grading.save_mark')}

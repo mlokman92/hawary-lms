@@ -85,6 +85,9 @@ export const payments: PaymentsDict = {
   'payments.form.due_date': 'Tarikh akhir (pilihan)',
   'payments.form.tax': 'Cukai / SST (RM, pilihan)',
   'payments.form.notes': 'Nota (pilihan)',
+  'payments.form.charge_to_payor': 'Pembayar menanggung caj ToyyibPay',
+  'payments.form.charge_to_payor.hint':
+    'Menambah caj FPX {amount} ToyyibPay apabila pelajar membayar dalam talian, jadi anda menerima jumlah penuh. Bermula daripada tetapan lalai anda.',
   'payments.form.per_student_one': '{amount} × {count} pelajar',
   'payments.form.per_student_other': '{amount} × {count} pelajar',
   'payments.form.grand_total': 'Jumlah {amount}',

@@ -53,6 +53,9 @@ export const learnWork: LearnWorkDict = {
   // Penilaian — sedang menduduki percubaan
   'lwork.assessment.instructions': 'Arahan',
   'lwork.assessment.answer_placeholder': 'Jawapan anda…',
+  'lwork.assessment.select_all': 'Pilih semua jawapan yang berkenaan.',
+  'lwork.assessment.pick_match': 'Pilih…',
+  'lwork.assessment.answered': '{n} daripada {total} dijawab',
   'lwork.assessment.save_answers': 'Simpan jawapan',
   'lwork.assessment.submit': 'Hantar penilaian',
   'lwork.assessment.confirm_submit.title': 'Hantar penilaian ini?',

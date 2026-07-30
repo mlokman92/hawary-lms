@@ -52,6 +52,9 @@ export const learnWork = {
   // Assessment — sitting an attempt
   'lwork.assessment.instructions': 'Instructions',
   'lwork.assessment.answer_placeholder': 'Your answer…',
+  'lwork.assessment.select_all': 'Select every answer that applies.',
+  'lwork.assessment.pick_match': 'Choose…',
+  'lwork.assessment.answered': '{n} of {total} answered',
   'lwork.assessment.save_answers': 'Save answers',
   'lwork.assessment.submit': 'Submit assessment',
   'lwork.assessment.confirm_submit.title': 'Submit this assessment?',

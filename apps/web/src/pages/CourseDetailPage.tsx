@@ -1,15 +1,17 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
   ChevronDown,
   ChevronUp,
   ClipboardList,
+  Copy,
   FileCheck2,
   FileText,
   GraduationCap,
   Layers,
   MoreHorizontal,
+  Paperclip,
   Pencil,
   Plus,
   type LucideIcon,
@@ -19,9 +21,15 @@ import { useAcademy } from '@/lib/academy'
 import { useAuth } from '@/lib/auth'
 import { fmtDate } from '@/lib/format'
 import { useT, type TKey } from '@/lib/i18n'
+import { PublishSwitch } from '@/components/patterns/PublishSwitch'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +51,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { CourseFormDialog } from '@/features/courses/CourseFormDialog'
+import { DuplicateCourseDialog } from '@/features/courses/DuplicateCourseDialog'
 import { ModuleFormDialog } from '@/features/modules/ModuleFormDialog'
 import { useCourse, COURSE_STATUS_LABEL } from '@/features/courses/api'
 import {
@@ -50,11 +59,19 @@ import {
   useModules,
   useReorderModules,
   useReorderModuleItems,
+  useTogglePublished,
   useUpdateModule,
   type CourseModule,
   type ItemKind,
 } from '@/features/modules/api'
 import { useCreateNote, useDeleteNote, useNotes } from '@/features/notes/api'
+import { MaterialUploadDialog } from '@/features/materials/MaterialUploadDialog'
+import {
+  formatBytes,
+  useDeleteMaterial,
+  useMaterials,
+  useOpenMaterial,
+} from '@/features/materials/api'
 import {
   useAssessments,
   useCreateAssessment,
@@ -66,7 +83,7 @@ import {
   useDeleteAssignment,
 } from '@/features/assignments/api'
 
-/** One content row, normalised across the three tables so the list, the
+/** One content row, normalised across the four tables so the list, the
  *  reorder/move menus and the delete dialog stay generic. */
 type Item = {
   id: string
@@ -75,11 +92,13 @@ type Item = {
   title: string
   isPublished: boolean
   meta: string | null
-  href: string
+  /** null for a material: it has no editor page, it opens as a signed URL. */
+  href: string | null
 }
 
 const KIND_ICON: Record<ItemKind, LucideIcon> = {
   note: FileText,
+  material: Paperclip,
   assessment: ClipboardList,
   assignment: FileCheck2,
 }
@@ -88,6 +107,11 @@ const KIND_ICON: Record<ItemKind, LucideIcon> = {
 // language is known, so the labels are resolved at render with `t()`.
 const SECTIONS: { kind: ItemKind; labelKey: TKey; addKey: TKey }[] = [
   { kind: 'note', labelKey: 'common.notes', addKey: 'courses.item.note' },
+  {
+    kind: 'material',
+    labelKey: 'courses.materials',
+    addKey: 'courses.item.material',
+  },
   {
     kind: 'assessment',
     labelKey: 'courses.assessments',
@@ -102,8 +126,51 @@ const SECTIONS: { kind: ItemKind; labelKey: TKey; addKey: TKey }[] = [
 
 const KIND_DELETE_TITLE: Record<ItemKind, TKey> = {
   note: 'courses.delete.note.title',
+  material: 'courses.delete.material.title',
   assessment: 'courses.delete.assessment.title',
   assignment: 'courses.delete.assignment.title',
+}
+
+/**
+ * Which modules are expanded, remembered per course.
+ *
+ * Authoring a course is a return trip — you open a module, edit a note, come
+ * back. Collapsing everything on the way back would undo the reader's place
+ * each time, so the open set outlives the navigation. Sessions only: this is
+ * view state, not tenant data.
+ */
+function useOpenModules(courseId: string, firstModuleId: string | undefined) {
+  const storageKey = `hawary.course.${courseId}.open`
+  const [open, setOpen] = useState<string[] | null>(null)
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(storageKey)
+      const parsed: unknown = raw ? JSON.parse(raw) : null
+      if (Array.isArray(parsed)) {
+        setOpen(parsed.filter((x): x is string => typeof x === 'string'))
+        return
+      }
+    } catch {
+      // A corrupt entry is not worth a broken page.
+    }
+    setOpen(null)
+  }, [storageKey])
+
+  // Nothing stored yet: open the first module, so the page never lands as a
+  // wall of closed bars with no sign of what is inside.
+  const value = open ?? (firstModuleId ? [firstModuleId] : [])
+
+  const onChange = (next: string[]) => {
+    setOpen(next)
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify(next))
+    } catch {
+      // Private mode / quota. The accordion still works for this visit.
+    }
+  }
+
+  return [value, onChange] as const
 }
 
 export function CourseDetailPage() {
@@ -121,6 +188,7 @@ export function CourseDetailPage() {
     courseId,
   )
   const { data: notes } = useNotes(activeAcademyId, courseId)
+  const { data: materials } = useMaterials(activeAcademyId, courseId)
   const { data: assessments } = useAssessments(activeAcademyId, courseId)
   const { data: assignments } = useAssignments(activeAcademyId, courseId)
 
@@ -133,15 +201,24 @@ export function CourseDetailPage() {
   const createAssessment = useCreateAssessment(academyId, courseId)
   const createAssignment = useCreateAssignment(academyId, courseId)
   const deleteNote = useDeleteNote(academyId, courseId)
+  const deleteMaterial = useDeleteMaterial(academyId, courseId)
   const deleteAssessment = useDeleteAssessment(academyId, courseId)
   const deleteAssignment = useDeleteAssignment(academyId, courseId)
+  const openMaterial = useOpenMaterial()
+
+  const togglePublished = useTogglePublished(activeAcademyId)
 
   const [courseDialogOpen, setCourseDialogOpen] = useState(false)
+  const [duplicateOpen, setDuplicateOpen] = useState(false)
   const [moduleDialogOpen, setModuleDialogOpen] = useState(false)
   const [editingModule, setEditingModule] = useState<CourseModule | null>(null)
   const [deleteModuleTarget, setDeleteModuleTarget] =
     useState<CourseModule | null>(null)
   const [deleteItemTarget, setDeleteItemTarget] = useState<Item | null>(null)
+  const [uploadTarget, setUploadTarget] = useState<{
+    moduleId: string
+    sortOrder: number
+  } | null>(null)
 
   // Items keyed by module, already in sort order within each kind.
   const itemsByModule = useMemo(() => {
@@ -160,6 +237,17 @@ export function CourseDetailPage() {
         isPublished: n.is_published,
         meta: null,
         href: `/notes/${n.id}`,
+      }),
+    )
+    ;(materials ?? []).forEach((m) =>
+      push({
+        id: m.id,
+        kind: 'material',
+        moduleId: m.module_id,
+        title: m.title || m.file_name,
+        isPublished: m.is_published,
+        meta: formatBytes(m.size_bytes) || null,
+        href: null,
       }),
     )
     ;(assessments ?? []).forEach((a) =>
@@ -187,7 +275,7 @@ export function CourseDetailPage() {
       }),
     )
     return map
-  }, [notes, assessments, assignments, t, tn])
+  }, [notes, materials, assessments, assignments, t, tn])
 
   const kindItems = (moduleId: string, kind: ItemKind) =>
     (itemsByModule.get(moduleId) ?? []).filter((i) => i.kind === kind)
@@ -195,6 +283,13 @@ export function CourseDetailPage() {
   async function addItem(kind: ItemKind, moduleId: string) {
     const sortOrder = kindItems(moduleId, kind).length
     const common = { module_id: moduleId, created_by: user?.id ?? null, sort_order: sortOrder }
+    // A material starts with a file, not an empty record — there is nothing to
+    // edit until one is chosen, so it goes through a dialog instead of the
+    // create-then-navigate the other three use.
+    if (kind === 'material') {
+      setUploadTarget({ moduleId, sortOrder })
+      return
+    }
     if (kind === 'note') {
       const row = await createNote.mutateAsync({
         title: t('common.untitled'),
@@ -254,6 +349,7 @@ export function CourseDetailPage() {
     if (!deleteItemTarget) return
     const { kind, id } = deleteItemTarget
     if (kind === 'note') await deleteNote.mutateAsync(id)
+    else if (kind === 'material') await deleteMaterial.mutateAsync(id)
     else if (kind === 'assessment') await deleteAssessment.mutateAsync(id)
     else await deleteAssignment.mutateAsync(id)
     setDeleteItemTarget(null)
@@ -264,6 +360,11 @@ export function CourseDetailPage() {
     await deleteModule.mutateAsync(deleteModuleTarget.id)
     setDeleteModuleTarget(null)
   }
+
+  const [openModules, setOpenModules] = useOpenModules(
+    courseId,
+    modules?.[0]?.id,
+  )
 
   const openNewModule = () => {
     setEditingModule(null)
@@ -337,6 +438,9 @@ export function CourseDetailPage() {
             <Button variant="outline" onClick={() => setCourseDialogOpen(true)}>
               <Pencil /> {t('courses.edit')}
             </Button>
+            <Button variant="outline" onClick={() => setDuplicateOpen(true)}>
+              <Copy /> {t('courses.duplicate')}
+            </Button>
             <Button onClick={openNewModule}>
               <Plus /> {t('courses.module.new')}
             </Button>
@@ -367,85 +471,102 @@ export function CourseDetailPage() {
             ) : null}
           </div>
         ) : (
-          modules!.map((m, index) => (
-            <Card key={m.id} className="gap-4">
-              <CardHeader className="gap-1">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-muted-foreground text-xs font-medium tabular-nums">
-                        {index + 1}
+          <Accordion
+            type="multiple"
+            value={openModules}
+            onValueChange={setOpenModules}
+          >
+            {modules!.map((m, index) => {
+              const count = (itemsByModule.get(m.id) ?? []).length
+              return (
+                <AccordionItem key={m.id} value={m.id}>
+                  {/* The trigger is only the title block. The module's own menu
+                      sits beside it, outside the button — a control nested in a
+                      button is neither operable by keyboard nor valid HTML. */}
+                  <div className="flex items-start gap-2 pr-4">
+                    <AccordionTrigger className="min-w-0 flex-1 items-center">
+                      <span className="flex min-w-0 flex-1 flex-col gap-1">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="text-muted-foreground text-xs font-medium tabular-nums">
+                            {index + 1}
+                          </span>
+                          <span className="font-semibold">{m.title}</span>
+                          {!m.is_published ? (
+                            <Badge variant="outline">
+                              {t('courses.module.hidden')}
+                            </Badge>
+                          ) : null}
+                          {/* Closed modules are opaque without this. */}
+                          <span className="text-muted-foreground text-xs font-normal">
+                            {tn('courses.module.item_count', count)}
+                          </span>
+                        </span>
+                        {m.description ? (
+                          <span className="text-muted-foreground text-sm font-normal">
+                            {m.description}
+                          </span>
+                        ) : null}
                       </span>
-                      <h2 className="font-semibold">{m.title}</h2>
-                      {!m.is_published ? (
-                        <Badge variant="outline">
-                          {t('courses.module.hidden')}
-                        </Badge>
-                      ) : null}
-                    </div>
-                    {m.description ? (
-                      <p className="text-muted-foreground mt-1 text-sm">
-                        {m.description}
-                      </p>
+                    </AccordionTrigger>
+                    {isStaff ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            className="mt-3 shrink-0"
+                          >
+                            <MoreHorizontal />
+                            <span className="sr-only">
+                              {t('courses.module.actions')}
+                            </span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openEditModule(m)}>
+                            {t('courses.module.edit')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              updateModule.mutate({
+                                id: m.id,
+                                patch: { is_published: !m.is_published },
+                              })
+                            }
+                          >
+                            {m.is_published
+                              ? t('courses.module.hide')
+                              : t('courses.module.show')}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            disabled={index === 0}
+                            onClick={() => moveModule(index, -1)}
+                          >
+                            <ChevronUp /> {t('courses.move_up')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={index === moduleCount - 1}
+                            onClick={() => moveModule(index, 1)}
+                          >
+                            <ChevronDown /> {t('courses.move_down')}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            variant="destructive"
+                            onClick={() => setDeleteModuleTarget(m)}
+                          >
+                            {t('courses.module.delete')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     ) : null}
                   </div>
-                  {isStaff ? (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          className="-mt-1 -mr-1 shrink-0"
-                        >
-                          <MoreHorizontal />
-                          <span className="sr-only">
-                            {t('courses.module.actions')}
-                          </span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEditModule(m)}>
-                          {t('courses.module.edit')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() =>
-                            updateModule.mutate({
-                              id: m.id,
-                              patch: { is_published: !m.is_published },
-                            })
-                          }
-                        >
-                          {m.is_published
-                            ? t('courses.module.hide')
-                            : t('courses.module.show')}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          disabled={index === 0}
-                          onClick={() => moveModule(index, -1)}
-                        >
-                          <ChevronUp /> {t('courses.move_up')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          disabled={index === moduleCount - 1}
-                          onClick={() => moveModule(index, 1)}
-                        >
-                          <ChevronDown /> {t('courses.move_down')}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={() => setDeleteModuleTarget(m)}
-                        >
-                          {t('courses.module.delete')}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  ) : null}
-                </div>
-              </CardHeader>
 
-              <CardContent className="space-y-4">
+                  {/* h-auto overrides the primitive's fixed content height: this
+                      list grows and shrinks while open (adding an item, deleting
+                      one), and the measured height would clip it. */}
+                  <AccordionContent className="h-auto space-y-4">
                 {SECTIONS.map(({ kind, labelKey, addKey }) => {
                   const items = kindItems(m.id, kind)
                   const Icon = KIND_ICON[kind]
@@ -482,27 +603,56 @@ export function CourseDetailPage() {
                                 className="text-muted-foreground size-4 shrink-0"
                                 aria-hidden
                               />
-                              <Link
-                                to={item.href}
-                                className="min-w-0 flex-1 truncate text-sm hover:underline"
-                              >
-                                {item.title}
-                              </Link>
+                              {item.href ? (
+                                <Link
+                                  to={item.href}
+                                  className="min-w-0 flex-1 truncate text-sm hover:underline"
+                                >
+                                  {item.title}
+                                </Link>
+                              ) : (
+                                // A material has no page of its own: clicking it
+                                // fetches a 60-second signed URL and opens the
+                                // file.
+                                <button
+                                  type="button"
+                                  className="min-w-0 flex-1 truncate text-left text-sm hover:underline"
+                                  onClick={() =>
+                                    openMaterial.mutate({ id: item.id })
+                                  }
+                                >
+                                  {item.title}
+                                </button>
+                              )}
                               {item.meta ? (
                                 <span className="text-muted-foreground hidden shrink-0 text-xs sm:inline">
                                   {item.meta}
                                 </span>
                               ) : null}
-                              <Badge
-                                variant={
-                                  item.isPublished ? 'default' : 'secondary'
-                                }
-                                className="shrink-0"
-                              >
-                                {item.isPublished
-                                  ? t('common.published')
-                                  : t('common.draft')}
-                              </Badge>
+                              {isStaff ? (
+                                <PublishSwitch
+                                  checked={item.isPublished}
+                                  title={item.title}
+                                  onChange={(next) =>
+                                    togglePublished.mutate({
+                                      kind: item.kind,
+                                      id: item.id,
+                                      next,
+                                    })
+                                  }
+                                />
+                              ) : (
+                                <Badge
+                                  variant={
+                                    item.isPublished ? 'default' : 'secondary'
+                                  }
+                                  className="shrink-0"
+                                >
+                                  {item.isPublished
+                                    ? t('common.published')
+                                    : t('common.draft')}
+                                </Badge>
+                              )}
                               {isStaff ? (
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
@@ -521,10 +671,26 @@ export function CourseDetailPage() {
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
                                     <DropdownMenuItem
-                                      onClick={() => navigate(item.href)}
+                                      onClick={() =>
+                                        item.href
+                                          ? navigate(item.href)
+                                          : openMaterial.mutate({ id: item.id })
+                                      }
                                     >
                                       {t('common.open')}
                                     </DropdownMenuItem>
+                                    {!item.href ? (
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          openMaterial.mutate({
+                                            id: item.id,
+                                            download: true,
+                                          })
+                                        }
+                                      >
+                                        {t('common.download')}
+                                      </DropdownMenuItem>
+                                    ) : null}
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem
                                       disabled={i === 0}
@@ -576,9 +742,11 @@ export function CourseDetailPage() {
                     </div>
                   )
                 })}
-              </CardContent>
-            </Card>
-          ))
+                  </AccordionContent>
+                </AccordionItem>
+              )
+            })}
+          </Accordion>
         )}
       </div>
 
@@ -590,6 +758,12 @@ export function CourseDetailPage() {
             open={courseDialogOpen}
             onOpenChange={setCourseDialogOpen}
           />
+          <DuplicateCourseDialog
+            academyId={activeAcademyId}
+            course={course}
+            open={duplicateOpen}
+            onOpenChange={setDuplicateOpen}
+          />
           <ModuleFormDialog
             academyId={activeAcademyId}
             courseId={courseId}
@@ -597,6 +771,16 @@ export function CourseDetailPage() {
             nextSortOrder={moduleCount}
             open={moduleDialogOpen}
             onOpenChange={setModuleDialogOpen}
+          />
+          <MaterialUploadDialog
+            academyId={activeAcademyId}
+            courseId={courseId}
+            moduleId={uploadTarget?.moduleId ?? null}
+            sortOrder={uploadTarget?.sortOrder ?? 0}
+            open={!!uploadTarget}
+            onOpenChange={(o) => {
+              if (!o) setUploadTarget(null)
+            }}
           />
         </>
       ) : null}

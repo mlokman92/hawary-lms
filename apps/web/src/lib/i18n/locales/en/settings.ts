@@ -1,9 +1,37 @@
-/** Academy settings: the ToyyibPay gateway card and the members (staff) page. */
+/**
+ * Academy settings: the academy profile (letterhead) card, the ToyyibPay
+ * gateway card and the members (staff) page.
+ */
 export const settings = {
   // Settings page shell
   'settings.title': 'Settings',
-  'settings.subtitle': 'Configure your academy’s integrations.',
+  'settings.subtitle': 'Configure your academy’s details and integrations.',
   'settings.admin_only': 'Only academy admins can manage settings.',
+
+  // Academy profile — what invoices and receipts print
+  'settings.academy.title': 'Academy details',
+  'settings.academy.description':
+    'These appear on the invoices and receipts your students download.',
+  'settings.academy.name_label': 'Academy name',
+  'settings.academy.name_placeholder': 'Your academy’s registered name',
+  'settings.academy.logo_label': 'Logo',
+  'settings.academy.logo_hint':
+    'PNG, JPEG or WebP. Shown at the top of every invoice and receipt.',
+  'settings.academy.no_logo': 'No logo',
+  'settings.academy.change_logo': 'Change logo',
+  'settings.academy.remove_logo': 'Remove logo',
+  'settings.academy.address_label': 'Address',
+  'settings.academy.address_placeholder':
+    'Street, postcode, city and state — one line each',
+  'settings.academy.phone_label': 'Phone number',
+  'settings.academy.phone_placeholder': '03-1234 5678',
+  'settings.academy.sst_label': 'SST number',
+  'settings.academy.sst_placeholder': 'W10-1808-31000000',
+  'settings.academy.optional_hint':
+    'Only the academy name is required. Anything left blank is simply omitted from the document.',
+  'settings.academy.save': 'Save details',
+  'settings.academy.saved': 'Saved',
+  'settings.academy.error.name_required': 'Enter your academy name.',
 
   // ToyyibPay gateway card. "Sandbox" and "Live" are ToyyibPay's own mode
   // names and stay as-is in every language.
@@ -27,6 +55,10 @@ export const settings = {
   'settings.toyyibpay.accept_online.hint':
     'Show a “Pay online” button on invoice pay links.',
 
+  'settings.toyyibpay.charge_to_payor': 'Payor pays the ToyyibPay charge',
+  'settings.toyyibpay.charge_to_payor.hint':
+    'ToyyibPay adds its {amount} FPX charge on top, so the student pays it and you receive the full invoice amount. Off means you absorb it. This is the default for new invoices — you can change it on each one.',
+
   'settings.toyyibpay.secret_label': 'ToyyibPay secret key',
   'settings.toyyibpay.secret_placeholder': 'Your userSecretKey',
   'settings.toyyibpay.secret_hint':
@@ -48,25 +80,7 @@ export const settings = {
   'settings.toyyibpay.error.save_failed': 'Could not save the key.',
   'settings.toyyibpay.error.no_response': 'No response from server.',
 
-  // Members page
-  'settings.members.title': 'Members',
-  'settings.members.subtitle':
-    'Everyone with access to this academy, and what they can do.',
-  'settings.members.col.person': 'Person',
-  'settings.members.you': '(you)',
-  'settings.members.actions': 'Member actions',
-  'settings.members.make_admin': 'Make admin',
-  'settings.members.make_trainer': 'Make trainer',
-  'settings.members.make_student': 'Make student',
-  'settings.members.suspend': 'Suspend access',
-  'settings.members.restore': 'Restore access',
-  'settings.members.footnote':
-    'Suspending a member revokes course access immediately — enrolment alone no longer grants it.',
-
-  // academy_members.status
-  'settings.members.status.active': 'Active',
-  'settings.members.status.invited': 'Invited',
-  'settings.members.status.suspended': 'Suspended',
+  // The members page has its own namespace now — see `locales/en/members.ts`.
 } as const
 
 export type SettingsDict = Record<keyof typeof settings, string>

@@ -32,15 +32,60 @@ Monorepo: **pnpm workspaces + Turborepo**.
   params before the Supabase client consumes them), self-serve academy creation
   (creator becomes admin), academy switcher, light/dark theme.
 - **Sections** (each: list + add/edit, staff-gated, academy-scoped by RLS):
-  Courses · Students · Instructors · Payments. Nav is these four + Dashboard.
+  Courses · Students · Instructors · Payments. Nav is these four + Dashboard;
+  admins also get Members + Settings. The **header search** (`HeaderSearch` +
+  `features/search`) finds students and instructors across the active academy by
+  name, email, phone, IC or record number and jumps straight to the record.
 - **Course → module → content**: a course is a card grid (`/courses`) showing per-course
-  counts; opening one (`/courses/:id`) lists its **modules**, each holding notes,
-  assessments and assignments. `course_modules` is the only hierarchy —
-  `module_id` is **NOT NULL** on all three content tables, so there is no
-  course-level loose content and notes are a flat list per module (the old note
-  folder tree is gone). Editors stay routable at `/notes/:id`, `/assessments/:id`,
+  counts; opening one (`/courses/:id`) lists its **modules as an accordion**
+  (`type="multiple"`, open set kept per course in `sessionStorage`, first module
+  open by default), each holding notes, **materials**, assessments and
+  assignments. `course_modules` is the only hierarchy — `module_id` is **NOT
+  NULL** on all four content tables, so there is no course-level loose content
+  and notes are a flat list per module (the old note folder tree is gone).
+  Editors stay routable at `/notes/:id`, `/assessments/:id`,
   `/assignments/:id`. Reorder/move via `reorder_course_modules` +
-  `reorder_module_items(module, kind, ordered_ids)`.
+  `reorder_module_items(module, kind, ordered_ids)`. Publishing is an inline
+  `PublishSwitch` on the row (optimistic, reconciles on refetch) in both the
+  course page and the library pages — one `useTogglePublished` covers all
+  kinds. **Assessments** and
+  **Assignments** are also sub-nav items under Courses in both shells
+  (`NavItem.children` → `SidebarMenuSub`, always open), pointing at the
+  academy-wide lists `/assessments` · `/assignments` (staff, one `LibraryPage`)
+  and `/learn/assessments` · `/learn/assignments` (learner, one
+  `LearnTaskListPage` off the existing dashboard query). Notes stay module-only.
+- **Question types** (`docs/question-types.md`): six — `essay` · `short_text`
+  (marked by a person) and `true_false` · `single_choice` · `multiple_choice` ·
+  `matching` (marked by Postgres). `options` is public, `correct_answer` never
+  leaves the server, and **a student's answer is encoded exactly like
+  `correct_answer`** (string / boolean / array of ids / `{leftId: rightId}`), so
+  scoring is a comparison and the v1 string answers still work untouched.
+  Matching's right column is shuffled by `app.shuffled_matching_options` —
+  authoring order is itself the answer key. `submit_attempt` auto-scores via
+  `app.question_fraction` (partial credit for matching) and reaches `graded` only
+  when no question needs a human; otherwise it banks the objective marks and
+  leaves the rest to the grader. `assessments.total_points` is now
+  trigger-maintained — clients must not write it. Model + client mirror:
+  `apps/web/src/lib/questions.ts`.
+- **Materials** (`docs/course-materials.md`): `course_materials` is shaped like
+  `notes` (same FKs, same four policies) but its file lives in the **private**
+  `course-materials` bucket — this is the product, and in a public bucket the URL
+  *is* the product. Upload extends `upload-media` (50 MB, document MIME list, key
+  `<academy_id>/<course_id>/<uuid>.<ext>`); reads go through the new
+  **`material-url`** function, which asks `public.material_download` — under the
+  caller's own JWT — whether they may have it, then signs for 60s with the
+  service role. The request carries an **id, never a path**. Deleting a material
+  deletes the row, **not** the object: `duplicate_course` points copies at the
+  same file.
+- **Course duplication** (`docs/course-duplication.md`): `duplicate_course(id,
+  title, code)` deep-copies modules · notes · materials · assessments +
+  questions + answer keys · assignments · instructor assignments. Not enrolments,
+  attempts, submissions or invoices. The intake lives in the **title** — there is
+  no cohort entity and none should be invented. `code` is asked for, not copied
+  (uniquely indexed per academy); status resets to `draft` and all schedule dates
+  to NULL, so a new intake never opens already closed. Gated by
+  `app.can_grade_course`, stricter than course creation because it carries a
+  question bank.
 - **Data model**: identity is global (`profiles`, one per email); roles/records are
   per-academy. A **student is an academy record** (`students`, not necessarily an auth
   user); enrollment/invoices/payments reference `students`. An **instructor is the same
@@ -50,6 +95,36 @@ Monorepo: **pnpm workspaces + Turborepo**.
   `create_invitation`/`create_instructor_invitation`/`accept_invitation` RPCs reconcile
   an invited student/instructor to a profile — accepting an instructor invite grants the
   `trainer` role (email delivery needs SMTP).
+- **Members & roles** (`/members`, admin-only): the staff roster — students are
+  excluded (they are an academy record, managed on their own page, where their
+  app access can also be suspended). Two independent axes, never merged into one
+  ladder: **access** is `academy_members.role` (admin/trainer) and **teaching**
+  is a linked `instructors` record, so one account can be an admin *and* an
+  instructor. **Director** is the academy creator (`academies.created_by`) — a
+  name for the founder, not a fourth role; `Membership.isCreator` carries it to
+  the client. Contact details come from the admin-only `list_academy_staff` RPC,
+  which joins `auth.users` for the email: `profiles` is readable by every
+  co-member, so an email column there would be an address book for students.
+  There is **no `/members/:id`** — a row opens the person's own record
+  (`memberRecordPath`: instructor, else student). `/members` is where a
+  membership is managed (role, suspend/restore, attach/detach the instructor
+  record); the instructor page carries only a **"Make admin" checkbox**, the one
+  control worth having next to the person.
+  `unlink_instructor_account` is the inverse of `link_instructor_account` (which
+  preserves an `admin` role on purpose).
+- **CSV import** (`features/import`): bulk creation for students and
+  instructors, one spec-driven dialog (`ImportSpec` → `ImportDialog`) plus a
+  hand-rolled `lib/csv.ts` (BOM, CRLF, quoted commas/newlines, `;`/tab
+  delimiters — no dependency). Headers match loosely against per-field aliases
+  in EN and BM, so a spreadsheet with `Nama Penuh` / `No. Telefon` lands without
+  a mapping step; parsing, validation and duplicate detection (`email`,
+  `ic_number`, against the loaded list *and* earlier rows) all happen in the
+  browser, and a row with a problem is listed with its line number and excluded
+  rather than dropped silently. Inserts are chunked 100 at a time and report how
+  many landed if a later chunk fails.
+- **Own profile**: `/profile` (staff) and `/learn/profile` (learner) edit the
+  same `profiles` row via `features/profile/api.ts`; both are reached by clicking
+  your name in the sidebar footer (`UserMenu`'s `profileTo` prop).
 - **Block content**: shared editor (`lib/blocks.ts` + `components/BlocksEditor.tsx`) —
   text / image / youtube — used by assessments and assignments (notes use the
   rich-text `content` column).
@@ -57,6 +132,21 @@ Monorepo: **pnpm workspaces + Turborepo**.
   — unpublishing a module hides everything under it. `app.is_enrolled` requires an
   **active membership** plus an unarchived `active`/`trial` student record, so
   suspending a member revokes content immediately.
+- **Invoice documents** (`docs/invoice-documents.md`): every invoice gets its
+  `pay_token` from a BEFORE INSERT trigger, so the pay link exists at creation
+  (`ensure_pay_token` remains as the idempotent repair). `/settings` has an
+  **Academy details** card (name — the only mandatory field — logo, address,
+  phone, SST number) writing the long-existing `academies` columns; learners
+  download **invoice / receipt PDFs** from `/learn/billing*`, drawn by
+  `features/payments/pdf.ts` with a dynamically imported jsPDF.
+- **ToyyibPay charge** (`docs/toyyibpay-payments.md`): the flat RM1 FPX fee can
+  be passed to the payer via `billChargeToCustomer='0'`. Academy default
+  `academy_payment_settings.toyyibpay_charge_to_payor`, per-invoice override
+  `invoices.charge_to_payor` (**NULL = follow the default**); the terms are
+  pinned onto `payment_intents.{charge_to_payor,fee_sen}` at bill time.
+  `record_gateway_payment` no longer demands an exact amount — it accepts
+  `[amount_sen, amount_sen + fee_sen]` and **always credits `amount_sen`**, since
+  the surcharge is ToyyibPay's, not the academy's. Off by default.
 - **Learner surface** (`/learn/*`, `StudentShell`): enrolled courses → published
   modules → notes / assignments / assessments, plus **Billing** (own invoices,
   read-only) and **My profile** (editable `profiles.full_name`/`phone`). It renders
@@ -117,8 +207,10 @@ Monorepo: **pnpm workspaces + Turborepo**.
   low-rate test mailer and the functions want `APP_URL`/`ALLOWED_ORIGINS` set.
   Until then, link accounts with the admin RPCs above.
 - Assignment **attachments** (needs a private `submissions` bucket + a student
-  branch in `upload-media`); scheduled expiry sweep for invitations; student
-  billing view; assessment auto-scoring for objective question types.
+  branch in `upload-media`); scheduled expiry sweep for invitations.
+- Assessment settings still have **no UI**: `duration_minutes`, `max_attempts`,
+  `available_from/until` and `type` are enforced server-side but can only be set
+  in SQL. The editor writes `title`, `is_published` and `instructions` only.
 - Mobile app wiring (i18n dictionary moves to `packages/shared` when it lands);
   BM for transactional email + Edge Function errors; web code-splitting.
 - Plans in `docs/` (academy registration/reconciliation, CI/CD).

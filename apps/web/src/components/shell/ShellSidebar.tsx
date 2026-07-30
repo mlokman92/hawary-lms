@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { UserMenu } from '@/components/UserMenu'
-import { isNavActive, type NavGroup } from './nav'
+import { isBranchActive, isNavActive, type NavGroup } from './nav'
 import {
   Sidebar,
   SidebarContent,
@@ -12,6 +12,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
 } from '@/components/ui/sidebar'
 
@@ -23,9 +26,12 @@ import {
 export function ShellSidebar({
   switcher,
   groups,
+  profileTo,
 }: {
   switcher: ReactNode
   groups: NavGroup[]
+  /** Where the footer identity block points — see `UserMenu`. */
+  profileTo: string
 }) {
   const { pathname } = useLocation()
 
@@ -44,7 +50,9 @@ export function ShellSidebar({
                   <SidebarMenuItem key={item.to}>
                     <SidebarMenuButton
                       asChild
-                      isActive={active}
+                      // The parent stays lit for its whole branch, but only the
+                      // exact match claims aria-current="page".
+                      isActive={isBranchActive(pathname, item)}
                       tooltip={item.title}
                     >
                       <Link
@@ -55,6 +63,36 @@ export function ShellSidebar({
                         <span>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
+                    {item.children?.length ? (
+                      // Always open. These are four fixed destinations, not a
+                      // tree that grows — a disclosure would only add a click
+                      // and hide them again. Radix's own styles collapse this
+                      // away in the icon rail.
+                      <SidebarMenuSub>
+                        {item.children.map((child) => {
+                          const childActive = isNavActive(pathname, child)
+                          const { icon: ChildIcon } = child
+                          return (
+                            <SidebarMenuSubItem key={child.to}>
+                              <SidebarMenuSubButton
+                                asChild
+                                isActive={childActive}
+                              >
+                                <Link
+                                  to={child.to}
+                                  aria-current={
+                                    childActive ? 'page' : undefined
+                                  }
+                                >
+                                  <ChildIcon />
+                                  <span>{child.title}</span>
+                                </Link>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          )
+                        })}
+                      </SidebarMenuSub>
+                    ) : null}
                   </SidebarMenuItem>
                 )
               })}
@@ -63,7 +101,7 @@ export function ShellSidebar({
         ))}
       </SidebarContent>
       <SidebarFooter>
-        <UserMenu />
+        <UserMenu profileTo={profileTo} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

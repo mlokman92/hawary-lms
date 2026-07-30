@@ -4,10 +4,28 @@ export const courses = {
   'courses.subtitle': 'Open a course to manage its modules and content.',
   'courses.new': 'New course',
   'courses.edit': 'Edit course',
+  'courses.materials': 'Materials',
   'courses.assessments': 'Assessments',
   'courses.assignments': 'Assignments',
   'courses.menu.edit_details': 'Edit details',
   'courses.menu.archive': 'Archive',
+
+  // Duplicate for a new intake
+  'courses.duplicate': 'Duplicate',
+  'courses.duplicate.description':
+    'Copy this course for a new intake. Name the copy so the two can be told apart — most academies put the intake in the title.',
+  'courses.duplicate.title_default': '{title} (copy)',
+  'courses.duplicate.code_hint':
+    'Course codes must be unique, so the copy starts without one. The original is “{code}”.',
+  'courses.duplicate.code_hint_none':
+    'Course codes must be unique in an academy. Optional.',
+  'courses.duplicate.copies.title': 'What comes across',
+  'courses.duplicate.copies.body':
+    'Modules, notes, materials, assessments with their questions and answer keys, assignments, and the assigned instructors. The copy is created as a draft.',
+  'courses.duplicate.skips.body':
+    'Students, enrolments, submissions, attempts and invoices are not copied. Opening and due dates are cleared so you can set this intake’s own.',
+  'courses.duplicate.confirm': 'Duplicate course',
+  'courses.duplicate.working': 'Duplicating…',
   'courses.status.archived': 'Archived',
   'courses.empty.none': 'No courses yet.',
   'courses.empty.create_first': 'Create your first course',
@@ -32,6 +50,8 @@ export const courses = {
   // Modules inside a course
   'courses.module.new': 'New module',
   'courses.module.hidden': 'Hidden',
+  'courses.module.item_count_one': '{count} item',
+  'courses.module.item_count_other': '{count} items',
   'courses.module.actions': 'Module actions',
   'courses.module.edit': 'Edit module',
   'courses.module.hide': 'Hide from students',
@@ -47,6 +67,7 @@ export const courses = {
   // Content inside a module
   'courses.section.empty': 'None yet.',
   'courses.item.note': 'Note',
+  'courses.item.material': 'Material',
   'courses.item.assessment': 'Assessment',
   'courses.item.assignment': 'Assignment',
   'courses.item.actions': '{title} actions',
@@ -62,6 +83,7 @@ export const courses = {
 
   // Delete confirmations
   'courses.delete.note.title': 'Delete this note?',
+  'courses.delete.material.title': 'Remove this material?',
   'courses.delete.assessment.title': 'Delete this assessment?',
   'courses.delete.assignment.title': 'Delete this assignment?',
   'courses.delete.module.title': 'Delete this module?',

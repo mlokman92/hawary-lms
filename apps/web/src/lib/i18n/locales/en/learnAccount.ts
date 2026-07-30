@@ -5,6 +5,7 @@ export const learnAccount = {
   'lacct.billing.description': 'Your invoices and payments.',
   'lacct.billing.no_record_detail': 'There is nothing to bill yet.',
   'lacct.billing.empty': 'You don’t have any invoices yet.',
+  'lacct.billing.documents': 'Documents',
 
   // Money labels (stat tiles and the invoice summary read the same words)
   'lacct.amount.billed': 'Billed',
@@ -57,7 +58,6 @@ export const learnAccount = {
     'Your sign-in email can’t be changed here — ask your academy if it needs updating.',
   'lacct.profile.save_changes': 'Save changes',
   'lacct.profile.save_failed': 'Could not save your profile.',
-  'lacct.profile.not_signed_in': 'Not signed in.',
 
   // Profile → the record the academy holds
   'lacct.profile.record': 'Academy record',

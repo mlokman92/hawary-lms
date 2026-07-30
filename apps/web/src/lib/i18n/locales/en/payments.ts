@@ -83,6 +83,9 @@ export const payments = {
   'payments.form.due_date': 'Due date (optional)',
   'payments.form.tax': 'Tax / SST (RM, optional)',
   'payments.form.notes': 'Notes (optional)',
+  'payments.form.charge_to_payor': 'Payor pays the ToyyibPay charge',
+  'payments.form.charge_to_payor.hint':
+    'Adds ToyyibPay’s {amount} FPX charge on top when the student pays online, so you receive the full amount. Starts from your settings default.',
   'payments.form.per_student_one': '{amount} × {count} student',
   'payments.form.per_student_other': '{amount} × {count} students',
   'payments.form.grand_total': 'Total {amount}',

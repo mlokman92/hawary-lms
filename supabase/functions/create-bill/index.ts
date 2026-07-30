@@ -41,6 +41,19 @@ function json(body: unknown, status = 200): Response {
 const DEFAULT_APP_URL = 'https://app.hawary.my'
 const PAYABLE = ['issued', 'partially_paid', 'overdue']
 
+// ToyyibPay's standard B2C FPX rate: a flat RM1.00 per transaction, independent
+// of the amount. Only used when the academy passes the charge to the payer, and
+// only as the tolerance `record_gateway_payment` allows on top of the bill
+// amount — the money itself is ToyyibPay's and never enters our ledger. If they
+// ever reprice, an outdated value here shows up as `needs_reconciliation` on the
+// intent, not as a wrongly settled invoice.
+const FPX_FEE_SEN = 100
+
+// billChargeToCustomer: blank = bill owner pays both, "0" = FPX to the customer
+// and card to the owner. We open the FPX channel only (billPaymentChannel "0"),
+// so "0" is the exact setting.
+const CHARGE_FPX_TO_CUSTOMER = '0'
+
 // Resolve the return-URL base from trusted server config only. A client-supplied
 // origin is accepted solely when it is explicitly allowlisted. (Same helper as
 // send-invitation — kept inline so each function stays a single deployable file.)
@@ -98,7 +111,7 @@ Deno.serve(async (req) => {
   const { data: invoice, error: invErr } = await admin
     .from('invoices')
     .select(
-      'id, academy_id, invoice_no, currency, total_sen, amount_paid_sen, status, student_id',
+      'id, academy_id, invoice_no, currency, total_sen, amount_paid_sen, status, student_id, charge_to_payor',
     )
     .eq('pay_token', token)
     .maybeSingle()
@@ -115,7 +128,9 @@ Deno.serve(async (req) => {
   // 2. Load gateway settings for this academy.
   const { data: settings } = await admin
     .from('academy_payment_settings')
-    .select('toyyibpay_enabled, toyyibpay_category_code, toyyibpay_is_sandbox')
+    .select(
+      'toyyibpay_enabled, toyyibpay_category_code, toyyibpay_is_sandbox, toyyibpay_charge_to_payor',
+    )
     .eq('academy_id', invoice.academy_id)
     .maybeSingle()
   if (!settings?.toyyibpay_enabled || !settings.toyyibpay_category_code)
@@ -123,6 +138,11 @@ Deno.serve(async (req) => {
 
   const isSandbox = settings.toyyibpay_is_sandbox !== false
   const base = host(isSandbox)
+
+  // Per-invoice decision wins; NULL means "follow the academy's default".
+  const chargeToPayor =
+    invoice.charge_to_payor ?? settings.toyyibpay_charge_to_payor ?? false
+  const feeSen = chargeToPayor ? FPX_FEE_SEN : 0
 
   // 3. Reuse a live intent so a repeated click doesn't mint duplicate bills.
   const { data: live } = await admin
@@ -149,6 +169,8 @@ Deno.serve(async (req) => {
       amount_sen: dueSen,
       status: 'created',
       nonce,
+      charge_to_payor: chargeToPayor,
+      fee_sen: feeSen,
     })
     if (insErr) {
       // Lost a race to a concurrent call — re-read the now-live intent.
@@ -209,6 +231,9 @@ Deno.serve(async (req) => {
   }
   if (validEmail) fields.billEmail = payerEmail
   if (payerPhone) fields.billPhone = payerPhone
+  // Omitted entirely when the academy absorbs the charge — ToyyibPay reads a
+  // blank/absent billChargeToCustomer as "bill owner pays".
+  if (chargeToPayor) fields.billChargeToCustomer = CHARGE_FPX_TO_CUSTOMER
 
   const res = await fetch(`${base}/index.php/api/createBill`, {
     method: 'POST',
@@ -235,9 +260,19 @@ Deno.serve(async (req) => {
     )
   }
 
+  // Restate the charge terms alongside the bill code: this row is what
+  // record_gateway_payment judges the settled amount against, so it must record
+  // what we actually sent — including on a reused intent minted before the
+  // academy changed its default.
   await admin
     .from('payment_intents')
-    .update({ bill_code: billCode, status: 'pending', host: base })
+    .update({
+      bill_code: billCode,
+      status: 'pending',
+      host: base,
+      charge_to_payor: chargeToPayor,
+      fee_sen: feeSen,
+    })
     .eq('id', intentId)
 
   return json({ ok: true, url: `${base}/${billCode}` })

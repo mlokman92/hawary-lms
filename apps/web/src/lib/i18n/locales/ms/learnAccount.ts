@@ -6,6 +6,7 @@ export const learnAccount: LearnAccountDict = {
   'lacct.billing.description': 'Invois dan pembayaran anda.',
   'lacct.billing.no_record_detail': 'Belum ada apa-apa untuk dibilkan.',
   'lacct.billing.empty': 'Anda belum mempunyai sebarang invois.',
+  'lacct.billing.documents': 'Dokumen',
 
   // Label jumlah wang
   'lacct.amount.billed': 'Dibilkan',
@@ -57,7 +58,6 @@ export const learnAccount: LearnAccountDict = {
     'E-mel log masuk anda tidak boleh ditukar di sini — hubungi akademi anda jika ia perlu dikemas kini.',
   'lacct.profile.save_changes': 'Simpan perubahan',
   'lacct.profile.save_failed': 'Profil anda tidak dapat disimpan.',
-  'lacct.profile.not_signed_in': 'Anda belum log masuk.',
 
   // Profil → rekod yang disimpan akademi
   'lacct.profile.record': 'Rekod akademi',

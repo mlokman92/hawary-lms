@@ -41,6 +41,11 @@ export const grading: GradingDict = {
   'grading.attempt.meta': '{title} · percubaan {no} · dihantar {when}',
   'grading.attempt.no_answer': 'Tiada jawapan diberikan.',
   'grading.attempt.no_questions': 'Penilaian ini tiada soalan.',
+  'grading.attempt.manual': 'Anda menilai ini',
+  'grading.attempt.auto_earned': '{earned} / {max}',
+  'grading.attempt.auto_summary':
+    'Dinilai secara automatik: {scored} daripada {auto}. Baki {manual} markah adalah untuk anda berikan.',
+  'grading.attempt.use_auto': 'Mula daripada {scored}',
   'grading.attempt.release_hint':
     'Memberi markah pada percubaan akan memaparkan markah tersebut kepada pelajar.',
   'grading.score_out_of': 'Skor (daripada {max})',

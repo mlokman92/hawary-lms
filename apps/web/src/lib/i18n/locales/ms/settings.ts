@@ -3,8 +3,34 @@ import type { SettingsDict } from '../en/settings'
 export const settings: SettingsDict = {
   // Halaman tetapan
   'settings.title': 'Tetapan',
-  'settings.subtitle': 'Konfigurasikan integrasi akademi anda.',
+  'settings.subtitle':
+    'Konfigurasikan butiran dan integrasi akademi anda.',
   'settings.admin_only': 'Hanya pentadbir akademi boleh mengurus tetapan.',
+
+  // Profil akademi — maklumat yang dicetak pada invois dan resit
+  'settings.academy.title': 'Butiran akademi',
+  'settings.academy.description':
+    'Maklumat ini dipaparkan pada invois dan resit yang dimuat turun oleh pelajar anda.',
+  'settings.academy.name_label': 'Nama akademi',
+  'settings.academy.name_placeholder': 'Nama berdaftar akademi anda',
+  'settings.academy.logo_label': 'Logo',
+  'settings.academy.logo_hint':
+    'PNG, JPEG atau WebP. Dipaparkan di bahagian atas setiap invois dan resit.',
+  'settings.academy.no_logo': 'Tiada logo',
+  'settings.academy.change_logo': 'Tukar logo',
+  'settings.academy.remove_logo': 'Buang logo',
+  'settings.academy.address_label': 'Alamat',
+  'settings.academy.address_placeholder':
+    'Jalan, poskod, bandar dan negeri — satu baris setiap satu',
+  'settings.academy.phone_label': 'Nombor telefon',
+  'settings.academy.phone_placeholder': '03-1234 5678',
+  'settings.academy.sst_label': 'Nombor SST',
+  'settings.academy.sst_placeholder': 'W10-1808-31000000',
+  'settings.academy.optional_hint':
+    'Hanya nama akademi diwajibkan. Ruangan yang dibiarkan kosong tidak akan dipaparkan pada dokumen.',
+  'settings.academy.save': 'Simpan butiran',
+  'settings.academy.saved': 'Telah disimpan',
+  'settings.academy.error.name_required': 'Masukkan nama akademi anda.',
 
   // Kad gerbang pembayaran ToyyibPay. "Sandbox" dan "Live" ialah nama mod
   // ToyyibPay sendiri, jadi ia dikekalkan.
@@ -27,6 +53,10 @@ export const settings: SettingsDict = {
   'settings.toyyibpay.accept_online': 'Terima pembayaran dalam talian',
   'settings.toyyibpay.accept_online.hint':
     'Paparkan butang “Bayar dalam talian” pada pautan bayaran invois.',
+
+  'settings.toyyibpay.charge_to_payor': 'Pembayar menanggung caj ToyyibPay',
+  'settings.toyyibpay.charge_to_payor.hint':
+    'ToyyibPay menambah caj FPX {amount} pada jumlah bil, jadi pelajar yang menanggungnya dan anda menerima jumlah invois penuh. Jika dimatikan, anda yang menanggungnya. Ini ialah tetapan lalai untuk invois baharu — anda boleh mengubahnya pada setiap invois.',
 
   'settings.toyyibpay.secret_label': 'Kunci rahsia ToyyibPay',
   'settings.toyyibpay.secret_placeholder': 'userSecretKey anda',
@@ -51,23 +81,6 @@ export const settings: SettingsDict = {
   'settings.toyyibpay.error.save_failed': 'Kunci tidak dapat disimpan.',
   'settings.toyyibpay.error.no_response': 'Tiada respons daripada pelayan.',
 
-  // Halaman ahli
-  'settings.members.title': 'Ahli',
-  'settings.members.subtitle':
-    'Semua orang yang mempunyai akses kepada akademi ini, dan apa yang boleh mereka lakukan.',
-  'settings.members.col.person': 'Individu',
-  'settings.members.you': '(anda)',
-  'settings.members.actions': 'Tindakan ahli',
-  'settings.members.make_admin': 'Jadikan pentadbir',
-  'settings.members.make_trainer': 'Jadikan jurulatih',
-  'settings.members.make_student': 'Jadikan pelajar',
-  'settings.members.suspend': 'Gantung akses',
-  'settings.members.restore': 'Pulihkan akses',
-  'settings.members.footnote':
-    'Menggantung seseorang ahli akan menarik balik akses kursusnya serta-merta — pendaftaran kursus sahaja tidak lagi memberikan akses.',
-
-  // academy_members.status
-  'settings.members.status.active': 'Aktif',
-  'settings.members.status.invited': 'Dijemput',
-  'settings.members.status.suspended': 'Digantung',
+  // Halaman ahli kini mempunyai ruang namanya sendiri — lihat
+  // `locales/ms/members.ts`.
 }

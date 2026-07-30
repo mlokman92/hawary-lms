@@ -1,6 +1,12 @@
 // ============================================================================
 // Edge Function: upload-media
-// Uploads an image into a public bucket, scoped to <academy_id>/ .
+// Uploads a file into an allow-listed bucket, always scoped to <academy_id>/ .
+//
+//   note-media / avatars   public  · images  · <academy_id>/<uuid>.<ext>
+//   course-materials       PRIVATE · docs    · <academy_id>/<course_id>/<uuid>.<ext>
+//
+// Materials get no URL back — the bucket is private, so reading one goes
+// through the material-url function instead.
 // ----------------------------------------------------------------------------
 // Why this exists
 //   Direct browser uploads went to storage.objects and were authorised by RLS
@@ -19,9 +25,10 @@
 //   - Staff membership for the TARGET academy is re-checked server-side with
 //     the service role (authoritative, no RLS recursion). Non-staff, or staff
 //     of a different academy, are rejected with an explicit message.
-//   - bucket is allow-listed; the object key is always
-//     <academy_id>/<uuid>.<ext>, so a caller can never write outside its tenant.
-//   - Content type must be an image and size is capped.
+//   - bucket is allow-listed; the object key always starts with the academy id
+//     the caller was just proved to be staff of, so a caller can never write
+//     outside its tenant.
+//   - Content type is allow-listed per bucket and size is capped.
 // Auto-injected by the platform: SUPABASE_URL, SUPABASE_ANON_KEY,
 // SUPABASE_SERVICE_ROLE_KEY.
 // ============================================================================
@@ -43,11 +50,13 @@ function json(body: unknown, status = 200): Response {
 }
 
 /** Buckets this function may write to. Anything else is rejected outright. */
-const BUCKETS = new Set(['note-media', 'avatars'])
+const BUCKETS = new Set(['note-media', 'avatars', 'course-materials'])
 
 const MAX_BYTES = 10 * 1024 * 1024 // 10 MB
+/** Slide decks are not images. Bigger cap, but only for the private bucket. */
+const MAX_BYTES_MATERIAL = 50 * 1024 * 1024 // 50 MB
 
-const EXT_BY_TYPE: Record<string, string> = {
+const IMAGE_EXT_BY_TYPE: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/jpg': 'jpg',
   'image/png': 'png',
@@ -55,6 +64,29 @@ const EXT_BY_TYPE: Record<string, string> = {
   'image/gif': 'gif',
   'image/avif': 'avif',
   'image/svg+xml': 'svg',
+}
+
+/**
+ * Course material is a document, not an image, so it needs its own allow-list.
+ * Kept in step with the bucket's allowed_mime_types — Storage would reject a
+ * mismatch anyway, but a 400 from here says which type was refused.
+ */
+const MATERIAL_EXT_BY_TYPE: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'application/msword': 'doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+    'docx',
+  'application/vnd.ms-powerpoint': 'ppt',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+    'pptx',
+  'application/vnd.ms-excel': 'xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'text/plain': 'txt',
+  'text/csv': 'csv',
+  'application/zip': 'zip',
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
 }
 
 const UUID_RE =
@@ -73,7 +105,7 @@ Deno.serve(async (req) => {
   if (!supabaseUrl || !anonKey || !serviceKey)
     return json({ error: 'Server misconfigured: missing Supabase env' }, 500)
 
-  // multipart/form-data: file + bucket + academy_id
+  // multipart/form-data: file + bucket + academy_id (+ course_id for materials)
   let form: FormData
   try {
     form = await req.formData()
@@ -83,21 +115,39 @@ Deno.serve(async (req) => {
 
   const bucket = String(form.get('bucket') ?? '').trim()
   const academyId = String(form.get('academy_id') ?? '').trim()
+  // Materials are filed per course so the object key mirrors the hierarchy;
+  // ignored by the two image buckets.
+  const courseId = String(form.get('course_id') ?? '').trim()
   const file = form.get('file')
+
+  const isMaterial = bucket === 'course-materials'
 
   if (!BUCKETS.has(bucket)) return json({ error: 'Unknown bucket' }, 400)
   if (!UUID_RE.test(academyId))
     return json({ error: 'Missing or malformed academy_id' }, 400)
+  if (isMaterial && !UUID_RE.test(courseId))
+    return json({ error: 'Missing or malformed course_id' }, 400)
   if (!(file instanceof File)) return json({ error: 'Missing file' }, 400)
   if (file.size === 0) return json({ error: 'File is empty' }, 400)
-  if (file.size > MAX_BYTES)
-    return json({ error: 'File is larger than 10 MB' }, 413)
+
+  const maxBytes = isMaterial ? MAX_BYTES_MATERIAL : MAX_BYTES
+  if (file.size > maxBytes)
+    return json(
+      { error: `File is larger than ${Math.round(maxBytes / 1024 / 1024)} MB` },
+      413,
+    )
 
   const contentType = file.type || 'application/octet-stream'
-  const ext = EXT_BY_TYPE[contentType]
+  const ext = isMaterial
+    ? MATERIAL_EXT_BY_TYPE[contentType]
+    : IMAGE_EXT_BY_TYPE[contentType]
   if (!ext)
     return json(
-      { error: `Unsupported image type: ${contentType}` },
+      {
+        error: isMaterial
+          ? `Unsupported file type: ${contentType}`
+          : `Unsupported image type: ${contentType}`,
+      },
       415,
     )
 
@@ -146,12 +196,31 @@ Deno.serve(async (req) => {
     )
   }
 
+  // Materials are filed under their course, images directly under the tenant.
+  // Either way the key starts with the academy id the caller was just proved to
+  // be staff of, so nothing can be written outside its tenant.
+  const path = isMaterial
+    ? `${academyId}/${courseId}/${crypto.randomUUID()}.${ext}`
+    : `${academyId}/${crypto.randomUUID()}.${ext}`
+
   // --- write (service role: independent of storage RLS) ---------------------
-  const path = `${academyId}/${crypto.randomUUID()}.${ext}`
   const { error: upErr } = await admin.storage
     .from(bucket)
     .upload(path, file, { contentType, upsert: false })
   if (upErr) return json({ error: upErr.message, code: 'upload_failed' }, 500)
+
+  // The materials bucket is private, so there is no public URL to hand back —
+  // only the key, which the caller stores on course_materials.file_path. Reading
+  // it later goes through material-url.
+  if (isMaterial) {
+    return json({
+      ok: true,
+      path,
+      file_name: file.name,
+      mime_type: contentType,
+      size_bytes: file.size,
+    })
+  }
 
   const { data: pub } = admin.storage.from(bucket).getPublicUrl(path)
   return json({ ok: true, path, url: pub.publicUrl })

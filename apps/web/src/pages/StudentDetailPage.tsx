@@ -56,6 +56,11 @@ import {
   type StudentStatus,
 } from '@/features/students/api'
 import { useSendInvitation } from '@/features/students/api'
+import {
+  MEMBER_STATUS_META,
+  useMemberAccess,
+  useUpdateMember,
+} from '@/features/members/api'
 
 /**
  * Enum→label maps are module constants, built before any language is known, so
@@ -151,6 +156,8 @@ export function StudentDetailPage() {
   const academyId = activeAcademyId ?? ''
   const isStaff = active?.role === 'admin' || active?.role === 'trainer'
 
+  const isAdmin = active?.role === 'admin'
+
   const { data: student, isLoading, error } = useStudent(id)
   const { data: enrollments } = useStudentEnrollments(id)
   const updateStudent = useUpdateStudent(academyId)
@@ -158,6 +165,8 @@ export function StudentDetailPage() {
   const unenroll = useUnenroll(academyId, id ?? '')
   const createInvitation = useCreateInvitation()
   const { data: invoices } = useStudentInvoices(academyId, id)
+  const { data: access } = useMemberAccess(activeAcademyId, student?.user_id)
+  const updateMember = useUpdateMember(activeAcademyId)
 
   const [editOpen, setEditOpen] = useState(false)
   const [enrollOpen, setEnrollOpen] = useState(false)
@@ -218,9 +227,44 @@ export function StudentDetailPage() {
                   no: student.student_no,
                 })}
               </p>
-              <div className="mt-2 flex items-center gap-2">
+              <div className="mt-2 flex flex-wrap items-center gap-2">
                 {student.user_id ? (
-                  <Badge variant="secondary">{t('students.account.linked')}</Badge>
+                  <>
+                    <Badge variant="secondary">
+                      {t('students.account.linked')}
+                    </Badge>
+                    {/* App access lives here now: students are no longer listed
+                        on /members, and suspending a membership is what
+                        actually revokes course access (app.is_enrolled requires
+                        an active member row). */}
+                    {access ? (
+                      <Badge variant={MEMBER_STATUS_META[access.status].variant}>
+                        {t(MEMBER_STATUS_META[access.status].labelKey)}
+                      </Badge>
+                    ) : null}
+                    {isAdmin && access ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={updateMember.isPending}
+                        onClick={() =>
+                          updateMember.mutate({
+                            userId: student.user_id!,
+                            patch: {
+                              status:
+                                access.status === 'active'
+                                  ? 'suspended'
+                                  : 'active',
+                            },
+                          })
+                        }
+                      >
+                        {access.status === 'active'
+                          ? t('members.suspend')
+                          : t('members.restore')}
+                      </Button>
+                    ) : null}
+                  </>
                 ) : student.email ? (
                   isStaff ? (
                     <Button

@@ -1,18 +1,28 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { Tables, TablesUpdate } from '@hawary/shared'
+import type { Json, Tables, TablesUpdate } from '@hawary/shared'
 import { supabase } from '@/lib/supabase'
+import type { QuestionType } from '@/lib/questions'
 
 export type Assessment = Tables<'assessments'>
 export type AssessmentPatch = TablesUpdate<'assessments'>
 export type Question = Tables<'assessment_questions'>
 export type AssessmentRow = Assessment & { questions: { count: number }[] }
 
-/** A question being edited: id is null until first saved. */
+/**
+ * A question being edited: id is null until first saved.
+ *
+ * `options` and `correct_answer` are carried as jsonb exactly as the column
+ * stores them — see lib/questions.ts for the per-type shapes. Keeping them
+ * opaque here means adding a seventh question type never touches this file.
+ */
 export type QuestionDraft = {
   key: string
   id: string | null
+  question_type: QuestionType
   prompt: string
   points: number
+  options: Json | null
+  correct_answer: Json | null
 }
 
 const listKey = (a: string | null, c: string | null) =>
@@ -146,7 +156,14 @@ export function useSaveAssessment(
         if (q.id) {
           const { error } = await supabase
             .from('assessment_questions')
-            .update({ prompt: q.prompt, points: q.points, sort_order: q.sort_order })
+            .update({
+              question_type: q.question_type,
+              prompt: q.prompt,
+              points: q.points,
+              sort_order: q.sort_order,
+              options: q.options,
+              correct_answer: q.correct_answer,
+            })
             .eq('id', q.id)
           if (error) throw error
         } else {
@@ -155,10 +172,12 @@ export function useSaveAssessment(
             .insert({
               academy_id: academyId,
               assessment_id: assessmentId,
-              question_type: 'essay' as const,
+              question_type: q.question_type,
               prompt: q.prompt,
               points: q.points,
               sort_order: q.sort_order,
+              options: q.options,
+              correct_answer: q.correct_answer,
             })
             .select('id')
             .single()

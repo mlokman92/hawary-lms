@@ -28,12 +28,18 @@ import { pay as enPay } from './locales/en/pay'
 import { notes as enNotes } from './locales/en/notes'
 import { assessments as enAssessments } from './locales/en/assessments'
 import { assignments as enAssignments } from './locales/en/assignments'
+import { library as enLibrary } from './locales/en/library'
+import { materials as enMaterials } from './locales/en/materials'
 import { grading as enGrading } from './locales/en/grading'
 import { learn as enLearn } from './locales/en/learn'
 import { learnWork as enLearnWork } from './locales/en/learnWork'
 import { learnAccount as enLearnAccount } from './locales/en/learnAccount'
 import { settings as enSettings } from './locales/en/settings'
+import { members as enMembers } from './locales/en/members'
+import { importCsv as enImportCsv } from './locales/en/importCsv'
+import { profile as enProfile } from './locales/en/profile'
 import { invitations as enInvitations } from './locales/en/invitations'
+import { documents as enDocuments } from './locales/en/documents'
 
 import { common as msCommon } from './locales/ms/common'
 import { nav as msNav } from './locales/ms/nav'
@@ -48,12 +54,18 @@ import { pay as msPay } from './locales/ms/pay'
 import { notes as msNotes } from './locales/ms/notes'
 import { assessments as msAssessments } from './locales/ms/assessments'
 import { assignments as msAssignments } from './locales/ms/assignments'
+import { library as msLibrary } from './locales/ms/library'
+import { materials as msMaterials } from './locales/ms/materials'
 import { grading as msGrading } from './locales/ms/grading'
 import { learn as msLearn } from './locales/ms/learn'
 import { learnWork as msLearnWork } from './locales/ms/learnWork'
 import { learnAccount as msLearnAccount } from './locales/ms/learnAccount'
 import { settings as msSettings } from './locales/ms/settings'
+import { members as msMembers } from './locales/ms/members'
+import { importCsv as msImportCsv } from './locales/ms/importCsv'
+import { profile as msProfile } from './locales/ms/profile'
 import { invitations as msInvitations } from './locales/ms/invitations'
+import { documents as msDocuments } from './locales/ms/documents'
 
 /** `en` is the source of truth: its keys define the contract. */
 export const en = {
@@ -70,12 +82,18 @@ export const en = {
   ...enNotes,
   ...enAssessments,
   ...enAssignments,
+  ...enLibrary,
+  ...enMaterials,
   ...enGrading,
   ...enLearn,
   ...enLearnWork,
   ...enLearnAccount,
   ...enSettings,
+  ...enMembers,
+  ...enProfile,
+  ...enImportCsv,
   ...enInvitations,
+  ...enDocuments,
 } as const
 
 export type TKey = keyof typeof en
@@ -107,12 +125,18 @@ export const ms: Record<TKey, string> = {
   ...msNotes,
   ...msAssessments,
   ...msAssignments,
+  ...msLibrary,
+  ...msMaterials,
   ...msGrading,
   ...msLearn,
   ...msLearnWork,
   ...msLearnAccount,
   ...msSettings,
+  ...msMembers,
+  ...msProfile,
+  ...msImportCsv,
   ...msInvitations,
+  ...msDocuments,
 }
 
 export type Lang = 'en' | 'ms'

@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
   if (invoice.status !== 'paid') {
     const { data: intents } = await admin
       .from('payment_intents')
-      .select('id, bill_code, host, amount_sen')
+      .select('id, bill_code, host, amount_sen, fee_sen')
       .eq('invoice_id', invoice.id)
       .in('status', ['created', 'pending'])
       .not('bill_code', 'is', null)
@@ -98,7 +98,11 @@ Deno.serve(async (req) => {
 
       await admin.rpc('record_gateway_payment', {
         _intent_id: intent.id,
-        _amount_sen: normalizeSen(success.billpaymentAmount, intent.amount_sen),
+        _amount_sen: normalizeSen(
+          success.billpaymentAmount,
+          intent.amount_sen,
+          intent.amount_sen + (intent.fee_sen ?? 0),
+        ),
         _provider_ref:
           str(success.billpaymentInvoiceNo) || (intent.bill_code as string),
         _paid_at: parseDate(success.billPaymentDate ?? success.billpaymentDate),
@@ -131,13 +135,21 @@ function str(v: unknown): string {
   return v == null ? '' : String(v).trim()
 }
 
-function normalizeSen(raw: unknown, expected: number): number {
+/**
+ * ToyyibPay reports the paid amount without declaring whether it is ringgit
+ * ("100.00") or sen ("10000"), so the unit is inferred by matching an amount we
+ * expect. When the FPX charge is passed to the payer there are two candidates —
+ * the bill amount, and the bill amount plus the surcharge — because their API
+ * reference does not say which one `billpaymentAmount` carries. If neither
+ * matches, read it as ringgit and let record_gateway_payment reject it.
+ */
+function normalizeSen(raw: unknown, ...expected: number[]): number {
   const n = parseFloat(str(raw).replace(/,/g, ''))
   if (!Number.isFinite(n)) return -1
   const asDecimal = Math.round(n * 100)
   const asCents = Math.round(n)
-  if (asCents === expected) return asCents
-  if (asDecimal === expected) return asDecimal
+  if (expected.includes(asCents)) return asCents
+  if (expected.includes(asDecimal)) return asDecimal
   return asDecimal
 }
 

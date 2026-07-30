@@ -8,6 +8,9 @@ export const nav = {
   // Back-office destinations
   'nav.dashboard': 'Dashboard',
   'nav.courses': 'Courses',
+  // Sub-navigation under Courses, shared by both shells.
+  'nav.assessments': 'Assessments',
+  'nav.assignments': 'Assignments',
   'nav.students': 'Students',
   'nav.instructors': 'Instructors',
   'nav.payments': 'Payments',
@@ -21,9 +24,18 @@ export const nav = {
   'nav.learn.billing': 'Billing',
   'nav.learn.profile': 'My profile',
 
-  // Header
-  'nav.search_placeholder': 'Search…',
-  'nav.search_label': 'Search',
+  // Header search. It looks across the people records in the active academy —
+  // the thing an admin most often arrives wanting to find.
+  'nav.search_placeholder': 'Search students and instructors…',
+  'nav.search_label': 'Search students and instructors',
+  'search.group.students': 'Students',
+  'search.group.instructors': 'Instructors',
+  'search.searching': 'Searching…',
+  'search.no_results': 'Nothing matches “{query}”.',
+  'search.hint': 'Keep typing — two characters or more.',
+  'search.failed': 'Search failed.',
+  'search.clear': 'Clear search',
+
   'nav.toggle_sidebar': 'Toggle sidebar',
   'nav.sidebar': 'Sidebar',
   'nav.sidebar_description': 'Displays the mobile sidebar.',
@@ -42,6 +54,8 @@ export const nav = {
 
   // User menu
   'user.account': 'Account',
+  'user.profile': 'My profile',
+  'nav.profile': 'My profile',
   'user.theme': 'Theme',
   'user.theme.light': 'Light',
   'user.theme.dark': 'Dark',

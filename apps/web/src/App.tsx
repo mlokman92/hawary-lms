@@ -13,6 +13,7 @@ import { StudentShell } from './components/StudentShell'
 import { LearnDashboardPage } from './pages/learn/LearnDashboardPage'
 import { LearnHomePage } from './pages/learn/LearnHomePage'
 import { LearnWorkPage } from './pages/learn/LearnWorkPage'
+import { LearnTaskListPage } from './pages/learn/LearnTaskListPage'
 import { LearnCoursePage } from './pages/learn/LearnCoursePage'
 import { LearnNotePage } from './pages/learn/LearnNotePage'
 import { LearnAssignmentPage } from './pages/learn/LearnAssignmentPage'
@@ -39,11 +40,13 @@ import { InstructorsPage } from './pages/InstructorsPage'
 import { InstructorDetailPage } from './pages/InstructorDetailPage'
 import { NoteEditorPage } from './pages/NoteEditorPage'
 import { AssessmentEditorPage } from './pages/AssessmentEditorPage'
+import { LibraryPage } from './pages/LibraryPage'
 import { AssignmentEditorPage } from './pages/AssignmentEditorPage'
 import { PaymentsPage } from './pages/PaymentsPage'
 import { InvoiceDetailPage } from './pages/InvoiceDetailPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { MembersPage } from './pages/MembersPage'
+import { ProfilePage } from './pages/ProfilePage'
 import { PublicPayPage } from './pages/PublicPayPage'
 import { PayResultPage } from './pages/PayResultPage'
 
@@ -91,6 +94,16 @@ export default function App() {
                     <Route path="/learn" element={<LearnDashboardPage />} />
                     <Route path="/learn/courses" element={<LearnHomePage />} />
                     <Route path="/learn/work" element={<LearnWorkPage />} />
+                    {/* Sub-nav under My courses. Declared before the :id routes
+                        below so the literal path wins the match. */}
+                    <Route
+                      path="/learn/assessments"
+                      element={<LearnTaskListPage kind="assessment" />}
+                    />
+                    <Route
+                      path="/learn/assignments"
+                      element={<LearnTaskListPage kind="assignment" />}
+                    />
                     <Route path="/learn/courses/:id" element={<LearnCoursePage />} />
                     <Route path="/learn/notes/:id" element={<LearnNotePage />} />
                     <Route
@@ -141,8 +154,16 @@ export default function App() {
                       path="/instructors/:id"
                       element={<InstructorDetailPage />}
                     />
-                    {/* Content is reached from its course; these stay routable so
-                        deep links and the editors' own URLs keep working. */}
+                    {/* Sub-nav under Courses: the academy-wide inventory. The
+                        editors below are still reached from a course too. */}
+                    <Route
+                      path="/assessments"
+                      element={<LibraryPage kind="assessment" />}
+                    />
+                    <Route
+                      path="/assignments"
+                      element={<LibraryPage kind="assignment" />}
+                    />
                     <Route path="/notes/:id" element={<NoteEditorPage />} />
                     <Route
                       path="/assessments/:id"
@@ -154,7 +175,13 @@ export default function App() {
                     />
                     <Route path="/payments" element={<PaymentsPage />} />
                     <Route path="/payments/:id" element={<InvoiceDetailPage />} />
+                    {/* No /members/:id: a member's page *is* their instructor
+                        or student record, so the roster links straight there
+                        rather than mirroring those pages badly. */}
                     <Route path="/members" element={<MembersPage />} />
+                    {/* The staff counterpart of /learn/profile — reached by
+                        clicking your own name in the sidebar footer. */}
+                    <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/settings" element={<SettingsPage />} />
                   </Route>
                   <Route path="*" element={<Navigate to="/" replace />} />
