@@ -11,8 +11,12 @@
 //   - No service-role key. Email delivery is best-effort: if RESEND_API_KEY is
 //     unset or sending fails, we return { ok: false, ... } and the web app falls
 //     back to the copy-link flow.
+//   - The pay-link base is NEVER taken from arbitrary client input. It comes from
+//     server config (APP_URL); a client-supplied `origin` is honoured only if it
+//     exactly matches ALLOWED_ORIGINS. Otherwise any staff caller could have
+//     Hawary send a branded "Pay now" email pointing at their own host.
 // Required secret: RESEND_API_KEY (shared with send-invitation).
-// Optional: INVITE_FROM_EMAIL (reused as the sender), APP_URL.
+// Optional: INVITE_FROM_EMAIL (reused as the sender), APP_URL, ALLOWED_ORIGINS.
 // ============================================================================
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
@@ -32,6 +36,29 @@ function json(body: unknown, status = 200): Response {
 }
 
 const DEFAULT_APP_URL = 'https://app.hawary.my'
+
+// Resolve the pay-link base from trusted server config only. A client-supplied
+// origin is accepted solely when it is explicitly allowlisted. (Same helper as
+// send-invitation — kept inline so each function stays a single deployable file.)
+function resolveBase(payloadOrigin?: string): string {
+  const allowed = (Deno.env.get('ALLOWED_ORIGINS') ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const configured = Deno.env.get('APP_URL')?.trim()
+  const candidate =
+    (payloadOrigin && allowed.includes(payloadOrigin) ? payloadOrigin : '') ||
+    configured ||
+    allowed[0] ||
+    DEFAULT_APP_URL
+  try {
+    const u = new URL(candidate)
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return DEFAULT_APP_URL
+    return u.origin // scheme+host+port only; drops any path/query and normalizes
+  } catch {
+    return DEFAULT_APP_URL
+  }
+}
 
 function formatMYR(sen: number): string {
   return `RM ${((sen ?? 0) / 100).toFixed(2)}`
@@ -94,12 +121,7 @@ Deno.serve(async (req) => {
 
   const academyName = (inv.academies as { name?: string } | null)?.name ?? 'your academy'
   const dueSen = Math.max(0, (inv.total_sen ?? 0) - (inv.amount_paid_sen ?? 0))
-  const base = (
-    Deno.env.get('APP_URL') ??
-    payload.origin ??
-    req.headers.get('Origin') ??
-    DEFAULT_APP_URL
-  ).replace(/\/+$/, '')
+  const base = resolveBase(payload.origin)
   const payUrl = `${base}/pay/${encodeURIComponent(token!)}`
 
   const resendKey = Deno.env.get('RESEND_API_KEY')
@@ -179,6 +201,7 @@ function emailHtml(
 ): string {
   const safeName = escapeHtml(academyName)
   const safeNo = escapeHtml(invoiceNo)
+  const safeUrl = escapeHtml(payUrl)
   return `<!doctype html>
 <html lang="en">
   <body style="margin:0;background:#f4f4f5;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#18181b;">
@@ -194,7 +217,7 @@ function emailHtml(
       </tr>
       <tr>
         <td style="padding:20px 28px;">
-          <a href="${payUrl}" style="display:inline-block;background:#18181b;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:11px 20px;border-radius:8px;">
+          <a href="${safeUrl}" style="display:inline-block;background:#18181b;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:11px 20px;border-radius:8px;">
             Pay now
           </a>
         </td>
@@ -203,7 +226,7 @@ function emailHtml(
         <td style="padding:0 28px 24px;">
           <p style="margin:0;font-size:12px;line-height:1.6;color:#a1a1aa;">
             If the button doesn't work, copy and paste this link into your browser:<br />
-            <span style="color:#52525b;word-break:break-all;">${payUrl}</span>
+            <span style="color:#52525b;word-break:break-all;">${safeUrl}</span>
           </p>
         </td>
       </tr>

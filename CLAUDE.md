@@ -105,9 +105,16 @@ Monorepo: **pnpm workspaces + Turborepo**.
   rejected every upload even for valid staff on a correct path — see
   `supabase/functions/upload-media/README.md`.
 
+- **Production URLs** (`docs/production-urls.md`): the web app is deployed to
+  **app.hawary.my** (Netlify). Auth **Site URL + redirect allow list** must list
+  it or GoTrue silently drops `emailRedirectTo` and sends confirm/reset links to
+  the Site URL instead. `send-invitation` / `send-pay-link` / `create-bill` build
+  their links via an identical `resolveBase` — `APP_URL`, with a client `origin`
+  honoured only when it matches `ALLOWED_ORIGINS`, never raw client input.
+
 ### Deferred / next
 - **Transactional email is not configured** — sign-up confirmation uses Supabase's
-  low-rate test mailer and `send-invitation` needs `APP_URL`/`ALLOWED_ORIGINS`.
+  low-rate test mailer and the functions want `APP_URL`/`ALLOWED_ORIGINS` set.
   Until then, link accounts with the admin RPCs above.
 - Assignment **attachments** (needs a private `submissions` bucket + a student
   branch in `upload-media`); scheduled expiry sweep for invitations; student

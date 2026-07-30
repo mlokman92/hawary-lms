@@ -1,0 +1,9 @@
+# Netlify build config for the hawary.my marketing/landing page.
+# This is a SEPARATE Netlify site from apps/web (app.hawary.my) — create a
+# new site pointed at this repo with Base directory = apps/landing. See
+# README.md for the one-time setup. Static HTML, no build step.
+
+[build]
+  publish = "."
+  # Skip the deploy when this commit didn't touch apps/landing.
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- apps/landing"

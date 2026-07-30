@@ -12,6 +12,12 @@
 //   - A per-bill nonce is embedded in the callback URL and stored on the intent
 //     so the callback can authenticate itself (defense-in-depth alongside the
 //     server-side re-query).
+//   - billReturnUrl is built from server config (APP_URL) only; a client-supplied
+//     `origin` is honoured solely when it matches ALLOWED_ORIGINS. Since
+//     verify_jwt = false, an unauthenticated caller would otherwise choose where
+//     ToyyibPay sends the payer after paying.
+// Optional secrets: APP_URL (canonical base, e.g. "https://app.hawary.my"),
+//   ALLOWED_ORIGINS (comma-separated origins a client `origin` may request).
 // Auto-injected by the platform: SUPABASE_URL, SUPABASE_ANON_KEY,
 //   SUPABASE_SERVICE_ROLE_KEY.
 // ============================================================================
@@ -34,6 +40,29 @@ function json(body: unknown, status = 200): Response {
 
 const DEFAULT_APP_URL = 'https://app.hawary.my'
 const PAYABLE = ['issued', 'partially_paid', 'overdue']
+
+// Resolve the return-URL base from trusted server config only. A client-supplied
+// origin is accepted solely when it is explicitly allowlisted. (Same helper as
+// send-invitation — kept inline so each function stays a single deployable file.)
+function resolveBase(payloadOrigin?: string): string {
+  const allowed = (Deno.env.get('ALLOWED_ORIGINS') ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const configured = Deno.env.get('APP_URL')?.trim()
+  const candidate =
+    (payloadOrigin && allowed.includes(payloadOrigin) ? payloadOrigin : '') ||
+    configured ||
+    allowed[0] ||
+    DEFAULT_APP_URL
+  try {
+    const u = new URL(candidate)
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return DEFAULT_APP_URL
+    return u.origin // scheme+host+port only; drops any path/query and normalizes
+  } catch {
+    return DEFAULT_APP_URL
+  }
+}
 
 function host(isSandbox: boolean): string {
   return isSandbox ? 'https://dev.toyyibpay.com' : 'https://toyyibpay.com'
@@ -150,10 +179,7 @@ Deno.serve(async (req) => {
     .eq('id', invoice.student_id)
     .maybeSingle()
 
-  const appUrl = (Deno.env.get('APP_URL') ?? payload.origin ?? DEFAULT_APP_URL).replace(
-    /\/+$/,
-    '',
-  )
+  const appUrl = resolveBase(payload.origin)
   const returnUrl = `${appUrl}/pay/${encodeURIComponent(token)}/result`
   const callbackUrl = `${supabaseUrl}/functions/v1/toyyibpay-callback?k=${nonce}`
 

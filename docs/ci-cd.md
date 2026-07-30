@@ -1,11 +1,12 @@
 # Plan · CI/CD strategy
 
-Hawary LMS ships **three independently-deployed targets** out of one monorepo, plus a
+Hawary LMS ships **four independently-deployed targets** out of one monorepo, plus a
 shared quality gate. Keeping them decoupled is the whole point of the monorepo.
 
 | Target | What | Deploys via | Trigger |
 |--------|------|-------------|---------|
 | **Web** | `apps/web` (Vite SPA) | **Netlify** | git push (main → prod, PR → preview) |
+| **Landing** | `apps/landing` (static HTML, `hawary.my`) | **Netlify**, separate site | git push touching `apps/landing` |
 | **Mobile** | `apps/mobile` (Expo) | **Expo EAS** (Update / Build / Submit) | CI on push + release tags |
 | **Database** | `supabase/migrations` | **Supabase CLI** (`db push`) | push to main touching migrations |
 | **Quality gate** | lint · typecheck · test | **GitHub Actions** | every PR + push |
@@ -71,6 +72,17 @@ Cloudflare Pages (cheapest bandwidth). Netlify is entirely fine — no need to s
   same Supabase project for now; move previews to a **staging Supabase project** later.
 - Later, when previews should hit isolated data, combine with **Supabase branching**
   (below).
+
+---
+
+## 1b. Landing — Netlify
+
+`apps/landing` (the `hawary.my` marketing page) is a **second, separate Netlify
+site** on the same repo — plain static HTML, no build step, no Supabase env vars.
+Full setup steps are in `apps/landing/README.md`; the short version: Netlify
+site with **Base directory** = `apps/landing`, custom domains `hawary.my` +
+`www.hawary.my`. It exists only because a Netlify site publishes one directory,
+and the apex domain needs different content than `app.hawary.my`.
 
 ---
 
@@ -207,6 +219,7 @@ jobs:
 
 ```
 apps/web        → Vite app          (private, not published)
+apps/landing    → static HTML       (no package.json — not a pnpm/turbo package)
 apps/mobile     → Expo app          (private, not published)
 packages/shared → @hawary/shared    (consumed via workspace:*)
 ```

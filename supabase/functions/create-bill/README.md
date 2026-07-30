@@ -15,7 +15,13 @@ Amount is passed as **cents = sen** (no conversion). FPX only
 (`billPaymentChannel='0'`). Reuses a live intent so a repeated click can't mint
 duplicate bills (backed by a partial unique index).
 
-Secrets: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (auto-injected), optional
-`APP_URL` (for the return URL; falls back to the request origin).
+Secrets: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (auto-injected), plus
+`APP_URL` — the canonical base for `billReturnUrl`, e.g. `https://app.hawary.my`.
+Optional `ALLOWED_ORIGINS` (comma-separated) lists origins a client may request
+via `origin` instead, e.g. for local dev. A client `origin` that isn't
+allowlisted is **ignored**: because `verify_jwt=false`, anyone can call this
+function, so an unvalidated origin would let a stranger choose where ToyyibPay
+sends the payer after paying. With neither secret set the link falls back to
+`https://app.hawary.my`.
 
 Deploy: `deploy_edge_function` with `verify_jwt=false`.
