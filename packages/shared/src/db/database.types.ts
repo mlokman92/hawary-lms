@@ -1482,6 +1482,7 @@ export type Database = {
           gender: Database["public"]["Enums"]["gender"] | null
           ic_number: string | null
           id: string
+          organization: string | null
           phone: string | null
           status: Database["public"]["Enums"]["student_status"]
           student_no: string
@@ -1501,6 +1502,7 @@ export type Database = {
           gender?: Database["public"]["Enums"]["gender"] | null
           ic_number?: string | null
           id?: string
+          organization?: string | null
           phone?: string | null
           status?: Database["public"]["Enums"]["student_status"]
           student_no: string
@@ -1520,6 +1522,7 @@ export type Database = {
           gender?: Database["public"]["Enums"]["gender"] | null
           ic_number?: string | null
           id?: string
+          organization?: string | null
           phone?: string | null
           status?: Database["public"]["Enums"]["student_status"]
           student_no?: string

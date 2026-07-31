@@ -13,6 +13,9 @@ type StudentBrief = {
   full_name: string | null
   student_no: string
   email?: string | null
+  /** Detail read only — the bill-to block on the invoice / receipt PDF. */
+  organization?: string | null
+  address?: string | null
 }
 type CourseBrief = { id: string; title: string }
 export type InvoiceRow = Invoice & {
@@ -61,7 +64,7 @@ export function useInvoices(academyId: string | null) {
 }
 
 const DETAIL_SELECT =
-  '*, student:students(full_name, student_no, email), course:courses(id, title), items:invoice_items(*), payments(*)'
+  '*, student:students(full_name, student_no, email, organization, address), course:courses(id, title), items:invoice_items(*), payments(*)'
 
 /** The same read outside React — the PDF helpers need it on click, not on render. */
 export async function fetchInvoiceDetail(id: string): Promise<InvoiceDetail> {

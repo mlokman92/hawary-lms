@@ -68,6 +68,20 @@ export const studentImportSpec: ImportSpec = {
       sample: '2005-02-03',
     },
     {
+      key: 'organization',
+      column: 'organization',
+      labelKey: 'students.field.organization',
+      aliases: [
+        'organisation',
+        'company',
+        'employer',
+        'organisasi',
+        'syarikat',
+        'majikan',
+      ],
+      sample: 'Klinik Mesra Sdn Bhd',
+    },
+    {
       key: 'address',
       column: 'address',
       labelKey: 'students.field.address',

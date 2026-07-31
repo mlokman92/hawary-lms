@@ -246,13 +246,19 @@ function drawParties(
   ly += 4.5
 
   font(doc, 9, 'normal', MUTED)
+  // Postal block first (organization, then address as typed), then the
+  // identifiers. Both are optional on a student record — a line only exists
+  // when there is something to print.
   const details: string[] = []
+  if (student?.organization) details.push(student.organization)
+  if (student?.address) details.push(...student.address.split('\n'))
   if (student?.student_no)
     details.push(`${translate('doc.student_no')}: ${student.student_no}`)
   if (student?.email) details.push(student.email)
   if (invoice.course?.title)
     details.push(`${translate('doc.course')}: ${invoice.course.title}`)
   for (const raw of details) {
+    if (!raw.trim()) continue
     for (const line of wrap(doc, raw, 90)) {
       doc.text(line, M, ly)
       ly += 4

@@ -58,6 +58,7 @@ export function StudentFormDialog({
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
+  const [organization, setOrganization] = useState('')
   const [address, setAddress] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -70,6 +71,7 @@ export function StudentFormDialog({
     setPhone(student?.phone ?? '')
     setEmail(student?.email ?? '')
     setAvatarUrl(student?.avatar_url ?? '')
+    setOrganization(student?.organization ?? '')
     setAddress(student?.address ?? '')
     setError(null)
   }, [open, student])
@@ -90,6 +92,7 @@ export function StudentFormDialog({
       phone: phone.trim() || null,
       email: email.trim() || null,
       avatar_url: avatarUrl.trim() || null,
+      organization: organization.trim() || null,
       address: address.trim() || null,
     }
     try {
@@ -106,8 +109,11 @@ export function StudentFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+      {/* Capped at the viewport with the form as the only scroller: the
+          "more details" accordion and a tall address field must not push the
+          footer buttons off a laptop screen. */}
+      <DialogContent className="flex max-h-[90dvh] flex-col overflow-hidden sm:max-w-lg">
+        <DialogHeader className="shrink-0">
           <DialogTitle>
             {isEdit ? t('students.form.edit_title') : t('students.form.add_title')}
           </DialogTitle>
@@ -118,7 +124,12 @@ export function StudentFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form id="student-form" className="grid gap-4" onSubmit={onSubmit}>
+        {/* -mx-1 px-1 so a focus ring at the edge is not clipped by the scroller. */}
+        <form
+          id="student-form"
+          className="-mx-1 grid min-h-0 flex-1 auto-rows-min gap-4 overflow-y-auto px-1"
+          onSubmit={onSubmit}
+        >
           <div className="grid gap-2">
             <Label htmlFor="full_name">{t('common.name')}</Label>
             <Input
@@ -208,6 +219,17 @@ export function StudentFormDialog({
                   />
                 </div>
                 <div className="grid gap-2">
+                  <Label htmlFor="organization">
+                    {t('students.field.organization')}
+                  </Label>
+                  <Input
+                    id="organization"
+                    value={organization}
+                    onChange={(e) => setOrganization(e.target.value)}
+                    placeholder={t('students.form.organization_placeholder')}
+                  />
+                </div>
+                <div className="grid gap-2">
                   <Label htmlFor="address">{t('students.field.address')}</Label>
                   <Textarea
                     id="address"
@@ -219,11 +241,15 @@ export function StudentFormDialog({
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-
-          {error ? <p className="text-destructive text-sm">{error}</p> : null}
         </form>
 
-        <DialogFooter>
+        {/* Outside the scroller: a validation message is worthless if it can be
+            scrolled out of sight. */}
+        {error ? (
+          <p className="text-destructive shrink-0 text-sm">{error}</p>
+        ) : null}
+
+        <DialogFooter className="shrink-0">
           <Button
             type="button"
             variant="outline"

@@ -402,6 +402,11 @@ export function StudentDetailPage() {
             <Field label={t('common.phone')} value={student.phone} />
             <Field label={t('common.email')} value={student.email} />
             <Field
+              label={t('students.field.organization')}
+              value={student.organization}
+              className="sm:col-span-2"
+            />
+            <Field
               label={t('students.field.address')}
               value={student.address}
               className="sm:col-span-2"
