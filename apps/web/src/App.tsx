@@ -40,7 +40,7 @@ import { InstructorsPage } from './pages/InstructorsPage'
 import { InstructorDetailPage } from './pages/InstructorDetailPage'
 import { NoteEditorPage } from './pages/NoteEditorPage'
 import { AssessmentEditorPage } from './pages/AssessmentEditorPage'
-import { LibraryPage } from './pages/LibraryPage'
+import { GradingQueuePage } from './pages/GradingQueuePage'
 import { AssignmentEditorPage } from './pages/AssignmentEditorPage'
 import { PaymentsPage } from './pages/PaymentsPage'
 import { InvoiceDetailPage } from './pages/InvoiceDetailPage'
@@ -154,15 +154,16 @@ export default function App() {
                       path="/instructors/:id"
                       element={<InstructorDetailPage />}
                     />
-                    {/* Sub-nav under Courses: the academy-wide inventory. The
-                        editors below are still reached from a course too. */}
+                    {/* Sub-nav under Courses: the academy-wide grading queue for
+                        each kind. Authoring still happens inside a course; the
+                        :id editors below are unchanged. */}
                     <Route
                       path="/assessments"
-                      element={<LibraryPage kind="assessment" />}
+                      element={<GradingQueuePage kind="assessment" />}
                     />
                     <Route
                       path="/assignments"
-                      element={<LibraryPage kind="assignment" />}
+                      element={<GradingQueuePage kind="assignment" />}
                     />
                     <Route path="/notes/:id" element={<NoteEditorPage />} />
                     <Route

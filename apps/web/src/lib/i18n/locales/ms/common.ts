@@ -69,6 +69,7 @@ export const common: CommonDict = {
   'common.role': 'Peranan',
   'common.course': 'Kursus',
   'common.courses': 'Kursus',
+  'common.all_courses': 'Semua kursus',
   'common.student': 'Pelajar',
   'common.students': 'Pelajar',
   'common.instructor': 'Pengajar',

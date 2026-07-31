@@ -71,6 +71,8 @@ export const common = {
   'common.role': 'Role',
   'common.course': 'Course',
   'common.courses': 'Courses',
+  /** The "no filter" option in every course dropdown. */
+  'common.all_courses': 'All courses',
   'common.student': 'Student',
   'common.students': 'Students',
   'common.instructor': 'Instructor',

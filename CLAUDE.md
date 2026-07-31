@@ -46,14 +46,23 @@ Monorepo: **pnpm workspaces + Turborepo**.
   Editors stay routable at `/notes/:id`, `/assessments/:id`,
   `/assignments/:id`. Reorder/move via `reorder_course_modules` +
   `reorder_module_items(module, kind, ordered_ids)`. Publishing is an inline
-  `PublishSwitch` on the row (optimistic, reconciles on refetch) in both the
-  course page and the library pages — one `useTogglePublished` covers all
-  kinds. **Assessments** and
-  **Assignments** are also sub-nav items under Courses in both shells
-  (`NavItem.children` → `SidebarMenuSub`, always open), pointing at the
-  academy-wide lists `/assessments` · `/assignments` (staff, one `LibraryPage`)
-  and `/learn/assessments` · `/learn/assignments` (learner, one
-  `LearnTaskListPage` off the existing dashboard query). Notes stay module-only.
+  `PublishSwitch` on the row (optimistic, reconciles on refetch); one
+  `useTogglePublished` covers all four kinds.
+- **Sub-nav under Courses** (`NavItem.children` → `SidebarMenuSub`, always
+  open), and the two shells mean different things by it:
+  - **staff** `/assessments` · `/assignments` are the **grading queues** —
+    `GradingQueuePage` over `useAcademyQueue`, academy-wide because RLS
+    (`app.can_grade_*`) already narrows a trainer to their assigned courses.
+    Awaiting/Marked/All tiles, search, and a `?course=` filter the course page
+    deep-links into (its **Grading** button now points at
+    `/assessments?course=:id`). `/courses/:id/grading` (`CourseGradingPage`)
+    still resolves for older links. Authoring stays inside a course — there is
+    no academy-wide content inventory, and `LibraryPage`/`features/library`
+    were removed when this replaced them.
+  - **learner** `/learn/assessments` · `/learn/assignments` are their own lists
+    of work (`LearnTaskListPage`, off the existing dashboard query).
+
+  Notes and materials stay module-only on both sides.
 - **Question types** (`docs/question-types.md`): six — `essay` · `short_text`
   (marked by a person) and `true_false` · `single_choice` · `multiple_choice` ·
   `matching` (marked by Postgres). `options` is public, `correct_answer` never

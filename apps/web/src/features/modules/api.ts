@@ -122,10 +122,9 @@ export function useDeleteModule(academyId: string, courseId: string) {
 /**
  * Publish / unpublish one content row, whatever kind it is.
  *
- * One hook for all three tables because the three list pages that mount the
- * toggle (the course page, and the two academy-wide libraries) would otherwise
- * each need three near-identical mutations. Invalidation is by table prefix, so
- * it does not need to know which academy or course the caller is looking at —
+ * One hook for all four tables so the course page needs one mutation rather
+ * than four near-identical ones. Invalidation is by table prefix, so it does not
+ * need to know which academy or course the caller is looking at —
  * `['assessments']` matches `['assessments', academyId, courseId]`.
  */
 export function useTogglePublished(academyId: string | null) {
@@ -161,7 +160,6 @@ export function useTogglePublished(academyId: string | null) {
       void qc.invalidateQueries({
         queryKey: [kind === 'material' ? 'materials' : KIND_TABLE[kind]],
       })
-      void qc.invalidateQueries({ queryKey: ['library'] })
       void qc.invalidateQueries({ queryKey: ['courses', academyId] })
       void qc.invalidateQueries({ queryKey: ['learn-content'] })
     },

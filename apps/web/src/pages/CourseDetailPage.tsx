@@ -430,8 +430,11 @@ export function CourseDetailPage() {
         </div>
         {isStaff ? (
           <div className="flex items-center gap-2">
+            {/* The academy-wide queue, pre-filtered to this course, rather than
+                /courses/:id/grading — one grading surface, reached two ways.
+                That route still resolves, for older links. */}
             <Button asChild variant="outline">
-              <Link to={`/courses/${courseId}/grading`}>
+              <Link to={`/assessments?course=${courseId}`}>
                 <GraduationCap /> {t('courses.grading')}
               </Link>
             </Button>

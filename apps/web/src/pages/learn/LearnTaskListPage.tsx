@@ -130,7 +130,7 @@ export function LearnTaskListPage({ kind }: { kind: TaskKind }) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{tr('library.all_courses')}</SelectItem>
+              <SelectItem value="all">{tr('common.all_courses')}</SelectItem>
               {(courses ?? []).map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.title}

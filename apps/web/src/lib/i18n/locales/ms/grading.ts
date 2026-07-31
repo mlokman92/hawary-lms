@@ -9,6 +9,18 @@ export const grading: GradingDict = {
   'grading.queue.awaiting_empty': 'Tiada kerja sedang menunggu markah.',
   'grading.queue.marked': 'Sudah diberi markah',
   'grading.queue.marked_empty': 'Belum ada kerja yang diberi markah.',
+
+  // Baris gilir seluruh akademi (/assessments, /assignments)
+  'grading.queue.subtitle.assessments':
+    'Percubaan untuk dinilai, merentas semua kursus yang anda ajar.',
+  'grading.queue.subtitle.assignments':
+    'Penghantaran untuk dinilai, merentas semua kursus yang anda ajar.',
+  'grading.queue.search_placeholder': 'Cari mengikut pelajar, tajuk atau kursus…',
+  'grading.queue.no_match': 'Tiada yang sepadan dengan carian itu.',
+  'grading.queue.empty.assessments': 'Belum ada percubaan penilaian.',
+  'grading.queue.empty.assignments': 'Belum ada penghantaran tugasan.',
+  'grading.queue.empty.hint':
+    'Kerja akan muncul di sini setelah pelajar menghantarnya. Penilaian dan tugasan dicipta di dalam modul kursus.',
   'grading.item.assignment': 'Tugasan',
   'grading.item.assessment': 'Penilaian',
   'grading.attempt_no': 'Percubaan {no}',

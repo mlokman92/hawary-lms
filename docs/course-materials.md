@@ -69,8 +69,8 @@ that does will have to check for other rows on the same `file_path` —
 - No orphan sweep (above).
 - No in-app preview: a click opens the signed URL in a new tab and lets the
   browser decide. Good enough for PDFs and images; a `.pptx` downloads.
-- Materials are not in the academy-wide library pages (`/assessments`,
-  `/assignments`) — those exist because work has deadlines. A material does not,
-  so it is reachable through its module.
+- Materials have no academy-wide page. `/assessments` and `/assignments` are
+  grading queues, and there is nothing to grade about a slide deck — a material
+  is reached through its module.
 - `size_bytes` and `mime_type` are recorded from the upload response and never
   re-verified against the object.

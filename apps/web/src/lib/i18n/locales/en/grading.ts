@@ -1,4 +1,7 @@
-/** Grading: the per-course queue, plus marking one submission or attempt. */
+/**
+ * Grading: the academy-wide queue behind /assessments and /assignments, the
+ * per-course queue at /courses/:id/grading, and marking one item.
+ */
 export const grading = {
   // Queue page
   'grading.title': 'Grading',
@@ -8,6 +11,18 @@ export const grading = {
   'grading.queue.awaiting_empty': 'Nothing is waiting to be marked.',
   'grading.queue.marked': 'Marked',
   'grading.queue.marked_empty': 'Nothing marked yet.',
+
+  // Academy-wide queue (/assessments, /assignments)
+  'grading.queue.subtitle.assessments':
+    'Attempts to mark, across every course you teach.',
+  'grading.queue.subtitle.assignments':
+    'Submissions to mark, across every course you teach.',
+  'grading.queue.search_placeholder': 'Search by student, title or course…',
+  'grading.queue.no_match': 'Nothing matches that search.',
+  'grading.queue.empty.assessments': 'No assessment attempts yet.',
+  'grading.queue.empty.assignments': 'No assignment submissions yet.',
+  'grading.queue.empty.hint':
+    'Work appears here once a student hands it in. Assessments and assignments are created inside a course module.',
   'grading.item.assignment': 'Assignment',
   'grading.item.assessment': 'Assessment',
   'grading.attempt_no': 'Attempt {no}',
