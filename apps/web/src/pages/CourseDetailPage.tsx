@@ -21,7 +21,6 @@ import { useAcademy } from '@/lib/academy'
 import { useAuth } from '@/lib/auth'
 import { fmtDate } from '@/lib/format'
 import { useT, type TKey } from '@/lib/i18n'
-import { PublishSwitch } from '@/components/patterns/PublishSwitch'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -35,9 +34,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -51,6 +47,10 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { CourseFormDialog } from '@/features/courses/CourseFormDialog'
+import {
+  ModuleItemList,
+  type ModuleItem,
+} from '@/features/courses/ModuleItemList'
 import { DuplicateCourseDialog } from '@/features/courses/DuplicateCourseDialog'
 import { ModuleFormDialog } from '@/features/modules/ModuleFormDialog'
 import { useCourse, COURSE_STATUS_LABEL } from '@/features/courses/api'
@@ -82,19 +82,6 @@ import {
   useCreateAssignment,
   useDeleteAssignment,
 } from '@/features/assignments/api'
-
-/** One content row, normalised across the four tables so the list, the
- *  reorder/move menus and the delete dialog stay generic. */
-type Item = {
-  id: string
-  kind: ItemKind
-  moduleId: string
-  title: string
-  isPublished: boolean
-  meta: string | null
-  /** null for a material: it has no editor page, it opens as a signed URL. */
-  href: string | null
-}
 
 const KIND_ICON: Record<ItemKind, LucideIcon> = {
   note: FileText,
@@ -214,7 +201,7 @@ export function CourseDetailPage() {
   const [editingModule, setEditingModule] = useState<CourseModule | null>(null)
   const [deleteModuleTarget, setDeleteModuleTarget] =
     useState<CourseModule | null>(null)
-  const [deleteItemTarget, setDeleteItemTarget] = useState<Item | null>(null)
+  const [deleteItemTarget, setDeleteItemTarget] = useState<ModuleItem | null>(null)
   const [uploadTarget, setUploadTarget] = useState<{
     moduleId: string
     sortOrder: number
@@ -222,8 +209,8 @@ export function CourseDetailPage() {
 
   // Items keyed by module, already in sort order within each kind.
   const itemsByModule = useMemo(() => {
-    const map = new Map<string, Item[]>()
-    const push = (it: Item) => {
+    const map = new Map<string, ModuleItem[]>()
+    const push = (it: ModuleItem) => {
       const list = map.get(it.moduleId)
       if (list) list.push(it)
       else map.set(it.moduleId, [it])
@@ -311,23 +298,14 @@ export function CourseDetailPage() {
     }
   }
 
-  /** Swap an item with its neighbour of the same kind in the same module. */
-  function moveItem(item: Item, dir: -1 | 1) {
-    const siblings = kindItems(item.moduleId, item.kind)
-    const i = siblings.findIndex((s) => s.id === item.id)
-    const j = i + dir
-    if (i < 0 || j < 0 || j >= siblings.length) return
-    const next = [...siblings]
-    ;[next[i], next[j]] = [next[j], next[i]]
-    reorderItems.mutate({
-      moduleId: item.moduleId,
-      kind: item.kind,
-      orderedIds: next.map((s) => s.id),
-    })
+  /** An editor page for the three authored kinds; a signed URL for a material. */
+  function openItem(item: ModuleItem) {
+    if (item.href) navigate(item.href)
+    else openMaterial.mutate({ id: item.id })
   }
 
   /** Append the item to the end of the target module's list for its kind. */
-  function moveItemToModule(item: Item, targetModuleId: string) {
+  function moveItemToModule(item: ModuleItem, targetModuleId: string) {
     const target = kindItems(targetModuleId, item.kind).map((s) => s.id)
     reorderItems.mutate({
       moduleId: targetModuleId,
@@ -596,151 +574,35 @@ export function CourseDetailPage() {
                           {t('courses.section.empty')}
                         </p>
                       ) : (
-                        <ul className="mt-1 divide-y rounded-lg border">
-                          {items.map((item, i) => (
-                            <li
-                              key={item.id}
-                              className="hover:bg-muted/50 flex items-center gap-2 px-3 py-2 transition-colors"
-                            >
-                              <Icon
-                                className="text-muted-foreground size-4 shrink-0"
-                                aria-hidden
-                              />
-                              {item.href ? (
-                                <Link
-                                  to={item.href}
-                                  className="min-w-0 flex-1 truncate text-sm hover:underline"
-                                >
-                                  {item.title}
-                                </Link>
-                              ) : (
-                                // A material has no page of its own: clicking it
-                                // fetches a 60-second signed URL and opens the
-                                // file.
-                                <button
-                                  type="button"
-                                  className="min-w-0 flex-1 truncate text-left text-sm hover:underline"
-                                  onClick={() =>
-                                    openMaterial.mutate({ id: item.id })
-                                  }
-                                >
-                                  {item.title}
-                                </button>
-                              )}
-                              {item.meta ? (
-                                <span className="text-muted-foreground hidden shrink-0 text-xs sm:inline">
-                                  {item.meta}
-                                </span>
-                              ) : null}
-                              {isStaff ? (
-                                <PublishSwitch
-                                  checked={item.isPublished}
-                                  title={item.title}
-                                  onChange={(next) =>
-                                    togglePublished.mutate({
-                                      kind: item.kind,
-                                      id: item.id,
-                                      next,
-                                    })
-                                  }
-                                />
-                              ) : (
-                                <Badge
-                                  variant={
-                                    item.isPublished ? 'default' : 'secondary'
-                                  }
-                                  className="shrink-0"
-                                >
-                                  {item.isPublished
-                                    ? t('common.published')
-                                    : t('common.draft')}
-                                </Badge>
-                              )}
-                              {isStaff ? (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon-sm"
-                                      className="shrink-0"
-                                    >
-                                      <MoreHorizontal />
-                                      <span className="sr-only">
-                                        {t('courses.item.actions', {
-                                          title: item.title,
-                                        })}
-                                      </span>
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        item.href
-                                          ? navigate(item.href)
-                                          : openMaterial.mutate({ id: item.id })
-                                      }
-                                    >
-                                      {t('common.open')}
-                                    </DropdownMenuItem>
-                                    {!item.href ? (
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          openMaterial.mutate({
-                                            id: item.id,
-                                            download: true,
-                                          })
-                                        }
-                                      >
-                                        {t('common.download')}
-                                      </DropdownMenuItem>
-                                    ) : null}
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      disabled={i === 0}
-                                      onClick={() => moveItem(item, -1)}
-                                    >
-                                      <ChevronUp /> {t('courses.move_up')}
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      disabled={i === items.length - 1}
-                                      onClick={() => moveItem(item, 1)}
-                                    >
-                                      <ChevronDown /> {t('courses.move_down')}
-                                    </DropdownMenuItem>
-                                    {moduleCount > 1 ? (
-                                      <DropdownMenuSub>
-                                        <DropdownMenuSubTrigger>
-                                          {t('courses.item.move_to_module')}
-                                        </DropdownMenuSubTrigger>
-                                        <DropdownMenuSubContent>
-                                          {modules!
-                                            .filter((t) => t.id !== m.id)
-                                            .map((t) => (
-                                              <DropdownMenuItem
-                                                key={t.id}
-                                                onClick={() =>
-                                                  moveItemToModule(item, t.id)
-                                                }
-                                              >
-                                                {t.title}
-                                              </DropdownMenuItem>
-                                            ))}
-                                        </DropdownMenuSubContent>
-                                      </DropdownMenuSub>
-                                    ) : null}
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      variant="destructive"
-                                      onClick={() => setDeleteItemTarget(item)}
-                                    >
-                                      {t('common.delete')}
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              ) : null}
-                            </li>
-                          ))}
-                        </ul>
+                        <ModuleItemList
+                          items={items}
+                          icon={Icon}
+                          isStaff={isStaff}
+                          moduleId={m.id}
+                          otherModules={(modules ?? []).filter(
+                            (x) => x.id !== m.id,
+                          )}
+                          onReorder={(orderedIds) =>
+                            reorderItems.mutate({
+                              moduleId: m.id,
+                              kind,
+                              orderedIds,
+                            })
+                          }
+                          onOpen={openItem}
+                          onDownload={(item) =>
+                            openMaterial.mutate({ id: item.id, download: true })
+                          }
+                          onTogglePublish={(item, next) =>
+                            togglePublished.mutate({
+                              kind: item.kind,
+                              id: item.id,
+                              next,
+                            })
+                          }
+                          onMoveToModule={moveItemToModule}
+                          onDelete={setDeleteItemTarget}
+                        />
                       )}
                     </div>
                   )

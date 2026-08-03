@@ -141,6 +141,16 @@ export const common: CommonDict = {
   'qtype.true': 'Betul',
   'qtype.false': 'Salah',
 
+  // Seret untuk susun semula
+  'dnd.instructions':
+    'Tekan space atau enter untuk mula menyusun semula. Guna kekunci anak panah untuk mengalih, space atau enter untuk melepaskan, escape untuk batal.',
+  'dnd.picked_up': '{item} diangkat. Kedudukan {position} daripada {total}.',
+  'dnd.moved_over':
+    '{item} dialihkan ke kedudukan {position} daripada {total}.',
+  'dnd.dropped':
+    '{item} dilepaskan pada kedudukan {position} daripada {total}.',
+  'dnd.cancelled': 'Susunan semula dibatalkan. {item} kembali ke tempat asal.',
+
   // Muat naik imej
   'upload.no_academy':
     'Tiada akademi dipilih — muat semula halaman dan cuba lagi. (Muat naik disimpan mengikut akademi.)',

@@ -71,6 +71,7 @@ export const courses = {
   'courses.item.assessment': 'Assessment',
   'courses.item.assignment': 'Assignment',
   'courses.item.actions': '{title} actions',
+  'courses.item.drag': 'Reorder {title}',
   'courses.item.move_to_module': 'Move to module',
   'courses.item.questions_one': '{count} question',
   'courses.item.questions_other': '{count} questions',

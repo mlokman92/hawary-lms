@@ -11,6 +11,17 @@ export const invitations = {
   'invite.action.revoke': 'Revoke',
   'invite.error.resend': 'Could not resend.',
 
+  // The invitee's own side: academies waiting for them
+  'invite.waiting.title': 'Academy invitations',
+  'invite.waiting.description':
+    'These academies have added you. Join to get access.',
+  'invite.waiting.added': 'Added {date}',
+  'invite.waiting.role_student': 'Student',
+  'invite.waiting.role_trainer': 'Trainer',
+  'invite.waiting.join': 'Join',
+  'invite.waiting.joining': 'Joining…',
+  'invite.waiting.error': 'Could not join this academy.',
+
   // Link an existing account (admin only)
   'invite.link.title': 'Link an existing account',
   'invite.link.description.student':

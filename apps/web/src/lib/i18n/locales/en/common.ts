@@ -151,6 +151,16 @@ export const common = {
   'qtype.true': 'True',
   'qtype.false': 'False',
 
+  // Drag-to-reorder. These replace dnd-kit's built-in English announcements,
+  // which would otherwise narrate a Malay page in English mid-drag. Spoken, not
+  // shown — keep them whole sentences.
+  'dnd.instructions':
+    'Press space or enter to start reordering. Use the arrow keys to move, space or enter to drop, escape to cancel.',
+  'dnd.picked_up': 'Picked up {item}. Position {position} of {total}.',
+  'dnd.moved_over': '{item} moved to position {position} of {total}.',
+  'dnd.dropped': '{item} dropped at position {position} of {total}.',
+  'dnd.cancelled': 'Reordering cancelled. {item} is back where it was.',
+
   // Image upload (lib/storage.ts — shared by avatars and note media)
   'upload.no_academy':
     'No academy selected — reload the page and try again. (Uploads are stored per academy.)',

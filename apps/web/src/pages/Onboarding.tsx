@@ -6,6 +6,9 @@ import { useAuth } from '@/lib/auth'
 import { useAcademy } from '@/lib/academy'
 import { slugify } from '@/lib/slug'
 import { useT } from '@/lib/i18n'
+import { FullPageLoading } from '@/components/patterns/QueryState'
+import { PendingInviteList } from '@/features/invitations/PendingInviteList'
+import { useMyPendingInvitations } from '@/features/invitations/api'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -31,11 +34,25 @@ const MY_STATES = [
   'Terengganu', 'Kuala Lumpur', 'Labuan', 'Putrajaya',
 ]
 
+/**
+ * Where a signed-in account with no membership lands.
+ *
+ * It used to be the founder form and nothing else, which was a trap: an
+ * invited student who signed up on a different device than the one that
+ * received the link had no way forward except creating an academy — an act
+ * that makes them staff and evicts them from /learn. So invitations come
+ * first, and creating an academy is the fallback for someone who really is a
+ * founder.
+ */
 export function Onboarding() {
   const { t } = useT()
   const navigate = useNavigate()
   const { user } = useAuth()
   const { refresh } = useAcademy()
+  const { data: invites, isLoading: invitesLoading } = useMyPendingInvitations()
+  // Revealed on request when invitations exist — someone can be both invited
+  // and a founder, but that is the rarer of the two.
+  const [showCreate, setShowCreate] = useState(false)
 
   const [name, setName] = useState('')
   const [slugEdited, setSlugEdited] = useState(false)
@@ -83,9 +100,34 @@ export function Onboarding() {
     navigate('/', { replace: true })
   }
 
+  // Wait for the answer rather than flashing "Create your academy" at someone
+  // who is about to be told they have been invited.
+  if (invitesLoading) return <FullPageLoading />
+
+  const hasInvites = (invites ?? []).length > 0
+  const showForm = !hasInvites || showCreate
+
   return (
     <div className="bg-muted flex min-h-svh items-center justify-center p-6">
-      <div className="w-full max-w-lg">
+      <div className="grid w-full max-w-lg gap-4">
+        <PendingInviteList
+          onAccepted={() => navigate('/', { replace: true })}
+        />
+
+        {hasInvites && !showCreate ? (
+          <p className="text-muted-foreground text-center text-sm">
+            {t('auth.onboarding.founder_prompt')}{' '}
+            <button
+              type="button"
+              className="text-foreground underline underline-offset-4"
+              onClick={() => setShowCreate(true)}
+            >
+              {t('auth.onboarding.create_instead')}
+            </button>
+          </p>
+        ) : null}
+
+        {showForm ? (
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">
@@ -155,6 +197,7 @@ export function Onboarding() {
             </form>
           </CardContent>
         </Card>
+        ) : null}
       </div>
     </div>
   )

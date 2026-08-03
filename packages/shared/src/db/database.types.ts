@@ -1581,6 +1581,10 @@ export type Database = {
     }
     Functions: {
       accept_invitation: { Args: { _token: string }; Returns: Json }
+      accept_pending_invitation: {
+        Args: { _kind: string; _record_id: string }
+        Returns: Json
+      }
       create_instructor_invitation: {
         Args: { _instructor_id: string }
         Returns: Json
@@ -1591,10 +1595,6 @@ export type Database = {
         Returns: string
       }
       ensure_pay_token: { Args: { _invoice: string }; Returns: string }
-      material_download: {
-        Args: { _material_id: string }
-        Returns: { file_name: string; file_path: string; mime_type: string }[]
-      }
       get_attempt: { Args: { _attempt_id: string }; Returns: Json }
       get_pay_status: {
         Args: { _token: string }
@@ -1645,6 +1645,27 @@ export type Database = {
           student_id: string
           student_no: string
           user_id: string
+        }[]
+      }
+      material_download: {
+        Args: { _material_id: string }
+        Returns: {
+          file_name: string
+          file_path: string
+          mime_type: string
+        }[]
+      }
+      my_pending_invitations: {
+        Args: never
+        Returns: {
+          academy_id: string
+          academy_logo_url: string
+          academy_name: string
+          academy_slug: string
+          invited_at: string
+          kind: string
+          record_id: string
+          role: string
         }[]
       }
       record_gateway_payment: {

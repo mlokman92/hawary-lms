@@ -37,6 +37,68 @@ export function useInvitations(academyId: string | null) {
   })
 }
 
+// ---------------------------------------------------------------------------
+// The invitee's own side: academies waiting for them
+// ---------------------------------------------------------------------------
+
+/**
+ * One academy waiting for the signed-in person, as returned by
+ * `my_pending_invitations`. `kind` is the record they would be claiming;
+ * `role` is the membership it grants (student / trainer).
+ */
+export type PendingInvite = {
+  academy_id: string
+  academy_name: string
+  academy_slug: string
+  academy_logo_url: string | null
+  kind: 'student' | 'instructor'
+  record_id: string
+  role: 'student' | 'trainer'
+  invited_at: string
+}
+
+const myInvitesKey = ['my-pending-invitations'] as const
+
+/**
+ * Academies that have a student/instructor record carrying this account's
+ * confirmed email and no linked user yet.
+ *
+ * Derived server-side from the records themselves, not from
+ * `academy_invitations`: a CSV import creates no invitation rows, so a
+ * token-shaped list would be empty exactly when it matters most. The invitee
+ * cannot read either table directly (both are staff-scoped), hence the RPC.
+ */
+export function useMyPendingInvitations(enabled = true) {
+  return useQuery({
+    queryKey: myInvitesKey,
+    enabled,
+    // A stale list means offering a seat that is already taken; accepting then
+    // fails with "Invitation not found", which reads like a bug.
+    staleTime: 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('my_pending_invitations')
+      if (error) throw error
+      return (data ?? []) as unknown as PendingInvite[]
+    },
+  })
+}
+
+/** Claim one of them. Links the record and grants the membership. */
+export function useAcceptPendingInvitation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (invite: Pick<PendingInvite, 'kind' | 'record_id'>) => {
+      const { data, error } = await supabase.rpc('accept_pending_invitation', {
+        _kind: invite.kind,
+        _record_id: invite.record_id,
+      })
+      if (error) throw error
+      return data as unknown as { academy_id: string; status: string }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: myInvitesKey }),
+  })
+}
+
 export function useRevokeInvitation(academyId: string | null) {
   const qc = useQueryClient()
   return useMutation({

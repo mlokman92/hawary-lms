@@ -45,9 +45,15 @@ Monorepo: **pnpm workspaces + Turborepo**.
   and notes are a flat list per module (the old note folder tree is gone).
   Editors stay routable at `/notes/:id`, `/assessments/:id`,
   `/assignments/:id`. Reorder/move via `reorder_course_modules` +
-  `reorder_module_items(module, kind, ordered_ids)`. Publishing is an inline
-  `PublishSwitch` on the row (optimistic, reconciles on refetch); one
-  `useTogglePublished` covers all four kinds.
+  `reorder_module_items(module, kind, ordered_ids)`. Items are **drag-sortable**
+  (`features/courses/ModuleItemList.tsx`, dnd-kit): by handle, not whole-row —
+  the row also holds a link, a switch and a menu — and within one
+  (module, kind) section only, since that is what the RPC takes and a note
+  cannot be dropped into "Assessments". Crossing modules stays on the ⋯ menu,
+  which still works when the target module is collapsed. `useReorderModuleItems`
+  is optimistic or the row springs back mid-drag. Publishing is an inline
+  `PublishSwitch` on the row (also optimistic); one `useTogglePublished` covers
+  all four kinds.
 - **Sub-nav under Courses** (`NavItem.children` → `SidebarMenuSub`, always
   open), and the two shells mean different things by it:
   - **staff** `/assessments` · `/assignments` are the **grading queues** —
@@ -100,10 +106,23 @@ Monorepo: **pnpm workspaces + Turborepo**.
   user); enrollment/invoices/payments reference `students`. An **instructor is the same
   shape** (`instructors`, CRM-style record); `course_instructors` assigns them to
   courses. Money in integer **sen**.
-- **Account linking**: `academy_invitations` (`student_id` **or** `instructor_id`) +
-  `create_invitation`/`create_instructor_invitation`/`accept_invitation` RPCs reconcile
-  an invited student/instructor to a profile — accepting an instructor invite grants the
-  `trainer` role (email delivery needs SMTP).
+- **Account linking** (`docs/account-claiming.md`): two routes, one shared body
+  (`app.link_claimed_record` — archived/already-linked guards, monotonic role
+  upsert, suspended stays suspended). **The record is the invitation**: a
+  student/instructor row whose email matches the caller's *confirmed* auth email
+  and has no `user_id` is claimable via `my_pending_invitations()` +
+  `accept_pending_invitation(kind, record_id)` — derived from the records, not
+  from `academy_invitations`, because a CSV import mints no tokens. Role comes
+  from the record kind, never from client input. The **token flow**
+  (`create_invitation` / `create_instructor_invitation` (admin) /
+  `accept_invitation` / `resend` / `revoke` + `/accept-invite?token=`) survives
+  for emailed and shareable links; the token was never the authorisation — the
+  email match always was. Accepted risk, decided deliberately: a trainer can
+  create an instructor record with an email they control and self-claim it
+  (lateral, not escalation); close it by tightening `instructors: staff insert`
+  to `is_admin`, not by special-casing the RPC. Invitees see waiting academies on
+  `/onboarding` (which no longer traps them in "create your academy") and on
+  `/profile` + `/learn/profile` via `features/invitations/PendingInviteList`.
 - **Members & roles** (`/members`, admin-only): the staff roster — students are
   excluded (they are an academy record, managed on their own page, where their
   app access can also be suspended). Two independent axes, never merged into one
@@ -214,7 +233,8 @@ Monorepo: **pnpm workspaces + Turborepo**.
 ### Deferred / next
 - **Transactional email is not configured** — sign-up confirmation uses Supabase's
   low-rate test mailer and the functions want `APP_URL`/`ALLOWED_ORIGINS` set.
-  Until then, link accounts with the admin RPCs above.
+  Less load-bearing since self-claim landed: an invitee signs up and finds the
+  academy waiting on `/onboarding` without any email being sent.
 - Assignment **attachments** (needs a private `submissions` bucket + a student
   branch in `upload-media`); scheduled expiry sweep for invitations.
 - Assessment settings still have **no UI**: `duration_minutes`, `max_attempts`,

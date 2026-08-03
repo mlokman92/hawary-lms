@@ -71,6 +71,8 @@ export const auth: AuthDict = {
   'auth.onboarding.invalid_slug': 'Sila masukkan nama akademi / URL yang sah.',
   'auth.onboarding.slug_taken': 'URL itu telah digunakan — sila cuba yang lain.',
   'auth.onboarding.submit': 'Cipta akademi',
+  'auth.onboarding.founder_prompt': 'Menguruskan akademi anda sendiri?',
+  'auth.onboarding.create_instead': 'Cipta akademi',
 
   // Menerima jemputan
   'auth.invite.subtitle': 'Terima jemputan',

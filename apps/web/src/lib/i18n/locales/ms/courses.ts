@@ -72,6 +72,7 @@ export const courses: CoursesDict = {
   'courses.item.assessment': 'Penilaian',
   'courses.item.assignment': 'Tugasan',
   'courses.item.actions': 'Tindakan untuk {title}',
+  'courses.item.drag': 'Susun semula {title}',
   'courses.item.move_to_module': 'Alih ke modul',
   'courses.item.questions_one': '{count} soalan',
   'courses.item.questions_other': '{count} soalan',

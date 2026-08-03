@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { AvatarUploader } from '@/features/students/AvatarUploader'
+import { PendingInviteList } from '@/features/invitations/PendingInviteList'
 import { TIER_META, memberTier } from '@/features/members/api'
 import {
   useMyInstructorRecord,
@@ -93,6 +94,9 @@ export function ProfilePage() {
       {error ? <ErrorBlock error={error} className="mt-6" /> : null}
 
       <div className="mt-6 space-y-6">
+        {/* Renders nothing unless another academy is waiting — the only place
+            an existing member would ever find out. */}
+        <PendingInviteList />
         <Card>
           <CardHeader>
             <CardTitle>{t('profile.account')}</CardTitle>

@@ -6,6 +6,7 @@ import { useStudentAcademy } from '@/lib/studentAcademy'
 import { useMyStudent } from '@/features/learn/api'
 import { useMyProfile, useUpdateMyProfile } from '@/features/profile/api'
 import { STATUS_META } from '@/features/students/status'
+import { PendingInviteList } from '@/features/invitations/PendingInviteList'
 import { PageHeader } from '@/components/patterns/PageHeader'
 import { ErrorBlock, RouteLoading } from '@/components/patterns/QueryState'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -95,6 +96,8 @@ export function LearnProfilePage() {
       />
 
       <div className="mt-6 space-y-6">
+        {/* Renders nothing unless another academy is waiting. */}
+        <PendingInviteList />
         <Card>
           <CardHeader>
             <CardTitle>{t('lacct.profile.account')}</CardTitle>

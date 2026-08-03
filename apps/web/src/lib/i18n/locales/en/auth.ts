@@ -72,6 +72,8 @@ export const auth = {
   'auth.onboarding.invalid_slug': 'Please enter a valid academy name / URL.',
   'auth.onboarding.slug_taken': 'That URL is already taken — try a different one.',
   'auth.onboarding.submit': 'Create academy',
+  'auth.onboarding.founder_prompt': 'Running your own academy?',
+  'auth.onboarding.create_instead': 'Create one instead',
 
   // Invitation acceptance
   'auth.invite.subtitle': 'Accept invitation',

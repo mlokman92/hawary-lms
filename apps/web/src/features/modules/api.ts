@@ -205,11 +205,27 @@ export function useReorderModules(academyId: string, courseId: string) {
   })
 }
 
+/** The TanStack key each kind's list is cached under. */
+const kindListKey = (kind: ItemKind) =>
+  kind === 'material' ? 'materials' : KIND_TABLE[kind]
+
+/** The shape the optimistic patch needs; every content row has these. */
+type OrderableRow = {
+  id: string
+  module_id: string
+  sort_order: number
+  created_at: string
+}
+
 /**
  * Reorder a module's items of one kind — and move items between modules.
  * `orderedIds` is the destination module's full, ordered list for that kind
  * (the moved item included); the RPC writes module_id + sort_order by position.
  * A cross-course target is rejected by the (course_id, module_id) FK.
+ *
+ * Optimistic, because this is what drag-and-drop commits to. Without it the row
+ * springs back to where it was and only lands once the refetch returns, which
+ * reads as the drag having failed.
  */
 export function useReorderModuleItems(academyId: string, courseId: string) {
   const qc = useQueryClient()
@@ -231,9 +247,38 @@ export function useReorderModuleItems(academyId: string, courseId: string) {
       if (error) throw error
       return kind
     },
-    onSuccess: (kind) => {
-      const key = kind === 'material' ? 'materials' : KIND_TABLE[kind]
-      qc.invalidateQueries({ queryKey: [key, academyId, courseId] })
+    onMutate: async ({ moduleId, kind, orderedIds }) => {
+      const key = [kindListKey(kind), academyId, courseId] as const
+      await qc.cancelQueries({ queryKey: key })
+      const previous = qc.getQueryData<OrderableRow[]>(key)
+      if (previous) {
+        const position = new Map(orderedIds.map((id, i) => [id, i]))
+        qc.setQueryData(
+          key,
+          [...previous]
+            // module_id is patched too: the same RPC is what moves an item to
+            // another module, and the row has to leave its old section at once.
+            .map((row) =>
+              position.has(row.id)
+                ? { ...row, module_id: moduleId, sort_order: position.get(row.id)! }
+                : row,
+            )
+            .sort(
+              (a, b) =>
+                a.sort_order - b.sort_order ||
+                a.created_at.localeCompare(b.created_at),
+            ),
+        )
+      }
+      return { previous, key }
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.previous) qc.setQueryData(ctx.key, ctx.previous)
+    },
+    onSettled: (_d, _e, { kind }) => {
+      void qc.invalidateQueries({
+        queryKey: [kindListKey(kind), academyId, courseId],
+      })
     },
   })
 }
