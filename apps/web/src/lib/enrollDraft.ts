@@ -41,6 +41,25 @@ export function readEnrollDraft(courseId: string): Record<string, string> | null
   }
 }
 
+/**
+ * The draft without caring which course it belongs to.
+ *
+ * Only for the auth pages: /signup and /signin ask for a name, an email and a
+ * phone number that the applicant has just typed into the enrollment form, and
+ * which course it was for makes no difference to those three answers. Callers
+ * must check that they are actually mid-enrollment (`next` points at /enroll/)
+ * before using it.
+ */
+export function readEnrollDraftValues(): Record<string, string> | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY)
+    if (!raw) return null
+    return (JSON.parse(raw) as Draft)?.values ?? null
+  } catch {
+    return null
+  }
+}
+
 export function clearEnrollDraft(): void {
   try {
     localStorage.removeItem(DRAFT_KEY)

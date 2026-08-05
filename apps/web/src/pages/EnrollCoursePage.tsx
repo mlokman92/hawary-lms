@@ -21,6 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { useMyProfile } from '@/features/profile/api'
 import { PublicShell } from '@/features/enrollment/PublicShell'
 import { ApplyForm, type ApplyValues } from '@/features/enrollment/ApplyForm'
 import {
@@ -52,6 +53,7 @@ export function EnrollCoursePage() {
     isLoading: applicationLoading,
     refetch: refetchApplication,
   } = useMyApplication(courseId, user?.id)
+  const { data: profile, isLoading: profileLoading } = useMyProfile()
   const apply = useApplyToCourse(courseId)
   const withdraw = useWithdrawApplication(courseId)
   const [failure, setFailure] = useState<string | null>(null)
@@ -75,14 +77,25 @@ export function EnrollCoursePage() {
 
   const initialValues: ApplyValues = useMemo(() => {
     const draft = courseId ? readEnrollDraft(courseId) : null
+    // `profiles` is the authoritative record. user_metadata is only written at
+    // sign-up, so it is empty for an account created any other way and stale the
+    // moment someone edits their profile — it is the fallback, not the source.
     const meta = (user?.user_metadata ?? {}) as Record<string, unknown>
     return {
-      full_name: String(meta.full_name ?? ''),
+      full_name: profile?.full_name ?? String(meta.full_name ?? ''),
       email: user?.email ?? '',
-      phone: String(meta.phone ?? ''),
+      phone: profile?.phone ?? String(meta.phone ?? ''),
+      // What they typed on this form beats anything we can infer about them.
       ...(draft ?? {}),
     }
-  }, [courseId, user])
+  }, [courseId, user, profile])
+
+  // Persist on every keystroke, not only on submit: "Sign in instead" is a plain
+  // link, and losing a filled form to it is the same failure the /signup hop was
+  // given a draft to avoid.
+  const persist = (values: ApplyValues) => {
+    if (courseId) setEnrollDraft(courseId, values)
+  }
 
   async function submit(values: ApplyValues) {
     setFailure(null)
@@ -101,7 +114,14 @@ export function EnrollCoursePage() {
     }
   }
 
-  if (isLoading || authLoading || (!!session && applicationLoading)) {
+  // The profile is part of the wait, not a late arrival: the form is seeded once
+  // on mount, so rendering it before the profile lands would show empty name and
+  // phone boxes that then fight whatever the person has already started typing.
+  if (
+    isLoading ||
+    authLoading ||
+    (!!session && (applicationLoading || profileLoading))
+  ) {
     return (
       <PublicShell>
         <p className="text-muted-foreground py-16 text-center text-sm">
@@ -284,10 +304,14 @@ export function EnrollCoursePage() {
               </p>
             ) : null}
             <ApplyForm
+              // Remount only when the person changes. Signing in mid-form is the
+              // one moment a reseed is right; anything else would wipe typing.
+              key={user?.id ?? 'anon'}
               requiredFields={page.required_fields as ApplicantField[]}
               initialValues={initialValues}
               busy={apply.isPending}
               error={failure}
+              onChange={persist}
               submitLabel={
                 session
                   ? t('enroll.form.submit')

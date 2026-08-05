@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { readEnrollDraftValues } from '@/lib/enrollDraft'
 import { useT } from '@/lib/i18n'
 import { AuthCard } from '@/components/AuthCard'
 import { Button } from '@/components/ui/button'
@@ -13,9 +14,17 @@ export function SignUp() {
   const [params] = useSearchParams()
   const next = params.get('next') || '/'
   const signinTo = next !== '/' ? `/signin?next=${encodeURIComponent(next)}` : '/signin'
-  const [fullName, setFullName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
+  // Sent here by an enrollment form: it asked for exactly this name, email and
+  // phone a moment ago. Asking for them twice is how an applicant is lost
+  // between the two pages. Guarded on `next` so an unrelated sign-up never
+  // inherits a stale draft.
+  const seed = useMemo(
+    () => (next.startsWith('/enroll/') ? readEnrollDraftValues() : null),
+    [next],
+  )
+  const [fullName, setFullName] = useState(seed?.full_name ?? '')
+  const [email, setEmail] = useState(seed?.email ?? '')
+  const [phone, setPhone] = useState(seed?.phone ?? '')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)

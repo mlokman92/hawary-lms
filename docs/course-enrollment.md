@@ -46,12 +46,32 @@ the invite flow ([SignUp.tsx](../apps/web/src/pages/SignUp.tsx),
   learns the answer by coming back to `/enroll/…`, `/onboarding` or `/profile`.
   Take the account away and there is nowhere to tell them.
 
-A signed-out visitor still gets the whole form. Their answers are stashed in
-`localStorage` before the `/signup` hop and rehydrated on the way back
-([lib/enrollDraft.ts](../apps/web/src/lib/enrollDraft.ts)) — a form filled in and
-then emptied by an authentication redirect is the single most likely place to
-lose someone. The read is deliberately non-destructive; it is cleared only once
-the application is actually sent.
+### Nothing is typed twice
+
+A form filled in and then emptied by an authentication redirect is the single
+most likely place to lose an applicant, so the draft
+([lib/enrollDraft.ts](../apps/web/src/lib/enrollDraft.ts)) works in both
+directions and is written on **every keystroke**, not on submit — "Sign in
+instead" is a plain link, and a save that only happens on submit does not
+survive it.
+
+- **enroll → auth**: `/signup` and `/signin` seed their name/email/phone boxes
+  from the draft, guarded on `next` starting with `/enroll/` so an unrelated
+  sign-up never inherits a stale one. Those pages were asking for the same three
+  answers the enrollment form had just collected.
+- **auth → enroll**: the form is seeded from the draft on top of the person's
+  own details.
+
+Reads are non-destructive; the draft is cleared only once an application is
+actually sent.
+
+**Prefill comes from `profiles`**, with `user_metadata` as a fallback.
+`user_metadata` is written once at sign-up: it is empty for an account created
+any other way (invited, self-claimed) and stale the moment someone edits their
+profile, so it cannot be the source. The page waits for the profile query before
+mounting the form, and `ApplyForm` seeds its state **once** — it remounts by
+`key` only when the signed-in person changes. Re-seeding from a prop that moved
+would overwrite half-typed answers the moment a slow query landed.
 
 ## Per-course link, plus an academy index
 

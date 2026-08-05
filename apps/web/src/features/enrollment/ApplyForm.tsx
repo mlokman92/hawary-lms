@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import { useT } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -54,6 +54,7 @@ export function ApplyForm({
   error,
   submitLabel,
   onSubmit,
+  onChange,
 }: {
   requiredFields: ApplicantField[]
   initialValues: ApplyValues
@@ -61,13 +62,15 @@ export function ApplyForm({
   error: string | null
   submitLabel: string
   onSubmit: (values: ApplyValues) => void
+  /** Every edit, so the caller can keep a draft without owning the state. */
+  onChange?: (values: ApplyValues) => void
 }) {
   const { t } = useT()
+  // Seeded once. The caller waits for its prefill sources and remounts this via
+  // `key` when the signed-in person changes; re-seeding from a prop that moved
+  // would overwrite whatever is half-typed.
   const [values, setValues] = useState<ApplyValues>(initialValues)
   const [localError, setLocalError] = useState<string | null>(null)
-
-  // Re-seed when the draft or the signed-in profile arrives after first paint.
-  useEffect(() => setValues(initialValues), [initialValues])
 
   const shown = useMemo(() => {
     const wanted = new Set<ApplicantField>([
@@ -78,8 +81,11 @@ export function ApplyForm({
     return ORDER.filter((f) => wanted.has(f))
   }, [requiredFields])
 
-  const set = (field: string, value: string) =>
-    setValues((v) => ({ ...v, [field]: value }))
+  const set = (field: string, value: string) => {
+    const next = { ...values, [field]: value }
+    setValues(next)
+    onChange?.(next)
+  }
 
   function submit(e: FormEvent) {
     e.preventDefault()
