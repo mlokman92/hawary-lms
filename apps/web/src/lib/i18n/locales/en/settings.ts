@@ -31,7 +31,17 @@ export const settings = {
     'Only the academy name is required. Anything left blank is simply omitted from the document.',
   'settings.academy.save': 'Save details',
   'settings.academy.saved': 'Saved',
+  'settings.academy.preview': 'Preview invoice',
   'settings.academy.error.name_required': 'Enter your academy name.',
+
+  // Invoice / receipt preview dialog
+  'settings.preview.title': 'Document preview',
+  'settings.preview.description':
+    'How your invoices and receipts will look with the details above.',
+  'settings.preview.tab_invoice': 'Invoice',
+  'settings.preview.tab_receipt': 'Receipt',
+  'settings.preview.sample_note':
+    'Sample figures — only the academy details are yours. Changes here are previewed before you save them.',
 
   // ToyyibPay gateway card. "Sandbox" and "Live" are ToyyibPay's own mode
   // names and stay as-is in every language.

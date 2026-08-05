@@ -5,7 +5,6 @@ export const students = {
   'students.action.add': 'Add Student',
   'students.action.invite': 'Invite Student',
   'students.search_placeholder': 'Search name, email, phone, IC…',
-  'students.filter.all_statuses': 'All statuses',
   'students.sort.name_asc': 'Name A–Z',
   'students.sort.name_desc': 'Name Z–A',
   'students.sort.joined_desc': 'Join date: newest',

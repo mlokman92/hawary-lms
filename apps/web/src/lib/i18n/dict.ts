@@ -20,6 +20,7 @@ import { nav as enNav } from './locales/en/nav'
 import { auth as enAuth } from './locales/en/auth'
 import { dashboard as enDashboard } from './locales/en/dashboard'
 import { courses as enCourses } from './locales/en/courses'
+import { enrollment as enEnrollment } from './locales/en/enrollment'
 import { modules as enModules } from './locales/en/modules'
 import { students as enStudents } from './locales/en/students'
 import { instructors as enInstructors } from './locales/en/instructors'
@@ -46,6 +47,7 @@ import { nav as msNav } from './locales/ms/nav'
 import { auth as msAuth } from './locales/ms/auth'
 import { dashboard as msDashboard } from './locales/ms/dashboard'
 import { courses as msCourses } from './locales/ms/courses'
+import { enrollment as msEnrollment } from './locales/ms/enrollment'
 import { modules as msModules } from './locales/ms/modules'
 import { students as msStudents } from './locales/ms/students'
 import { instructors as msInstructors } from './locales/ms/instructors'
@@ -74,6 +76,7 @@ export const en = {
   ...enAuth,
   ...enDashboard,
   ...enCourses,
+  ...enEnrollment,
   ...enModules,
   ...enStudents,
   ...enInstructors,
@@ -117,6 +120,7 @@ export const ms: Record<TKey, string> = {
   ...msAuth,
   ...msDashboard,
   ...msCourses,
+  ...msEnrollment,
   ...msModules,
   ...msStudents,
   ...msInstructors,

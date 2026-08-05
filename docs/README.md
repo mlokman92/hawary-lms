@@ -8,6 +8,8 @@ Living documentation for Hawary LMS.
   and account setup (invitations).
 - [ci-cd.md](ci-cd.md) — CI/CD strategy: Netlify (web), Expo EAS (mobile), Supabase
   migrations, GitHub Actions, and monorepo guidance.
+- [course-enrollment.md](course-enrollment.md) — the public enrollment page,
+  applications and approval, and bulk enrolment by email.
 
 Add an entry here when you create a new doc. Keep decisions with their rationale so
 future work (and Claude) understands *why*, not just *what*.

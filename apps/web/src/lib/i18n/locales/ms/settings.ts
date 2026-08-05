@@ -30,7 +30,17 @@ export const settings: SettingsDict = {
     'Hanya nama akademi diwajibkan. Ruangan yang dibiarkan kosong tidak akan dipaparkan pada dokumen.',
   'settings.academy.save': 'Simpan butiran',
   'settings.academy.saved': 'Telah disimpan',
+  'settings.academy.preview': 'Pratonton invois',
   'settings.academy.error.name_required': 'Masukkan nama akademi anda.',
+
+  // Invoice / receipt preview dialog
+  'settings.preview.title': 'Pratonton dokumen',
+  'settings.preview.description':
+    'Rupa invois dan resit anda dengan butiran di atas.',
+  'settings.preview.tab_invoice': 'Invois',
+  'settings.preview.tab_receipt': 'Resit',
+  'settings.preview.sample_note':
+    'Angka contoh — hanya butiran akademi milik anda. Perubahan di sini dipratonton sebelum anda menyimpannya.',
 
   // Kad gerbang pembayaran ToyyibPay. "Sandbox" dan "Live" ialah nama mod
   // ToyyibPay sendiri, jadi ia dikekalkan.

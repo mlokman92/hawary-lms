@@ -12,6 +12,7 @@ export const nav: NavDict = {
   // Sub-navigasi di bawah Kursus, dikongsi oleh kedua-dua shell.
   'nav.assessments': 'Penilaian',
   'nav.assignments': 'Tugasan',
+  'nav.enrollments': 'Pendaftaran',
   'nav.students': 'Pelajar',
   'nav.instructors': 'Pengajar',
   'nav.payments': 'Pembayaran',

@@ -440,6 +440,15 @@ export type DocumentInput = {
   academy: Letterhead | null
 }
 
+/**
+ * A finished document that has not yet been handed anywhere.
+ *
+ * Building and delivering are separate steps because the same drawing serves
+ * two destinations: the learner's download, and the on-screen preview in
+ * Settings, which needs the bytes rather than a file on disk.
+ */
+export type BuiltDocument = { doc: jsPDF; fileName: string }
+
 /** `INV-ABC123-invoice.pdf` — safe on every filesystem. */
 function fileName(invoiceNo: string, suffix: string) {
   const base = invoiceNo.replace(/[^A-Za-z0-9._-]+/g, '-') || 'invoice'
@@ -456,7 +465,10 @@ async function newDoc(academy: Letterhead | null, title: string) {
   return { doc, logo }
 }
 
-export async function downloadInvoicePdf({ invoice, academy }: DocumentInput) {
+export async function buildInvoicePdf({
+  invoice,
+  academy,
+}: DocumentInput): Promise<BuiltDocument> {
   const title = translate('doc.invoice.title')
   const { doc, logo } = await newDoc(academy, `${title} ${invoice.invoice_no}`)
 
@@ -477,10 +489,16 @@ export async function downloadInvoicePdf({ invoice, academy }: DocumentInput) {
   ])
   drawNotes(doc, invoice.notes, y)
   drawFooters(doc)
-  doc.save(fileName(invoice.invoice_no, translate('doc.file.invoice')))
+  return {
+    doc,
+    fileName: fileName(invoice.invoice_no, translate('doc.file.invoice')),
+  }
 }
 
-export async function downloadReceiptPdf({ invoice, academy }: DocumentInput) {
+export async function buildReceiptPdf({
+  invoice,
+  academy,
+}: DocumentInput): Promise<BuiltDocument> {
   const title = translate('doc.receipt.title')
   const { doc, logo } = await newDoc(academy, `${title} ${invoice.invoice_no}`)
 
@@ -516,5 +534,20 @@ export async function downloadReceiptPdf({ invoice, academy }: DocumentInput) {
   ])
   drawNotes(doc, invoice.notes, y)
   drawFooters(doc)
-  doc.save(fileName(invoice.invoice_no, translate('doc.file.receipt')))
+  return {
+    doc,
+    fileName: fileName(invoice.invoice_no, translate('doc.file.receipt')),
+  }
+}
+
+// --- delivery ---------------------------------------------------------------
+
+export async function downloadInvoicePdf(input: DocumentInput) {
+  const { doc, fileName: name } = await buildInvoicePdf(input)
+  doc.save(name)
+}
+
+export async function downloadReceiptPdf(input: DocumentInput) {
+  const { doc, fileName: name } = await buildReceiptPdf(input)
+  doc.save(name)
 }

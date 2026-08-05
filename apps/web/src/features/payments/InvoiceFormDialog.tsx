@@ -81,6 +81,8 @@ export function InvoiceFormDialog({
   const [dueDate, setDueDate] = useState('')
   const [notes, setNotes] = useState('')
   const [chargeToPayor, setChargeToPayor] = useState(false)
+  const [allowPartial, setAllowPartial] = useState(false)
+  const [minPartial, setMinPartial] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const gatewayOn = !!paymentSettings?.toyyibpay_enabled
@@ -96,6 +98,8 @@ export function InvoiceFormDialog({
     setTax('')
     setDueDate('')
     setNotes('')
+    setAllowPartial(false)
+    setMinPartial('')
     setError(null)
   }, [open, initialStudentId])
 
@@ -179,6 +183,7 @@ export function InvoiceFormDialog({
   )
   const taxSen = ringgitToSen(tax)
   const perStudentSen = subtotalSen + taxSen
+  const minPartialSen = ringgitToSen(minPartial)
   const grandTotalSen = perStudentSen * selected.size
 
   const changeItem = (key: string, patch: Partial<ItemRow>) =>
@@ -189,6 +194,21 @@ export function InvoiceFormDialog({
     if (selected.size === 0) return setError(t('payments.form.error_no_student'))
     if (perStudentSen <= 0)
       return setError(t('payments.form.error_no_amount'))
+    // A minimum instalment nobody could ever meet would leave the pay page
+    // offering a choice with one option, so reject it here rather than let the
+    // server silently collapse it back to "pay in full".
+    if (allowPartial && minPartialSen > 0) {
+      if (minPartialSen < TOYYIBPAY_FPX_FEE_SEN)
+        return setError(
+          t('payments.partial.error_min', {
+            min: formatMYR(TOYYIBPAY_FPX_FEE_SEN),
+          }),
+        )
+      if (minPartialSen > perStudentSen)
+        return setError(
+          t('payments.partial.error_max', { max: formatMYR(perStudentSen) }),
+        )
+    }
     setError(null)
     try {
       const created = await createInvoices.mutateAsync({
@@ -202,6 +222,9 @@ export function InvoiceFormDialog({
         // leave NULL so the invoice picks up whatever default is in force if
         // the academy connects ToyyibPay later.
         chargeToPayor: gatewayOn ? chargeToPayor : null,
+        allowPartialPayment: gatewayOn && allowPartial,
+        // Blank means "no floor of ours" — ToyyibPay's RM1.00 applies instead.
+        minPartialSen: minPartialSen > 0 ? minPartialSen : null,
         items: items
           .filter((it) => it.description.trim() || ringgitToSen(it.unitPrice) > 0)
           .map((it) => ({
@@ -499,25 +522,70 @@ export function InvoiceFormDialog({
             </div>
 
             {/* Only meaningful once ToyyibPay is connected and switched on —
-                there is no online charge to pass on otherwise. */}
+                there is no online charge to pass on, and nothing to part-pay,
+                otherwise. */}
             {gatewayOn ? (
-              <div className="flex items-center justify-between gap-4 rounded-md border p-3">
-                <div className="space-y-0.5">
-                  <Label htmlFor="charge-to-payor-invoice">
-                    {t('payments.form.charge_to_payor')}
-                  </Label>
-                  <p className="text-muted-foreground text-xs">
-                    {t('payments.form.charge_to_payor.hint', {
-                      amount: formatMYR(TOYYIBPAY_FPX_FEE_SEN),
-                    })}
-                  </p>
+              <>
+                <div className="flex items-center justify-between gap-4 rounded-md border p-3">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="charge-to-payor-invoice">
+                      {t('payments.form.charge_to_payor')}
+                    </Label>
+                    <p className="text-muted-foreground text-xs">
+                      {t('payments.form.charge_to_payor.hint', {
+                        amount: formatMYR(TOYYIBPAY_FPX_FEE_SEN),
+                      })}
+                    </p>
+                  </div>
+                  <Switch
+                    id="charge-to-payor-invoice"
+                    checked={chargeToPayor}
+                    onCheckedChange={setChargeToPayor}
+                  />
                 </div>
-                <Switch
-                  id="charge-to-payor-invoice"
-                  checked={chargeToPayor}
-                  onCheckedChange={setChargeToPayor}
-                />
-              </div>
+
+                <div className="grid gap-3 rounded-md border p-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="allow-partial-invoice">
+                        {t('payments.partial.allow')}
+                      </Label>
+                      <p className="text-muted-foreground text-xs">
+                        {t('payments.partial.allow_hint', {
+                          fee: formatMYR(TOYYIBPAY_FPX_FEE_SEN),
+                        })}
+                      </p>
+                    </div>
+                    <Switch
+                      id="allow-partial-invoice"
+                      checked={allowPartial}
+                      onCheckedChange={setAllowPartial}
+                    />
+                  </div>
+                  {allowPartial ? (
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="min-partial-invoice">
+                        {t('payments.partial.minimum')}
+                      </Label>
+                      <Input
+                        id="min-partial-invoice"
+                        type="number"
+                        min="1"
+                        step="0.01"
+                        value={minPartial}
+                        onChange={(e) => setMinPartial(e.target.value)}
+                        placeholder={t('payments.partial.minimum_placeholder')}
+                        className="max-w-40"
+                      />
+                      <p className="text-muted-foreground text-xs">
+                        {t('payments.partial.minimum_hint', {
+                          min: formatMYR(TOYYIBPAY_FPX_FEE_SEN),
+                        })}
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+              </>
             ) : null}
 
             <div className="bg-muted mt-auto flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">

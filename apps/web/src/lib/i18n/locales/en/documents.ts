@@ -49,6 +49,20 @@ export const documents = {
   'doc.file.invoice': 'invoice',
   'doc.file.receipt': 'receipt',
 
+  // The stand-in invoice behind the Settings preview. Everything here is
+  // fictional on purpose — a preview must not read as a real bill.
+  'doc.sample.invoice_no': 'INV-SAMPLE',
+  'doc.sample.student': 'Sample Student',
+  'doc.sample.student_no': 'STU-0001',
+  'doc.sample.email': 'student@example.com',
+  'doc.sample.address': '12 Jalan Contoh\n50450 Kuala Lumpur\nWilayah Persekutuan',
+  'doc.sample.course': 'Sample Course',
+  'doc.sample.item_course': 'Course fee',
+  'doc.sample.item_registration': 'Registration fee',
+  'doc.sample.item_materials': 'Learning materials',
+  'doc.sample.notes':
+    'Please quote the invoice number when making payment. Thank you.',
+
   // Download buttons
   'doc.download.invoice': 'Download invoice',
   'doc.download.receipt': 'Download receipt',

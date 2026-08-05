@@ -44,7 +44,8 @@ import { InviteStudentDialog } from '@/features/students/InviteStudentDialog'
 import { ImportDialog } from '@/features/import/ImportDialog'
 import { studentImportSpec } from '@/features/students/importSpec'
 import { PendingInvitations } from '@/features/invitations/PendingInvitations'
-import { MANUAL_STATUSES, STATUS_META } from '@/features/students/status'
+import { STATUS_META } from '@/features/students/status'
+import { useCourses } from '@/features/courses/api'
 import {
   STUDENT_STATUSES,
   studentStats,
@@ -75,18 +76,30 @@ export function StudentsPage() {
   const { activeAcademyId, active } = useAcademy()
   const isStaff = active?.role === 'admin' || active?.role === 'trainer'
   const { data: students, isLoading, error } = useStudents(activeAcademyId)
+  const { data: courses } = useCourses(activeAcademyId)
 
   const [search, setSearch] = useState('')
-  // The status filter lives in the URL so other pages can deep-link into it
-  // (the dashboard's "No course yet" tile points at ?status=unenrolled).
+  // Status and course both live in the URL so other pages can deep-link into
+  // them (the dashboard's "No course yet" tile points at ?status=unenrolled).
   const [params, setParams] = useSearchParams()
   const requested = params.get('status')
   const filter: Filter =
     requested && FILTERS.includes(requested as Filter)
       ? (requested as Filter)
       : 'all'
-  const setFilter = (f: Filter) =>
-    setParams(f === 'all' ? {} : { status: f }, { replace: true })
+  const course = params.get('course') ?? 'all'
+  // Written from the pair rather than replacing the whole query string —
+  // setParams takes the full set, so writing one filter alone drops the other.
+  const writeParams = (next: { status?: Filter; course?: string }) => {
+    const status = next.status ?? filter
+    const courseId = next.course ?? course
+    const out: Record<string, string> = {}
+    if (status !== 'all') out.status = status
+    if (courseId !== 'all') out.course = courseId
+    setParams(out, { replace: true })
+  }
+  const setFilter = (f: Filter) => writeParams({ status: f })
+  const setCourse = (id: string) => writeParams({ course: id })
   const [sort, setSort] = useState<Sort>('joined_desc')
   const [addOpen, setAddOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
@@ -95,12 +108,31 @@ export function StudentsPage() {
 
   const stats = studentStats(students ?? [])
 
+  // Every course the academy has, not only the ones with students on them: a
+  // course you can pick and see "no match" is clearer than one that is missing
+  // from the list because nobody has enrolled yet.
+  const courseOptions = useMemo(
+    () =>
+      (courses ?? [])
+        .filter((c) => c.status !== 'archived')
+        .map((c) => ({ id: c.id, title: c.title }))
+        .sort((a, b) => a.title.localeCompare(b.title)),
+    [courses],
+  )
+
   const rows = useMemo(() => {
     let list = students ?? []
     if (filter === 'unenrolled') {
       list = list.filter((s) => s.enrollments.length === 0)
     } else if (filter !== 'all') {
       list = list.filter((s) => s.status === filter)
+    }
+    // Matches the Course column on the same row, which lists every enrolment
+    // whatever its status.
+    if (course !== 'all') {
+      list = list.filter((s) =>
+        s.enrollments.some((e) => e.courses?.id === course),
+      )
     }
     const q = search.trim().toLowerCase()
     if (q) {
@@ -122,7 +154,7 @@ export function StudentsPage() {
           return b.created_at.localeCompare(a.created_at)
       }
     })
-  }, [students, filter, search, sort])
+  }, [students, filter, course, search, sort])
 
   const cards: {
     label: string
@@ -223,22 +255,20 @@ export function StudentsPage() {
               className="pl-8"
             />
           </div>
-          <Select value={filter} onValueChange={(v) => setFilter(v as Filter)}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder={t('common.status')} />
+          {/* Course, not status: the stat tiles above already are the status
+              filter, and "who is on this course" was the question this row had
+              no answer for. */}
+          <Select value={course} onValueChange={setCourse}>
+            <SelectTrigger className="w-56" aria-label={t('common.course')}>
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">
-                {t('students.filter.all_statuses')}
-              </SelectItem>
-              {MANUAL_STATUSES.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {t(STATUS_META[s].labelKey)}
+              <SelectItem value="all">{t('common.all_courses')}</SelectItem>
+              {courseOptions.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.title}
                 </SelectItem>
               ))}
-              <SelectItem value="unenrolled">
-                {t('status.student.unenrolled')}
-              </SelectItem>
             </SelectContent>
           </Select>
           <Select value={sort} onValueChange={(v) => setSort(v as Sort)}>

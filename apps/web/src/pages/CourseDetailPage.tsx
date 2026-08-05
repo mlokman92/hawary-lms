@@ -53,6 +53,7 @@ import {
 } from '@/features/courses/ModuleItemList'
 import { DuplicateCourseDialog } from '@/features/courses/DuplicateCourseDialog'
 import { ModuleFormDialog } from '@/features/modules/ModuleFormDialog'
+import { EnrollmentSettingsCard } from '@/features/enrollment/EnrollmentSettingsCard'
 import { useCourse, COURSE_STATUS_LABEL } from '@/features/courses/api'
 import {
   useDeleteModule,
@@ -428,6 +429,17 @@ export function CourseDetailPage() {
           </div>
         ) : null}
       </div>
+
+      {/* Getting people onto the course, above the syllabus: a course with no
+          students is the state this card exists to end. Staff only — a linked
+          student reaching this page must not see the roster controls. */}
+      {isStaff && activeAcademyId ? (
+        <EnrollmentSettingsCard
+          className="mt-6"
+          academyId={activeAcademyId}
+          course={course}
+        />
+      ) : null}
 
       <div className="mt-6 space-y-4">
         {modulesLoading ? (

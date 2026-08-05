@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { Building2, Check, Loader2, Upload, X } from 'lucide-react'
+import { Building2, Check, FileText, Loader2, Upload, X } from 'lucide-react'
 import { useAcademy } from '@/lib/academy'
 import { useT } from '@/lib/i18n'
 import { uploadPublicImage } from '@/lib/storage'
@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useAcademyProfile, useUpdateAcademyProfile } from './academy'
+import { InvoicePreviewDialog } from './InvoicePreviewDialog'
 
 /**
  * The academy's letterhead, editable by an admin.
@@ -37,6 +38,7 @@ export function AcademyProfileCard({ academyId }: { academyId: string }) {
   const [sstNumber, setSstNumber] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   // Seed once the row lands, and re-seed when the admin switches academy.
   useEffect(() => {
@@ -166,7 +168,7 @@ export function AcademyProfileCard({ academyId }: { academyId: string }) {
 
             {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <Button type="submit" disabled={update.isPending}>
                 {update.isPending ? (
                   <>
@@ -177,6 +179,18 @@ export function AcademyProfileCard({ academyId }: { academyId: string }) {
                   t('settings.academy.save')
                 )}
               </Button>
+              {/* Deliberately drawn from the form state, not the saved row: the
+                  question this answers is "how will THIS look", which is worth
+                  asking before committing to it. Needs a name to print, and
+                  nothing here writes, so it is safe on an unsaved form. */}
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!name.trim()}
+                onClick={() => setPreviewOpen(true)}
+              >
+                <FileText /> {t('settings.academy.preview')}
+              </Button>
               {saved && !update.isPending ? (
                 <span className="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">
                   <Check className="size-4" /> {t('settings.academy.saved')}
@@ -186,6 +200,19 @@ export function AcademyProfileCard({ academyId }: { academyId: string }) {
           </form>
         )}
       </CardContent>
+
+      <InvoicePreviewDialog
+        academyId={academyId}
+        academy={{
+          name: name.trim(),
+          logo_url: logoUrl || null,
+          address: address.trim() || null,
+          phone: phone.trim() || null,
+          sst_number: sstNumber.trim() || null,
+        }}
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+      />
     </Card>
   )
 }

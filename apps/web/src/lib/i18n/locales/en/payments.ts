@@ -135,6 +135,18 @@ export const payments = {
   'payments.pay_link.error_create': 'Could not create a link.',
   'payments.pay_link.error_check': 'Could not check status.',
 
+  // Part payment — the invoice form and the pay-link card share these.
+  'payments.partial.allow': 'Allow part payment',
+  'payments.partial.allow_hint':
+    'The student can pay this invoice in instalments online. ToyyibPay’s {fee} charge applies to each payment.',
+  'payments.partial.minimum': 'Smallest payment',
+  'payments.partial.minimum_placeholder': 'No minimum',
+  'payments.partial.minimum_hint':
+    'Leave blank to accept any amount from {min} — ToyyibPay’s own minimum.',
+  'payments.partial.error_min': 'The smallest payment must be at least {min}.',
+  'payments.partial.error_max':
+    'The smallest payment can’t be more than the {max} outstanding.',
+
   // Errors raised by the data layer (features/payments/api.ts)
   'payments.error.email_failed': 'Could not send email.',
   'payments.error.no_response': 'No response from server.',

@@ -9,6 +9,8 @@ import { useT } from '@/lib/i18n'
 import { FullPageLoading } from '@/components/patterns/QueryState'
 import { PendingInviteList } from '@/features/invitations/PendingInviteList'
 import { useMyPendingInvitations } from '@/features/invitations/api'
+import { MyApplicationList } from '@/features/enrollment/MyApplicationList'
+import { useMyApplications } from '@/features/enrollment/api'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -50,6 +52,8 @@ export function Onboarding() {
   const { user } = useAuth()
   const { refresh } = useAcademy()
   const { data: invites, isLoading: invitesLoading } = useMyPendingInvitations()
+  const { data: applications, isLoading: applicationsLoading } =
+    useMyApplications()
   // Revealed on request when invitations exist — someone can be both invited
   // and a founder, but that is the rarer of the two.
   const [showCreate, setShowCreate] = useState(false)
@@ -102,10 +106,13 @@ export function Onboarding() {
 
   // Wait for the answer rather than flashing "Create your academy" at someone
   // who is about to be told they have been invited.
-  if (invitesLoading) return <FullPageLoading />
+  if (invitesLoading || applicationsLoading) return <FullPageLoading />
 
   const hasInvites = (invites ?? []).length > 0
-  const showForm = !hasInvites || showCreate
+  // Someone who has just applied is in the same position as an invitee: they
+  // have no membership, and "create your academy" is not what they came for.
+  const waiting = hasInvites || (applications ?? []).length > 0
+  const showForm = !waiting || showCreate
 
   return (
     <div className="bg-muted flex min-h-svh items-center justify-center p-6">
@@ -114,7 +121,12 @@ export function Onboarding() {
           onAccepted={() => navigate('/', { replace: true })}
         />
 
-        {hasInvites && !showCreate ? (
+        {/* An applicant waiting on a decision has no membership either, and
+            would otherwise be shown nothing but "create your academy" — the
+            same trap invitations were rescued from. */}
+        <MyApplicationList />
+
+        {waiting && !showCreate ? (
           <p className="text-muted-foreground text-center text-sm">
             {t('auth.onboarding.founder_prompt')}{' '}
             <button

@@ -7,6 +7,7 @@ import {
   Receipt,
   Settings,
   ShieldCheck,
+  UserPlus,
   Users,
 } from 'lucide-react'
 import { useAcademy } from '@/lib/academy'
@@ -39,6 +40,11 @@ const nav = (t: TFn): NavItem[] => [
         title: t('nav.assignments'),
         to: '/assignments',
         icon: FileCheck2,
+      },
+      {
+        title: t('nav.enrollments'),
+        to: '/enrollments',
+        icon: UserPlus,
       },
     ],
   },

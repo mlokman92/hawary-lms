@@ -187,6 +187,10 @@ export function useCreateInvoices(academyId: string) {
       createdBy?: string | null
       /** null = follow the academy's ToyyibPay default at pay time. */
       chargeToPayor?: boolean | null
+      /** Let the payer settle this invoice in instalments online. */
+      allowPartialPayment?: boolean
+      /** Floor for one instalment, in sen. null = ToyyibPay's RM1.00 minimum. */
+      minPartialSen?: number | null
     }) => {
       const subtotal = input.items.reduce(
         (s, it) => s + it.quantity * it.unitPriceSen,
@@ -218,6 +222,12 @@ export function useCreateInvoices(academyId: string) {
             notes: input.notes || null,
             created_by: input.createdBy ?? null,
             charge_to_payor: input.chargeToPayor ?? null,
+            allow_partial_payment: input.allowPartialPayment ?? false,
+            // Only meaningful alongside the flag, and NULL is the "their floor"
+            // representation the CHECK constraint expects.
+            min_partial_sen: input.allowPartialPayment
+              ? (input.minPartialSen ?? null)
+              : null,
           })
           .select()
           .single()
@@ -282,6 +292,41 @@ export function useRecordPayment(academyId: string) {
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: listKey(academyId) })
       qc.invalidateQueries({ queryKey: oneKey(vars.invoiceId) })
+    },
+  })
+}
+
+/**
+ * The online payment terms, editable after the invoice is issued.
+ *
+ * Turning instalments on for an invoice the student already has is the ordinary
+ * case — "can I pay this in two?" is a phone call, not something anticipated at
+ * creation — so this lives on the invoice rather than only in the new-invoice
+ * form. Authority is unchanged: `invoices: admin update` is `app.is_admin`, so a
+ * trainer's write is refused by the database, not merely by a hidden card, and
+ * `create-bill` re-reads both columns before it bills anything.
+ */
+export function useUpdatePaymentTerms(academyId: string, invoiceId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      allowPartial: boolean
+      minPartialSen: number | null
+    }) => {
+      const { error } = await supabase
+        .from('invoices')
+        .update({
+          allow_partial_payment: input.allowPartial,
+          // NULL is how "no floor of our own, use ToyyibPay's RM1.00" is
+          // stored, and the CHECK constraint rejects anything under 100 sen.
+          min_partial_sen: input.allowPartial ? input.minPartialSen : null,
+        })
+        .eq('id', invoiceId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: oneKey(invoiceId) })
+      qc.invalidateQueries({ queryKey: listKey(academyId) })
     },
   })
 }
@@ -413,6 +458,15 @@ export type PublicInvoice = {
   gateway_enabled: boolean
   /** Resolved server-side: the invoice's own flag, else the academy default. */
   charge_to_payor: boolean
+  /** The payer may bill less than `due_sen`. Per invoice; off by default. */
+  allow_partial: boolean
+  /**
+   * The smallest amount this invoice accepts, already clamped to `due_sen` by
+   * `get_public_invoice` — so a balance under the academy's minimum instalment
+   * is simply payable in full. `create-bill` re-derives the same figure; this
+   * copy exists to validate the input before a round trip, never instead of it.
+   */
+  min_pay_sen: number
 }
 
 /** Read-only invoice by public pay token (anon RPC; minimal fields, no PII). */
@@ -454,15 +508,33 @@ export type CreateBillResult = {
   reused?: boolean
   code?: string
   message?: string
+  /** What the bill was actually raised for — the server's clamp, not ours. */
+  amount_sen?: number
+  min_sen?: number
 }
 
-/** Create a ToyyibPay bill for the invoice and get the hosted FPX payment URL. */
+/**
+ * Create a ToyyibPay bill for the invoice and get the hosted FPX payment URL.
+ *
+ * `amountSen` is omitted for a payment in full and sent only when the payer
+ * chose a smaller figure. It is a request: the function re-reads the invoice's
+ * balance, its `allow_partial_payment` flag and its minimum under the service
+ * role, so nothing here is load-bearing for correctness.
+ */
 export function useCreateBill() {
   return useMutation({
-    mutationFn: async (payToken: string) => {
+    mutationFn: async (input: string | { token: string; amountSen?: number }) => {
+      const { token, amountSen } =
+        typeof input === 'string' ? { token: input, amountSen: undefined } : input
       const { data, error } = await supabase.functions.invoke<CreateBillResult>(
         'create-bill',
-        { body: { pay_token: payToken, origin: window.location.origin } },
+        {
+          body: {
+            pay_token: token,
+            origin: window.location.origin,
+            ...(amountSen === undefined ? {} : { amount_sen: amountSen }),
+          },
+        },
       )
       if (error) {
         const body = await readFunctionError(error)

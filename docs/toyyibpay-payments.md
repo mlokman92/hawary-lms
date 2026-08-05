@@ -450,6 +450,68 @@ the invoice amount and the academy nets RM1 less.
 only. If ToyyibPay reprices, a stale constant surfaces as
 `needs_reconciliation` on the intent — never as a wrongly settled invoice.
 
+## Part payment
+
+An RM2,500 invoice can be settled in instalments online. Enabled **per invoice**
+— there is no academy-wide default, because an academy that instalment-bills one
+cohort rarely wants every invoice part-payable.
+
+```
+invoices.allow_partial_payment  boolean not null default false
+invoices.min_partial_sen        integer null   -- CHECK (>= 100)
+```
+
+**The ledger already supported this.** `payments` rows sum, `partially_paid`
+already exists as a status, and `record_gateway_payment` recomputes
+`amount_paid_sen` from `sum(payments where succeeded)` — so two settled bills
+against one invoice are correct by construction, not a special case. The only
+thing missing was the gateway: `create-bill` hard-coded `billAmount` to the
+whole balance.
+
+**The floor is resolved server-side, in one place.** `get_public_invoice`
+returns `min_pay_sen`:
+
+```sql
+least(due_sen, greatest(coalesce(min_partial_sen, 100), 100))
+```
+
+RM1.00 is ToyyibPay's own minimum for an FPX bill, so a smaller academy floor
+could only ever be rejected at the gateway. Clamping to `due_sen` is what makes
+the last instalment work: RM30 left under an RM50 minimum is payable, just not
+divisible — the pay page hides the choice entirely when
+`min_pay_sen >= due_sen`.
+
+**`amount_sen` in the `create-bill` body is a request, not an instruction.** The
+function re-reads `total_sen`, `amount_paid_sen`, `allow_partial_payment` and
+`min_partial_sen` under the service role and derives the same figure itself.
+Part-payment off, or an amount at/above the balance, bills the full balance;
+below the minimum is refused with `code: 'below_minimum'` and the resolved
+`min_sen`. Omitting `amount_sen` reproduces the old behaviour exactly, which is
+why the deploy was backwards-compatible.
+
+**Intent reuse is now amount-scoped.** It used to reuse *any* live intent for
+the invoice, which with part payment hands a payer who opened an RM500 bill and
+then chose RM1,000 the RM500 bill again. `liveIntent()` matches on
+`amount_sen` as well, and uses `limit(1)` rather than `.maybeSingle()` because
+an invoice may legitimately carry several live intents at once.
+
+Intents at other amounts are **left live, not expired**. `verify-payment` sweeps
+every `created`/`pending` intent that has a bill code, so a bill abandoned
+mid-flow — or paid from a stale tab after the payer changed their mind — still
+reconciles. Expiring them would silently drop that safety net for a tidier
+table.
+
+**The charge composes, it does not change.** `charge_to_payor` is untouched and
+still decides who bears the RM1. It is a charge **per transaction**, so three
+instalments cost three times the charge — the pay page says so
+(`pay.charge_notice_each`) and states the exact debited total on every visit,
+because a surprise at the bank page is how a payment gets abandoned.
+
+**Where it is set.** `InvoiceFormDialog` at creation, and `PayLinkCard` on an
+already-issued invoice (`useUpdatePaymentTerms`) — the latter is the real case,
+since "can I pay this in two?" is a phone call. Both are `app.is_admin` writes
+under `invoices: admin update`.
+
 ## Sources
 
 Research compiled from the ToyyibPay unofficial docs (fajarhac), the fakhrullah

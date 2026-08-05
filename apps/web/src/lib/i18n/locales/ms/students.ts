@@ -6,7 +6,6 @@ export const students: StudentsDict = {
   'students.action.add': 'Tambah pelajar',
   'students.action.invite': 'Jemput pelajar',
   'students.search_placeholder': 'Cari nama, e-mel, telefon, IC…',
-  'students.filter.all_statuses': 'Semua status',
   'students.sort.name_asc': 'Nama A–Z',
   'students.sort.name_desc': 'Nama Z–A',
   'students.sort.joined_desc': 'Tarikh sertai: terbaharu',

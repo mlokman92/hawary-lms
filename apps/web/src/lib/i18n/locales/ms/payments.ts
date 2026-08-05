@@ -141,6 +141,19 @@ export const payments: PaymentsDict = {
   'payments.pay_link.error_check': 'Status tidak dapat disemak.',
 
   // Ralat daripada lapisan data
+  // Part payment — the invoice form and the pay-link card share these.
+  'payments.partial.allow': 'Benarkan bayaran sebahagian',
+  'payments.partial.allow_hint':
+    'Pelajar boleh menjelaskan invois ini secara ansuran dalam talian. Caj ToyyibPay {fee} dikenakan pada setiap bayaran.',
+  'payments.partial.minimum': 'Bayaran terkecil',
+  'payments.partial.minimum_placeholder': 'Tiada minimum',
+  'payments.partial.minimum_hint':
+    'Biarkan kosong untuk menerima apa-apa jumlah dari {min} — minimum ToyyibPay sendiri.',
+  'payments.partial.error_min':
+    'Bayaran terkecil mestilah sekurang-kurangnya {min}.',
+  'payments.partial.error_max':
+    'Bayaran terkecil tidak boleh melebihi baki tertunggak {max}.',
+
   'payments.error.email_failed': 'E-mel tidak dapat dihantar.',
   'payments.error.no_response': 'Tiada respons daripada pelayan.',
   'payments.error.start_payment': 'Pembayaran tidak dapat dimulakan.',

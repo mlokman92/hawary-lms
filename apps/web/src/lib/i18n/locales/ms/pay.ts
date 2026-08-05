@@ -7,9 +7,22 @@ export const pay: PayDict = {
   'pay.partially_paid': '{paid} daripada {total} telah dibayar',
   'pay.fully_paid': 'Invois ini telah dijelaskan sepenuhnya. Terima kasih!',
 
+  // Choosing how much to pay (only when the invoice allows part payment)
+  'pay.amount.full': 'Bayar sepenuhnya',
+  'pay.amount.part': 'Bayar sebahagian',
+  'pay.amount.part_hint': 'Pilih jumlah',
+  'pay.amount.label': 'Jumlah untuk dibayar (RM)',
+  'pay.amount.remaining':
+    'Bermula dari {min}. Baki {remaining} masih tertunggak selepas bayaran ini.',
+  'pay.amount.error_required': 'Masukkan jumlah.',
+  'pay.amount.error_min': 'Bayaran terkecil yang diterima ialah {min}.',
+  'pay.amount.error_max': 'Jumlah itu melebihi baki tertunggak {max}.',
+
   // Pay action
   'pay.charge_notice':
     'Caj FPX {fee} ditambah semasa pembayaran — {total} akan didebitkan.',
+  'pay.charge_notice_each':
+    'Caj FPX {fee} ditambah pada setiap bayaran — {total} akan didebitkan.',
   'pay.pay_with_fpx': 'Bayar {amount} dengan FPX',
   'pay.starting': 'Memulakan…',
   'pay.secured_by': 'Dilindungi oleh ToyyibPay',

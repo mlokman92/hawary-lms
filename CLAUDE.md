@@ -59,6 +59,8 @@ Monorepo: **pnpm workspaces + Turborepo**.
   - **staff** `/assessments` · `/assignments` are the **grading queues** —
     `GradingQueuePage` over `useAcademyQueue`, academy-wide because RLS
     (`app.can_grade_*`) already narrows a trainer to their assigned courses.
+    `/enrollments` is the third child and the same shape of thing: the
+    enrollment-application queue, narrowed by the same rule.
     Awaiting/Marked/All tiles, search, and a `?course=` filter the course page
     deep-links into (its **Grading** button now points at
     `/assessments?course=:id`). `/courses/:id/grading` (`CourseGradingPage`)
@@ -101,6 +103,27 @@ Monorepo: **pnpm workspaces + Turborepo**.
   to NULL, so a new intake never opens already closed. Gated by
   `app.can_grade_course`, stricter than course creation because it carries a
   question bank.
+- **Enrollment** (`docs/course-enrollment.md`): two ways onto a course. Staff
+  **bulk-enrol** existing records from the course page's *Enrollment* card —
+  paste/CSV of emails matched against `students` in this academy only, bucketed
+  (to enroll · already · no record · ambiguous · invalid) *before* any write,
+  upserted so a dropped student reactivates. Strangers **apply**: each course can
+  open a public page at `/enroll/:slug/:courseId` (per-course is the artifact —
+  the intake lives in the title; `/enroll/:slug` is a directory of open+listed
+  intakes). Viewing is anon; applying needs an account, and the half-filled form
+  survives the `/signup?next=` hop via `lib/enrollDraft.ts`. An application is
+  its own table because `enrollments.student_id` is NOT NULL — **approval is the
+  conversion** into students + academy_members + enrollments, reusing
+  `app.link_claimed_record`. Gated by `app.can_grade_course` (queue at
+  `/enrollments`, `?course=` deep-link). `course_enrollment_settings` is 1:1 with
+  a course; **an absent row means no enrollment page**, and `required_fields`
+  decides what the form *asks for*. Capacity never closes the form (over-capacity
+  approval needs `_force`). No client DML on `enrollment_applications` at all —
+  every write is a SECURITY DEFINER RPC. Duplicate matches are only `linkable` on
+  a **confirmed** email; IC/typed-email matches are warnings. **No invoice is
+  created** — billing stays a deliberate act on `/payments`. No decision email
+  either, so `MyApplicationList` on `/onboarding` + both profile pages is how an
+  applicant finds out.
 - **Data model**: identity is global (`profiles`, one per email); roles/records are
   per-academy. A **student is an academy record** (`students`, not necessarily an auth
   user); enrollment/invoices/payments reference `students`. An **instructor is the same
@@ -166,7 +189,14 @@ Monorepo: **pnpm workspaces + Turborepo**.
   **Academy details** card (name — the only mandatory field — logo, address,
   phone, SST number) writing the long-existing `academies` columns; learners
   download **invoice / receipt PDFs** from `/learn/billing*`, drawn by
-  `features/payments/pdf.ts` with a dynamically imported jsPDF.
+  `features/payments/pdf.ts` with a dynamically imported jsPDF. `pdf.ts` splits
+  **build from deliver** — `buildInvoicePdf`/`buildReceiptPdf` return
+  `{doc, fileName}` and the `download*` pair are wrappers — so the same drawing
+  serves a download and the **Preview invoice** button on the Academy details
+  card (`InvoicePreviewDialog`, an `<iframe>` over `doc.output('blob')`). The
+  preview reads the form's *current* values, not the saved row, and draws a
+  fictional `sampleInvoice()`, so a brand-new academy can check its letterhead
+  before saving and a stray print can never pass for a real bill.
 - **ToyyibPay charge** (`docs/toyyibpay-payments.md`): the flat RM1 FPX fee can
   be passed to the payer via `billChargeToCustomer='0'`. Academy default
   `academy_payment_settings.toyyibpay_charge_to_payor`, per-invoice override
@@ -175,6 +205,19 @@ Monorepo: **pnpm workspaces + Turborepo**.
   `record_gateway_payment` no longer demands an exact amount — it accepts
   `[amount_sen, amount_sen + fee_sen]` and **always credits `amount_sen`**, since
   the surcharge is ToyyibPay's, not the academy's. Off by default.
+- **Part payment** (`docs/toyyibpay-payments.md` → "Part payment"): per invoice
+  (`invoices.allow_partial_payment` + `min_partial_sen`), **no academy default**.
+  The ledger always supported it — `payments` rows sum and
+  `record_gateway_payment` recomputes `amount_paid_sen` from them — so only the
+  gateway needed opening up. `create-bill` takes `amount_sen` as a **request**
+  and re-derives it under the service role; `get_public_invoice` resolves
+  `min_pay_sen = least(due_sen, greatest(min_partial_sen ?? 100, 100))`, so the
+  last instalment is always payable and the pay page hides the choice when the
+  floor has met the balance. Intent reuse is now **amount-scoped** (an
+  amount-blind reuse handed a payer the wrong bill); intents at other amounts
+  are left live so `verify-payment` still sweeps them. The RM1 charge composes
+  unchanged and applies **per transaction** — set at creation
+  (`InvoiceFormDialog`) or after issue (`PayLinkCard`, the real case).
 - **Learner surface** (`/learn/*`, `StudentShell`): enrolled courses → published
   modules → notes / assignments / assessments, plus **Billing** (own invoices,
   read-only) and **My profile** (editable `profiles.full_name`/`phone`). It renders

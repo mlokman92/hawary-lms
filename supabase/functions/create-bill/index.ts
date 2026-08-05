@@ -6,6 +6,10 @@
 //   - verify_jwt = false: called from the login-less public pay page. The
 //     boundary is the unguessable `pay_token`; tenancy is derived from data
 //     (pay_token → invoice → academy), never from the request.
+//   - `amount_sen` in the body is a REQUEST, not an instruction. Part-payment
+//     has to be enabled on the invoice, and the figure is re-derived here under
+//     the service role against the real balance and the invoice's own minimum.
+//     A caller cannot bill themselves RM1 for an RM2,500 invoice.
 //   - Uses the SERVICE ROLE to resolve the invoice, read the academy's secret
 //     (get_toyyibpay_secret is service-role only), and write payment_intents
 //     (no authenticated write policy). The secret never leaves the function.
@@ -49,6 +53,10 @@ const PAYABLE = ['issued', 'partially_paid', 'overdue']
 // intent, not as a wrongly settled invoice.
 const FPX_FEE_SEN = 100
 
+// ToyyibPay will not create a bill below RM1.00, so it is also the floor for a
+// part-payment however small an academy sets its own minimum.
+const FPX_MIN_SEN = 100
+
 // billChargeToCustomer: blank = bill owner pays both, "0" = FPX to the customer
 // and card to the owner. We open the FPX channel only (billPaymentChannel "0"),
 // so "0" is the exact setting.
@@ -89,7 +97,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
 
-  let payload: { pay_token?: string; origin?: string }
+  let payload: { pay_token?: string; origin?: string; amount_sen?: number }
   try {
     payload = await req.json()
   } catch {
@@ -111,7 +119,7 @@ Deno.serve(async (req) => {
   const { data: invoice, error: invErr } = await admin
     .from('invoices')
     .select(
-      'id, academy_id, invoice_no, currency, total_sen, amount_paid_sen, status, student_id, charge_to_payor',
+      'id, academy_id, invoice_no, currency, total_sen, amount_paid_sen, status, student_id, charge_to_payor, allow_partial_payment, min_partial_sen',
     )
     .eq('pay_token', token)
     .maybeSingle()
@@ -122,8 +130,35 @@ Deno.serve(async (req) => {
 
   const dueSen = Math.max(0, invoice.total_sen - invoice.amount_paid_sen)
   if (dueSen <= 0) return json({ ok: false, code: 'already_paid' })
-  if (dueSen < 100)
+  if (dueSen < FPX_MIN_SEN)
     return json({ ok: false, code: 'below_minimum', message: 'Minimum online payment is RM1.00.' })
+
+  // 1a. Settle the amount to bill. Anything the caller asks for is bounded by
+  // three server-held facts: part-payment must be on for this invoice, the
+  // figure may not fall under the invoice's own minimum (itself never below
+  // ToyyibPay's RM1.00, and never above what is actually left), and it may not
+  // exceed the balance. Asking for more than the balance simply pays it off —
+  // that is not an error worth stopping a payment for.
+  const minSen = Math.min(
+    dueSen,
+    Math.max(invoice.min_partial_sen ?? FPX_MIN_SEN, FPX_MIN_SEN),
+  )
+  const requested = Number.isFinite(payload.amount_sen)
+    ? Math.round(payload.amount_sen as number)
+    : dueSen
+
+  let amountSen = dueSen
+  if (invoice.allow_partial_payment && requested < dueSen) {
+    if (requested < minSen) {
+      return json({
+        ok: false,
+        code: 'below_minimum',
+        min_sen: minSen,
+        message: `Minimum payment for this invoice is RM${(minSen / 100).toFixed(2)}.`,
+      })
+    }
+    amountSen = requested
+  }
 
   // 2. Load gateway settings for this academy.
   const { data: settings } = await admin
@@ -144,13 +179,18 @@ Deno.serve(async (req) => {
     invoice.charge_to_payor ?? settings.toyyibpay_charge_to_payor ?? false
   const feeSen = chargeToPayor ? FPX_FEE_SEN : 0
 
-  // 3. Reuse a live intent so a repeated click doesn't mint duplicate bills.
-  const { data: live } = await admin
-    .from('payment_intents')
-    .select('id, bill_code, nonce, host')
-    .eq('invoice_id', invoice.id)
-    .in('status', ['created', 'pending'])
-    .maybeSingle()
+  // 3. Reuse a live intent so a repeated click doesn't mint duplicate bills —
+  // but only one for the SAME amount. A payer who opens an RM500 bill, goes
+  // back and chooses RM1,000 must not be handed the RM500 bill again, which is
+  // what an amount-blind reuse did.
+  //
+  // Intents at other amounts are deliberately left live rather than expired:
+  // verify-payment sweeps every `created`/`pending` intent that has a bill
+  // code, so a bill abandoned mid-flow — or paid from a stale tab after the
+  // payer changed their mind — still reconciles. Two settling intents are
+  // correct by construction: record_gateway_payment recomputes
+  // `amount_paid_sen` from the sum of succeeded payments.
+  const live = await liveIntent(admin, invoice.id, amountSen)
 
   let intentId = live?.id ?? crypto.randomUUID()
   let nonce = live?.nonce ?? crypto.randomUUID().replace(/-/g, '')
@@ -166,7 +206,7 @@ Deno.serve(async (req) => {
       invoice_id: invoice.id,
       provider: 'toyyibpay',
       host: base,
-      amount_sen: dueSen,
+      amount_sen: amountSen,
       status: 'created',
       nonce,
       charge_to_payor: chargeToPayor,
@@ -174,12 +214,7 @@ Deno.serve(async (req) => {
     })
     if (insErr) {
       // Lost a race to a concurrent call — re-read the now-live intent.
-      const { data: raced } = await admin
-        .from('payment_intents')
-        .select('id, bill_code, nonce, host')
-        .eq('invoice_id', invoice.id)
-        .in('status', ['created', 'pending'])
-        .maybeSingle()
+      const raced = await liveIntent(admin, invoice.id, amountSen)
       if (raced?.bill_code)
         return json({ ok: true, url: `${(raced.host || base)}/${raced.bill_code}`, reused: true })
       if (!raced) return json({ error: insErr.message }, 500)
@@ -219,10 +254,15 @@ Deno.serve(async (req) => {
     userSecretKey: secret as string,
     categoryCode: settings.toyyibpay_category_code,
     billName: clean(invoice.invoice_no, 30) || 'Invoice',
-    billDescription: clean(`Payment for ${invoice.invoice_no}`, 100),
+    // Says "Part payment" on the payer's bank confirmation and in the
+    // ToyyibPay dashboard, so an instalment is not mistaken for a settled bill.
+    billDescription: clean(
+      `${amountSen < dueSen ? 'Part payment' : 'Payment'} for ${invoice.invoice_no}`,
+      100,
+    ),
     billPriceSetting: '1',
     billPayorInfo: hasFullPayer ? '1' : '0',
-    billAmount: String(dueSen),
+    billAmount: String(amountSen),
     billReturnUrl: returnUrl,
     billCallbackUrl: callbackUrl,
     billExternalReferenceNo: intentId,
@@ -275,8 +315,36 @@ Deno.serve(async (req) => {
     })
     .eq('id', intentId)
 
-  return json({ ok: true, url: `${base}/${billCode}` })
+  return json({ ok: true, url: `${base}/${billCode}`, amount_sen: amountSen })
 })
+
+/**
+ * The newest live intent for this invoice at exactly this amount.
+ *
+ * `limit(1)` rather than `.maybeSingle()`: part-payment means an invoice can
+ * legitimately carry several live intents at once (RM500 abandoned, RM1,000
+ * open), and `.maybeSingle()` errors on more than one row.
+ */
+async function liveIntent(
+  admin: ReturnType<typeof createClient>,
+  invoiceId: string,
+  amountSen: number,
+) {
+  const { data } = await admin
+    .from('payment_intents')
+    .select('id, bill_code, nonce, host')
+    .eq('invoice_id', invoiceId)
+    .eq('amount_sen', amountSen)
+    .in('status', ['created', 'pending'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+  return (data?.[0] ?? null) as {
+    id: string
+    bill_code: string | null
+    nonce: string | null
+    host: string | null
+  } | null
+}
 
 function extractBillCode(data: unknown): string {
   const obj = Array.isArray(data) ? data[0] : data

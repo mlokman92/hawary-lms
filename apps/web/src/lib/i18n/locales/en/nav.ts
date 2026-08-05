@@ -11,6 +11,7 @@ export const nav = {
   // Sub-navigation under Courses, shared by both shells.
   'nav.assessments': 'Assessments',
   'nav.assignments': 'Assignments',
+  'nav.enrollments': 'Enrollments',
   'nav.students': 'Students',
   'nav.instructors': 'Instructors',
   'nav.payments': 'Payments',

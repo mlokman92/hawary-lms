@@ -124,6 +124,39 @@ very different places: the learner's screens, and a plain drawing helper with no
 hook — `pdf.ts` resolves them with `translate()`, the documented escape hatch
 for non-component code.
 
+## 4. Previewing the letterhead from Settings
+
+**Preview invoice** sits next to **Save details** on the Academy details card
+and opens `InvoicePreviewDialog` — the real invoice and receipt, rendered from
+the real `pdf.ts`, in an `<iframe>`.
+
+**It draws the actual document, not a mock-up.** `pdf.ts` grew a build/deliver
+split: `buildInvoicePdf` / `buildReceiptPdf` return `{ doc, fileName }`, and the
+`downloadInvoicePdf` / `downloadReceiptPdf` pair are now two-line wrappers that
+call `doc.save(fileName)`. The preview takes the same `doc` and calls
+`doc.output('blob')`. A mock-up would drift; this cannot.
+
+**The letterhead is the form's current state, not the saved row.** The question
+being answered is "how will *this* look" — an admin can see a wrapped address or
+an over-tall logo before committing to it. Nothing is written and nothing is
+read, so this is safe on an unsaved form, and it works on an academy that has
+never issued an invoice. The effect depends on the five letterhead *fields*
+rather than the object (the parent builds it inline, so its identity changes
+every render) plus `t`, which is memoised per language — so the document
+redraws exactly when it would look different, including on a language switch.
+
+**The invoice is invented** (`features/settings/sampleInvoice.ts`). It is
+deliberately part-paid with one payment recorded: that is the only shape that
+exercises every block both documents can draw — line items, tax, an amount paid,
+an outstanding balance, and the receipt's payments table. The payer is
+`doc.sample.student` → "Sample Student", not a plausible person's name, so a
+preview that gets printed or saved can never read as a real bill. It is built by
+a function rather than held as a constant because `translate()` reads the
+language at call time.
+
+The tab strip is a plain segmented control, not shadcn `Tabs`: there is one
+panel rather than two, and it would have been the only `Tabs` in the app.
+
 ## Not done
 
 - No PDF affordance on the **admin** invoice page (`/payments/:id`); the request

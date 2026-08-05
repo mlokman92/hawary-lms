@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -63,18 +64,45 @@ export function AcademyProvider({ children }: { children: ReactNode }) {
     readActiveAcademyId,
   )
 
+  /**
+   * Depend on the id, not the `user` object. supabase-js re-emits the auth
+   * state on every tab focus — it re-reads the session from storage, so `user`
+   * is a fresh object identity even when nothing changed. Keying on the id (the
+   * only thing this query needs) keeps `refresh` stable, so the effect below
+   * fires on sign-in and sign-out and nowhere else.
+   */
+  const userId = user?.id ?? null
+
+  /**
+   * Which user `memberships` is already resolved for. `loading` gates a
+   * full-page spinner in AppShell/StudentShell, and that spinner *unmounts*
+   * every routed page beneath them — so it has to mean "nothing trustworthy to
+   * render yet", never "a fetch is in flight". Keyed on the id rather than a
+   * bare boolean so switching accounts still blocks: the memberships in hand
+   * are then the wrong person's.
+   */
+  const resolvedFor = useRef<string | null>(null)
+  /** Ticket for the in-flight fetch, so a superseded response can't land. */
+  const seq = useRef(0)
+
   const refresh = useCallback(async () => {
-    if (!user) {
+    const ticket = ++seq.current
+    if (!userId) {
+      resolvedFor.current = null
       setMemberships([])
       setLoading(false)
       return
     }
-    setLoading(true)
+    if (resolvedFor.current !== userId) setLoading(true)
     const { data, error } = await supabase
       .from('academy_members')
       .select('academy_id, role, academies(id, name, slug, created_by)')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('status', 'active')
+
+    // Signed out, or a newer refresh overtook this one, while we were awaiting.
+    // Bailing here stops the previous account's academies repopulating.
+    if (ticket !== seq.current) return
 
     if (error) {
       setMemberships([])
@@ -85,12 +113,13 @@ export function AcademyProvider({ children }: { children: ReactNode }) {
           academyId: r.academy_id,
           role: r.role,
           academy: r.academies,
-          isCreator: !!r.academies?.created_by && r.academies.created_by === user.id,
+          isCreator: !!r.academies?.created_by && r.academies.created_by === userId,
         })),
       )
     }
+    resolvedFor.current = userId
     setLoading(false)
-  }, [user])
+  }, [userId])
 
   useEffect(() => {
     if (authLoading) return

@@ -47,6 +47,20 @@ export const documents: DocumentsDict = {
   'doc.file.receipt': 'resit',
 
   // Butang muat turun
+  // The stand-in invoice behind the Settings preview. Everything here is
+  // fictional on purpose — a preview must not read as a real bill.
+  'doc.sample.invoice_no': 'INV-CONTOH',
+  'doc.sample.student': 'Pelajar Contoh',
+  'doc.sample.student_no': 'STU-0001',
+  'doc.sample.email': 'pelajar@example.com',
+  'doc.sample.address': '12 Jalan Contoh\n50450 Kuala Lumpur\nWilayah Persekutuan',
+  'doc.sample.course': 'Kursus Contoh',
+  'doc.sample.item_course': 'Yuran kursus',
+  'doc.sample.item_registration': 'Yuran pendaftaran',
+  'doc.sample.item_materials': 'Bahan pembelajaran',
+  'doc.sample.notes':
+    'Sila nyatakan nombor invois semasa membuat bayaran. Terima kasih.',
+
   'doc.download.invoice': 'Muat turun invois',
   'doc.download.receipt': 'Muat turun resit',
   'doc.download.preparing': 'Menyediakan…',

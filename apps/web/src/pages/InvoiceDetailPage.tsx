@@ -283,6 +283,9 @@ export function InvoiceDetailPage() {
           invoiceId={invoice.id}
           initialToken={invoice.pay_token}
           canPay={['issued', 'partially_paid', 'overdue'].includes(invoice.status)}
+          allowPartial={invoice.allow_partial_payment}
+          minPartialSen={invoice.min_partial_sen}
+          balanceSen={balance}
         />
       ) : null}
 

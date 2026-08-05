@@ -666,6 +666,60 @@ export type Database = {
           },
         ]
       }
+      course_enrollment_settings: {
+        Row: {
+          academy_id: string
+          capacity: number | null
+          closes_at: string | null
+          course_id: string
+          created_at: string
+          intro: string | null
+          is_listed: boolean
+          is_open: boolean
+          required_fields: string[]
+          updated_at: string
+        }
+        Insert: {
+          academy_id: string
+          capacity?: number | null
+          closes_at?: string | null
+          course_id: string
+          created_at?: string
+          intro?: string | null
+          is_listed?: boolean
+          is_open?: boolean
+          required_fields?: string[]
+          updated_at?: string
+        }
+        Update: {
+          academy_id?: string
+          capacity?: number | null
+          closes_at?: string | null
+          course_id?: string
+          created_at?: string
+          intro?: string | null
+          is_listed?: boolean
+          is_open?: boolean
+          required_fields?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_enrollment_settings_academy_id_course_id_fkey"
+            columns: ["academy_id", "course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "course_enrollment_settings_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_instructors: {
         Row: {
           academy_id: string
@@ -913,6 +967,104 @@ export type Database = {
           },
         ]
       }
+      enrollment_applications: {
+        Row: {
+          academy_id: string
+          address: string | null
+          course_id: string
+          created_at: string
+          date_of_birth: string | null
+          email: string
+          full_name: string
+          gender: Database["public"]["Enums"]["gender"] | null
+          ic_number: string | null
+          id: string
+          notes: string | null
+          organization: string | null
+          phone: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["enrollment_application_status"]
+          student_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          academy_id: string
+          address?: string | null
+          course_id: string
+          created_at?: string
+          date_of_birth?: string | null
+          email: string
+          full_name: string
+          gender?: Database["public"]["Enums"]["gender"] | null
+          ic_number?: string | null
+          id?: string
+          notes?: string | null
+          organization?: string | null
+          phone?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["enrollment_application_status"]
+          student_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          academy_id?: string
+          address?: string | null
+          course_id?: string
+          created_at?: string
+          date_of_birth?: string | null
+          email?: string
+          full_name?: string
+          gender?: Database["public"]["Enums"]["gender"] | null
+          ic_number?: string | null
+          id?: string
+          notes?: string | null
+          organization?: string | null
+          phone?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["enrollment_application_status"]
+          student_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enrollment_applications_academy_id_course_id_fkey"
+            columns: ["academy_id", "course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "enrollment_applications_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_applications_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_applications_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enrollments: {
         Row: {
           academy_id: string
@@ -1110,6 +1262,7 @@ export type Database = {
       invoices: {
         Row: {
           academy_id: string
+          allow_partial_payment: boolean
           amount_paid_sen: number
           charge_to_payor: boolean | null
           course_id: string | null
@@ -1121,6 +1274,7 @@ export type Database = {
           id: string
           invoice_no: string
           issued_at: string | null
+          min_partial_sen: number | null
           notes: string | null
           pay_token: string | null
           pay_token_created_at: string | null
@@ -1133,6 +1287,7 @@ export type Database = {
         }
         Insert: {
           academy_id: string
+          allow_partial_payment?: boolean
           amount_paid_sen?: number
           charge_to_payor?: boolean | null
           course_id?: string | null
@@ -1144,6 +1299,7 @@ export type Database = {
           id?: string
           invoice_no: string
           issued_at?: string | null
+          min_partial_sen?: number | null
           notes?: string | null
           pay_token?: string | null
           pay_token_created_at?: string | null
@@ -1156,6 +1312,7 @@ export type Database = {
         }
         Update: {
           academy_id?: string
+          allow_partial_payment?: boolean
           amount_paid_sen?: number
           charge_to_payor?: boolean | null
           course_id?: string | null
@@ -1167,6 +1324,7 @@ export type Database = {
           id?: string
           invoice_no?: string
           issued_at?: string | null
+          min_partial_sen?: number | null
           notes?: string | null
           pay_token?: string | null
           pay_token_created_at?: string | null
@@ -1585,6 +1743,22 @@ export type Database = {
         Args: { _kind: string; _record_id: string }
         Returns: Json
       }
+      application_match_candidates: {
+        Args: { _id: string }
+        Returns: {
+          email: string
+          full_name: string
+          ic_number: string
+          linkable: boolean
+          match_reason: string
+          student_id: string
+          student_no: string
+        }[]
+      }
+      apply_to_course: {
+        Args: { _course_id: string; _details: Json }
+        Returns: Json
+      }
       create_instructor_invitation: {
         Args: { _instructor_id: string }
         Returns: Json
@@ -1596,6 +1770,10 @@ export type Database = {
       }
       ensure_pay_token: { Args: { _invoice: string }; Returns: string }
       get_attempt: { Args: { _attempt_id: string }; Returns: Json }
+      get_enrollment_page: {
+        Args: { _course: string; _slug: string }
+        Returns: Json
+      }
       get_pay_status: {
         Args: { _token: string }
         Returns: {
@@ -1608,12 +1786,14 @@ export type Database = {
         Returns: {
           academy_logo_url: string
           academy_name: string
+          allow_partial: boolean
           amount_paid_sen: number
           charge_to_payor: boolean
           currency: string
           due_sen: number
           gateway_enabled: boolean
           invoice_no: string
+          min_pay_sen: number
           status: Database["public"]["Enums"]["invoice_status"]
           total_sen: number
         }[]
@@ -1647,12 +1827,29 @@ export type Database = {
           user_id: string
         }[]
       }
+      list_enrollment_openings: { Args: { _slug: string }; Returns: Json }
       material_download: {
         Args: { _material_id: string }
         Returns: {
           file_name: string
           file_path: string
           mime_type: string
+        }[]
+      }
+      my_enrollment_applications: {
+        Args: never
+        Returns: {
+          academy_id: string
+          academy_logo_url: string
+          academy_name: string
+          academy_slug: string
+          course_id: string
+          course_title: string
+          created_at: string
+          id: string
+          review_note: string
+          reviewed_at: string
+          status: Database["public"]["Enums"]["enrollment_application_status"]
         }[]
       }
       my_pending_invitations: {
@@ -1690,6 +1887,16 @@ export type Database = {
         Returns: undefined
       }
       resend_invitation: { Args: { _invitation_id: string }; Returns: Json }
+      review_enrollment_application: {
+        Args: {
+          _decision: string
+          _force?: boolean
+          _id: string
+          _link_student_id?: string
+          _note?: string
+        }
+        Returns: Json
+      }
       revoke_invitation: {
         Args: { _invitation_id: string }
         Returns: undefined
@@ -1714,12 +1921,18 @@ export type Database = {
         Args: { _instructor_id: string }
         Returns: Json
       }
+      withdraw_application: { Args: { _id: string }; Returns: undefined }
     }
     Enums: {
       academy_status: "active" | "suspended" | "cancelled"
       assessment_type: "quiz" | "exam" | "survey"
       attempt_status: "in_progress" | "submitted" | "graded"
       course_status: "draft" | "published" | "archived"
+      enrollment_application_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "withdrawn"
       enrollment_status:
         | "active"
         | "pending"
@@ -1892,6 +2105,12 @@ export const Constants = {
       assessment_type: ["quiz", "exam", "survey"],
       attempt_status: ["in_progress", "submitted", "graded"],
       course_status: ["draft", "published", "archived"],
+      enrollment_application_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "withdrawn",
+      ],
       enrollment_status: [
         "active",
         "pending",

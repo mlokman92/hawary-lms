@@ -6,9 +6,22 @@ export const pay = {
   'pay.partially_paid': '{paid} of {total} paid',
   'pay.fully_paid': 'This invoice is fully paid. Thank you!',
 
+  // Choosing how much to pay (only when the invoice allows part payment)
+  'pay.amount.full': 'Pay in full',
+  'pay.amount.part': 'Pay part of it',
+  'pay.amount.part_hint': 'Choose an amount',
+  'pay.amount.label': 'Amount to pay (RM)',
+  'pay.amount.remaining':
+    'From {min}. {remaining} will still be outstanding after this payment.',
+  'pay.amount.error_required': 'Enter an amount.',
+  'pay.amount.error_min': 'The smallest payment accepted is {min}.',
+  'pay.amount.error_max': 'That’s more than the {max} outstanding.',
+
   // Pay action
   'pay.charge_notice':
     'A {fee} FPX charge is added at checkout — {total} will be debited.',
+  'pay.charge_notice_each':
+    'A {fee} FPX charge is added to each payment — {total} will be debited.',
   'pay.pay_with_fpx': 'Pay {amount} with FPX',
   'pay.starting': 'Starting…',
   'pay.secured_by': 'Secured by ToyyibPay',
