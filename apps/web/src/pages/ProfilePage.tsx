@@ -13,7 +13,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { AvatarUploader } from '@/features/students/AvatarUploader'
 import { PendingInviteList } from '@/features/invitations/PendingInviteList'
-import { MyApplicationList } from '@/features/enrollment/MyApplicationList'
 import { TIER_META, memberTier } from '@/features/members/api'
 import {
   useMyInstructorRecord,
@@ -98,7 +97,6 @@ export function ProfilePage() {
         {/* Renders nothing unless another academy is waiting — the only place
             an existing member would ever find out. */}
         <PendingInviteList />
-        <MyApplicationList />
         <Card>
           <CardHeader>
             <CardTitle>{t('profile.account')}</CardTitle>

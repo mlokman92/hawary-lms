@@ -3,39 +3,22 @@ import type { Enums, Tables } from '@hawary/shared'
 import { supabase } from '@/lib/supabase'
 import type { TKey } from '@/lib/i18n'
 
-export type EnrollmentSettings = Tables<'course_enrollment_settings'>
-export type EnrollmentApplication = Tables<'enrollment_applications'>
-export type ApplicationStatus = Enums<'enrollment_application_status'>
-
-/** Enum → label, resolved at render. Built at import time, so it holds keys. */
-export const APPLICATION_STATUS_LABEL: Record<ApplicationStatus, TKey> = {
-  pending: 'enroll.status.pending',
-  approved: 'enroll.status.approved',
-  rejected: 'enroll.status.rejected',
-  withdrawn: 'enroll.status.withdrawn',
-}
+export type AcademyEnrollmentSettings = Tables<'academy_enrollment_settings'>
+export type CourseEnrollmentSettings = Tables<'course_enrollment_settings'>
+export type EnrollmentStatus = Enums<'enrollment_status'>
 
 /**
- * The student-detail fields an enrollment form can ask for. Names match
- * `students` columns 1:1 — that is what makes approval a straight copy rather
- * than a mapping table.
+ * Enrollment status → label. `pending` is a REQUEST: the person is already a
+ * member of the academy, and `app.is_enrolled` requires 'active', so the course
+ * stays shut until staff move it.
  */
-export const APPLICANT_FIELDS = [
-  'full_name',
-  'email',
-  'phone',
-  'ic_number',
-  'date_of_birth',
-  'gender',
-  'address',
-  'organization',
-] as const
-export type ApplicantField = (typeof APPLICANT_FIELDS)[number]
-
-/** Fields the settings dialog lets you toggle. full_name is never optional. */
-export const OPTIONAL_APPLICANT_FIELDS = APPLICANT_FIELDS.filter(
-  (f): f is Exclude<ApplicantField, 'full_name'> => f !== 'full_name',
-)
+export const ENROLLMENT_STATUS_LABEL: Record<EnrollmentStatus, TKey> = {
+  pending: 'enroll.status.pending',
+  active: 'enroll.status.active',
+  completed: 'enroll.status.completed',
+  dropped: 'enroll.status.dropped',
+  cancelled: 'enroll.status.rejected',
+}
 
 export type PublicAcademy = {
   id: string
@@ -44,347 +27,285 @@ export type PublicAcademy = {
   logo_url: string | null
 }
 
-export type PublicCourse = {
+export type OpenCourse = {
   id: string
   title: string
   code: string | null
   description: string | null
   price_sen: number
   currency: string
+  capacity: number | null
+  seats_taken: number
+  closes_at: string | null
 }
 
-export type EnrollmentPage = {
+export type AcademyEnrollment = {
   academy: PublicAcademy
-  course: PublicCourse
-  intro: string | null
-  required_fields: ApplicantField[]
   is_open: boolean
-  closes_at: string | null
-  capacity: number | null
-  seats_taken: number
+  intro: string | null
+  courses: OpenCourse[]
 }
 
-export type EnrollmentOpening = PublicCourse & {
-  closes_at: string | null
-  capacity: number | null
-  seats_taken: number
-}
-
-export type EnrollmentDirectory = {
-  academy: PublicAcademy
-  courses: EnrollmentOpening[]
-}
-
-export type MyApplication = {
-  id: string
+export type JoinResult = {
   academy_id: string
-  academy_name: string
-  academy_slug: string
-  academy_logo_url: string | null
-  course_id: string
-  course_title: string
-  status: ApplicationStatus
-  review_note: string | null
-  created_at: string
-  reviewed_at: string | null
-}
-
-export type MatchCandidate = {
   student_id: string
-  student_no: string
-  full_name: string | null
-  email: string | null
-  ic_number: string | null
-  match_reason: 'verified_email' | 'email' | 'ic'
-  linkable: boolean
+  enrollment_id: string
+  status: EnrollmentStatus
 }
 
-export type QueueApplication = EnrollmentApplication & {
+/** A request row as the staff queue reads it. */
+export type EnrollmentRequest = Tables<'enrollments'> & {
+  students: {
+    id: string
+    full_name: string | null
+    student_no: string
+    email: string | null
+    phone: string | null
+  } | null
   courses: { id: string; title: string } | null
 }
 
-const settingsKey = (courseId: string) =>
-  ['course-enrollment-settings', courseId] as const
-const queueKey = (academyId: string | null) =>
-  ['enrollment-applications', academyId] as const
-const myApplicationsKey = ['my-enrollment-applications'] as const
-const myApplicationKey = (courseId: string | undefined) =>
-  ['my-enrollment-application', courseId ?? ''] as const
+/** A course with its opening, as /enrollments lists them. */
+export type CourseOpening = {
+  id: string
+  title: string
+  code: string | null
+  status: Tables<'courses'>['status']
+  isOpen: boolean
+  capacity: number | null
+  closesAt: string | null
+  seatsTaken: number
+}
 
-/** Seats left, or null when the intake is uncapped. */
-export function seatsLeft(
-  capacity: number | null,
-  taken: number,
-): number | null {
+const academySettingsKey = (academyId: string | null) =>
+  ['academy-enrollment-settings', academyId] as const
+const openingsKey = (academyId: string | null) =>
+  ['course-openings', academyId] as const
+const requestsKey = (academyId: string | null) =>
+  ['enrollment-requests', academyId] as const
+
+export function seatsLeft(capacity: number | null, taken: number): number | null {
   return capacity === null ? null : Math.max(0, capacity - taken)
 }
 
 // ---------------------------------------------------------------------------
-// Public (works signed out — both RPCs are granted to anon)
+// Public — works signed out, both grants reach anon
 // ---------------------------------------------------------------------------
 
-export function useEnrollmentPage(
-  slug: string | undefined,
-  courseId: string | undefined,
-) {
+export function useAcademyEnrollment(slug: string | undefined) {
   return useQuery({
-    queryKey: ['enrollment-page', slug ?? '', courseId ?? ''] as const,
-    enabled: !!slug && !!courseId,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_enrollment_page', {
-        _slug: slug!,
-        _course: courseId!,
-      })
-      if (error) throw error
-      return (data as unknown as EnrollmentPage | null) ?? null
-    },
-  })
-}
-
-export function useEnrollmentDirectory(slug: string | undefined) {
-  return useQuery({
-    queryKey: ['enrollment-directory', slug ?? ''] as const,
+    queryKey: ['academy-enrollment', slug ?? ''] as const,
     enabled: !!slug,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('list_enrollment_openings', {
+      const { data, error } = await supabase.rpc('get_academy_enrollment', {
         _slug: slug!,
       })
       if (error) throw error
-      return (data as unknown as EnrollmentDirectory | null) ?? null
+      return (data as unknown as AcademyEnrollment | null) ?? null
     },
   })
 }
-
-// ---------------------------------------------------------------------------
-// Applicant
-// ---------------------------------------------------------------------------
 
 /**
- * The signed-in caller's own application for one course, latest first.
+ * Join the academy and request a course in one call.
  *
- * `user_id` is filtered explicitly and not left to RLS. The policy is
- * `can_grade_course(course_id) OR user_id = auth.uid()`, so for a trainer
- * viewing their own course's public page an unfiltered read would return
- * somebody else's application as "yours".
+ * Re-entrant: an existing member calling it again just requests another course,
+ * which is why there is no separate "request" mutation.
  */
-export function useMyApplication(
-  courseId: string | undefined,
-  userId: string | undefined,
-) {
-  return useQuery({
-    queryKey: [...myApplicationKey(courseId), userId ?? ''] as const,
-    enabled: !!courseId && !!userId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('enrollment_applications')
-        .select('*')
-        .eq('course_id', courseId!)
-        .eq('user_id', userId!)
-        .order('created_at', { ascending: false })
-        .limit(1)
-      if (error) throw error
-      return (data?.[0] ?? null) as EnrollmentApplication | null
-    },
-  })
-}
-
-export function useApplyToCourse(courseId: string | undefined) {
+export function useJoinAcademy() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (details: Record<string, string>) => {
-      const { data, error } = await supabase.rpc('apply_to_course', {
-        _course_id: courseId!,
-        _details: details,
+    mutationFn: async (input: { slug: string; courseId: string }) => {
+      const { data, error } = await supabase.rpc('join_academy', {
+        _slug: input.slug,
+        _course_id: input.courseId,
       })
       if (error) throw error
-      return data as unknown as { id: string; status: ApplicationStatus }
+      return data as unknown as JoinResult
     },
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: myApplicationKey(courseId) })
-      void qc.invalidateQueries({ queryKey: myApplicationsKey })
-    },
-  })
-}
-
-export function useWithdrawApplication(courseId?: string) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.rpc('withdraw_application', { _id: id })
-      if (error) throw error
-    },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: myApplicationKey(courseId) })
-      void qc.invalidateQueries({ queryKey: myApplicationsKey })
-    },
-  })
-}
-
-/**
- * Every application this account has made, with the academy and course names
- * attached. An RPC rather than an embed: the applicant is not a member, so
- * `academies` and `courses` are invisible to them through RLS.
- */
-export function useMyApplications(enabled = true) {
-  return useQuery({
-    queryKey: myApplicationsKey,
-    enabled,
-    // The decision arrives without any notification, so this list is how the
-    // applicant finds out. Never serve it stale.
-    staleTime: 0,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('my_enrollment_applications')
-      if (error) throw error
-      return (data ?? []) as unknown as MyApplication[]
+      void qc.invalidateQueries({ queryKey: ['my-enrollments'] })
     },
   })
 }
 
 // ---------------------------------------------------------------------------
-// Staff — settings
+// Learner — their own rows, read straight through RLS (owns_student)
 // ---------------------------------------------------------------------------
 
-export function useEnrollmentSettings(courseId: string | undefined) {
+export type MyEnrollment = Tables<'enrollments'> & {
+  courses: { id: string; title: string } | null
+}
+
+export function useMyEnrollments(studentId: string | null | undefined) {
   return useQuery({
-    queryKey: settingsKey(courseId ?? ''),
-    enabled: !!courseId,
+    queryKey: ['my-enrollments', studentId] as const,
+    enabled: !!studentId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('course_enrollment_settings')
+        .from('enrollments')
+        .select('*, courses(id, title)')
+        .eq('student_id', studentId!)
+        .order('enrolled_at', { ascending: false })
+      if (error) throw error
+      return (data ?? []) as unknown as MyEnrollment[]
+    },
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Staff — the academy's public link
+// ---------------------------------------------------------------------------
+
+export function useAcademyEnrollmentSettings(academyId: string | null) {
+  return useQuery({
+    queryKey: academySettingsKey(academyId),
+    enabled: !!academyId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('academy_enrollment_settings')
         .select('*')
-        .eq('course_id', courseId!)
+        .eq('academy_id', academyId!)
         .maybeSingle()
       if (error) throw error
-      return data as EnrollmentSettings | null
+      return data as AcademyEnrollmentSettings | null
     },
   })
 }
 
-export type EnrollmentSettingsPatch = {
-  is_open?: boolean
-  is_listed?: boolean
-  capacity?: number | null
-  closes_at?: string | null
-  intro?: string | null
-  required_fields?: string[]
-}
-
-/**
- * Upsert, not update: a course has no settings row until someone configures it,
- * and "absent" is what the public RPCs read as "this course has no enrollment
- * page". Both the insert and the update policy are app.can_grade_course.
- */
-export function useSaveEnrollmentSettings(academyId: string, courseId: string) {
+/** Upsert: no row until someone opens the link, and absent reads as closed. */
+export function useSaveAcademyEnrollment(academyId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (patch: EnrollmentSettingsPatch) => {
+    mutationFn: async (patch: { is_open?: boolean; intro?: string | null }) => {
       const { data, error } = await supabase
+        .from('academy_enrollment_settings')
+        .upsert({ academy_id: academyId, ...patch }, { onConflict: 'academy_id' })
+        .select()
+        .single()
+      if (error) throw error
+      return data as AcademyEnrollmentSettings
+    },
+    onSuccess: (row) => qc.setQueryData(academySettingsKey(academyId), row),
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Staff — which courses can be picked
+// ---------------------------------------------------------------------------
+
+export function useCourseOpenings(academyId: string | null) {
+  return useQuery({
+    queryKey: openingsKey(academyId),
+    enabled: !!academyId,
+    queryFn: async (): Promise<CourseOpening[]> => {
+      const [courses, settings, stats] = await Promise.all([
+        supabase
+          .from('courses')
+          .select('id, title, code, status')
+          .eq('academy_id', academyId!)
+          .neq('status', 'archived')
+          .order('title'),
+        supabase
+          .from('course_enrollment_settings')
+          .select('*')
+          .eq('academy_id', academyId!),
+        supabase
+          .from('course_enrollment_stats')
+          .select('course_id, active_students')
+          .eq('academy_id', academyId!),
+      ])
+      if (courses.error) throw courses.error
+      if (settings.error) throw settings.error
+      if (stats.error) throw stats.error
+
+      const byCourse = new Map(
+        (settings.data ?? []).map((s) => [s.course_id, s]),
+      )
+      const taken = new Map(
+        (stats.data ?? []).map((s) => [s.course_id ?? '', s.active_students ?? 0]),
+      )
+      return (courses.data ?? []).map((c) => {
+        const s = byCourse.get(c.id)
+        return {
+          id: c.id,
+          title: c.title,
+          code: c.code,
+          status: c.status,
+          isOpen: !!s?.is_open,
+          capacity: s?.capacity ?? null,
+          closesAt: s?.closes_at ?? null,
+          seatsTaken: taken.get(c.id) ?? 0,
+        }
+      })
+    },
+  })
+}
+
+export function useSaveCourseOpening(academyId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      courseId: string
+      is_open?: boolean
+      capacity?: number | null
+      closes_at?: string | null
+    }) => {
+      const { courseId, ...patch } = input
+      const { error } = await supabase
         .from('course_enrollment_settings')
         .upsert(
           { course_id: courseId, academy_id: academyId, ...patch },
           { onConflict: 'course_id' },
         )
-        .select()
-        .single()
       if (error) throw error
-      return data as EnrollmentSettings
     },
-    onSuccess: (row) => {
-      qc.setQueryData(settingsKey(courseId), row)
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: openingsKey(academyId) })
     },
   })
 }
 
 // ---------------------------------------------------------------------------
-// Staff — the review queue
+// Staff — requests
 // ---------------------------------------------------------------------------
 
-/**
- * Academy-wide, like the grading queue: the SELECT policy is
- * `app.can_grade_course(course_id)`, so a trainer already sees only the courses
- * they are assigned to and no client-side narrowing is needed.
- */
-export function useApplicationQueue(academyId: string | null) {
+export function useEnrollmentRequests(academyId: string | null) {
   return useQuery({
-    queryKey: queueKey(academyId),
+    queryKey: requestsKey(academyId),
     enabled: !!academyId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('enrollment_applications')
-        .select('*, courses(id, title)')
+        .from('enrollments')
+        .select(
+          '*, students(id, full_name, student_no, email, phone), courses(id, title)',
+        )
         .eq('academy_id', academyId!)
         .order('created_at', { ascending: false })
       if (error) throw error
-      return (data ?? []) as unknown as QueueApplication[]
+      return (data ?? []) as unknown as EnrollmentRequest[]
     },
   })
 }
 
-/** Just the badge on the course page — a count, not the rows. */
-export function usePendingApplicationCount(
-  academyId: string | null,
-  courseId: string | undefined,
-) {
-  return useQuery({
-    queryKey: ['enrollment-applications-pending', academyId, courseId] as const,
-    enabled: !!academyId && !!courseId,
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('enrollment_applications')
-        .select('id', { count: 'exact', head: true })
-        .eq('course_id', courseId!)
-        .eq('status', 'pending')
-      if (error) throw error
-      return count ?? 0
-    },
-  })
-}
-
-export function useMatchCandidates(applicationId: string | undefined) {
-  return useQuery({
-    queryKey: ['application-match-candidates', applicationId ?? ''] as const,
-    enabled: !!applicationId,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc(
-        'application_match_candidates',
-        { _id: applicationId! },
-      )
-      if (error) throw error
-      return (data ?? []) as unknown as MatchCandidate[]
-    },
-  })
-}
-
-export type ReviewInput = {
-  id: string
-  decision: 'approved' | 'rejected'
-  note?: string | null
-  linkStudentId?: string | null
-  force?: boolean
-}
-
-export function useReviewApplication(academyId: string | null) {
+/**
+ * Approve or reject: a plain UPDATE. The `enrollments: staff update` policy has
+ * always allowed this — the same right staff already exercise when they enrol
+ * somebody from the student page — so there is nothing for an RPC to add.
+ */
+export function useSetEnrollmentStatus(academyId: string | null) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (input: ReviewInput) => {
-      const { data, error } = await supabase.rpc(
-        'review_enrollment_application',
-        {
-          _id: input.id,
-          _decision: input.decision,
-          _note: input.note ?? undefined,
-          _link_student_id: input.linkStudentId ?? undefined,
-          _force: input.force ?? false,
-        },
-      )
+    mutationFn: async (input: { id: string; status: EnrollmentStatus }) => {
+      const { error } = await supabase
+        .from('enrollments')
+        .update({ status: input.status })
+        .eq('id', input.id)
       if (error) throw error
-      return data as unknown as { status: ApplicationStatus; student_id?: string }
     },
     onSuccess: () => {
-      // Approving mints a student and an enrollment: the roster, the per-course
-      // student count and the queue all move at once.
-      void qc.invalidateQueries({ queryKey: queueKey(academyId) })
-      void qc.invalidateQueries({ queryKey: ['enrollment-applications-pending'] })
+      void qc.invalidateQueries({ queryKey: requestsKey(academyId) })
+      void qc.invalidateQueries({ queryKey: openingsKey(academyId) })
       void qc.invalidateQueries({ queryKey: ['students', academyId] })
       void qc.invalidateQueries({ queryKey: ['courses', academyId] })
       void qc.invalidateQueries({

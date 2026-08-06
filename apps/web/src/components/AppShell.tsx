@@ -2,6 +2,7 @@ import { Navigate, Outlet } from 'react-router-dom'
 import { useAcademy } from '@/lib/academy'
 import { FullPageLoading } from '@/components/patterns/QueryState'
 import { acceptInvitePath, getPendingInvite } from '@/lib/invite'
+import { enrollPath, getEnrollIntent } from '@/lib/enrollIntent'
 import { AppLayout } from './AppLayout'
 
 /**
@@ -25,6 +26,10 @@ export function AppShell() {
     // finish accepting — never flash "Create your academy".
     const pending = getPendingInvite()
     if (pending) return <Navigate to={acceptInvitePath(pending)} replace />
+    // Likewise someone who came to join an academy: finish that, don't offer to
+    // found one.
+    const joining = getEnrollIntent()
+    if (joining) return <Navigate to={enrollPath(joining)} replace />
     return <Navigate to="/onboarding" replace />
   }
 

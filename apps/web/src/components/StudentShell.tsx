@@ -2,6 +2,7 @@ import { Navigate } from 'react-router-dom'
 import { useAcademy } from '@/lib/academy'
 import { FullPageLoading } from '@/components/patterns/QueryState'
 import { acceptInvitePath, getPendingInvite } from '@/lib/invite'
+import { enrollPath, getEnrollIntent } from '@/lib/enrollIntent'
 import { LearnLayout } from '@/components/learn/LearnLayout'
 import { StudentAcademyProvider } from '@/lib/studentAcademy'
 
@@ -22,6 +23,8 @@ export function StudentShell() {
   if (studentMemberships.length === 0) {
     const pending = getPendingInvite()
     if (pending) return <Navigate to={acceptInvitePath(pending)} replace />
+    const joining = getEnrollIntent()
+    if (joining) return <Navigate to={enrollPath(joining)} replace />
     return <Navigate to="/onboarding" replace />
   }
 

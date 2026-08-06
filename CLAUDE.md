@@ -59,14 +59,16 @@ Monorepo: **pnpm workspaces + Turborepo**.
   - **staff** `/assessments` · `/assignments` are the **grading queues** —
     `GradingQueuePage` over `useAcademyQueue`, academy-wide because RLS
     (`app.can_grade_*`) already narrows a trainer to their assigned courses.
-    `/enrollments` is the third child and the same shape of thing: the
-    enrollment-application queue, narrowed by the same rule.
-    Awaiting/Marked/All tiles, search, and a `?course=` filter the course page
-    deep-links into (its **Grading** button now points at
-    `/assessments?course=:id`). `/courses/:id/grading` (`CourseGradingPage`)
-    still resolves for older links. Authoring stays inside a course — there is
-    no academy-wide content inventory, and `LibraryPage`/`features/library`
-    were removed when this replaced them.
+    `/enrollments` is the third child — the whole enrollment surface, not a
+    queue: the public link, which courses accept requests, who is waiting, and
+    bulk enrol.
+    Awaiting/Marked/All tiles, search, and a `?course=` filter. `/courses/:id`
+    carries **no Grading button** and no enrollment controls — it is for
+    building the course, so *New module* is the only button and Edit/Duplicate
+    sit in a `⋯` menu. `/courses/:id/grading` (`CourseGradingPage`) still
+    resolves for older links. Authoring stays inside a course — there is no
+    academy-wide content inventory, and `LibraryPage`/`features/library` were
+    removed when this replaced them.
   - **learner** `/learn/assessments` · `/learn/assignments` are their own lists
     of work (`LearnTaskListPage`, off the existing dashboard query).
 
@@ -103,27 +105,36 @@ Monorepo: **pnpm workspaces + Turborepo**.
   to NULL, so a new intake never opens already closed. Gated by
   `app.can_grade_course`, stricter than course creation because it carries a
   question bank.
-- **Enrollment** (`docs/course-enrollment.md`): two ways onto a course. Staff
-  **bulk-enrol** existing records from the course page's *Enrollment* card —
-  paste/CSV of emails matched against `students` in this academy only, bucketed
-  (to enroll · already · no record · ambiguous · invalid) *before* any write,
-  upserted so a dropped student reactivates. Strangers **apply**: each course can
-  open a public page at `/enroll/:slug/:courseId` (per-course is the artifact —
-  the intake lives in the title; `/enroll/:slug` is a directory of open+listed
-  intakes). Viewing is anon; applying needs an account, and the half-filled form
-  survives the `/signup?next=` hop via `lib/enrollDraft.ts`. An application is
-  its own table because `enrollments.student_id` is NOT NULL — **approval is the
-  conversion** into students + academy_members + enrollments, reusing
-  `app.link_claimed_record`. Gated by `app.can_grade_course` (queue at
-  `/enrollments`, `?course=` deep-link). `course_enrollment_settings` is 1:1 with
-  a course; **an absent row means no enrollment page**, and `required_fields`
-  decides what the form *asks for*. Capacity never closes the form (over-capacity
-  approval needs `_force`). No client DML on `enrollment_applications` at all —
-  every write is a SECURITY DEFINER RPC. Duplicate matches are only `linkable` on
-  a **confirmed** email; IC/typed-email matches are warnings. **No invoice is
-  created** — billing stays a deliberate act on `/payments`. No decision email
-  either, so `MyApplicationList` on `/onboarding` + both profile pages is how an
-  applicant finds out.
+- **Enrollment** (`docs/course-enrollment.md`): **enrolling is joining.**
+  *Anyone can enter an academy; course access is what staff grant.* The academy
+  publishes **one** public link, `/enroll/:slug` (`academy_enrollment_settings`,
+  admin-only, off by default). A visitor signs up or signs in, **picks a
+  course**, and `join_academy(slug, course)` creates the student record, links it
+  and upserts the `student` membership via `app.link_claimed_record` — then files
+  the course as `enrollments.status = 'pending'`. They land on `/learn` a member,
+  with nothing open. Picking a course is what gates joining, so nobody lands in
+  an academy without asking for something.
+  There is **no application table**: the student record exists by the time
+  anything is requested, `app.is_enrolled` already demands `'active'`, and the
+  long-standing `enrollments: staff update` policy already lets staff move it —
+  so **approving is a plain UPDATE**, not an RPC. An unlinked record carrying the
+  caller's **confirmed** email is adopted rather than duplicated (the
+  `my_pending_invitations` standard), which is what stops a CSV-imported student
+  becoming a second row. `course_enrollment_settings` now holds only `is_open` ·
+  `capacity` · `closes_at`; capacity never closes a course (a queue is the
+  point). Staff also **bulk-enrol** existing records by pasted/CSV email,
+  matched against `students` in this academy only and bucketed (to enroll ·
+  already · no record · ambiguous · invalid) *before* any write.
+  **Everything staff-side lives on `/enrollments`** — the link, which courses
+  accept requests, the request list, bulk enrol. The course page is for building
+  the course. **No invoice** is created; billing stays a deliberate act on
+  `/payments`.
+  The **intent survives the auth hop** in `localStorage` (`lib/enrollIntent.ts`),
+  because GoTrue drops `emailRedirectTo` whenever the redirect allow list misses
+  the URL and the confirmation link then lands on `/onboarding` — "create your
+  academy" being the exact opposite of what the person came to do.
+  `useLandingTarget`, both shells and `PendingInviteRedirect` all consult it,
+  the same way they consult a stashed invite token.
 - **Data model**: identity is global (`profiles`, one per email); roles/records are
   per-academy. A **student is an academy record** (`students`, not necessarily an auth
   user); enrollment/invoices/payments reference `students`. An **instructor is the same
@@ -298,6 +309,15 @@ pnpm --filter web lint
 
 ## Conventions
 
+- **Functionality first. No UI cosmetics.** The owner of this repo does not want
+  decorative interface. Do not add a card, banner, tile, badge, status list or
+  explanatory paragraph whose only job is to narrate something the interface
+  already shows, or to reassure the user that a thing happened. If a control
+  does the work, ship the control and nothing else. Prefer **removing** UI to
+  adding it; put a new thing on an existing page before inventing a page for it;
+  and when a screen has one obvious action, that is a button — everything
+  occasional belongs behind a `⋯` menu. A section that exists to explain the
+  product back to the user is slop and will be deleted.
 - **TypeScript only.** Shared-first: cross-app types/logic go in `packages/shared`.
 - **DB types are generated** (Supabase MCP `generate_typescript_types`), not hand-written.
 - **Multi-tenancy is enforced in the DB** via RLS: every tenant table has `academy_id`

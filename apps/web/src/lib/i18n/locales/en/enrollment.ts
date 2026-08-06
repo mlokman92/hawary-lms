@@ -1,171 +1,95 @@
 /**
- * Course enrollment: the public application pages, the staff review queue, the
- * per-course settings card, and bulk enrollment by email.
+ * Enrollment: the academy's one public join link, the staff page that governs
+ * it, and bulk enrolment by email.
  */
 export const enrollment = {
-  // --- Public: academy directory -------------------------------------------
-  'enroll.directory.subtitle': 'Courses open for enrollment',
-  'enroll.directory.empty': 'No courses are open for enrollment right now.',
-  'enroll.directory.empty_hint': 'Check back later, or contact the academy.',
+  // --- Public join page -----------------------------------------------------
   'enroll.unavailable.title': 'Page unavailable',
   'enroll.unavailable.body':
-    'This enrollment link is not valid, or the academy is no longer taking applications here.',
-
-  // --- Public: course page --------------------------------------------------
+    'This link is not valid, or the academy is no longer accepting new students here.',
   'enroll.closed.title': 'Enrollment closed',
-  'enroll.closed.body': 'This intake is not accepting applications right now.',
-  'enroll.closes': 'Applications close {date}',
-  'enroll.closed_on': 'Applications closed {date}',
+  'enroll.closed.body': 'This academy is not accepting new students right now.',
+  'enroll.page.title': 'Join this academy',
+  'enroll.page.subtitle':
+    'Pick the course you want. You join straight away; the course opens once staff approve it.',
+  'enroll.choose': 'Choose a course',
+  'enroll.no_courses': 'No courses are open for enrollment right now.',
+  'enroll.join': 'Join and request this course',
+  'enroll.joining': 'Joining…',
+  'enroll.cta.create_account': 'Create an account',
+  'enroll.cta.sign_in': 'Sign in',
+  'enroll.cta.have_account': 'Already have an account?',
+  'enroll.already_staff':
+    'You are staff of this academy — enroll students from the back office.',
+  'enroll.go_dashboard': 'Go to my dashboard',
   'enroll.price_free': 'Free',
   'enroll.seats.left_one': '{count} seat left',
   'enroll.seats.left_other': '{count} seats left',
   'enroll.seats.enrolled': '{count} enrolled',
-  'enroll.seats.full':
-    'All {count} seats are taken. You can still apply — the academy will let you know if one opens up.',
-  'enroll.view_courses': 'See other courses',
+  'enroll.closes': 'Closes {date}',
 
-  // --- Public: the apply call to action -------------------------------------
-  'enroll.cta.title': 'Apply for a seat',
-  'enroll.cta.body':
-    'Enrollment is by application: create an account, send your details, and the academy confirms your seat.',
-  'enroll.cta.create_account': 'Create an account to apply',
-  'enroll.cta.have_account': 'Already have an account?',
-  'enroll.cta.sign_in': 'Sign in',
-  'enroll.cta.staff':
-    'You are staff of this academy, so you cannot apply here. Enroll a student from the course page instead.',
+  // --- Enrollment status ----------------------------------------------------
+  'enroll.status.pending': 'Awaiting approval',
+  'enroll.status.active': 'Active',
+  'enroll.status.completed': 'Completed',
+  'enroll.status.dropped': 'Dropped',
+  'enroll.status.rejected': 'Not approved',
 
-  // --- Public: the form -----------------------------------------------------
-  'enroll.form.title': 'Your details',
-  'enroll.form.description':
-    'The academy reviews every application before a seat is confirmed.',
-  'enroll.form.submit': 'Send application',
-  'enroll.form.sending': 'Sending…',
-  'enroll.form.required_error': 'Please fill in every required field.',
-  'enroll.field.full_name': 'Full name',
-  'enroll.field.email': 'Email',
-  'enroll.field.email_hint':
-    'Leave as it is to use your account email. We only use this to contact you.',
-  'enroll.field.phone': 'Phone',
-  'enroll.field.ic_number': 'IC number',
-  'enroll.field.date_of_birth': 'Date of birth',
-  'enroll.field.gender': 'Gender',
-  'enroll.field.address': 'Address',
-  'enroll.field.organization': 'Organisation',
-  'enroll.field.notes': 'Anything else the academy should know?',
-  'enroll.field.optional': 'optional',
-  'enroll.gender.male': 'Male',
-  'enroll.gender.female': 'Female',
-  'enroll.gender.placeholder': 'Select',
+  // --- Learner --------------------------------------------------------------
+  'enroll.learn.pending': 'Awaiting approval',
+  'enroll.learn.pending_hint': 'Opens once staff approve your place.',
 
-  // --- Public: application status -------------------------------------------
-  'enroll.applied.title': 'Application sent',
-  'enroll.applied.body':
-    'The academy is reviewing it. The decision appears here — no email needed.',
-  'enroll.applied.on': 'Applied {date}',
-  'enroll.withdraw': 'Withdraw application',
-  'enroll.withdrawing': 'Withdrawing…',
-  'enroll.approved.title': 'You are enrolled',
-  'enroll.approved.body': 'Open the course from your dashboard.',
-  'enroll.approved.go': 'Go to my courses',
-  'enroll.rejected.title': 'Not accepted this time',
-  'enroll.rejected.body': 'The academy could not offer you a seat on this intake.',
-  'enroll.withdrawn.title': 'Application withdrawn',
-  'enroll.reapply': 'Apply again',
-  'enroll.review_note': 'Note from the academy',
+  // --- Staff: the page ------------------------------------------------------
+  'enroll.staff.subtitle':
+    'The public join link, which courses accept requests, and who is waiting.',
 
-  'enroll.status.pending': 'Awaiting review',
-  'enroll.status.approved': 'Approved',
-  'enroll.status.rejected': 'Not accepted',
-  'enroll.status.withdrawn': 'Withdrawn',
+  'enroll.link.title': 'Public join link',
+  'enroll.link.description':
+    'Anyone with this link can create an account and request a course. Nobody gets course access until you approve it.',
+  'enroll.link.open': 'Open for enrollment',
+  'enroll.link.closed_note': 'Switch this on to publish the link.',
+  'enroll.link.intro': 'Message on the page',
+  'enroll.link.intro_placeholder':
+    'Who this is for, when classes start, what to bring.',
+  'enroll.link.preview': 'Preview',
+  'enroll.link.admin_only': 'Only an admin can change this.',
 
-  // --- Applicant's own list (onboarding + profile pages) --------------------
-  'enroll.mine.title': 'Your applications',
-  'enroll.mine.description':
-    'Courses you have applied for. An approved application gives you access straight away.',
-  'enroll.mine.reviewed': 'Reviewed {date}',
+  'enroll.courses.title': 'Courses accepting requests',
+  'enroll.courses.description':
+    'A course must be published and switched on here before it appears on the link.',
+  'enroll.courses.empty': 'No courses yet.',
+  'enroll.courses.limits': 'Limits',
+  'enroll.courses.seats_uncapped': '{taken} enrolled',
+  'enroll.courses.seats_capped': '{taken} of {capacity} seats',
+  'enroll.courses.no_deadline': 'No closing date',
 
-  // --- Staff: the review queue ----------------------------------------------
-  'enroll.queue.subtitle':
-    'Applications from your courses’ public enrollment pages.',
-  'enroll.queue.pending': 'Awaiting review',
-  'enroll.queue.reviewed': 'Reviewed',
-  'enroll.queue.search_placeholder': 'Search name, email, phone or course',
-  'enroll.queue.empty': 'No applications yet.',
-  'enroll.queue.empty_hint':
-    'Open a course for enrollment and share its link to start receiving them.',
-  'enroll.queue.no_match': 'No application matches this filter.',
+  'enroll.limits.title': 'Enrollment limits',
+  'enroll.limits.description': 'Applies to {course}.',
+  'enroll.limits.capacity': 'Seats',
+  'enroll.limits.capacity_hint':
+    'Blank for no limit. A full course still takes requests — you decide who gets the seat.',
+  'enroll.limits.closes_at': 'Stop accepting requests on',
+  'enroll.limits.closes_at_hint': 'Blank to stay open until you switch it off.',
 
-  // --- Staff: the review sheet ----------------------------------------------
-  'enroll.review.title': 'Enrollment application',
-  'enroll.review.details': 'Submitted details',
-  'enroll.review.applicant_note': 'From the applicant',
-  'enroll.review.note_label': 'Note (optional)',
-  'enroll.review.note_placeholder':
-    'Shown to the applicant alongside the decision.',
-  'enroll.review.approve': 'Approve',
-  'enroll.review.approving': 'Approving…',
-  'enroll.review.reject': 'Reject',
-  'enroll.review.rejecting': 'Rejecting…',
-  'enroll.review.reviewed_on': 'Reviewed {date}',
-  'enroll.review.outcome_student': 'Student record',
-  'enroll.review.full_warning':
-    'This intake is full ({taken} of {capacity}). Approving adds a seat over capacity.',
-  'enroll.review.what_happens':
-    'Approving creates the student record if there isn’t one, links it to this account and enrolls them. No invoice is created.',
-
-  'enroll.review.match.title': 'Possible existing record',
-  'enroll.review.match.body':
-    'This academy already has a student record that looks like this applicant.',
-  'enroll.review.match.create_new': 'Create a new student record',
-  'enroll.review.match.link': 'Link to {name}',
-  'enroll.review.match.verified_email': 'Same confirmed email',
-  'enroll.review.match.email': 'Same email — not confirmed',
-  'enroll.review.match.ic': 'Same IC number',
-  'enroll.review.match.not_linkable':
-    'Cannot be linked automatically: the applicant has not confirmed this email address. Approve as a new record and merge the two by hand.',
-
-  // --- Staff: the course settings card --------------------------------------
-  'enroll.card.title': 'Enrollment',
-  'enroll.card.description':
-    'Add students who already have a record, or open a public page so new people can apply.',
-  'enroll.settings.title': 'Enrollment page',
-  'enroll.settings.description':
-    'Let people apply for a seat from a public link.',
-  'enroll.settings.open': 'Open for enrollment',
-  'enroll.settings.needs_publish':
-    'The course must be published before the page goes live.',
-  'enroll.settings.listed': 'Show on the academy’s enrollment page',
-  'enroll.settings.listed_hint':
-    'Turn this off for a private intake — the link still works.',
-  'enroll.settings.configure': 'Configure',
-  'enroll.settings.preview': 'Preview',
-  'enroll.settings.link_note':
-    'Anyone with this link can apply. Nobody is enrolled until you approve them.',
-  'enroll.settings.pending_one': '{count} awaiting review',
-  'enroll.settings.pending_other': '{count} awaiting review',
-  'enroll.settings.seats_uncapped': '{taken} enrolled · no seat limit',
-  'enroll.settings.seats_capped': '{taken} of {capacity} seats taken',
-  'enroll.settings.no_deadline': 'No closing date',
-  'enroll.settings.dialog.title': 'Enrollment settings',
-  'enroll.settings.dialog.description': 'Applies to this course only.',
-  'enroll.settings.capacity': 'Seats',
-  'enroll.settings.capacity_hint':
-    'Leave blank for no limit. A full intake still accepts applications — you decide who gets the seat.',
-  'enroll.settings.closes_at': 'Close applications on',
-  'enroll.settings.closes_at_hint':
-    'Leave blank to stay open until you switch it off.',
-  'enroll.settings.intro': 'Introduction',
-  'enroll.settings.intro_placeholder':
-    'Shown above the form — who this intake is for, what to bring, when it starts.',
-  'enroll.settings.required': 'Details to collect',
-  'enroll.settings.required_hint':
-    'Full name and email are always asked for. Tick anything else the form should collect — everything ticked is required.',
+  'enroll.requests.title': 'Requests',
+  'enroll.requests.pending': 'Awaiting approval',
+  'enroll.requests.enrolled': 'Enrolled',
+  'enroll.requests.search_placeholder': 'Search name, email, phone or course',
+  'enroll.requests.empty': 'No requests yet.',
+  'enroll.requests.empty_hint':
+    'Open the link and switch a course on to start receiving them.',
+  'enroll.requests.no_match': 'Nothing matches this filter.',
+  'enroll.requests.approve': 'Approve',
+  'enroll.requests.reject': 'Reject',
+  'enroll.requests.full': 'Full',
 
   // --- Staff: bulk enroll by email ------------------------------------------
   'enroll.bulk.action': 'Enroll students',
   'enroll.bulk.title': 'Enroll existing students',
   'enroll.bulk.description':
     'Paste a list of email addresses, or upload a CSV. Only people who already have a student record in this academy can be enrolled this way.',
+  'enroll.bulk.course': 'Course',
+  'enroll.bulk.pick_course': 'Select a course',
   'enroll.bulk.label': 'Email addresses',
   'enroll.bulk.placeholder': 'aina@example.com\nrahim@example.com',
   'enroll.bulk.hint':
@@ -178,16 +102,14 @@ export const enrollment = {
   'enroll.bulk.stat.ambiguous': 'More than one match',
   'enroll.bulk.unknown_title': 'No student record for these addresses',
   'enroll.bulk.unknown_hint':
-    'They need a student record in this academy first — add or import them on the Students page, or send them the enrollment link so they can apply.',
+    'Add or import them on the Students page, or send them the join link so they can request a place. Archived students do not match.',
   'enroll.bulk.ambiguous_title': 'More than one student shares these addresses',
   'enroll.bulk.ambiguous_hint':
     'Enroll these from the student’s own page, so the right record is picked.',
   'enroll.bulk.invalid_title': 'Not valid email addresses',
-  'enroll.bulk.archived_note':
-    'Archived students are not matched — they count as having no record.',
   'enroll.bulk.submit': 'Enroll {count}',
   'enroll.bulk.submitting': 'Enrolling…',
-  'enroll.bulk.nothing': 'Nothing to enroll.',
+  'enroll.bulk.nothing': 'Nothing to enroll',
   'enroll.bulk.done_one': '{count} student enrolled.',
   'enroll.bulk.done_other': '{count} students enrolled.',
 } as const

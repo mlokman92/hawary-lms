@@ -93,6 +93,35 @@ export function useMyCourses(academyId: string | null, studentId: string | null)
   })
 }
 
+/**
+ * Courses this student has asked for and staff have not opened yet.
+ *
+ * Separate from useMyCourses rather than widening its filter: everything
+ * downstream of that hook assumes a course you can actually open.
+ */
+export function useMyPendingCourses(
+  academyId: string | null,
+  studentId: string | null,
+) {
+  return useQuery({
+    queryKey: ['learn-pending-courses', academyId, studentId] as const,
+    enabled: !!academyId && !!studentId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('enrollments')
+        .select('id, courses(id, title)')
+        .eq('academy_id', academyId!)
+        .eq('student_id', studentId!)
+        .eq('status', 'pending')
+      if (error) throw error
+      type Row = { id: string; courses: { id: string; title: string } | null }
+      return ((data ?? []) as unknown as Row[])
+        .filter((r) => r.courses)
+        .map((r) => ({ id: r.id, title: r.courses!.title }))
+    },
+  })
+}
+
 /** A course's published modules with their published content, student vantage. */
 export function useLearnCourseContent(
   academyId: string | null,

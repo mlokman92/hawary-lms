@@ -8,7 +8,6 @@ import {
   Copy,
   FileCheck2,
   FileText,
-  GraduationCap,
   Layers,
   MoreHorizontal,
   Paperclip,
@@ -53,7 +52,6 @@ import {
 } from '@/features/courses/ModuleItemList'
 import { DuplicateCourseDialog } from '@/features/courses/DuplicateCourseDialog'
 import { ModuleFormDialog } from '@/features/modules/ModuleFormDialog'
-import { EnrollmentSettingsCard } from '@/features/enrollment/EnrollmentSettingsCard'
 import { useCourse, COURSE_STATUS_LABEL } from '@/features/courses/api'
 import {
   useDeleteModule,
@@ -407,39 +405,33 @@ export function CourseDetailPage() {
             </p>
           ) : null}
         </div>
+        {/* This page is for building the course. Adding a module is the one
+            action worth a button; editing and duplicating are occasional, so
+            they sit in the menu. */}
         {isStaff ? (
           <div className="flex items-center gap-2">
-            {/* The academy-wide queue, pre-filtered to this course, rather than
-                /courses/:id/grading — one grading surface, reached two ways.
-                That route still resolves, for older links. */}
-            <Button asChild variant="outline">
-              <Link to={`/assessments?course=${courseId}`}>
-                <GraduationCap /> {t('courses.grading')}
-              </Link>
-            </Button>
-            <Button variant="outline" onClick={() => setCourseDialogOpen(true)}>
-              <Pencil /> {t('courses.edit')}
-            </Button>
-            <Button variant="outline" onClick={() => setDuplicateOpen(true)}>
-              <Copy /> {t('courses.duplicate')}
-            </Button>
             <Button onClick={openNewModule}>
               <Plus /> {t('courses.module.new')}
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <MoreHorizontal />
+                  <span className="sr-only">{t('common.actions')}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setCourseDialogOpen(true)}>
+                  <Pencil /> {t('courses.edit')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setDuplicateOpen(true)}>
+                  <Copy /> {t('courses.duplicate')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         ) : null}
       </div>
-
-      {/* Getting people onto the course, above the syllabus: a course with no
-          students is the state this card exists to end. Staff only — a linked
-          student reaching this page must not see the roster controls. */}
-      {isStaff && activeAcademyId ? (
-        <EnrollmentSettingsCard
-          className="mt-6"
-          academyId={activeAcademyId}
-          course={course}
-        />
-      ) : null}
 
       <div className="mt-6 space-y-4">
         {modulesLoading ? (

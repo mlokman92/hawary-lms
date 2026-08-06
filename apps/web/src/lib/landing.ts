@@ -1,5 +1,6 @@
 import { useAcademy } from './academy'
 import { getPendingInvite, acceptInvitePath } from './invite'
+import { enrollPath, getEnrollIntent } from './enrollIntent'
 
 /**
  * Where a signed-in user belongs. One place, because this decision was
@@ -10,6 +11,7 @@ import { getPendingInvite, acceptInvitePath } from './invite'
  *   staff membership          -> the back-office
  *   student membership only   -> the /learn tree
  *   no membership + a token   -> finish accepting the invitation
+ *   no membership + an intent -> finish joining the academy they came for
  *   no membership at all      -> create an academy
  */
 export function useLandingTarget(): string {
@@ -18,14 +20,16 @@ export function useLandingTarget(): string {
   if (studentMemberships.length > 0) return '/learn'
   const token = getPendingInvite()
   if (token) return acceptInvitePath(token)
+  const slug = getEnrollIntent()
+  if (slug) return enrollPath(slug)
   return '/onboarding'
 }
 
 /**
- * Routes on which a stashed invite token may be recovered. Never public pages
- * (e.g. /pay) or the auth/accept pages themselves, so a stale token cannot
- * hijack an unrelated navigation. Kept beside useLandingTarget so a new landing
- * route cannot be added to one without the other.
+ * Routes on which a stashed invite token or join intent may be recovered. Never
+ * public pages (e.g. /pay, /enroll) or the auth/accept pages themselves, so a
+ * stale one cannot hijack an unrelated navigation. Kept beside useLandingTarget
+ * so a new landing route cannot be added to one without the other.
  */
 export const LANDING_PATHS: ReadonlySet<string> = new Set([
   '/',

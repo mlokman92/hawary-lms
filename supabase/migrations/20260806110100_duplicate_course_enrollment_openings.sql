@@ -1,10 +1,13 @@
--- duplicate_course now carries the enrollment page configuration too.
+-- duplicate_course carries the course's enrollment opening too.
 --
 -- is_open and closes_at are reset for the same reason the schedule dates already
--- are: a new intake that inherits last term's window opens already closed, or —
--- worse here — opens a public form on a course nobody has finished writing.
--- capacity, intro, required_fields and is_listed are copied verbatim: those are
--- the syllabus's shape, not the intake's.
+-- are: a new intake must not inherit last term's window, and must not appear on
+-- the public join form for a course nobody has finished writing. capacity is the
+-- syllabus's shape, so it copies.
+--
+-- Re-emitted in full because a plpgsql body is not validated until it runs: the
+-- column list here has to match course_enrollment_settings, and nothing would
+-- fail until the next duplication.
 
 create or replace function public.duplicate_course(
   _course_id uuid,
@@ -93,12 +96,9 @@ begin
   where n.course_id = _course_id;
 
   -- The copy points at the SAME storage object rather than duplicating the
-  -- file: one slide deck shared by two intakes is one PDF, and duplicating
-  -- bytes on every copy would grow storage without bound. The consequence,
+  -- file: one slide deck shared by two intakes is one PDF. The consequence,
   -- recorded here because it is not visible from the row: deleting a material
-  -- must not delete its object, or the copy breaks. Nothing deletes objects
-  -- today; a sweep that does will have to check for other rows on the same
-  -- file_path.
+  -- must not delete its object, or the copy breaks.
   insert into public.course_materials
     (academy_id, course_id, module_id, title, file_path, file_name, mime_type,
      size_bytes, is_published, sort_order, created_by)
@@ -153,12 +153,10 @@ begin
   from public.course_instructors ci
   where ci.course_id = _course_id;
 
-  -- Enrollment page config. Closed and undated, always.
+  -- Enrollment opening. Closed and undated, always.
   insert into public.course_enrollment_settings
-    (course_id, academy_id, is_open, is_listed, capacity, closes_at, intro,
-     required_fields)
-  select v_new, s.academy_id, false, s.is_listed, s.capacity, null, s.intro,
-         s.required_fields
+    (course_id, academy_id, is_open, capacity, closes_at)
+  select v_new, s.academy_id, false, s.capacity, null
   from public.course_enrollment_settings s
   where s.course_id = _course_id;
 

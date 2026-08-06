@@ -2,7 +2,11 @@ import { Link } from 'react-router-dom'
 import { BookOpen, ClipboardList, FileText } from 'lucide-react'
 import { useT } from '@/lib/i18n'
 import { useStudentAcademy } from '@/lib/studentAcademy'
-import { useMyCourses, useMyStudent } from '@/features/learn/api'
+import {
+  useMyCourses,
+  useMyPendingCourses,
+  useMyStudent,
+} from '@/features/learn/api'
 import { useLearnDashboard } from '@/features/learn/dashboard'
 import { PageHeader } from '@/components/patterns/PageHeader'
 import { EmptyState } from '@/components/patterns/EmptyState'
@@ -43,6 +47,7 @@ export function LearnHomePage() {
     error,
   } = useMyCourses(academyId, student?.id ?? null)
   const { data: dash } = useLearnDashboard(academyId, student?.id ?? null)
+  const { data: pending } = useMyPendingCourses(academyId, student?.id ?? null)
 
   // Rendered in every branch so the h1 never pops in — same as the back-office.
   const header = (
@@ -87,6 +92,26 @@ export function LearnHomePage() {
   return (
     <div className="mx-auto w-full max-w-6xl">
       {header}
+
+      {/* Requested, not yet opened. Without this a student who has just joined
+          sees "no courses" and has no idea their request landed. */}
+      {(pending ?? []).length > 0 ? (
+        <ul className="mt-6 divide-y rounded-xl border">
+          {(pending ?? []).map((p) => (
+            <li
+              key={p.id}
+              className="flex items-center justify-between gap-3 px-4 py-3"
+            >
+              <span className="min-w-0 truncate text-sm font-medium">
+                {p.title}
+              </span>
+              <span className="text-muted-foreground shrink-0 text-xs">
+                {t('enroll.learn.pending')}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
       <div className="mt-6">
         {isLoading ? (

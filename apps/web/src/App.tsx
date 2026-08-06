@@ -49,9 +49,8 @@ import { MembersPage } from './pages/MembersPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { PublicPayPage } from './pages/PublicPayPage'
 import { PayResultPage } from './pages/PayResultPage'
-import { EnrollDirectoryPage } from './pages/EnrollDirectoryPage'
-import { EnrollCoursePage } from './pages/EnrollCoursePage'
-import { EnrollmentQueuePage } from './pages/EnrollmentQueuePage'
+import { EnrollPage } from './pages/EnrollPage'
+import { EnrollmentsPage } from './pages/EnrollmentsPage'
 
 export default function App() {
   return (
@@ -77,14 +76,10 @@ export default function App() {
                   <Route path="/accept-invite" element={<AcceptInvitePage />} />
                   <Route path="/pay/:token" element={<PublicPayPage />} />
                   <Route path="/pay/:token/result" element={<PayResultPage />} />
-                  {/* Public enrollment. Outside ProtectedRoute on purpose: the
-                      course page must be readable signed out, and applying
+                  {/* The academy's one public join link. Outside ProtectedRoute
+                      on purpose: it must be readable signed out, and joining
                       bounces through /signup?next= like the invite flow. */}
-                  <Route path="/enroll/:slug" element={<EnrollDirectoryPage />} />
-                  <Route
-                    path="/enroll/:slug/:courseId"
-                    element={<EnrollCoursePage />}
-                  />
+                  <Route path="/enroll/:slug" element={<EnrollPage />} />
                   <Route
                     path="/onboarding"
                     element={
@@ -176,7 +171,7 @@ export default function App() {
                       path="/assignments"
                       element={<GradingQueuePage kind="assignment" />}
                     />
-                    <Route path="/enrollments" element={<EnrollmentQueuePage />} />
+                    <Route path="/enrollments" element={<EnrollmentsPage />} />
                     <Route path="/notes/:id" element={<NoteEditorPage />} />
                     <Route
                       path="/assessments/:id"

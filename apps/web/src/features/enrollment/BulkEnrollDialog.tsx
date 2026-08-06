@@ -11,6 +11,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import {
   classifyEmails,
@@ -58,26 +65,31 @@ function Bucket({
  */
 export function BulkEnrollDialog({
   academyId,
-  courseId,
+  courses,
   open,
   onOpenChange,
 }: {
   academyId: string
-  courseId: string
+  courses: { id: string; title: string }[]
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
   const { t, tn } = useT()
   const fileRef = useRef<HTMLInputElement>(null)
+  const [courseId, setCourseId] = useState('')
   const [text, setText] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<number | null>(null)
 
-  const { data: roster, isLoading } = useEnrollRoster(academyId, courseId)
+  const { data: roster, isLoading } = useEnrollRoster(
+    academyId,
+    courseId || undefined,
+  )
   const enroll = useBulkEnroll(academyId, courseId)
 
   useEffect(() => {
     if (!open) return
+    setCourseId('')
     setText('')
     setError(null)
     setDone(null)
@@ -121,6 +133,22 @@ export function BulkEnrollDialog({
         </DialogHeader>
 
         <div className="grid max-h-[60vh] gap-4 overflow-y-auto pr-1">
+          <div className="grid gap-2">
+            <Label>{t('enroll.bulk.course')}</Label>
+            <Select value={courseId} onValueChange={setCourseId}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder={t('enroll.bulk.pick_course')} />
+              </SelectTrigger>
+              <SelectContent>
+                {courses.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="grid gap-2">
             <div className="flex items-center justify-between gap-2">
               <Label htmlFor="bulk-emails">{t('enroll.bulk.label')}</Label>
@@ -185,7 +213,7 @@ export function BulkEnrollDialog({
 
           <Bucket
             title={t('enroll.bulk.unknown_title')}
-            hint={`${t('enroll.bulk.unknown_hint')} ${t('enroll.bulk.archived_note')}`}
+            hint={t('enroll.bulk.unknown_hint')}
             emails={buckets.unknown}
           />
           <Bucket
@@ -218,7 +246,10 @@ export function BulkEnrollDialog({
           <Button
             type="button"
             disabled={
-              isLoading || enroll.isPending || buckets.ready.length === 0
+              !courseId ||
+              isLoading ||
+              enroll.isPending ||
+              buckets.ready.length === 0
             }
             onClick={() => void submit()}
           >

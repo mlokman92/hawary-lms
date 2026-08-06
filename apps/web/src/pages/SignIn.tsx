@@ -1,7 +1,6 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
-import { readEnrollDraftValues } from '@/lib/enrollDraft'
 import { useT } from '@/lib/i18n'
 import { AuthCard } from '@/components/AuthCard'
 import { Button } from '@/components/ui/button'
@@ -14,13 +13,7 @@ export function SignIn() {
   const [params] = useSearchParams()
   const next = params.get('next') || '/'
   const signupTo = next !== '/' ? `/signup?next=${encodeURIComponent(next)}` : '/signup'
-  // Arriving from an enrollment form, which already asked for the address.
-  // Guarded on `next` so an unrelated sign-in never inherits a stale draft.
-  const seed = useMemo(
-    () => (next.startsWith('/enroll/') ? readEnrollDraftValues() : null),
-    [next],
-  )
-  const [email, setEmail] = useState(seed?.email ?? '')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)

@@ -1,226 +1,140 @@
-# Course enrollment — applications, approval, bulk enrol
+# Enrollment — joining an academy, and getting onto a course
 
-Two ways onto a course, for the two kinds of people there are.
+**Anyone can enter an academy. Course access is what staff grant.**
 
-- **The academy already has a record for you** → staff enrol you. One at a time
-  from `/students/:id` (unchanged), or a list of email addresses at once from
-  the course page (below).
-- **The academy has never heard of you** → you apply from a public link, and
-  staff approve. Approval is what mints the student record.
+## The model
 
-## Why an application is its own table
+Enrolling in a course *is* the intent to join the academy. Someone who opens a
+course link has already decided; making them wait outside for approval before
+they can even see a dashboard was friction with nothing behind it.
 
-`enrollments.student_id` is `NOT NULL`. A person with no student record cannot
-hold a pending enrollment — and not having one is the whole point. The other
-obvious shortcut, letting the public write `students` directly, turns the roster
-into a spam target.
+So there is **one public link per academy**, `/enroll/<slug>`. A visitor signs up
+or signs in, picks a course, and in that same call:
 
-So `enrollment_applications` is the third thing, and **approval is a conversion**:
-one application becomes a `students` row, an `academy_members` row and an
-`enrollments` row, in that order.
+1. a `students` record is created (or an existing one adopted — see below),
+2. `app.link_claimed_record` links it to the account and upserts the `student`
+   membership,
+3. the chosen course is filed as `enrollments.status = 'pending'`.
 
-`enrollments.status` still has a `pending` value. It is still dead. Leave it
-that way — a pending *enrollment* would need the student_id we do not have.
+They land on `/learn` a member, with no course open yet. Staff approve the
+course, not the person.
 
-## Why approval at all
+Picking a course is what gates joining. There is no "join" button that does not
+also ask for something, so nobody ends up sitting inside an academy having asked
+for nothing.
 
-This is not an online course. A seat is subject to availability, so somebody
-decides. That is also why **capacity does not close the form**: `app.enrollment_open`
-deliberately ignores `capacity`, and a full intake keeps accepting applications.
-A queue of people who want the next seat is the feature, not a bug. Approving
-past capacity needs `_force`, which the review dialog passes after showing the
-reviewer how full it is.
+## Why there is no application table
 
-## Why an account is required
+There was one, briefly, for a real reason: `enrollments.student_id` is `NOT NULL`
+and an applicant had no student record. That premise is gone — the record exists
+by the time anything is requested. Which means:
 
-Viewing a course page needs nothing. Applying needs an account.
+- `enrollments.status = 'pending'` expresses the request exactly;
+- `app.is_enrolled` already requires `'active'`, so a pending row carries no
+  content access, no seat, and no place in `course_enrollment_stats`;
+- the long-standing `enrollments: staff update` policy already lets staff move
+  it — the same right they exercise enrolling somebody from `/students/:id`.
 
-`?next=` already carries a person through sign-up *and* email confirmation for
-the invite flow ([SignUp.tsx](../apps/web/src/pages/SignUp.tsx),
-`ProtectedRoute`), so the plumbing existed. What the account buys:
+**Approving is a plain UPDATE.** No RPC, no second table, no review dialog. If
+you find yourself writing one, check whether the premise came back first.
 
-- one identity per applicant, so a second application is a duplicate rather than
-  a second stranger;
-- somewhere to *show* the decision. **No email is sent when an application is
-  reviewed** — transactional email is still not configured — so the applicant
-  learns the answer by coming back to `/enroll/…`, `/onboarding` or `/profile`.
-  Take the account away and there is nowhere to tell them.
+## The two RPCs
 
-### Nothing is typed twice
+| function | grant | job |
+|---|---|---|
+| `get_academy_enrollment(_slug)` | **anon** + authenticated | The public page: academy branding, `is_open`, `intro`, and the courses that can be picked. Explicit column list — `courses` and `academies` are not readable by a non-member and must stay that way. |
+| `join_academy(_slug, _course_id)` | authenticated | Everything above, in one transaction. |
 
-A form filled in and then emptied by an authentication redirect is the single
-most likely place to lose an applicant, so the draft
-([lib/enrollDraft.ts](../apps/web/src/lib/enrollDraft.ts)) works in both
-directions and is written on **every keystroke**, not on submit — "Sign in
-instead" is a plain link, and a save that only happens on submit does not
-survive it.
+`join_academy` is **idempotent and re-entrant**: an existing member calling it
+again simply requests another course, which is why there is no separate
+"request" function and why the same page serves both.
 
-- **enroll → auth**: `/signup` and `/signin` seed their name/email/phone boxes
-  from the draft, guarded on `next` starting with `/enroll/` so an unrelated
-  sign-up never inherits a stale one. Those pages were asking for the same three
-  answers the enrollment form had just collected.
-- **auth → enroll**: the form is seeded from the draft on top of the person's
-  own details.
+It refuses staff of that academy. A trainer joining as a student would hand
+`link_claimed_record` a membership to reconcile for no reason.
 
-Reads are non-destructive; the draft is cleared only once an application is
-actually sent.
+### Adopting an existing record
 
-**Prefill comes from `profiles`**, with `user_metadata` as a fallback.
-`user_metadata` is written once at sign-up: it is empty for an account created
-any other way (invited, self-claimed) and stale the moment someone edits their
-profile, so it cannot be the source. The page waits for the profile query before
-mounting the form, and `ApplyForm` seeds its state **once** — it remounts by
-`key` only when the signed-in person changes. Re-seeding from a prop that moved
-would overwrite half-typed answers the moment a slow query landed.
+Before creating anything, `join_academy` looks for an unlinked, unarchived
+`students` row whose email matches the caller's **confirmed** auth email. That is
+the same standard `my_pending_invitations` holds — without a token, a verified
+email is the entire proof of identity — and it is what stops a CSV-imported
+student who later uses the public link from becoming a second row.
 
-## Per-course link, plus an academy index
+## The intent survives the auth hop
 
-`/enroll/:slug/:courseId` is the shareable artifact — the thing that goes on a
-poster or into a WhatsApp group. `/enroll/:slug` lists whatever is open.
+The reported bug: sign up from the join link, click the confirmation email, land
+on **"create your academy"**.
 
-Per-course is not a preference, it follows from the model already here: *the
-intake lives in the title*, and `duplicate_course` mints a new course per intake
-(see [course-duplication.md](course-duplication.md)). Open/closed, capacity and a
-closing date are therefore per-course by construction; an academy-wide form would
-need a "which intake?" selector to say the same thing. The directory is a read
-over the same settings — one page, no second entity.
+`emailRedirectTo` carries `?next=`, but GoTrue silently drops the whole redirect
+when the URL is not on its allow list and substitutes the Site URL — the failure
+already written up in [production-urls.md](production-urls.md). The `?next=` is
+therefore not something to rely on alone.
 
-`is_listed = false` keeps a private intake out of the directory while its link
-keeps working.
+So the slug is stashed in `localStorage` ([lib/enrollIntent.ts](../apps/web/src/lib/enrollIntent.ts)),
+exactly like the invite token, and consulted by every place that decides where a
+signed-in person belongs:
 
-## Schema
+- `useLandingTarget` ([lib/landing.ts](../apps/web/src/lib/landing.ts)) — after
+  the invite token, before `/onboarding`;
+- `AppShell` and `StudentShell`, whose gates mirror it;
+- `PendingInviteRedirect`, which recovers it on any `LANDING_PATHS` route —
+  including `/onboarding`, which is where a dropped `?next=` deposits people.
 
-`course_enrollment_settings` — 1:1 with a course, shaped like
-`academy_payment_settings`. **An absent row means the course has no enrollment
-page at all**; that is what the public functions test.
+It is cleared on a successful join and on sign-out, with the other tenant keys.
 
-| column | note |
-|---|---|
-| `is_open` | master switch, default **false** — publishing a course must not quietly open a public form on it |
-| `is_listed` | appears in the academy directory |
-| `capacity` | null = unlimited; does not close the form |
-| `closes_at` | null = open until switched off. The dialog stores the **end** of the chosen day, so "closes on the 14th" includes the 14th |
-| `intro` | free text above the form |
-| `required_fields` | `students` column names. Decides what the form **asks for**, not merely what is starred — see below |
+## Settings
 
-A separate table rather than columns on `courses` for one concrete reason:
-`duplicate_course` lists its columns explicitly, so a new column there is either
-silently copied or silently dropped, and both are wrong. It copies the settings
-row with `is_open = false` and `closes_at = null`, for the same reason it already
-resets the schedule dates.
+`academy_enrollment_settings` — one row per academy, **admin-only**, `is_open`
+off by default. An absent row or `is_open = false` means `/enroll/<slug>` is
+closed. `intro` is free text shown above the course list.
 
-`enrollment_applications` — the submitted detail mirrors `students` 1:1, so
-approval is a copy and not a mapping table. `unique (course_id, user_id) where
-status = 'pending'`: one live application each, but a rejected applicant may
-apply again next intake.
+`course_enrollment_settings` — `is_open`, `capacity`, `closes_at`, nothing else.
+A course appears on the link only when it is **published** and switched on here
+(`app.enrollment_open`). Capacity deliberately does **not** close a course: a
+queue of people who want the next seat is the point of approving at all.
 
-### required_fields decides what is asked
+There is no form configuration. The join form asks for a course; the name, phone
+and email come from the account, which sign-up already collected. Anything else
+the academy needs, it edits on the student record.
 
-Full name and email are always on the form. Everything ticked is shown **and**
-mandatory. A form that renders eight fields so two of them can be optional is
-the version people abandon; an academy that wants an IC number ticks IC number.
-The DB check constraint pins `full_name` into the array and rejects any name that
-is not a real `students` column.
-
-## Security
-
-- **No client DML on `enrollment_applications`.** SELECT only —
-  `app.can_grade_course(course_id) OR user_id = auth.uid()`. Every write is a
-  SECURITY DEFINER RPC. This is the `academy_invitations` lesson
-  ([account-claiming.md](account-claiming.md)) applied to a table whose writer is
-  a **non-member**, the widest audience anything in this schema has. Verified:
-  an admin's direct `UPDATE … SET status='approved'` changes 0 rows.
-- **Two functions reach `anon`** — `get_enrollment_page` and
-  `list_enrollment_openings` — and both project an explicit column list.
-  `courses` and `academies` are not readable by a non-member and must stay that
-  way. A closed intake still resolves and reports `is_open: false`, because
-  "this intake is closed" beats "not found" for a poster link, and a published
-  title and price is not a secret.
-- **Reviewing is `app.can_grade_course`** — admin academy-wide, trainer only
-  their assigned courses. Same scope as the grading queue, so `/enrollments` can
-  be academy-wide with no client-side narrowing.
-- **`app.is_staff` of the academy cannot apply.** A trainer applying to their own
-  course is a mistake, not a use case.
-- The applicant's contact email is theirs to type, but it can never be blank —
-  it falls back to the account's own address.
-
-### Duplicate detection, and the one rule that matters
-
-`application_match_candidates` returns existing unlinked student records that
-look like the applicant, each with a `linkable` flag.
-
-`linkable` is true **only** when the record's email equals the applicant's
-*confirmed* auth email — the same standard `my_pending_invitations` holds,
-because without a token a verified email is the entire proof of identity. A match
-on the IC number, or on the address they typed into the form, is shown to the
-reviewer as a warning and cannot be selected: `review_enrollment_application`
-re-checks `linkable` server-side and refuses anything else. Approve as a new
-record and merge by hand.
-
-When an existing record is reused, only its **NULL** columns are filled from the
-application. Self-reported detail never overwrites what staff have curated.
-
-Linking and the membership upsert are `app.link_claimed_record`, reused rather
-than reimplemented: it already holds the archived/already-linked guards, the
-monotonic role ladder (admin > trainer > student, never demoted) and
-suspended-stays-suspended. It takes the caller explicitly, so passing the
-*applicant's* id rather than `auth.uid()` is supported by design.
-
-## No invoice
-
-Approval creates the student and the enrollment. Nothing else. Billing stays a
-deliberate act on `/payments`, whenever the academy is ready. The data model
-supports adding it later (`invoices.enrollment_id` and `invoices.course_id` both
-exist) without changing anything here.
-
-## Bulk enrol by email
-
-The course page's **Enroll students** dialog takes a pasted list of addresses or
-a CSV (`email` / `e-mel` / `emel` header recognised; otherwise every cell is an
-address). Parsing reuses [lib/csv.ts](../apps/web/src/lib/csv.ts); duplicates are
-removed before anything is matched.
-
-Addresses are matched against **`students` in this academy and nothing else**.
-Enrolling is adding a *record* to a course, and there is no record to add for an
-address the academy has never seen. Five buckets, all shown before a single row
-is written:
-
-| bucket | meaning |
-|---|---|
-| to enroll | exactly one non-archived record, not already active on the course |
-| already enrolled | matched a record already active here |
-| no student record | nothing matches — add them on `/students`, or send the enrollment link |
-| more than one match | two records share the address (a guardian's inbox — a documented reality). Enrol from the student's own page so the right record is picked |
-| not an email | failed the format check |
-
-Matching is done in the browser against the loaded roster, because stored
-addresses keep whatever case they were typed in and Postgres `in` is
-case-sensitive — only a client-side compare makes `Aina@` find `aina@`.
-
-Writes are `upsert(onConflict: 'course_id,student_id')` chunked 100 at a time, so
-a student previously *dropped* from the course is reactivated rather than
-colliding with the unique index, and a partial failure reports how many landed.
+`duplicate_course` copies `capacity` and resets `is_open`/`closes_at` — a new
+intake must not inherit last term's window, or open on a course nobody has
+finished writing.
 
 ## Surfaces
 
 | where | what |
 |---|---|
-| `/enroll/:slug` | academy directory of open, listed intakes (public) |
-| `/enroll/:slug/:courseId` | course + apply form + your own application status (public) |
-| `/enrollments` | the review queue, under Courses in the sidebar. `?course=` deep-link |
-| `/courses/:id` | the **Enrollment** card: the switch, the link, capacity/deadline summary, bulk enrol |
-| `/onboarding` | `MyApplicationList` beside `PendingInviteList`. An applicant has no membership either, and "create your academy" is not what they came for — the same trap invitations were rescued from |
-| `/profile`, `/learn/profile` | the same list, for someone who already belongs somewhere |
+| `/enroll/:slug` | public. Academy, intro, the courses on offer, and sign-up / sign-in / join |
+| `/enrollments` | **all of the staff side**: the link and its switch, which courses accept requests and their limits, the request list with Approve/Reject, and bulk enrol |
+| `/courses/:id` | building the course. *New module* is the only button; Edit and Duplicate are in the `⋯` menu. No enrollment controls, no Grading button |
+| `/learn/courses` | a plain row per pending request, so a student who just joined can see it landed |
 
-Copy lives in the `enrollment` namespace (`locales/{en,ms}/enrollment.ts`).
-Server error sentences are still English, as everywhere else.
+## Bulk enrol by email
+
+The dialog on `/enrollments` takes a pasted list or a CSV (`email` / `e-mel` /
+`emel` header recognised; otherwise every cell is treated as an address).
+Parsing reuses [lib/csv.ts](../apps/web/src/lib/csv.ts) and de-duplicates before
+matching.
+
+Addresses match against **`students` in this academy and nothing else** —
+enrolling is adding a *record* to a course, and there is no record to add for an
+address the academy has never seen. Five buckets, all shown before a single row
+is written: to enroll · already enrolled · no student record · more than one
+match · not an email.
+
+Matching runs in the browser against the loaded roster, because stored addresses
+keep whatever case they were typed in and Postgres `in` is case-sensitive — only
+a client-side compare makes `Aina@` find `aina@`. Writes are
+`upsert(onConflict: 'course_id,student_id')` chunked 100 at a time, so a student
+previously dropped from the course is reactivated rather than colliding with the
+unique index.
 
 ## Not done
 
-- No email on a decision. A `send-application-decision` function in the shape of
-  `send-invitation` is the addition once transactional email is configured.
-- No custom per-course questions. `required_fields` toggles the fixed
-  student-detail set; a question builder is a separate feature.
-- No waitlist entity. Over-capacity applications stay `pending` and are flagged.
+- No email when a request is approved. The student sees it on `/learn`. A
+  `send-*` function in the shape of `send-invitation` is the addition once
+  transactional email is configured.
+- No waitlist entity. Over-capacity requests stay `pending`.
 - No bulk approve.
-- Bulk enrol does not create student records. That is deliberate — see above.
+- Bulk enrol does not create student records. Deliberate — see above.
