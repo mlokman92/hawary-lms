@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { UserMenu } from '@/components/UserMenu'
+import { cn } from '@/lib/utils'
 import { isBranchActive, isNavActive, type NavGroup } from './nav'
 import {
   Sidebar,
@@ -45,14 +46,23 @@ export function ShellSidebar({
             <SidebarMenu>
               {group.items.map((item) => {
                 const active = isNavActive(pathname, item)
+                const branch = isBranchActive(pathname, item)
                 const { icon: Icon } = item
                 return (
                   <SidebarMenuItem key={item.to}>
                     <SidebarMenuButton
                       asChild
-                      // The parent stays lit for its whole branch, but only the
-                      // exact match claims aria-current="page".
-                      isActive={isBranchActive(pathname, item)}
+                      // The tinted row marks the page you are on. A parent
+                      // whose *child* is active gets the brand colour on the
+                      // icon alone — "the section you are in" and "the page
+                      // you are on" must not read as the same thing, and two
+                      // stacked tinted rows would say the latter twice.
+                      isActive={active}
+                      className={cn(
+                        !active &&
+                          branch &&
+                          'font-medium [&_svg]:text-sidebar-primary',
+                      )}
                       tooltip={item.title}
                     >
                       <Link
