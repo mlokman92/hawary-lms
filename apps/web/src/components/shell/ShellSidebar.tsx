@@ -11,6 +11,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
@@ -18,6 +19,18 @@ import {
   SidebarMenuSubItem,
   SidebarRail,
 } from '@/components/ui/sidebar'
+
+/**
+ * A count that wants acting on, not merely noticing — the solid fill every
+ * notification badge uses.
+ *
+ * `text-background` rather than a fixed white: --destructive is a mid red in
+ * light mode and a *lighter* red in dark, so white would drop to roughly 2.5:1
+ * there. The background token inverts with the theme, which is exactly the
+ * contrast this needs, in one class and no new token.
+ */
+const URGENT_BADGE =
+  'bg-destructive text-background rounded-full text-xs font-semibold tabular-nums'
 
 /**
  * The sidebar body shared by both trees. `UserMenu` is role-agnostic — it reads
@@ -73,6 +86,11 @@ export function ShellSidebar({
                         <span>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
+                    {item.badge ? (
+                      <SidebarMenuBadge className={URGENT_BADGE}>
+                        {item.badge}
+                      </SidebarMenuBadge>
+                    ) : null}
                     {item.children?.length ? (
                       // Always open. These are four fixed destinations, not a
                       // tree that grows — a disclosure would only add a click
@@ -96,6 +114,16 @@ export function ShellSidebar({
                                 >
                                   <ChildIcon />
                                   <span>{child.title}</span>
+                                  {child.badge ? (
+                                    <span
+                                      className={cn(
+                                        'ml-auto flex h-5 min-w-5 items-center justify-center px-1',
+                                        URGENT_BADGE,
+                                      )}
+                                    >
+                                      {child.badge}
+                                    </span>
+                                  ) : null}
                                 </Link>
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>

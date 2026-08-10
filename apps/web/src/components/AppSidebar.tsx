@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useAcademy } from '@/lib/academy'
 import { useT, type TFn } from '@/lib/i18n'
+import { usePendingEnrollmentCount } from '@/features/enrollment/api'
 import { AcademySwitcher } from './AcademySwitcher'
 import { ShellSidebar } from './shell/ShellSidebar'
 import type { NavGroup, NavItem } from './shell/nav'
@@ -25,7 +26,7 @@ import type { NavGroup, NavItem } from './shell/nav'
 //
 // Built per render rather than held as a module constant: the titles are
 // translated, so they have to be read after the language is known.
-const nav = (t: TFn): NavItem[] => [
+const nav = (t: TFn, pendingEnrollments: number): NavItem[] => [
   { title: t('nav.dashboard'), to: '/', icon: LayoutDashboard, exact: true },
   {
     title: t('nav.courses'),
@@ -46,6 +47,9 @@ const nav = (t: TFn): NavItem[] => [
         title: t('nav.enrollments'),
         to: '/enrollments',
         icon: UserPlus,
+        // People waiting on a decision. Nobody is notified when a request
+        // arrives, so without this the only way to find out is to go and look.
+        badge: pendingEnrollments,
       },
     ],
   },
@@ -61,10 +65,11 @@ const adminNav = (t: TFn): NavItem[] => [
 ]
 
 export function AppSidebar() {
-  const { active } = useAcademy()
+  const { active, activeAcademyId } = useAcademy()
   const { t } = useT()
+  const { data: pendingEnrollments } = usePendingEnrollmentCount(activeAcademyId)
 
-  const items = nav(t)
+  const items = nav(t, pendingEnrollments ?? 0)
   const groups: NavGroup[] = [
     {
       label: t('nav.group.platform'),

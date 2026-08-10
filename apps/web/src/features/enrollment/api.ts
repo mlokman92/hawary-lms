@@ -83,6 +83,8 @@ const openingsKey = (academyId: string | null) =>
   ['course-openings', academyId] as const
 const requestsKey = (academyId: string | null) =>
   ['enrollment-requests', academyId] as const
+const pendingCountKey = (academyId: string | null) =>
+  ['enrollment-requests-pending', academyId] as const
 
 export function seatsLeft(capacity: number | null, taken: number): number | null {
   return capacity === null ? null : Math.max(0, capacity - taken)
@@ -125,6 +127,7 @@ export function useJoinAcademy() {
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['my-enrollments'] })
+      void qc.invalidateQueries({ queryKey: ['enrollment-requests-pending'] })
     },
   })
 }
@@ -289,6 +292,35 @@ export function useEnrollmentRequests(academyId: string | null) {
 }
 
 /**
+ * Just the sidebar's number: a count, not the rows.
+ *
+ * Its own query rather than deriving it from useEnrollmentRequests — the
+ * sidebar is mounted on every back-office page, and pulling every request with
+ * its student and course embedded to display one integer would be a full table
+ * read per navigation.
+ */
+export function usePendingEnrollmentCount(academyId: string | null) {
+  return useQuery({
+    queryKey: pendingCountKey(academyId),
+    enabled: !!academyId,
+    // The sidebar outlives every navigation, so nothing would refetch this on
+    // its own. Requests arrive while the tab sits open and nobody is notified —
+    // coming back to the window is the moment the number has to be right.
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('enrollments')
+        .select('id', { count: 'exact', head: true })
+        .eq('academy_id', academyId!)
+        .eq('status', 'pending')
+      if (error) throw error
+      return count ?? 0
+    },
+  })
+}
+
+/**
  * Approve or reject: a plain UPDATE. The `enrollments: staff update` policy has
  * always allowed this — the same right staff already exercise when they enrol
  * somebody from the student page — so there is nothing for an RPC to add.
@@ -305,6 +337,7 @@ export function useSetEnrollmentStatus(academyId: string | null) {
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: requestsKey(academyId) })
+      void qc.invalidateQueries({ queryKey: pendingCountKey(academyId) })
       void qc.invalidateQueries({ queryKey: openingsKey(academyId) })
       void qc.invalidateQueries({ queryKey: ['students', academyId] })
       void qc.invalidateQueries({ queryKey: ['courses', academyId] })

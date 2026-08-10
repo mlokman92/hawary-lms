@@ -7,6 +7,12 @@ export type NavItem = {
   /** Match the path exactly. Needed for index routes like '/' and '/learn'. */
   exact?: boolean
   /**
+   * A count worth interrupting for — work waiting on this destination. Rendered
+   * only when it is above zero: a badge showing "0" is a decoration, and the
+   * absence of the badge already says the same thing.
+   */
+  badge?: number
+  /**
    * One level of sub-navigation, rendered permanently rather than behind a
    * disclosure. Assessments and assignments are destinations in their own right
    * — they were previously reachable only by opening a course and scanning its
