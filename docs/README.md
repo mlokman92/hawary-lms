@@ -10,6 +10,9 @@ Living documentation for Hawary LMS.
   migrations, GitHub Actions, and monorepo guidance.
 - [course-enrollment.md](course-enrollment.md) — the public enrollment page,
   applications and approval, and bulk enrolment by email.
+- [appointments.md](appointments.md) — one-to-one session booking: derived
+  slots, the round-robin rota, and the overlap constraint that makes
+  double-booking impossible.
 
 Add an entry here when you create a new doc. Keep decisions with their rationale so
 future work (and Claude) understands *why*, not just *what*.

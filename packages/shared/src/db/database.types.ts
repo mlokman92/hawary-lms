@@ -83,6 +83,53 @@ export type Database = {
         }
         Relationships: []
       }
+      academy_booking_settings: {
+        Row: {
+          academy_id: string
+          assignment_mode: Database["public"]["Enums"]["appointment_assignment"]
+          created_at: string
+          horizon_days: number
+          is_open: boolean
+          location: string | null
+          max_open_per_student: number | null
+          min_notice_hours: number
+          slot_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          academy_id: string
+          assignment_mode?: Database["public"]["Enums"]["appointment_assignment"]
+          created_at?: string
+          horizon_days?: number
+          is_open?: boolean
+          location?: string | null
+          max_open_per_student?: number | null
+          min_notice_hours?: number
+          slot_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          academy_id?: string
+          assignment_mode?: Database["public"]["Enums"]["appointment_assignment"]
+          created_at?: string
+          horizon_days?: number
+          is_open?: boolean
+          location?: string | null
+          max_open_per_student?: number | null
+          min_notice_hours?: number
+          slot_minutes?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academy_booking_settings_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: true
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       academy_enrollment_settings: {
         Row: {
           academy_id: string
@@ -303,6 +350,88 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "academies"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointments: {
+        Row: {
+          academy_id: string
+          auto_assigned: boolean
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string
+          created_by: string | null
+          ends_at: string
+          id: string
+          instructor_id: string
+          location: string | null
+          note: string | null
+          staff_note: string | null
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          academy_id: string
+          auto_assigned?: boolean
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          ends_at: string
+          id?: string
+          instructor_id: string
+          location?: string | null
+          note?: string | null
+          staff_note?: string | null
+          starts_at: string
+          status?: Database["public"]["Enums"]["appointment_status"]
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          academy_id?: string
+          auto_assigned?: boolean
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string
+          id?: string
+          instructor_id?: string
+          location?: string | null
+          note?: string | null
+          staff_note?: string | null
+          starts_at?: string
+          status?: Database["public"]["Enums"]["appointment_status"]
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_academy_id_instructor_id_fkey"
+            columns: ["academy_id", "instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructors"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "appointments_academy_id_student_id_fkey"
+            columns: ["academy_id", "student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["academy_id", "id"]
           },
         ]
       }
@@ -698,6 +827,89 @@ export type Database = {
           },
         ]
       }
+      booking_hours: {
+        Row: {
+          academy_id: string
+          created_at: string
+          end_time: string
+          id: string
+          start_time: string
+          weekday: number
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          start_time: string
+          weekday: number
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          start_time?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_hours_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_time_off: {
+        Row: {
+          academy_id: string
+          created_at: string
+          created_by: string | null
+          ends_at: string
+          id: string
+          instructor_id: string | null
+          reason: string | null
+          starts_at: string
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          created_by?: string | null
+          ends_at: string
+          id?: string
+          instructor_id?: string | null
+          reason?: string | null
+          starts_at: string
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string
+          id?: string
+          instructor_id?: string | null
+          reason?: string | null
+          starts_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_time_off_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_time_off_academy_id_instructor_id_fkey"
+            columns: ["academy_id", "instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructors"
+            referencedColumns: ["academy_id", "id"]
+          },
+        ]
+      }
       course_enrollment_settings: {
         Row: {
           academy_id: string
@@ -1064,6 +1276,7 @@ export type Database = {
           ic_number: string | null
           id: string
           instructor_no: string
+          is_bookable: boolean
           phone: string | null
           specialization: string | null
           status: Database["public"]["Enums"]["instructor_status"]
@@ -1085,6 +1298,7 @@ export type Database = {
           ic_number?: string | null
           id?: string
           instructor_no: string
+          is_bookable?: boolean
           phone?: string | null
           specialization?: string | null
           status?: Database["public"]["Enums"]["instructor_status"]
@@ -1106,6 +1320,7 @@ export type Database = {
           ic_number?: string | null
           id?: string
           instructor_no?: string
+          is_bookable?: boolean
           phone?: string | null
           specialization?: string | null
           status?: Database["public"]["Enums"]["instructor_status"]
@@ -1668,6 +1883,20 @@ export type Database = {
         Args: { _kind: string; _record_id: string }
         Returns: Json
       }
+      book_appointment: {
+        Args: {
+          _academy_id: string
+          _instructor_id?: string
+          _note?: string
+          _starts_at: string
+          _student_id?: string
+        }
+        Returns: Json
+      }
+      cancel_appointment: {
+        Args: { _id: string; _reason?: string }
+        Returns: Json
+      }
       create_instructor_invitation: {
         Args: { _instructor_id: string }
         Returns: Json
@@ -1678,8 +1907,17 @@ export type Database = {
         Returns: string
       }
       ensure_pay_token: { Args: { _invoice: string }; Returns: string }
+      get_academy_availability: {
+        Args: { _academy_id: string; _from: string; _to: string }
+        Returns: Json
+      }
       get_academy_enrollment: { Args: { _slug: string }; Returns: Json }
       get_attempt: { Args: { _attempt_id: string }; Returns: Json }
+      get_booking_options: {
+        Args: { _academy_id: string; _from: string; _to: string }
+        Returns: Json
+      }
+      get_my_appointments: { Args: { _academy_id: string }; Returns: Json }
       get_pay_status: {
         Args: { _token: string }
         Returns: {
@@ -1807,6 +2045,8 @@ export type Database = {
     }
     Enums: {
       academy_status: "active" | "suspended" | "cancelled"
+      appointment_assignment: "student_choice" | "round_robin"
+      appointment_status: "booked" | "completed" | "cancelled" | "no_show"
       assessment_type: "quiz" | "exam" | "survey"
       attempt_status: "in_progress" | "submitted" | "graded"
       course_status: "draft" | "published" | "archived"
@@ -1979,6 +2219,8 @@ export const Constants = {
   public: {
     Enums: {
       academy_status: ["active", "suspended", "cancelled"],
+      appointment_assignment: ["student_choice", "round_robin"],
+      appointment_status: ["booked", "completed", "cancelled", "no_show"],
       assessment_type: ["quiz", "exam", "survey"],
       attempt_status: ["in_progress", "submitted", "graded"],
       course_status: ["draft", "published", "archived"],

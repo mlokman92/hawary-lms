@@ -21,6 +21,7 @@ import { LearnAssessmentPage } from './pages/learn/LearnAssessmentPage'
 import { LearnBillingPage } from './pages/learn/LearnBillingPage'
 import { LearnInvoicePage } from './pages/learn/LearnInvoicePage'
 import { LearnProfilePage } from './pages/learn/LearnProfilePage'
+import { LearnAppointmentsPage } from './pages/learn/LearnAppointmentsPage'
 import { SignIn } from './pages/SignIn'
 import { SignUp } from './pages/SignUp'
 import { ForgotPassword } from './pages/ForgotPassword'
@@ -51,6 +52,7 @@ import { PublicPayPage } from './pages/PublicPayPage'
 import { PayResultPage } from './pages/PayResultPage'
 import { EnrollPage } from './pages/EnrollPage'
 import { EnrollmentsPage } from './pages/EnrollmentsPage'
+import { AppointmentsPage } from './pages/AppointmentsPage'
 
 export default function App() {
   return (
@@ -125,6 +127,10 @@ export default function App() {
                       path="/learn/billing/:id"
                       element={<LearnInvoicePage />}
                     />
+                    <Route
+                      path="/learn/appointments"
+                      element={<LearnAppointmentsPage />}
+                    />
                     <Route path="/learn/profile" element={<LearnProfilePage />} />
                     {/* In-tree catch-all. Without it an unknown /learn/* URL hits
                         the global '*' below, which sends it to '/' — and AppShell
@@ -156,6 +162,7 @@ export default function App() {
                     <Route path="/students" element={<StudentsPage />} />
                     <Route path="/students/:id" element={<StudentDetailPage />} />
                     <Route path="/instructors" element={<InstructorsPage />} />
+                    <Route path="/appointments" element={<AppointmentsPage />} />
                     <Route
                       path="/instructors/:id"
                       element={<InstructorDetailPage />}

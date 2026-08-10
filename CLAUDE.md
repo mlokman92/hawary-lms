@@ -32,7 +32,7 @@ Monorepo: **pnpm workspaces + Turborepo**.
   params before the Supabase client consumes them), self-serve academy creation
   (creator becomes admin), academy switcher, light/dark theme.
 - **Sections** (each: list + add/edit, staff-gated, academy-scoped by RLS):
-  Courses · Students · Instructors · Payments. Nav is these four + Dashboard;
+  Courses · Students · Instructors · Payments · Appointments. Nav is these five + Dashboard;
   admins also get Members + Settings. The **header search** (`HeaderSearch` +
   `features/search`) finds students and instructors across the active academy by
   name, email, phone, IC or record number and jumps straight to the record.
@@ -135,6 +135,34 @@ Monorepo: **pnpm workspaces + Turborepo**.
   academy" being the exact opposite of what the person came to do.
   `useLandingTarget`, both shells and `PendingInviteRedirect` all consult it,
   the same way they consult a stashed invite token.
+- **Appointments** (`docs/appointments.md`): one-to-one sessions. **Slots are
+  not rows** — `app.booking_slots(academy, from, to)` derives them from
+  `booking_hours` (recurring weekly windows, academy-wide, in
+  `academies.timezone`), `instructors.is_bookable` and what is already taken or
+  closed (`booking_time_off`, whose null `instructor_id` closes the whole
+  academy). Changing 10:00–18:00 to 09:00–17:00 is one UPDATE, not a
+  regeneration. That one generator feeds the learner page, the staff booking
+  dialog **and** `book_appointment`'s own check, the same reason
+  `app.enrollment_open` exists. Double-booking is an **EXCLUDE constraint** on
+  `(instructor_id, tstzrange)` — and a second on `student_id` — not a
+  check-then-insert, because two students taking the last 15:00 slot at once is
+  the normal case; the predicate skips `cancelled`/`no_show`, so cancelling
+  frees the slot with no second write. `assignment_mode` is `round_robin`
+  (candidates ordered fewest-sessions → longest-since-assigned → id, then walked
+  until one inserts) or `student_choice`; under round robin the RPC **omits the
+  instructor list entirely**, since `instructors` is staff-readable and naming
+  the free teachers would defeat the mode. Naming an instructor is gated on *who
+  is asking*, not the mode: staff may always name one or leave it to the rota, a
+  student under round robin is ignored rather than refused. Students have **no
+  DML policy at all** on `appointments` — `book_appointment` /
+  `cancel_appointment` are the only doors — but marking done/no-show is a plain
+  staff UPDATE. `app.bookable_student` mirrors `app.is_enrolled`'s membership
+  test, not `app.my_student_id`, so suspending a member revokes booking at once.
+  Staff-side `/appointments` is diary-first (week grid) with the policy, hours
+  and pool below it, admin-only; learner-side `/learn/appointments` is pick a
+  day → pick a time → book. Day maths is `YYYY-MM-DD` strings in the academy's
+  zone (`features/appointments/calendar.ts`), never the browser's. **No
+  invoice**, no approval step, not tied to a course.
 - **Data model**: identity is global (`profiles`, one per email); roles/records are
   per-academy. A **student is an academy record** (`students`, not necessarily an auth
   user); enrollment/invoices/payments reference `students`. An **instructor is the same

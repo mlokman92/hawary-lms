@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  CalendarClock,
   ClipboardList,
   FileCheck2,
   LayoutDashboard,
@@ -50,6 +51,7 @@ const nav = (t: TFn): NavItem[] => [
   },
   { title: t('nav.students'), to: '/students', icon: Users },
   { title: t('nav.instructors'), to: '/instructors', icon: Presentation },
+  { title: t('nav.appointments'), to: '/appointments', icon: CalendarClock },
   { title: t('nav.payments'), to: '/payments', icon: Receipt },
 ]
 

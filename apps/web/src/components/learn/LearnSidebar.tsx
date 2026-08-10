@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  CalendarClock,
   ClipboardList,
   FileCheck2,
   LayoutDashboard,
@@ -56,6 +57,11 @@ export function LearnSidebar() {
           ],
         },
         { title: t('nav.learn.work'), to: '/learn/work', icon: ListTodo },
+        {
+          title: t('nav.learn.appointments'),
+          to: '/learn/appointments',
+          icon: CalendarClock,
+        },
       ],
     },
     {

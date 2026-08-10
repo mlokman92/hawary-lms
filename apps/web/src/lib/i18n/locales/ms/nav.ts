@@ -14,6 +14,7 @@ export const nav: NavDict = {
   'nav.assignments': 'Tugasan',
   'nav.enrollments': 'Pendaftaran',
   'nav.students': 'Pelajar',
+  'nav.appointments': 'Temu janji',
   'nav.instructors': 'Pengajar',
   'nav.payments': 'Pembayaran',
   'nav.members': 'Ahli',
@@ -22,6 +23,7 @@ export const nav: NavDict = {
   // Destinasi pelajar
   'nav.learn.dashboard': 'Papan Pemuka',
   'nav.learn.courses': 'Kursus saya',
+  'nav.learn.appointments': 'Temu janji',
   'nav.learn.work': 'Tugasan saya',
   'nav.learn.billing': 'Bil',
   'nav.learn.profile': 'Profil saya',

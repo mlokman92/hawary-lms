@@ -29,6 +29,7 @@ import { pay as enPay } from './locales/en/pay'
 import { notes as enNotes } from './locales/en/notes'
 import { assessments as enAssessments } from './locales/en/assessments'
 import { assignments as enAssignments } from './locales/en/assignments'
+import { appointments as enAppointments } from './locales/en/appointments'
 import { library as enLibrary } from './locales/en/library'
 import { materials as enMaterials } from './locales/en/materials'
 import { grading as enGrading } from './locales/en/grading'
@@ -56,6 +57,7 @@ import { pay as msPay } from './locales/ms/pay'
 import { notes as msNotes } from './locales/ms/notes'
 import { assessments as msAssessments } from './locales/ms/assessments'
 import { assignments as msAssignments } from './locales/ms/assignments'
+import { appointments as msAppointments } from './locales/ms/appointments'
 import { library as msLibrary } from './locales/ms/library'
 import { materials as msMaterials } from './locales/ms/materials'
 import { grading as msGrading } from './locales/ms/grading'
@@ -85,6 +87,7 @@ export const en = {
   ...enNotes,
   ...enAssessments,
   ...enAssignments,
+  ...enAppointments,
   ...enLibrary,
   ...enMaterials,
   ...enGrading,
@@ -129,6 +132,7 @@ export const ms: Record<TKey, string> = {
   ...msNotes,
   ...msAssessments,
   ...msAssignments,
+  ...msAppointments,
   ...msLibrary,
   ...msMaterials,
   ...msGrading,
