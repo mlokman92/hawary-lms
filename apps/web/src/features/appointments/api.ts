@@ -102,6 +102,8 @@ const availabilityKey = (a: string | null, from: Ymd, to: Ymd) =>
 const optionsKey = (a: string | null, from: Ymd, to: Ymd) =>
   ['booking-options', a, from, to] as const
 const mineKey = (a: string | null) => ['my-appointments', a] as const
+const upcomingCountKey = (a: string | null) =>
+  ['appointments-upcoming-count', a] as const
 
 /** Everything a booking write can invalidate, in one place. */
 function invalidateBookings(
@@ -112,6 +114,7 @@ function invalidateBookings(
   void qc.invalidateQueries({ queryKey: ['booking-availability', academyId] })
   void qc.invalidateQueries({ queryKey: ['booking-options', academyId] })
   void qc.invalidateQueries({ queryKey: mineKey(academyId) })
+  void qc.invalidateQueries({ queryKey: upcomingCountKey(academyId) })
 }
 
 // ---------------------------------------------------------------------------
@@ -418,6 +421,38 @@ export function useAcademyAvailability(
       if (error) throw error
       return ((data as unknown as { slots: OpenSlot[] } | null)?.slots ??
         []) as OpenSlot[]
+    },
+  })
+}
+
+/**
+ * Just the sidebar's number: a count, not the rows.
+ *
+ * Its own query rather than a slice of useAcademyAppointments — that one is
+ * scoped to the week being *looked at*, which is the wrong window (next week's
+ * sessions still count) and is not loaded at all outside /appointments. Same
+ * shape as usePendingEnrollmentCount: a head request, so no rows cross the
+ * wire to render one integer on every back-office page.
+ */
+export function useUpcomingAppointmentCount(academyId: string | null) {
+  return useQuery({
+    queryKey: upcomingCountKey(academyId),
+    enabled: !!academyId,
+    // The sidebar outlives every navigation, and students book while the tab
+    // sits open — coming back to the window is when this has to be right.
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('appointments')
+        .select('id', { count: 'exact', head: true })
+        .eq('academy_id', academyId!)
+        .eq('status', 'booked')
+        // Strictly ahead of now: a session that has started is no longer
+        // upcoming, and one already marked done or cancelled is not booked.
+        .gt('starts_at', new Date().toISOString())
+      if (error) throw error
+      return count ?? 0
     },
   })
 }

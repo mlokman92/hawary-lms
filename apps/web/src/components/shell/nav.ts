@@ -13,6 +13,15 @@ export type NavItem = {
    */
   badge?: number
   /**
+   * What the count means, which decides how loudly it is drawn.
+   *
+   * `urgent` (the default) is work waiting on somebody — a request nobody has
+   * answered. `neutral` is a number that is merely true: a diary with sessions
+   * in it is the system working, not a queue. Drawing both in the same red is
+   * what makes the red stop meaning anything.
+   */
+  badgeTone?: 'urgent' | 'neutral'
+  /**
    * One level of sub-navigation, rendered permanently rather than behind a
    * disclosure. Assessments and assignments are destinations in their own right
    * — they were previously reachable only by opening a course and scanning its

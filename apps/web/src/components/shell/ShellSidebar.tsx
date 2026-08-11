@@ -2,7 +2,12 @@ import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { UserMenu } from '@/components/UserMenu'
 import { cn } from '@/lib/utils'
-import { isBranchActive, isNavActive, type NavGroup } from './nav'
+import {
+  isBranchActive,
+  isNavActive,
+  type NavGroup,
+  type NavItem,
+} from './nav'
 import {
   Sidebar,
   SidebarContent,
@@ -31,6 +36,16 @@ import {
  */
 const URGENT_BADGE =
   'bg-destructive text-background rounded-full text-xs font-semibold tabular-nums'
+
+/**
+ * A count that is only worth knowing. No fill — it sits in the rail at the
+ * weight of the label it belongs to, so the eye finds the red one first.
+ */
+const NEUTRAL_BADGE = 'text-muted-foreground rounded-full text-xs tabular-nums'
+
+function badgeClass(tone: NavItem['badgeTone']): string {
+  return tone === 'neutral' ? NEUTRAL_BADGE : URGENT_BADGE
+}
 
 /**
  * The sidebar body shared by both trees. `UserMenu` is role-agnostic — it reads
@@ -87,7 +102,7 @@ export function ShellSidebar({
                       </Link>
                     </SidebarMenuButton>
                     {item.badge ? (
-                      <SidebarMenuBadge className={URGENT_BADGE}>
+                      <SidebarMenuBadge className={badgeClass(item.badgeTone)}>
                         {item.badge}
                       </SidebarMenuBadge>
                     ) : null}
@@ -118,7 +133,7 @@ export function ShellSidebar({
                                     <span
                                       className={cn(
                                         'ml-auto flex h-5 min-w-5 items-center justify-center px-1',
-                                        URGENT_BADGE,
+                                        badgeClass(child.badgeTone),
                                       )}
                                     >
                                       {child.badge}

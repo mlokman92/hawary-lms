@@ -14,6 +14,7 @@ import {
 import { useAcademy } from '@/lib/academy'
 import { useT, type TFn } from '@/lib/i18n'
 import { usePendingEnrollmentCount } from '@/features/enrollment/api'
+import { useUpcomingAppointmentCount } from '@/features/appointments/api'
 import { AcademySwitcher } from './AcademySwitcher'
 import { ShellSidebar } from './shell/ShellSidebar'
 import type { NavGroup, NavItem } from './shell/nav'
@@ -26,7 +27,11 @@ import type { NavGroup, NavItem } from './shell/nav'
 //
 // Built per render rather than held as a module constant: the titles are
 // translated, so they have to be read after the language is known.
-const nav = (t: TFn, pendingEnrollments: number): NavItem[] => [
+const nav = (
+  t: TFn,
+  pendingEnrollments: number,
+  upcomingAppointments: number,
+): NavItem[] => [
   { title: t('nav.dashboard'), to: '/', icon: LayoutDashboard, exact: true },
   {
     title: t('nav.courses'),
@@ -55,7 +60,16 @@ const nav = (t: TFn, pendingEnrollments: number): NavItem[] => [
   },
   { title: t('nav.students'), to: '/students', icon: Users },
   { title: t('nav.instructors'), to: '/instructors', icon: Presentation },
-  { title: t('nav.appointments'), to: '/appointments', icon: CalendarClock },
+  {
+    title: t('nav.appointments'),
+    to: '/appointments',
+    icon: CalendarClock,
+    // Sessions still to come. Neutral, not urgent: a booked diary is the
+    // feature working, and nothing here is waiting on a decision the way a
+    // pending enrolment is.
+    badge: upcomingAppointments,
+    badgeTone: 'neutral',
+  },
   { title: t('nav.payments'), to: '/payments', icon: Receipt },
 ]
 
@@ -68,8 +82,10 @@ export function AppSidebar() {
   const { active, activeAcademyId } = useAcademy()
   const { t } = useT()
   const { data: pendingEnrollments } = usePendingEnrollmentCount(activeAcademyId)
+  const { data: upcomingAppointments } =
+    useUpcomingAppointmentCount(activeAcademyId)
 
-  const items = nav(t, pendingEnrollments ?? 0)
+  const items = nav(t, pendingEnrollments ?? 0, upcomingAppointments ?? 0)
   const groups: NavGroup[] = [
     {
       label: t('nav.group.platform'),
