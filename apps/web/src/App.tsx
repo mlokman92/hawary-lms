@@ -53,6 +53,8 @@ import { PayResultPage } from './pages/PayResultPage'
 import { EnrollPage } from './pages/EnrollPage'
 import { EnrollmentsPage } from './pages/EnrollmentsPage'
 import { AppointmentsPage } from './pages/AppointmentsPage'
+import { IncentivesPage } from './pages/IncentivesPage'
+import { IncentiveBatchPage } from './pages/IncentiveBatchPage'
 
 export default function App() {
   return (
@@ -190,6 +192,8 @@ export default function App() {
                     />
                     <Route path="/payments" element={<PaymentsPage />} />
                     <Route path="/payments/:id" element={<InvoiceDetailPage />} />
+                    <Route path="/incentives" element={<IncentivesPage />} />
+                    <Route path="/incentives/:id" element={<IncentiveBatchPage />} />
                     {/* No /members/:id: a member's page *is* their instructor
                         or student record, so the roster links straight there
                         rather than mirroring those pages badly. */}

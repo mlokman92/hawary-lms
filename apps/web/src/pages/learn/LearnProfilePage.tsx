@@ -7,6 +7,7 @@ import { useMyStudent } from '@/features/learn/api'
 import { useMyProfile, useUpdateMyProfile } from '@/features/profile/api'
 import { STATUS_META } from '@/features/students/status'
 import { PendingInviteList } from '@/features/invitations/PendingInviteList'
+import { BankAccountCard } from '@/features/bank/BankAccountCard'
 import { PageHeader } from '@/components/patterns/PageHeader'
 import { ErrorBlock, RouteLoading } from '@/components/patterns/QueryState'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -221,6 +222,16 @@ export function LearnProfilePage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Nothing to attach bank details to without an academy record — the
+            row is keyed by student_id and the policy is `owns_student`. */}
+        {academyId && student ? (
+          <BankAccountCard
+            academyId={academyId}
+            studentId={student.id}
+            canEdit
+          />
+        ) : null}
       </div>
     </div>
   )

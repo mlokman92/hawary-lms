@@ -91,6 +91,51 @@ export const settings: SettingsDict = {
   'settings.toyyibpay.error.save_failed': 'Kunci tidak dapat disimpan.',
   'settings.toyyibpay.error.no_response': 'Tiada respons daripada pelayan.',
 
+  // Kad Billplz. Pasangan kepada kad ToyyibPay di atas, tetapi arah wang yang
+  // bertentangan: ToyyibPay mengutip daripada pelajar, Payment Order Billplz
+  // membayar mereka. "Sandbox", "Live" dan "Payment Order" ialah nama Billplz
+  // sendiri, jadi ia dikekalkan.
+  'settings.billplz.title': 'Pindahan kepada pelajar · Billplz',
+  'settings.billplz.description':
+    'Tambah kunci Billplz Payment Order akademi anda supaya anda boleh memindahkan insentif terus ke akaun bank pelajar anda sendiri.',
+  'settings.billplz.connected': 'Kunci telah disambungkan',
+  'settings.billplz.mode.sandbox': 'Sandbox',
+  'settings.billplz.mode.live': 'Live',
+  'settings.billplz.secret_masked': 'Kunci rahsia ••••{last4}',
+  'settings.billplz.limit': 'Had Payment Order {amount}',
+  'settings.billplz.replace_key': 'Ganti kunci',
+  'settings.billplz.remove_key': 'Buang kunci',
+  'settings.billplz.removing': 'Membuang…',
+  'settings.billplz.remove_confirm.title': 'Buang kunci Billplz?',
+  'settings.billplz.remove_confirm.body':
+    'Tindakan ini memadam kunci yang tersimpan, jadi tiada pindahan lain boleh dihantar. Pindahan yang telah dihantar akan dikekalkan berserta statusnya. Anda boleh menambah kunci semula pada bila-bila masa.',
+
+  'settings.billplz.secret_label': 'Kunci rahsia API Billplz',
+  'settings.billplz.secret_placeholder': 'Kunci rahsia API anda',
+  'settings.billplz.secret_hint':
+    'Dapatkannya di papan pemuka Billplz anda, di bawah Settings → Account Settings.',
+  'settings.billplz.xsign_label': 'X Signature Key',
+  'settings.billplz.xsign_placeholder': 'X Signature Key anda',
+  'settings.billplz.xsign_hint':
+    'Billplz menandatangani setiap arahan pembayaran dengan kunci ini. Dapatkannya di papan pemuka Billplz anda, di bawah Settings → X Signature Key, bahagian Payment Order.',
+  'settings.billplz.sandbox_label': 'Mod sandbox',
+  'settings.billplz.sandbox_hint':
+    'Gunakan billplz-sandbox.com untuk ujian. Biarkan dimatikan untuk pindahan sebenar.',
+  'settings.billplz.advanced': 'Pilihan lanjutan',
+
+  'settings.billplz.verifying': 'Mengesahkan…',
+  'settings.billplz.save_new_key': 'Simpan kunci baharu',
+  'settings.billplz.connect': 'Sambung Billplz',
+
+  'settings.billplz.error.secret_required':
+    'Masukkan kunci rahsia API Billplz anda.',
+  'settings.billplz.error.xsign_required':
+    'Masukkan X Signature Key Billplz anda.',
+  'settings.billplz.error.verify_failed':
+    'Kunci tidak dapat disahkan dengan Billplz.',
+  'settings.billplz.error.save_failed': 'Kunci tidak dapat disimpan.',
+  'settings.billplz.error.no_response': 'Tiada respons daripada pelayan.',
+
   // Halaman ahli kini mempunyai ruang namanya sendiri — lihat
   // `locales/ms/members.ts`.
 }

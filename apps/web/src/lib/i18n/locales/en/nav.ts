@@ -16,6 +16,7 @@ export const nav = {
   'nav.instructors': 'Instructors',
   'nav.appointments': 'Appointments',
   'nav.payments': 'Payments',
+  'nav.incentives': 'Incentive',
   'nav.members': 'Members',
   'nav.settings': 'Settings',
 

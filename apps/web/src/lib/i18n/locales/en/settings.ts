@@ -90,6 +90,51 @@ export const settings = {
   'settings.toyyibpay.error.save_failed': 'Could not save the key.',
   'settings.toyyibpay.error.no_response': 'No response from server.',
 
+  // Billplz card. The sibling of the ToyyibPay card above and deliberately
+  // shaped like it — but the opposite direction of money: ToyyibPay collects
+  // from students, Billplz Payment Orders pay them. "Sandbox", "Live" and
+  // "Payment Order" are Billplz's own names and stay as-is in every language.
+  'settings.billplz.title': 'Student transfers · Billplz',
+  'settings.billplz.description':
+    'Add your academy’s Billplz Payment Order keys so you can transfer incentives straight into your students’ own bank accounts.',
+  'settings.billplz.connected': 'Keys connected',
+  'settings.billplz.mode.sandbox': 'Sandbox',
+  'settings.billplz.mode.live': 'Live',
+  'settings.billplz.secret_masked': 'Secret ••••{last4}',
+  'settings.billplz.limit': 'Payment Order Limit {amount}',
+  'settings.billplz.replace_key': 'Replace keys',
+  'settings.billplz.remove_key': 'Remove keys',
+  'settings.billplz.removing': 'Removing…',
+  'settings.billplz.remove_confirm.title': 'Remove Billplz keys?',
+  'settings.billplz.remove_confirm.body':
+    'This deletes your stored keys, so no further transfers can be sent. Transfers already sent are kept, along with their status. You can add keys again anytime.',
+
+  'settings.billplz.secret_label': 'Billplz API secret key',
+  'settings.billplz.secret_placeholder': 'Your API secret key',
+  'settings.billplz.secret_hint':
+    'Find it in your Billplz dashboard under Settings → Account Settings.',
+  'settings.billplz.xsign_label': 'X Signature Key',
+  'settings.billplz.xsign_placeholder': 'Your X Signature Key',
+  'settings.billplz.xsign_hint':
+    'Billplz signs every payment order with this key. Find it in your Billplz dashboard under Settings → X Signature Key, Payment Order section.',
+  'settings.billplz.sandbox_label': 'Sandbox mode',
+  'settings.billplz.sandbox_hint':
+    'Use billplz-sandbox.com for testing. Leave off for real transfers.',
+  'settings.billplz.advanced': 'Advanced options',
+
+  'settings.billplz.verifying': 'Verifying…',
+  'settings.billplz.save_new_key': 'Save new keys',
+  'settings.billplz.connect': 'Connect Billplz',
+
+  'settings.billplz.error.secret_required':
+    'Enter your Billplz API secret key.',
+  'settings.billplz.error.xsign_required':
+    'Enter your Billplz X Signature Key.',
+  'settings.billplz.error.verify_failed':
+    'Could not verify the keys with Billplz.',
+  'settings.billplz.error.save_failed': 'Could not save the keys.',
+  'settings.billplz.error.no_response': 'No response from server.',
+
   // The members page has its own namespace now — see `locales/en/members.ts`.
 } as const
 

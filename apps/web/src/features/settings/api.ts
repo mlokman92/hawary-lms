@@ -133,6 +133,77 @@ export function useSetChargeToPayor(academyId: string) {
   })
 }
 
+/**
+ * Result of the `billplz-connect` edge function. `ok: false` with a `code` is a
+ * soft outcome rendered inline (the keys did not verify). `limit_sen` is the
+ * Payment Order Limit — the prefunded balance a disbursement draws down — and
+ * only ever arrives here, since verifying the keys is the call that reads it.
+ */
+export type BillplzConnectResult = {
+  ok: boolean
+  last4?: string
+  is_sandbox?: boolean
+  enabled?: boolean
+  limit_sen?: number
+  code?: 'verify_failed'
+  message?: string
+}
+
+/** Save/replace the Billplz disbursement keys (server-side: verifies both keys
+ *  against `GET /payment_order_limit`, stores them in Vault). Neither key
+ *  round-trips back. */
+export function useSaveBillplz(academyId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      secretKey: string
+      xSignatureKey: string
+      isSandbox: boolean
+    }) => {
+      const { data, error } =
+        await supabase.functions.invoke<BillplzConnectResult>(
+          'billplz-connect',
+          {
+            body: {
+              academy_id: academyId,
+              secret_key: input.secretKey,
+              x_signature_key: input.xSignatureKey,
+              is_sandbox: input.isSandbox,
+            },
+          },
+        )
+      if (error) {
+        const body = await readFunctionError(error)
+        throw new Error(
+          body ??
+            (error instanceof Error
+              ? error.message
+              : translate('settings.billplz.error.save_failed')),
+        )
+      }
+      return (data ?? {
+        ok: false,
+        message: translate('settings.billplz.error.no_response'),
+      }) as BillplzConnectResult
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: settingsKey(academyId) }),
+  })
+}
+
+/** Remove the stored Billplz keys (deletes both Vault secrets + clears metadata). */
+export function useRemoveBillplz(academyId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.rpc('remove_billplz_credentials', {
+        _academy: academyId,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: settingsKey(academyId) }),
+  })
+}
+
 async function readFunctionError(error: unknown): Promise<string | null> {
   const ctx = (error as { context?: unknown })?.context
   if (ctx && typeof (ctx as Response).json === 'function') {

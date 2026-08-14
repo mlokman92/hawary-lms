@@ -3,6 +3,7 @@ import {
   CalendarClock,
   ClipboardList,
   FileCheck2,
+  HandCoins,
   LayoutDashboard,
   Presentation,
   Receipt,
@@ -74,6 +75,7 @@ const nav = (
 ]
 
 const adminNav = (t: TFn): NavItem[] => [
+  { title: t('nav.incentives'), to: '/incentives', icon: HandCoins },
   { title: t('nav.members'), to: '/members', icon: ShieldCheck },
   { title: t('nav.settings'), to: '/settings', icon: Settings },
 ]

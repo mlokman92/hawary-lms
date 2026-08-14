@@ -303,6 +303,12 @@ export type Database = {
       academy_payment_settings: {
         Row: {
           academy_id: string
+          billplz_enabled: boolean
+          billplz_has_secret: boolean
+          billplz_is_sandbox: boolean
+          billplz_secret_last4: string | null
+          billplz_secret_set_at: string | null
+          billplz_secret_set_by: string | null
           created_at: string
           provider: Database["public"]["Enums"]["payment_provider"]
           toyyibpay_category_code: string | null
@@ -317,6 +323,12 @@ export type Database = {
         }
         Insert: {
           academy_id: string
+          billplz_enabled?: boolean
+          billplz_has_secret?: boolean
+          billplz_is_sandbox?: boolean
+          billplz_secret_last4?: string | null
+          billplz_secret_set_at?: string | null
+          billplz_secret_set_by?: string | null
           created_at?: string
           provider?: Database["public"]["Enums"]["payment_provider"]
           toyyibpay_category_code?: string | null
@@ -331,6 +343,12 @@ export type Database = {
         }
         Update: {
           academy_id?: string
+          billplz_enabled?: boolean
+          billplz_has_secret?: boolean
+          billplz_is_sandbox?: boolean
+          billplz_secret_last4?: string | null
+          billplz_secret_set_at?: string | null
+          billplz_secret_set_by?: string | null
           created_at?: string
           provider?: Database["public"]["Enums"]["payment_provider"]
           toyyibpay_category_code?: string | null
@@ -1260,6 +1278,144 @@ export type Database = {
           },
         ]
       }
+      incentive_batches: {
+        Row: {
+          academy_id: string
+          amount_sen: number
+          billplz_collection_id: string | null
+          callback_nonce: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_sandbox: boolean
+          sent_at: string | null
+          status: Database["public"]["Enums"]["incentive_batch_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          academy_id: string
+          amount_sen: number
+          billplz_collection_id?: string | null
+          callback_nonce?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_sandbox?: boolean
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["incentive_batch_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          academy_id?: string
+          amount_sen?: number
+          billplz_collection_id?: string | null
+          callback_nonce?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_sandbox?: boolean
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["incentive_batch_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incentive_batches_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incentive_payouts: {
+        Row: {
+          academy_id: string
+          account_holder_name: string
+          amount_sen: number
+          bank_account_last4: string | null
+          bank_account_number: string
+          bank_code: string
+          batch_id: string
+          billplz_payment_order_id: string | null
+          completed_at: string | null
+          created_at: string
+          failure_reason: string | null
+          id: string
+          provider_status: string | null
+          sent_at: string | null
+          status: Database["public"]["Enums"]["incentive_payout_status"]
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          academy_id: string
+          account_holder_name: string
+          amount_sen: number
+          bank_account_last4?: string | null
+          bank_account_number: string
+          bank_code: string
+          batch_id: string
+          billplz_payment_order_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          failure_reason?: string | null
+          id?: string
+          provider_status?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["incentive_payout_status"]
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          academy_id?: string
+          account_holder_name?: string
+          amount_sen?: number
+          bank_account_last4?: string | null
+          bank_account_number?: string
+          bank_code?: string
+          batch_id?: string
+          billplz_payment_order_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          failure_reason?: string | null
+          id?: string
+          provider_status?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["incentive_payout_status"]
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incentive_payouts_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incentive_payouts_academy_id_student_id_fkey"
+            columns: ["academy_id", "student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "incentive_payouts_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "incentive_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       instructors: {
         Row: {
           academy_id: string
@@ -1766,6 +1922,57 @@ export type Database = {
         }
         Relationships: []
       }
+      student_bank_accounts: {
+        Row: {
+          academy_id: string
+          account_holder_ic: string | null
+          account_holder_name: string
+          bank_account_number: string
+          bank_code: string
+          created_at: string
+          student_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          academy_id: string
+          account_holder_ic?: string | null
+          account_holder_name: string
+          bank_account_number: string
+          bank_code: string
+          created_at?: string
+          student_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          academy_id?: string
+          account_holder_ic?: string | null
+          account_holder_name?: string
+          bank_account_number?: string
+          bank_code?: string
+          created_at?: string
+          student_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_bank_accounts_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_bank_accounts_academy_id_student_id_fkey"
+            columns: ["academy_id", "student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["academy_id", "id"]
+          },
+        ]
+      }
       students: {
         Row: {
           academy_id: string
@@ -1897,11 +2104,49 @@ export type Database = {
         Args: { _id: string; _reason?: string }
         Returns: Json
       }
+      claim_incentive_payouts: {
+        Args: { _batch: string; _limit: number }
+        Returns: {
+          academy_id: string
+          account_holder_name: string
+          amount_sen: number
+          bank_account_last4: string | null
+          bank_account_number: string
+          bank_code: string
+          batch_id: string
+          billplz_payment_order_id: string | null
+          completed_at: string | null
+          created_at: string
+          failure_reason: string | null
+          id: string
+          provider_status: string | null
+          sent_at: string | null
+          status: Database["public"]["Enums"]["incentive_payout_status"]
+          student_id: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "incentive_payouts"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      create_incentive_batch: {
+        Args: {
+          _academy: string
+          _amount_sen: number
+          _description: string
+          _title: string
+        }
+        Returns: string
+      }
       create_instructor_invitation: {
         Args: { _instructor_id: string }
         Returns: Json
       }
       create_invitation: { Args: { _student_id: string }; Returns: Json }
+      delete_incentive_batch: { Args: { _batch: string }; Returns: undefined }
       duplicate_course: {
         Args: { _code?: string; _course_id: string; _title?: string }
         Returns: string
@@ -1913,6 +2158,7 @@ export type Database = {
       }
       get_academy_enrollment: { Args: { _slug: string }; Returns: Json }
       get_attempt: { Args: { _attempt_id: string }; Returns: Json }
+      get_billplz_credentials: { Args: { _academy: string }; Returns: Json }
       get_booking_options: {
         Args: { _academy_id: string; _from: string; _to: string }
         Returns: Json
@@ -1943,6 +2189,19 @@ export type Database = {
         }[]
       }
       get_toyyibpay_secret: { Args: { _academy: string }; Returns: string }
+      incentive_candidates: {
+        Args: { _academy: string; _course?: string }
+        Returns: {
+          bank_code: string
+          email: string
+          full_name: string
+          has_bank: boolean
+          masked_account: string
+          status: Database["public"]["Enums"]["student_status"]
+          student_id: string
+          student_no: string
+        }[]
+      }
       join_academy: {
         Args: { _course_id: string; _slug: string }
         Returns: Json
@@ -2005,6 +2264,10 @@ export type Database = {
         }
         Returns: string
       }
+      remove_billplz_credentials: {
+        Args: { _academy: string }
+        Returns: undefined
+      }
       remove_toyyibpay_credentials: {
         Args: { _academy: string }
         Returns: undefined
@@ -2024,6 +2287,20 @@ export type Database = {
       }
       save_attempt_answers: {
         Args: { _answers: Json; _attempt_id: string }
+        Returns: Json
+      }
+      set_billplz_credentials: {
+        Args: {
+          _academy: string
+          _enabled: boolean
+          _is_sandbox: boolean
+          _secret: string
+          _xsign: string
+        }
+        Returns: Json
+      }
+      set_incentive_recipients: {
+        Args: { _batch: string; _student_ids: string[] }
         Returns: Json
       }
       set_toyyibpay_credentials: {
@@ -2057,6 +2334,14 @@ export type Database = {
         | "dropped"
         | "cancelled"
       gender: "male" | "female"
+      incentive_batch_status: "draft" | "sending" | "sent" | "cancelled"
+      incentive_payout_status:
+        | "pending"
+        | "sending"
+        | "processing"
+        | "completed"
+        | "failed"
+        | "cancelled"
       instructor_status: "active" | "on_leave" | "inactive"
       invitation_status: "pending" | "accepted" | "revoked" | "expired"
       invoice_status:
@@ -2232,6 +2517,15 @@ export const Constants = {
         "cancelled",
       ],
       gender: ["male", "female"],
+      incentive_batch_status: ["draft", "sending", "sent", "cancelled"],
+      incentive_payout_status: [
+        "pending",
+        "sending",
+        "processing",
+        "completed",
+        "failed",
+        "cancelled",
+      ],
       instructor_status: ["active", "on_leave", "inactive"],
       invitation_status: ["pending", "accepted", "revoked", "expired"],
       invoice_status: [

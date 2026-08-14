@@ -33,7 +33,7 @@ Monorepo: **pnpm workspaces + Turborepo**.
   (creator becomes admin), academy switcher, light/dark theme.
 - **Sections** (each: list + add/edit, staff-gated, academy-scoped by RLS):
   Courses · Students · Instructors · Payments · Appointments. Nav is these five + Dashboard;
-  admins also get Members + Settings. The **header search** (`HeaderSearch` +
+  admins also get Incentive + Members + Settings. The **header search** (`HeaderSearch` +
   `features/search`) finds students and instructors across the active academy by
   name, email, phone, IC or record number and jumps straight to the record.
 - **Course → module → content**: a course is a card grid (`/courses`) showing per-course
@@ -257,6 +257,26 @@ Monorepo: **pnpm workspaces + Turborepo**.
   are left live so `verify-payment` still sweeps them. The RM1 charge composes
   unchanged and applies **per transaction** — set at creation
   (`InvoiceFormDialog`) or after issue (`PayLinkCard`, the real case).
+- **Billplz incentives** (`docs/billplz-incentives.md`): paying a per-student
+  government grant **out** to each student's own bank account — money out, so no
+  invoice and no `payments` row; `/payments` stays money in. Billplz **Payment
+  Order**: two keys (API Secret = Basic auth, X Signature = an HMAC-SHA512
+  `checksum` whose value order differs **per endpoint**), a prefunded Payment
+  Order Limit separate from the Credit Balance, `total` in sen, sandbox settles
+  only `DUMMYBANKVERIFIED`. **There is no bulk endpoint** — a bulk transfer is a
+  loop of `POST /payment_orders`, which is why `billplz-disburse` is chunked (25,
+  cap 50), claims rows in **one** `UPDATE … FOR UPDATE SKIP LOCKED` statement
+  (`claim_incentive_payouts`, service-role only) and is resumable; insufficient
+  funds releases the claim and halts. Settlement is **reconciliation-driven** —
+  the callback fires only on `completed`/`refunded` and retries once, so
+  `billplz-payout-status` is authoritative and the callback (nonce + constant-time
+  checksum) is a fast path. Bank details are a **separate table**
+  (`student_bank_accounts`, `app.is_admin OR app.owns_student` — never
+  `app.is_staff`) because RLS is row-level and columns on `students` would be
+  trainer-readable; a payout **snapshots** them. Clients have **no DML** on
+  `incentive_payouts`, and `incentive_batches` UPDATE/DELETE are pinned to
+  `status = 'draft'` so a sent batch cannot be reopened and re-sent. Admin-only
+  `/incentives`; students see their own on `/learn/billing`.
 - **Learner surface** (`/learn/*`, `StudentShell`): enrolled courses → published
   modules → notes / assignments / assessments, plus **Billing** (own invoices,
   read-only) and **My profile** (editable `profiles.full_name`/`phone`). It renders

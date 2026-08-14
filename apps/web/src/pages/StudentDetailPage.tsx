@@ -34,6 +34,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { BankAccountCard } from '@/features/bank/BankAccountCard'
 import { StudentFormDialog } from '@/features/students/StudentFormDialog'
 import { EnrollCourseDialog } from '@/features/students/EnrollCourseDialog'
 import { InviteLink } from '@/features/students/InviteLink'
@@ -566,7 +567,14 @@ export function StudentDetailPage() {
         </CardContent>
       </Card>
 
-      {/* 5. Danger zone */}
+      {/* 5. Bank account — admin only. Trainers are excluded by the table's
+          own policy (`app.is_admin OR app.owns_student`), so for them the card
+          could only ever render empty. */}
+      {isAdmin && academyId ? (
+        <BankAccountCard academyId={academyId} studentId={student.id} canEdit />
+      ) : null}
+
+      {/* 6. Danger zone */}
       {isStaff ? (
         <Card className="border-destructive/40">
           <CardHeader>

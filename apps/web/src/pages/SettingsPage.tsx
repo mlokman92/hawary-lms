@@ -1,6 +1,7 @@
 import { useAcademy } from '@/lib/academy'
 import { useT } from '@/lib/i18n'
 import { AcademyProfileCard } from '@/features/settings/AcademyProfileCard'
+import { BillplzSettingsCard } from '@/features/settings/BillplzSettingsCard'
 import { ToyyibPaySettingsCard } from '@/features/settings/ToyyibPaySettingsCard'
 
 export function SettingsPage() {
@@ -28,6 +29,7 @@ export function SettingsPage() {
           <>
             <AcademyProfileCard academyId={activeAcademyId} />
             <ToyyibPaySettingsCard academyId={activeAcademyId} />
+            <BillplzSettingsCard academyId={activeAcademyId} />
           </>
         ) : null}
       </div>

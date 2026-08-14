@@ -6,6 +6,8 @@ import { useT } from '@/lib/i18n'
 import { useStudentAcademy } from '@/lib/studentAcademy'
 import { useMyStudent } from '@/features/learn/api'
 import { INVOICE_STATUS_KEY, useMyInvoices } from '@/features/learn/billing'
+import { useMyPayouts } from '@/features/incentives/learnApi'
+import { PAYOUT_STATUS_META } from '@/features/incentives/status'
 import { INVOICE_STATUS_VARIANT } from '@/features/payments/api'
 import {
   hasReceipt,
@@ -47,6 +49,7 @@ export function LearnBillingPage() {
     student?.id,
   )
   const docs = useInvoiceDocuments(academyId)
+  const { data: payouts } = useMyPayouts(academyId, student?.id)
 
   // Rendered in every branch so the h1 never pops in — same as /payments.
   const header = (
@@ -225,6 +228,55 @@ export function LearnBillingPage() {
           <p className="text-destructive mt-3 text-sm">{docs.error}</p>
         ) : null}
       </div>
+
+      {/*
+        Money going the other way. Rendered only when there is something to
+        show: a student whose academy runs no incentives should not be told
+        that a feature exists. The account it lands in is never printed — the
+        student knows their own, and this page is one screenshot away from
+        anyone standing behind them.
+      */}
+      {payouts && payouts.length > 0 ? (
+        <div className="mt-8">
+          <h2 className="mb-3 font-medium">{t('incentives.learn.payouts')}</h2>
+          <div className="rounded-xl border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('incentives.learn.col.batch')}</TableHead>
+                  <TableHead>{t('common.status')}</TableHead>
+                  <TableHead>{t('common.date')}</TableHead>
+                  <TableHead className="text-right">
+                    {t('common.amount')}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {payouts.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">
+                      {p.batch?.title ?? t('common.untitled')}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={PAYOUT_STATUS_META[p.status].variant}>
+                        {t(PAYOUT_STATUS_META[p.status].labelKey)}
+                      </Badge>
+                    </TableCell>
+                    {/* The date that matters is when the money moved, which
+                        only exists once it has. */}
+                    <TableCell className="text-sm">
+                      {fmtDate(p.completed_at ?? p.sent_at ?? p.created_at)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatMYR(p.amount_sen)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
