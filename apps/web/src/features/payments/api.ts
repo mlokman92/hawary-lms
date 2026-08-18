@@ -71,6 +71,20 @@ export type PaymentLogFilters = {
   status: PaymentStatus | null
 }
 
+/**
+ * Which date the ledger is ordered by.
+ *
+ * `recorded` (created_at) is the default because `RecordPaymentDialog` asks for
+ * the payment date, so staff entering historical payments back-date them — a
+ * payment banked today for money that arrived in May sorts into May, and "I
+ * just recorded it and cannot see it" is indistinguishable from missing.
+ * `paid` is the value-date order a reconciliation wants.
+ *
+ * Not part of `PaymentLogFilters` on purpose: a sum and a count do not care
+ * about ORDER BY, so the totals query must not be re-fetched when this changes.
+ */
+export type PaymentLogSort = 'recorded' | 'paid'
+
 
 /**
  * ToyyibPay's standard B2C FPX rate — a flat RM1.00 per transaction whatever the
@@ -86,8 +100,12 @@ export type NewItem = {
 
 const listKey = (a: string | null) => ['invoices', a] as const
 const oneKey = (id: string) => ['invoice', id] as const
-const logKey = (a: string | null, f: PaymentLogFilters, page: number) =>
-  ['payment-log', a, f.search, f.status, page] as const
+const logKey = (
+  a: string | null,
+  f: PaymentLogFilters,
+  sort: PaymentLogSort,
+  page: number,
+) => ['payment-log', a, f.search, f.status, sort, page] as const
 const logTotalsKey = (a: string | null, f: PaymentLogFilters) =>
   ['payment-log-totals', a, f.search, f.status] as const
 
@@ -201,16 +219,18 @@ function searchArgs(filters: PaymentLogFilters) {
 export function usePaymentLogPage(
   academyId: string | null,
   filters: PaymentLogFilters,
+  sort: PaymentLogSort,
   page: number,
 ) {
   return useQuery({
-    queryKey: logKey(academyId, filters, page),
+    queryKey: logKey(academyId, filters, sort, page),
     enabled: !!academyId,
     placeholderData: keepPreviousData,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('payment_log_page', {
         _academy: academyId!,
         ...searchArgs(filters),
+        _sort: sort,
         _limit: PAGE_SIZE,
         _offset: (page - 1) * PAGE_SIZE,
       })
@@ -266,6 +286,7 @@ const EXPORT_CHUNK = 200
 export async function fetchPaymentLogAll(
   academyId: string,
   filters: PaymentLogFilters,
+  sort: PaymentLogSort,
   total: number,
 ): Promise<PaymentLogRow[]> {
   const rows: PaymentLogRow[] = []
@@ -275,6 +296,9 @@ export async function fetchPaymentLogAll(
     const { data, error } = await supabase.rpc('payment_log_page', {
       _academy: academyId,
       ...searchArgs(filters),
+      // Same order as the screen: a CSV that disagrees with the table it was
+      // exported from is a support ticket waiting to happen.
+      _sort: sort,
       _limit: EXPORT_CHUNK,
       _offset: rows.length,
     })

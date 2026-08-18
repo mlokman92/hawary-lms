@@ -265,6 +265,24 @@ Monorepo: **pnpm workspaces + Turborepo**.
   The dashboard's recent-payments card links here as its "View all"; its revenue
   chart is now a **single** `collected` series (the invoiced figure survives as
   a number on the card, not a bar), so `dash.chart.invoiced` is gone.
+- **Back-dated payments** (`payment_log_page._sort`): `RecordPaymentDialog` asks
+  for the *payment* date and stores it at midday, so staff catching up on
+  historical payments enter them back-dated — **737 of 742** rows in this
+  database have a `paid_at` on a different day from their `created_at`. Ordering
+  the ledger by `paid_at` therefore buries fresh data entry: a payment banked
+  today for money that arrived in May sorted to row 338 of 742, page 7. It was
+  never missing, but "I just recorded it and cannot see it" is
+  indistinguishable from missing, and on a ledger that is the worst ambiguity
+  available. So the log takes a `_sort` of **`recorded`** (`created_at`, the
+  **default** — what a person doing data entry means by "recent") or `paid`
+  (value-date order, for reconciliation), and each row shows the recorded
+  timestamp **only when it was back-dated** — when the two days agree the
+  payment date already said it. `_sort` is **not** part of `PaymentLogFilters`:
+  a sum and a count do not care about ORDER BY, so changing it must not
+  re-fetch the totals. The ORDER BY is **dynamic SQL over a two-clause
+  whitelist**, not a CASE inside ORDER BY — a CASE is not indexable and would
+  force a full sort of the academy's payments on every page turn, defeating
+  both `payments_academy_paid_at_idx` and `payments_academy_created_at_idx`.
 - **Pagination** (`/payments` + `/payments/log`, 50 rows): both lists are paged
   **server-side**, because both used to fetch every row and one academy is
   already at 543 invoices / 702 payments — PostgREST caps a request at the

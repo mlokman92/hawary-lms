@@ -4,7 +4,7 @@ import { Download, Search } from 'lucide-react'
 import { formatMYR } from '@hawary/shared'
 import { useAcademy } from '@/lib/academy'
 import { downloadCsv } from '@/lib/csv'
-import { fmtDate } from '@/lib/format'
+import { fmtDate, fmtDateTime } from '@/lib/format'
 import { useT, type TFn } from '@/lib/i18n'
 import { useDebounced } from '@/lib/useDebounced'
 import { PageHeader } from '@/components/patterns/PageHeader'
@@ -42,10 +42,34 @@ import {
   usePaymentLogTotals,
   type PaymentLogFilters,
   type PaymentLogRow,
+  type PaymentLogSort,
   type PaymentStatus,
 } from '@/features/payments/api'
 
 const ALL = '__all__'
+
+/** The Malaysian calendar day of an instant — the academy's zone, not the browser's. */
+const MY_DAY = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Kuala_Lumpur',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+
+/**
+ * Was this payment entered on a day other than the day it was paid?
+ *
+ * Only then is the recorded timestamp worth a line: when the two match, the
+ * payment date already says when it was typed in, and repeating it under every
+ * row would be noise. Compared as Malaysian calendar days rather than instants:
+ * `paid_at` is a date the user picked, which `RecordPaymentDialog` stores at
+ * midday, while `created_at` is a real clock reading — so the two are never
+ * equal as instants even when they mean the same day.
+ */
+function backDated(p: PaymentLogRow): boolean {
+  if (!p.paid_at) return false
+  return MY_DAY.format(new Date(p.paid_at)) !== MY_DAY.format(new Date(p.created_at))
+}
 
 /**
  * Where the row came from, in one line.
@@ -76,6 +100,7 @@ function csvRows(rows: PaymentLogRow[], t: TFn) {
       t('payments.log.csv.provider'),
       t('payments.log.reference'),
       t('payments.log.csv.recorded_by'),
+      t('payments.log.csv.recorded_at'),
       t('common.status'),
       t('common.amount'),
     ],
@@ -92,6 +117,9 @@ function csvRows(rows: PaymentLogRow[], t: TFn) {
       // Blank rather than "Recorded manually" — a name column wants a name or
       // nothing, and a gateway row genuinely has nobody to name.
       p.recorded_by_name ?? '',
+      // Full instant, not a day: this column exists to reconstruct the order
+      // work was actually entered in.
+      p.created_at,
       t(PAYMENT_STATUS_LABEL[p.status]),
       // Ringgit, not sen — this file is read by a human in a spreadsheet.
       (p.amount_sen / 100).toFixed(2),
@@ -116,6 +144,7 @@ export function PaymentLogPage() {
   const { activeAcademyId } = useAcademy()
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState<PaymentStatus | typeof ALL>(ALL)
+  const [sort, setSort] = useState<PaymentLogSort>('recorded')
   const [page, setPage] = useState(1)
   const [exporting, setExporting] = useState(false)
 
@@ -127,10 +156,11 @@ export function PaymentLogPage() {
     [search, status],
   )
 
-  // Page 7 of an unfiltered ledger is not page 7 of a search for one name.
-  useEffect(() => setPage(1), [filters])
+  // Page 7 of an unfiltered ledger is not page 7 of a search for one name,
+  // and re-ordering the whole ledger renumbers every page under it.
+  useEffect(() => setPage(1), [filters, sort])
 
-  const rows = usePaymentLogPage(activeAcademyId, filters, page)
+  const rows = usePaymentLogPage(activeAcademyId, filters, sort, page)
   const totals = usePaymentLogTotals(activeAcademyId, filters)
 
   const total = totals.data?.total ?? 0
@@ -143,7 +173,7 @@ export function PaymentLogPage() {
     setExporting(true)
     try {
       // The whole filtered set, not the 50 rows on screen.
-      const all = await fetchPaymentLogAll(activeAcademyId, filters, total)
+      const all = await fetchPaymentLogAll(activeAcademyId, filters, sort, total)
       downloadCsv('payment-log.csv', csvRows(all, t))
     } finally {
       setExporting(false)
@@ -197,6 +227,20 @@ export function PaymentLogPage() {
             ))}
           </SelectContent>
         </Select>
+        <Select
+          value={sort}
+          onValueChange={(v) => setSort(v as PaymentLogSort)}
+        >
+          <SelectTrigger className="w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="recorded">
+              {t('payments.log.sort.recorded')}
+            </SelectItem>
+            <SelectItem value="paid">{t('payments.log.sort.paid')}</SelectItem>
+          </SelectContent>
+        </Select>
         <p className="text-muted-foreground ml-auto text-sm tabular-nums">
           {totals.data === undefined
             ? '—'
@@ -237,6 +281,13 @@ export function PaymentLogPage() {
                   <TableRow key={p.id}>
                     <TableCell className="whitespace-nowrap">
                       {fmtDate(p.paid_at ?? p.created_at)}
+                      {backDated(p) ? (
+                        <div className="text-muted-foreground text-xs">
+                          {t('payments.log.recorded_at', {
+                            when: fmtDateTime(p.created_at),
+                          })}
+                        </div>
+                      ) : null}
                     </TableCell>
                     <TableCell>
                       {p.student_id ? (

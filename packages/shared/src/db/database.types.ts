@@ -2270,6 +2270,7 @@ export type Database = {
           _limit?: number
           _offset?: number
           _search?: string
+          _sort?: string
           _status?: Database["public"]["Enums"]["payment_status"]
         }
         Returns: {
