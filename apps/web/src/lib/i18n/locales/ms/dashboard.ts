@@ -75,7 +75,6 @@ export const dashboard: DashboardDict = {
   'dash.revenue.empty.body':
     'Tiada invois atau kutipan dalam {months} bulan lalu.',
   'dash.revenue.empty.cta': 'Cipta invois pertama anda',
-  'dash.chart.invoiced': 'Diinvois',
   'dash.chart.collected': 'Dikutip',
 
   // Pelajar untuk disusuli

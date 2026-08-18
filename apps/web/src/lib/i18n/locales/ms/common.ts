@@ -38,6 +38,9 @@ export const common: CommonDict = {
   'common.actions': 'Tindakan',
   'common.select': 'Pilih',
   'common.clear': 'Kosongkan',
+  'common.previous': 'Sebelumnya',
+  'common.next': 'Seterusnya',
+  'common.page_of': 'Halaman {page} daripada {pages}',
 
   // Keadaan
   'common.loading': 'Memuatkan…',

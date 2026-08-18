@@ -72,7 +72,6 @@ export const dashboard = {
   'dash.revenue.empty.body':
     'Nothing invoiced or collected in the last {months} months.',
   'dash.revenue.empty.cta': 'Create your first invoice',
-  'dash.chart.invoiced': 'Invoiced',
   'dash.chart.collected': 'Collected',
 
   // People to follow up

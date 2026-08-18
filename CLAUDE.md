@@ -236,6 +236,66 @@ Monorepo: **pnpm workspaces + Turborepo**.
   preview reads the form's *current* values, not the saved row, and draws a
   fictional `sampleInvoice()`, so a brand-new academy can check its letterhead
   before saving and a stray print can never pass for a real bill.
+- **Payment log** (`/payments/log`): the money-in **ledger**, a sub-nav child of
+  Payments. `/payments` is the invoice book — what people were *asked* for;
+  this is what *arrived*, when, by what means and against which invoice. Neither
+  derives from the other: an invoice carries no paid-on date, a refund never
+  decrements `amount_paid_sen`, and one invoice can be settled by several
+  payments — which is why `usePaymentLog` reads `payments` directly rather than
+  re-deriving from `useInvoices`. Staff-wide, because `payments: staff view all`
+  is; no migration was needed. Search + status filter are client-side over one
+  unbounded ordered read (`paid_at desc nullsFirst:false`, `created_at` as the
+  tie-break — PostgREST sorts nulls first, which would float an unsettled row
+  above today's takings). Only `succeeded` rows count towards "received"; a
+  status badge is drawn **only** when the row is not succeeded. A manual row
+  names **who recorded it** (`created_by` → `profiles`, readable via
+  `profiles: self or co-member can view`); a gateway row names the gateway and
+  its reference instead, because a callback wrote it and there is nobody to
+  name. The recorder is searchable — "everything Aisyah took in cash" is a real
+  question to ask a ledger. **Export CSV**
+  reuses `lib/csv.ts`'s `downloadCsv` and writes ISO dates + ringgit decimals,
+  because the file's job is reconciliation in a spreadsheet.
+  This is the **first child nested under its parent's own path**, which exposed a
+  bug in `isNavActive` (`components/shell/nav.ts`): `pathname.startsWith` made
+  `/payments/log` light up the Payments row *and* the Log row, when the shell's
+  rule is that a parent whose child is active gets the brand colour on its icon
+  alone. `isNavActive` now yields to a matching child, so only one row ever
+  claims "the page you are on". `/courses`' children (`/assessments` etc.) never
+  hit this because they do not share its prefix.
+  The dashboard's recent-payments card links here as its "View all"; its revenue
+  chart is now a **single** `collected` series (the invoiced figure survives as
+  a number on the card, not a bar), so `dash.chart.invoiced` is gone.
+- **Pagination** (`/payments` + `/payments/log`, 50 rows): both lists are paged
+  **server-side**, because both used to fetch every row and one academy is
+  already at 543 invoices / 702 payments — PostgREST caps a request at the
+  project's "Max rows" (1000 by default) and a *ledger* that silently stops at
+  row 1000 is worse than one that is slow.
+  The split that makes it work: **rows are a page, totals are an aggregate**. A
+  page of 50 cannot answer "how much is outstanding", and deriving the tiles
+  from the page would quietly reinterpret the question — so `invoice_totals`
+  (four money tiles, optionally narrowed by `_course` / `_no_course`) and
+  `payment_log_totals` (count + money received) are their own calls.
+  `invoice_totals` mirrors the old client `computeStats` **exactly**, asymmetries
+  included — `collected` is the raw sum of `amount_paid_sen`, `outstanding` and
+  `overdue` clamp each invoice at zero first — verified equal on live data, so
+  the numbers on screen did not move.
+  The **log rows need an RPC** (`payment_log_page`) because its search spans five
+  tables and PostgREST cannot OR across embedded resources; the **invoice rows
+  stay on PostgREST** (`.range()` + `count: 'exact'`) because a course filter is
+  one `eq`. All three functions are **SECURITY INVOKER** — RLS already scopes the
+  caller, so definer rights would buy nothing but risk.
+  Two details that are load-bearing, not polish: every ordering carries **`id` as
+  a final tie-break** (OFFSET paging over a non-unique sort repeats one row and
+  skips another), and both lists use **`keepPreviousData`** (without it a page
+  turn blanks the table through the empty state and back, which reads as an
+  error). Search is debounced through the extracted `lib/useDebounced.ts` —
+  otherwise a keystroke is two round trips. **CSV export walks the whole filtered
+  set** in 200-row chunks via `fetchPaymentLogAll`, never the 50 rows on screen:
+  a reconciliation that stops at row 50 is worse than none, and 200 is the
+  `_limit` clamp the RPC enforces. `invalidateMoney` is the one place a money
+  write invalidates all five cached lists.
+  Still unbounded and deliberately left so: the **dashboard**'s `useInvoices`,
+  which reads every invoice for its 6-month chart and stat tiles.
 - **ToyyibPay charge** (`docs/toyyibpay-payments.md`): the flat RM1 FPX fee can
   be passed to the payer via `billChargeToCustomer='0'`. Academy default
   `academy_payment_settings.toyyibpay_charge_to_payor`, per-invoice override

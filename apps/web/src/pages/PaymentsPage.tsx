@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, CheckCircle2, Clock, Plus, Wallet } from 'lucide-react'
 import { formatMYR } from '@hawary/shared'
@@ -9,6 +9,7 @@ import { useCourses } from '@/features/courses/api'
 import { PageHeader } from '@/components/patterns/PageHeader'
 import { StatCard } from '@/components/patterns/StatCard'
 import { EmptyState } from '@/components/patterns/EmptyState'
+import { Pager } from '@/components/patterns/Pager'
 import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -29,32 +30,24 @@ import {
 } from '@/components/ui/table'
 import { InvoiceFormDialog } from '@/features/payments/InvoiceFormDialog'
 import {
+  ALL_COURSES,
   INVOICE_STATUS_LABEL,
   INVOICE_STATUS_VARIANT,
-  useInvoices,
-  type InvoiceRow,
+  NO_COURSE,
+  PAGE_SIZE,
+  useInvoicePage,
+  useInvoiceStats,
 } from '@/features/payments/api'
 
-const NO_COURSE = '__none__'
-
-function computeStats(invoices: InvoiceRow[]) {
-  const now = Date.now()
-  let total = 0
-  let collected = 0
-  let outstanding = 0
-  let overdue = 0
-  for (const inv of invoices) {
-    if (inv.status === 'void' || inv.status === 'cancelled' || inv.status === 'draft')
-      continue
-    total += inv.total_sen
-    collected += inv.amount_paid_sen
-    const bal = Math.max(0, inv.total_sen - inv.amount_paid_sen)
-    outstanding += bal
-    const due = inv.due_at ? Date.parse(inv.due_at) : NaN
-    if (bal > 0 && (inv.status === 'overdue' || (Number.isFinite(due) && due < now)))
-      overdue += bal
-  }
-  return { total, collected, outstanding, overdue }
+/**
+ * A tile's figure, or a dash while the aggregate is still in flight.
+ *
+ * The tiles now resolve separately from the rows, and printing a confident
+ * RM 0.00 for the half-second in between reads as "this academy has billed
+ * nothing" — a claim, not a placeholder.
+ */
+function money(sen: number | undefined): string {
+  return sen === undefined ? '—' : formatMYR(sen)
 }
 
 export function PaymentsPage() {
@@ -63,25 +56,32 @@ export function PaymentsPage() {
   const { activeAcademyId, active } = useAcademy()
   const academyId = activeAcademyId ?? ''
   const isAdmin = active?.role === 'admin'
-  const { data: invoices, isLoading, error } = useInvoices(activeAcademyId)
   const { data: courses } = useCourses(activeAcademyId)
   const [open, setOpen] = useState(false)
-  const [courseFilter, setCourseFilter] = useState('all')
+  const [courseFilter, setCourseFilter] = useState(ALL_COURSES)
   const [showAllCourses, setShowAllCourses] = useState(false)
+  const [page, setPage] = useState(1)
+
+  // Page 4 of every invoice is not page 4 of one course's invoices.
+  useEffect(() => setPage(1), [courseFilter])
+
+  // The rows are one page; the tiles are the whole filtered set. Two queries
+  // because a page of 50 cannot answer "how much is outstanding".
+  const { data, isLoading, error } = useInvoicePage(
+    activeAcademyId,
+    courseFilter,
+    page,
+  )
+  const { data: stats } = useInvoiceStats(activeAcademyId, courseFilter)
 
   const allCourses = courses ?? []
   const published = allCourses.filter((c) => c.status === 'published')
   const unpublishedCount = allCourses.length - published.length
   const courseOptions = showAllCourses ? allCourses : published
 
-  const filtered = useMemo(() => {
-    const list = invoices ?? []
-    if (courseFilter === 'all') return list
-    if (courseFilter === NO_COURSE) return list.filter((i) => !i.course_id)
-    return list.filter((i) => i.course_id === courseFilter)
-  }, [invoices, courseFilter])
-
-  const stats = useMemo(() => computeStats(filtered), [filtered])
+  const rows = data?.rows ?? []
+  const total = data?.total ?? 0
+  const filtering = courseFilter !== ALL_COURSES
 
   return (
     <div className="mx-auto w-full max-w-6xl">
@@ -101,7 +101,7 @@ export function PaymentsPage() {
             <SelectValue placeholder={t('payments.filter.all_courses')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t('payments.filter.all_courses')}</SelectItem>
+            <SelectItem value={ALL_COURSES}>{t('payments.filter.all_courses')}</SelectItem>
             <SelectItem value={NO_COURSE}>
               {t('payments.filter.no_course')}
             </SelectItem>
@@ -136,24 +136,24 @@ export function PaymentsPage() {
       <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label={t('payments.stat.invoiced')}
-          value={formatMYR(stats.total)}
+          value={money(stats?.total)}
           icon={Wallet}
         />
         <StatCard
           label={t('payments.stat.collected')}
-          value={formatMYR(stats.collected)}
+          value={money(stats?.collected)}
           icon={CheckCircle2}
           tone="positive"
         />
         <StatCard
           label={t('payments.stat.outstanding')}
-          value={formatMYR(stats.outstanding)}
+          value={money(stats?.outstanding)}
           icon={Clock}
           tone="warning"
         />
         <StatCard
           label={t('common.overdue')}
-          value={formatMYR(stats.overdue)}
+          value={money(stats?.overdue)}
           icon={AlertTriangle}
           tone="danger"
         />
@@ -168,7 +168,9 @@ export function PaymentsPage() {
           <LoadingBlock />
         ) : error ? (
           <ErrorBlock error={error} />
-        ) : !invoices || invoices.length === 0 ? (
+        ) : rows.length === 0 && filtering ? (
+          <EmptyState title={t('payments.empty.no_match')} />
+        ) : rows.length === 0 ? (
           <EmptyState size="block" title={t('payments.empty.none')}>
             {isAdmin ? (
               <Button variant="outline" onClick={() => setOpen(true)}>
@@ -176,8 +178,6 @@ export function PaymentsPage() {
               </Button>
             ) : null}
           </EmptyState>
-        ) : filtered.length === 0 ? (
-          <EmptyState title={t('payments.empty.no_match')} />
         ) : (
           <div className="rounded-xl border">
             <Table>
@@ -195,7 +195,7 @@ export function PaymentsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((inv) => (
+                {rows.map((inv) => (
                   <TableRow
                     key={inv.id}
                     className="cursor-pointer"
@@ -242,6 +242,13 @@ export function PaymentsPage() {
             </Table>
           </div>
         )}
+
+        <Pager
+          page={page}
+          total={total}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
       </div>
 
       {activeAcademyId ? (

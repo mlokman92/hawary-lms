@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Presentation,
   Receipt,
+  ScrollText,
   Settings,
   ShieldCheck,
   UserPlus,
@@ -71,7 +72,16 @@ const nav = (
     badge: upcomingAppointments,
     badgeTone: 'neutral',
   },
-  { title: t('nav.payments'), to: '/payments', icon: Receipt },
+  {
+    title: t('nav.payments'),
+    to: '/payments',
+    icon: Receipt,
+    children: [
+      // The invoice book and the ledger are different questions — "what is
+      // owed" vs "what arrived" — so the log is a destination, not a tab.
+      { title: t('nav.payment_log'), to: '/payments/log', icon: ScrollText },
+    ],
+  },
 ]
 
 const adminNav = (t: TFn): NavItem[] => [

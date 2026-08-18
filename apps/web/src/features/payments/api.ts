@@ -1,4 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query'
 import type { Enums, Tables } from '@hawary/shared'
 import { translate, type TKey } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
@@ -31,6 +37,42 @@ export type InvoiceDetail = Invoice & {
 export type StudentInvoiceRow = Invoice & { course: CourseBrief | null }
 
 /**
+ * One row of the money-in ledger, flattened by `payment_log_page`.
+ *
+ * Flat rather than the nested PostgREST embed it used to be: the search spans
+ * five tables and PostgREST cannot OR across embedded resources, so the whole
+ * read is one RPC now. The generated `Returns` type marks every column
+ * non-null — Supabase cannot infer nullability from a RETURNS TABLE — so this
+ * hand-written mirror is what the page actually trusts.
+ */
+export type PaymentLogRow = {
+  id: string
+  amount_sen: number
+  method: PaymentMethod
+  provider: Enums<'payment_provider'>
+  provider_ref: string | null
+  status: PaymentStatus
+  paid_at: string | null
+  created_at: string
+  invoice_id: string | null
+  invoice_no: string | null
+  course_id: string | null
+  course_title: string | null
+  student_id: string | null
+  student_full_name: string | null
+  student_no: string | null
+  /** Null on every gateway row: a callback wrote it, not a person. */
+  recorded_by_name: string | null
+}
+
+/** What both log queries filter by. Held together so they cannot drift apart. */
+export type PaymentLogFilters = {
+  search: string
+  status: PaymentStatus | null
+}
+
+
+/**
  * ToyyibPay's standard B2C FPX rate — a flat RM1.00 per transaction whatever the
  * amount. Display only: the authoritative copy is `FPX_FEE_SEN` in the
  * `create-bill` Edge Function, which is what settlement is judged against.
@@ -44,6 +86,10 @@ export type NewItem = {
 
 const listKey = (a: string | null) => ['invoices', a] as const
 const oneKey = (id: string) => ['invoice', id] as const
+const logKey = (a: string | null, f: PaymentLogFilters, page: number) =>
+  ['payment-log', a, f.search, f.status, page] as const
+const logTotalsKey = (a: string | null, f: PaymentLogFilters) =>
+  ['payment-log-totals', a, f.search, f.status] as const
 
 export function useInvoices(academyId: string | null) {
   return useQuery({
@@ -102,6 +148,228 @@ export function useStudentInvoices(
         .order('created_at', { ascending: false })
       if (error) throw error
       return (data ?? []) as unknown as StudentInvoiceRow[]
+    },
+  })
+}
+
+/**
+ * Every cached list a money write can move.
+ *
+ * One helper rather than a call per mutation: there are five keys now — the
+ * dashboard's whole-invoice read, the paged invoice list and its totals, the
+ * ledger page and its totals — and the failure mode of forgetting one is a
+ * stale money figure, which is the worst kind of stale. The paged keys are
+ * invalidated by prefix because every page and filter combination is its own
+ * entry and any of them may be wrong after a write.
+ */
+function invalidateMoney(qc: QueryClient, academyId: string) {
+  qc.invalidateQueries({ queryKey: listKey(academyId) })
+  qc.invalidateQueries({ queryKey: ['invoice-page'] })
+  qc.invalidateQueries({ queryKey: ['invoice-totals'] })
+  qc.invalidateQueries({ queryKey: ['payment-log'] })
+  qc.invalidateQueries({ queryKey: ['payment-log-totals'] })
+}
+
+/** Rows per page, shared by both paged lists so they feel like one product. */
+export const PAGE_SIZE = 50
+
+type PaymentLogTotalsRow = { total_count: number; received_sen: number }
+
+/** The filter arguments both log calls share, so they can never disagree. */
+function searchArgs(filters: PaymentLogFilters) {
+  return {
+    // Omit rather than send null: an absent argument takes the SQL default,
+    // which is exactly what "no filter" means on that side.
+    ...(filters.search.trim() ? { _search: filters.search.trim() } : {}),
+    ...(filters.status ? { _status: filters.status } : {}),
+  }
+}
+
+/**
+ * One page of the ledger.
+ *
+ * `useInvoices` answers "what do people owe us"; this answers "what actually
+ * arrived, when, and by what means". They are different books and neither can
+ * be derived from the other: an invoice carries no paid-on date, a refund never
+ * decrements `amount_paid_sen`, and one invoice can be settled by several
+ * payments.
+ *
+ * `keepPreviousData` holds the current page on screen while the next loads.
+ * Without it every page turn blanks the table through the empty state and
+ * back, which reads as an error rather than as paging.
+ */
+export function usePaymentLogPage(
+  academyId: string | null,
+  filters: PaymentLogFilters,
+  page: number,
+) {
+  return useQuery({
+    queryKey: logKey(academyId, filters, page),
+    enabled: !!academyId,
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('payment_log_page', {
+        _academy: academyId!,
+        ...searchArgs(filters),
+        _limit: PAGE_SIZE,
+        _offset: (page - 1) * PAGE_SIZE,
+      })
+      if (error) throw error
+      return (data ?? []) as unknown as PaymentLogRow[]
+    },
+  })
+}
+
+/**
+ * Row count and money received for the SAME filter the page query uses.
+ *
+ * A second round trip on purpose. Folding a window function into the page query
+ * would make every 50-row page scan the whole ledger, and the totals change far
+ * less often than the page does — so this stays cached across page turns while
+ * the rows above it move.
+ */
+export function usePaymentLogTotals(
+  academyId: string | null,
+  filters: PaymentLogFilters,
+) {
+  return useQuery({
+    queryKey: logTotalsKey(academyId, filters),
+    enabled: !!academyId,
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('payment_log_totals', {
+        _academy: academyId!,
+        ...searchArgs(filters),
+      })
+      if (error) throw error
+      const row = (data as unknown as PaymentLogTotalsRow[] | null)?.[0]
+      return {
+        total: Number(row?.total_count ?? 0),
+        receivedSen: Number(row?.received_sen ?? 0),
+      }
+    },
+  })
+}
+
+/** One request's worth of rows when sweeping the whole filtered set. */
+const EXPORT_CHUNK = 200
+
+/**
+ * Every row matching the filter, for the CSV — not just the page on screen.
+ *
+ * Exporting the visible 50 would be the wrong file: the point of the export is
+ * reconciliation, and one that stops at row 50 is worse than none. Walks the
+ * same RPC in chunks rather than asking for everything at once, which is why
+ * `payment_log_page` clamps `_limit` at 200 — the clamp is the contract, not an
+ * obstacle to route around.
+ */
+export async function fetchPaymentLogAll(
+  academyId: string,
+  filters: PaymentLogFilters,
+  total: number,
+): Promise<PaymentLogRow[]> {
+  const rows: PaymentLogRow[] = []
+  // Bounded by the count the totals query already reported, so a ledger that
+  // grows mid-export cannot turn this into an unbounded loop.
+  while (rows.length < total) {
+    const { data, error } = await supabase.rpc('payment_log_page', {
+      _academy: academyId,
+      ...searchArgs(filters),
+      _limit: EXPORT_CHUNK,
+      _offset: rows.length,
+    })
+    if (error) throw error
+    const chunk = (data ?? []) as unknown as PaymentLogRow[]
+    if (chunk.length === 0) break
+    rows.push(...chunk)
+  }
+  return rows
+}
+
+// --- The invoice list, paged ------------------------------------------------
+
+/** The two non-uuid values the course filter takes, alongside a course id. */
+export const ALL_COURSES = 'all'
+export const NO_COURSE = '__none__'
+
+type InvoiceTotalsRow = {
+  invoiced_sen: number
+  collected_sen: number
+  outstanding_sen: number
+  overdue_sen: number
+}
+
+/**
+ * One page of invoices.
+ *
+ * Still PostgREST rather than an RPC: the course filter is one `eq` and both
+ * embeds are plain FKs, so SQL would buy nothing. `id` joins the sort key
+ * because OFFSET paging over a non-unique order can repeat one row and skip
+ * another when two invoices share a `created_at`.
+ */
+export function useInvoicePage(
+  academyId: string | null,
+  courseFilter: string,
+  page: number,
+) {
+  return useQuery({
+    queryKey: ['invoice-page', academyId, courseFilter, page] as const,
+    enabled: !!academyId,
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      const from = (page - 1) * PAGE_SIZE
+      let q = supabase
+        .from('invoices')
+        .select(
+          '*, student:students(full_name, student_no), course:courses(id, title)',
+          { count: 'exact' },
+        )
+        .eq('academy_id', academyId!)
+      if (courseFilter === NO_COURSE) q = q.is('course_id', null)
+      else if (courseFilter !== ALL_COURSES) q = q.eq('course_id', courseFilter)
+
+      const { data, error, count } = await q
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(from, from + PAGE_SIZE - 1)
+      if (error) throw error
+      return {
+        rows: (data ?? []) as unknown as InvoiceRow[],
+        total: count ?? 0,
+      }
+    },
+  })
+}
+
+/**
+ * The four money tiles, over the whole filtered set rather than the page.
+ *
+ * This is the half of the old client-side `computeStats` a page cannot answer.
+ * `invoice_totals` mirrors it exactly, asymmetries included: `collected` is the
+ * raw sum of `amount_paid_sen` (an overpayment shows as collected, because it
+ * was) while `outstanding` and `overdue` clamp each invoice at zero first.
+ */
+export function useInvoiceStats(academyId: string | null, courseFilter: string) {
+  return useQuery({
+    queryKey: ['invoice-totals', academyId, courseFilter] as const,
+    enabled: !!academyId,
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('invoice_totals', {
+        _academy: academyId!,
+        ...(courseFilter === ALL_COURSES || courseFilter === NO_COURSE
+          ? {}
+          : { _course: courseFilter }),
+        ...(courseFilter === NO_COURSE ? { _no_course: true } : {}),
+      })
+      if (error) throw error
+      const row = (data as unknown as InvoiceTotalsRow[] | null)?.[0]
+      return {
+        total: Number(row?.invoiced_sen ?? 0),
+        collected: Number(row?.collected_sen ?? 0),
+        outstanding: Number(row?.outstanding_sen ?? 0),
+        overdue: Number(row?.overdue_sen ?? 0),
+      }
     },
   })
 }
@@ -169,7 +437,7 @@ export function useCreateInvoice(academyId: string) {
       }
       return inv
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: listKey(academyId) }),
+    onSuccess: () => invalidateMoney(qc, academyId),
   })
 }
 
@@ -251,7 +519,7 @@ export function useCreateInvoices(academyId: string) {
       }
       return created
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: listKey(academyId) }),
+    onSuccess: () => invalidateMoney(qc, academyId),
   })
 }
 
@@ -290,7 +558,7 @@ export function useRecordPayment(academyId: string) {
       if (e2) throw e2
     },
     onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: listKey(academyId) })
+      invalidateMoney(qc, academyId)
       qc.invalidateQueries({ queryKey: oneKey(vars.invoiceId) })
     },
   })
@@ -325,8 +593,8 @@ export function useUpdatePaymentTerms(academyId: string, invoiceId: string) {
       if (error) throw error
     },
     onSuccess: () => {
+      invalidateMoney(qc, academyId)
       qc.invalidateQueries({ queryKey: oneKey(invoiceId) })
-      qc.invalidateQueries({ queryKey: listKey(academyId) })
     },
   })
 }
@@ -343,7 +611,7 @@ export function useVoidInvoice(academyId: string) {
       return id
     },
     onSuccess: (id) => {
-      qc.invalidateQueries({ queryKey: listKey(academyId) })
+      invalidateMoney(qc, academyId)
       qc.invalidateQueries({ queryKey: oneKey(id) })
     },
   })
@@ -392,6 +660,52 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
   'ewallet',
   'other',
 ]
+
+export type PaymentStatus = Enums<'payment_status'>
+
+/**
+ * Payment status — the row's own outcome, not the invoice's.
+ *
+ * `succeeded` is deliberately drawn as a muted `outline`: it is the normal case
+ * and every row in the log would otherwise carry the same loud badge. What is
+ * worth interrupting for is a payment that failed or came back.
+ */
+export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, TKey> = {
+  pending: 'payments.pstatus.pending',
+  succeeded: 'payments.pstatus.succeeded',
+  failed: 'payments.pstatus.failed',
+  refunded: 'payments.pstatus.refunded',
+}
+
+export const PAYMENT_STATUS_VARIANT: Record<
+  PaymentStatus,
+  'default' | 'secondary' | 'outline' | 'destructive'
+> = {
+  pending: 'secondary',
+  succeeded: 'outline',
+  failed: 'destructive',
+  refunded: 'destructive',
+}
+
+/** Filter order for the log. `all` is the caller's own sentinel, not an enum. */
+export const PAYMENT_STATUSES: PaymentStatus[] = [
+  'succeeded',
+  'pending',
+  'failed',
+  'refunded',
+]
+
+/**
+ * Who took the money. The gateways are proper nouns and stay untranslated;
+ * only `manual` — "somebody typed this in" — is copy.
+ */
+export const PAYMENT_PROVIDER_LABEL: Record<Enums<'payment_provider'>, string> =
+  {
+    manual: '',
+    toyyibpay: 'ToyyibPay',
+    billplz: 'Billplz',
+    stripe: 'Stripe',
+  }
 
 // ---------------------------------------------------------------------------
 // Online payments (ToyyibPay). See docs/toyyibpay-payments.md.
@@ -614,8 +928,9 @@ export function useCheckPayment(academyId: string, invoiceId: string) {
       return (data ?? { ok: false }) as VerifyResult
     },
     onSuccess: () => {
+      // A reconcile can bank a gateway payment, so the ledger moves too.
+      invalidateMoney(qc, academyId)
       qc.invalidateQueries({ queryKey: oneKey(invoiceId) })
-      qc.invalidateQueries({ queryKey: listKey(academyId) })
     },
   })
 }

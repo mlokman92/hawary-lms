@@ -4,8 +4,6 @@ import { formatMYR } from '@hawary/shared'
 import { useT, type TFn } from '@/lib/i18n'
 import {
   ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
   type ChartConfig,
@@ -13,29 +11,30 @@ import {
 import type { RevenuePoint } from './api'
 
 /**
- * Colours are set here rather than through --chart-*: those tokens are orange
- * in light and blue in dark, so a series would change hue on theme toggle.
- * These match the money semantics used everywhere else on the dashboard —
- * emerald is cash that arrived, neutral is a bill that was merely raised — and
- * go lighter in dark mode, like every other colour pair in the app.
+ * One series: money that actually arrived. The invoiced figure is still on the
+ * card above as a number, but it is not a bar — two bars per month made the
+ * chart a comparison when the question being asked of it is "how are takings
+ * doing", and the answer to that is a single trend.
  *
- * The colours are a module constant; the labels are not, because they are copy
- * and have to be read after the language is known.
+ * The colour is set here rather than through --chart-*: those tokens are orange
+ * in light and blue in dark, so the series would change hue on theme toggle.
+ * Emerald is cash-that-arrived everywhere else on the dashboard, and goes
+ * lighter in dark mode like every other colour pair in the app.
+ *
+ * The colour is a module constant; the label is not, because it is copy and has
+ * to be read after the language is known.
  */
-const SERIES: Record<'invoiced' | 'collected', { light: string; dark: string }> =
-  {
-    invoiced: { light: 'oklch(0.556 0 0)', dark: 'oklch(0.708 0 0)' },
-    collected: {
-      light: 'oklch(0.596 0.145 163.225)',
-      dark: 'oklch(0.696 0.17 162.48)',
-    },
-  }
+const SERIES: Record<'collected', { light: string; dark: string }> = {
+  collected: {
+    light: 'oklch(0.596 0.145 163.225)',
+    dark: 'oklch(0.696 0.17 162.48)',
+  },
+}
 
 type SeriesKey = keyof typeof SERIES
 
 function chartConfig(t: TFn) {
   return {
-    invoiced: { label: t('dash.chart.invoiced'), theme: SERIES.invoiced },
     collected: { label: t('dash.chart.collected'), theme: SERIES.collected },
   } satisfies ChartConfig
 }
@@ -97,8 +96,7 @@ export function RevenueChart({ data }: { data: RevenuePoint[] }) {
             />
           }
         />
-        <ChartLegend content={<ChartLegendContent />} />
-        <Bar dataKey="invoiced" fill="var(--color-invoiced)" radius={4} />
+        {/* No legend: one series, already named by the figure above the chart. */}
         <Bar dataKey="collected" fill="var(--color-collected)" radius={4} />
       </BarChart>
     </ChartContainer>

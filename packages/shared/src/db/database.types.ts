@@ -2202,6 +2202,15 @@ export type Database = {
           student_no: string
         }[]
       }
+      invoice_totals: {
+        Args: { _academy: string; _course?: string; _no_course?: boolean }
+        Returns: {
+          collected_sen: number
+          invoiced_sen: number
+          outstanding_sen: number
+          overdue_sen: number
+        }[]
+      }
       join_academy: {
         Args: { _course_id: string; _slug: string }
         Returns: Json
@@ -2253,6 +2262,44 @@ export type Database = {
           kind: string
           record_id: string
           role: string
+        }[]
+      }
+      payment_log_page: {
+        Args: {
+          _academy: string
+          _limit?: number
+          _offset?: number
+          _search?: string
+          _status?: Database["public"]["Enums"]["payment_status"]
+        }
+        Returns: {
+          amount_sen: number
+          course_id: string
+          course_title: string
+          created_at: string
+          id: string
+          invoice_id: string
+          invoice_no: string
+          method: Database["public"]["Enums"]["payment_method"]
+          paid_at: string
+          provider: Database["public"]["Enums"]["payment_provider"]
+          provider_ref: string
+          recorded_by_name: string
+          status: Database["public"]["Enums"]["payment_status"]
+          student_full_name: string
+          student_id: string
+          student_no: string
+        }[]
+      }
+      payment_log_totals: {
+        Args: {
+          _academy: string
+          _search?: string
+          _status?: Database["public"]["Enums"]["payment_status"]
+        }
+        Returns: {
+          received_sen: number
+          total_count: number
         }[]
       }
       record_gateway_payment: {

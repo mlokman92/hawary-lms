@@ -948,10 +948,20 @@ export function Dashboard() {
 
       {/* Recent payments — the payoff for a clear morning */}
       <div className="mt-8">
-        <h2 className="text-sm font-medium">{t('dash.payments.title')}</h2>
-        <p className="text-muted-foreground mb-3 text-xs">
-          {t('dash.payments.subtitle')}
-        </p>
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-medium">{t('dash.payments.title')}</h2>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              {t('dash.payments.subtitle')}
+            </p>
+          </div>
+          {/* The five rows here are a sample of the ledger, not the ledger. */}
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/payments/log">
+              {t('dash.view_all')} <ChevronRight />
+            </Link>
+          </Button>
+        </div>
         <Card className="gap-0 py-0">
           {activity.isLoading ? (
             <div className="text-muted-foreground p-8 text-center text-sm">

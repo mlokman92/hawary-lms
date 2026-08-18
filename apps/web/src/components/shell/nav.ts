@@ -44,7 +44,14 @@ export type NavGroup = {
  * explicit `exact` flag says what those special cases actually meant.
  */
 export function isNavActive(pathname: string, item: NavItem): boolean {
-  return item.exact ? pathname === item.to : pathname.startsWith(item.to)
+  if (item.exact) return pathname === item.to
+  // A path that belongs to a child is the *child's* page, not the parent's.
+  // Only matters when a child nests under its parent's path (/payments/log
+  // under /payments, unlike /assessments under /courses): without this both
+  // rows tint, which says "the page you are on" twice. The parent still lights
+  // up as a branch — `isBranchActive` — it just does not claim the page.
+  if ((item.children ?? []).some((c) => isNavActive(pathname, c))) return false
+  return pathname.startsWith(item.to)
 }
 
 /**

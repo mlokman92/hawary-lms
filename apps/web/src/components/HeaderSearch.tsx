@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { GraduationCap, Search, Users, X } from 'lucide-react'
 import { useAcademy } from '@/lib/academy'
 import { useT } from '@/lib/i18n'
+import { DEBOUNCE_MS, useDebounced } from '@/lib/useDebounced'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import {
@@ -10,18 +11,6 @@ import {
   useGlobalSearch,
   type SearchHit,
 } from '@/features/search/api'
-
-/** Typing settles before a round trip; 200ms is under the "did it hear me" line. */
-const DEBOUNCE_MS = 200
-
-function useDebounced(value: string, ms: number): string {
-  const [debounced, setDebounced] = useState(value)
-  useEffect(() => {
-    const id = setTimeout(() => setDebounced(value), ms)
-    return () => clearTimeout(id)
-  }, [value, ms])
-  return debounced
-}
 
 /**
  * The back-office header search.

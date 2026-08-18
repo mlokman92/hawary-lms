@@ -102,6 +102,31 @@ export const payments = {
   'payments.record.submitting': 'Recording…',
   'payments.record.error_amount': 'Enter an amount greater than zero.',
 
+  // Payment status — the payment row's own outcome, not the invoice's
+  'payments.pstatus.pending': 'Pending',
+  'payments.pstatus.succeeded': 'Succeeded',
+  'payments.pstatus.failed': 'Failed',
+  'payments.pstatus.refunded': 'Refunded',
+
+  // Payment log (/payments/log) — the money-in ledger
+  'payments.log.title': 'Payment log',
+  'payments.log.subtitle': 'Every payment received, newest first.',
+  'payments.log.search_placeholder': 'Search student, invoice, or reference',
+  'payments.log.all_statuses': 'All statuses',
+  'payments.log.method': 'Method',
+  'payments.log.reference': 'Reference',
+  'payments.log.recorded_manually': 'Recorded manually',
+  'payments.log.recorded_by': 'Recorded by {name}',
+  'payments.log.csv.recorded_by': 'Recorded by',
+  'payments.log.summary_one': '{count} payment · {amount} received',
+  'payments.log.summary_other': '{count} payments · {amount} received',
+  'payments.log.export': 'Export CSV',
+  'payments.log.exporting': 'Exporting…',
+  'payments.log.empty': 'No payments recorded yet.',
+  'payments.log.no_match': 'No payments match.',
+  'payments.log.csv.student_no': 'Student no.',
+  'payments.log.csv.provider': 'Provider',
+
   // Payment methods
   'payments.method.cash': 'Cash',
   'payments.method.bank_transfer': 'Bank transfer',

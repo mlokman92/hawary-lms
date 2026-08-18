@@ -106,6 +106,31 @@ export const payments: PaymentsDict = {
   'payments.record.error_amount':
     'Masukkan jumlah yang lebih besar daripada sifar.',
 
+  // Status bayaran — keputusan baris bayaran itu sendiri, bukan invois
+  'payments.pstatus.pending': 'Menunggu',
+  'payments.pstatus.succeeded': 'Berjaya',
+  'payments.pstatus.failed': 'Gagal',
+  'payments.pstatus.refunded': 'Dikembalikan',
+
+  // Log bayaran (/payments/log) — lejar wang masuk
+  'payments.log.title': 'Log bayaran',
+  'payments.log.subtitle': 'Setiap bayaran yang diterima, terbaharu dahulu.',
+  'payments.log.search_placeholder': 'Cari pelajar, invois, atau rujukan',
+  'payments.log.all_statuses': 'Semua status',
+  'payments.log.method': 'Kaedah',
+  'payments.log.reference': 'Rujukan',
+  'payments.log.recorded_manually': 'Direkod secara manual',
+  'payments.log.recorded_by': 'Direkod oleh {name}',
+  'payments.log.csv.recorded_by': 'Direkod oleh',
+  'payments.log.summary_one': '{count} bayaran · {amount} diterima',
+  'payments.log.summary_other': '{count} bayaran · {amount} diterima',
+  'payments.log.export': 'Eksport CSV',
+  'payments.log.exporting': 'Mengeksport…',
+  'payments.log.empty': 'Belum ada bayaran direkodkan.',
+  'payments.log.no_match': 'Tiada bayaran yang sepadan.',
+  'payments.log.csv.student_no': 'No. pelajar',
+  'payments.log.csv.provider': 'Penyedia',
+
   // Kaedah bayaran
   'payments.method.cash': 'Tunai',
   'payments.method.bank_transfer': 'Pindahan bank',

@@ -17,6 +17,7 @@ export const nav: NavDict = {
   'nav.appointments': 'Temu janji',
   'nav.instructors': 'Pengajar',
   'nav.payments': 'Pembayaran',
+  'nav.payment_log': 'Log bayaran',
   'nav.incentives': 'Insentif',
   'nav.members': 'Ahli',
   'nav.settings': 'Tetapan',

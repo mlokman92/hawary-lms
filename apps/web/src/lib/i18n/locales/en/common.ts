@@ -40,6 +40,9 @@ export const common = {
   'common.actions': 'Actions',
   'common.select': 'Select',
   'common.clear': 'Clear',
+  'common.previous': 'Previous',
+  'common.next': 'Next',
+  'common.page_of': 'Page {page} of {pages}',
 
   // States
   'common.loading': 'Loading…',
