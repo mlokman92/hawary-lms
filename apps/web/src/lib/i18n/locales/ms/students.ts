@@ -98,6 +98,7 @@ export const students: StudentsDict = {
   'students.form.save_changes': 'Simpan perubahan',
   'students.form.name_required': 'Nama diperlukan.',
   'students.form.gender_required': 'Jantina diperlukan.',
+  'students.form.email_required': 'E-mel diperlukan.',
 
   // Daftar dalam kursus
   'students.enroll.title': 'Daftar dalam kursus',

@@ -82,6 +82,7 @@ export function StudentFormDialog({
     e.preventDefault()
     if (!fullName.trim()) return setError(t('students.form.name_required'))
     if (!gender) return setError(t('students.form.gender_required'))
+    if (!email.trim()) return setError(t('students.form.email_required'))
     setError(null)
 
     const fields = {
@@ -198,6 +199,7 @@ export function StudentFormDialog({
             <Input
               id="email"
               type="email"
+              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />

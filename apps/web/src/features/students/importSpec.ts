@@ -10,12 +10,18 @@ import { STUDENT_STATUSES } from './api'
 /**
  * The CSV shape for bulk student creation.
  *
- * Mirrors `StudentFormDialog` with one deliberate difference: the form makes
- * gender mandatory, this does not. Requiring it would turn a 200-row roster
- * from an existing system into 200 rows of manual data entry over a field the
- * column is nullable for anyway — and a name with no gender is still a usable
- * student record. Everything else the form can set (bar the avatar, which has
- * no sensible text representation) is accepted.
+ * Name and email are required, the same two the form insists on. The email is
+ * what later lets the person claim the record — `my_pending_invitations` finds
+ * a waiting student by matching it against the caller's confirmed auth email —
+ * so a roster imported without one is a roster nobody can be invited into, and
+ * a file missing the column altogether is rejected before any row is read.
+ *
+ * Gender is the one deliberate difference: the form makes it mandatory, this
+ * does not. Requiring it would turn a 200-row roster from an existing system
+ * into 200 rows of manual data entry over a field the column is nullable for
+ * anyway — and a name with no gender is still a usable student record.
+ * Everything else the form can set (bar the avatar, which has no sensible text
+ * representation) is accepted.
  */
 export const studentImportSpec: ImportSpec = {
   templateName: 'hawary-students-template.csv',
@@ -33,6 +39,7 @@ export const studentImportSpec: ImportSpec = {
       key: 'email',
       column: 'email',
       labelKey: 'common.email',
+      required: true,
       aliases: ['e-mail', 'emel', 'e-mel', 'email address', 'alamat emel'],
       parse: parseEmail,
       sample: 'nurul.aina@example.com',
