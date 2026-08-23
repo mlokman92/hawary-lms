@@ -17,6 +17,7 @@ import {
   useMyPendingInvitations,
   type PendingInvite,
 } from './api'
+import { errorMessage } from '@/lib/errors'
 
 /**
  * Academies waiting for the signed-in person.
@@ -57,7 +58,7 @@ export function PendingInviteList({
       await refresh()
       onAccepted?.(invite.academy_id)
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('invite.waiting.error'))
+      setError(errorMessage(e, t('invite.waiting.error')))
     } finally {
       setBusyId(null)
     }

@@ -27,6 +27,7 @@ import {
   type Course,
   type CourseStatus,
 } from './api'
+import { errorMessage } from '@/lib/errors'
 
 export function CourseFormDialog({
   academyId,
@@ -87,7 +88,7 @@ export function CourseFormDialog({
       }
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
+      setError(errorMessage(err, t('common.error')))
     }
   }
 

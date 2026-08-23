@@ -33,6 +33,7 @@ import {
   type Gender,
   type Student,
 } from './api'
+import { errorMessage } from '@/lib/errors'
 
 export function StudentFormDialog({
   academyId,
@@ -104,7 +105,7 @@ export function StudentFormDialog({
       }
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
+      setError(errorMessage(err, t('common.error')))
     }
   }
 

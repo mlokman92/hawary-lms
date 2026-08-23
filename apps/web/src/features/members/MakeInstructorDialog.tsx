@@ -23,6 +23,7 @@ import {
   useMakeInstructor,
   type StaffMember,
 } from './api'
+import { errorMessage } from '@/lib/errors'
 
 /**
  * Give a member an instructor record, so they can be assigned courses and grade
@@ -72,7 +73,7 @@ export function MakeInstructorDialog({
       await action()
       onOpenChange(false)
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('members.instructor.failed'))
+      setError(errorMessage(e, t('members.instructor.failed')))
     }
   }
 

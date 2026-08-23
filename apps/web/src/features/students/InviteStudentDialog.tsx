@@ -19,6 +19,7 @@ import {
   useSendInvitation,
   type SendInvitationResult,
 } from './api'
+import { errorMessage } from '@/lib/errors'
 
 export function InviteStudentDialog({
   academyId,
@@ -83,13 +84,11 @@ export function InviteStudentDialog({
           ok: false,
           code: 'send_failed',
           message:
-            err instanceof Error
-              ? err.message
-              : t('students.invite.send_failed'),
+            errorMessage(err, t('students.invite.send_failed')),
         })
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
+      setError(errorMessage(err, t('common.error')))
     }
   }
 

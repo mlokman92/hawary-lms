@@ -29,6 +29,7 @@ import {
   type ImportSpec,
   type ParsedRow,
 } from './spec'
+import { errorMessage } from '@/lib/errors'
 
 /** Rows shown in the preview. The rest are imported, just not rendered. */
 const PREVIEW_ROWS = 8
@@ -120,7 +121,7 @@ export function ImportDialog({
       setText('')
       setFileName(null)
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('import.failed'))
+      setError(errorMessage(e, t('import.failed')))
     } finally {
       setBusy(false)
     }

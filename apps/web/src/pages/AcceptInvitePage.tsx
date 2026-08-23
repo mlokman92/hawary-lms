@@ -6,9 +6,10 @@ import { acceptInvitation } from '@/features/students/api'
 import {
   clearPendingInvite,
   getPendingInvite,
-  isTerminalInviteError,
+  isRetryableInviteError,
   setPendingInvite,
 } from '@/lib/invite'
+import { errorMessage } from '@/lib/errors'
 import { useNoReferrer } from '@/lib/useNoReferrer'
 import { useLandingTarget } from '@/lib/landing'
 import { translate, useT } from '@/lib/i18n'
@@ -24,7 +25,16 @@ export function AcceptInvitePage() {
   const { refresh } = useAcademy()
   const landing = useLandingTarget()
   const navigate = useNavigate()
-  const ran = useRef(false)
+  /**
+   * One acceptance per (account, token, attempt). A ref rather than an effect
+   * dependency because supabase-js re-emits the auth state on every tab focus,
+   * so `session` is a fresh object identity even when nothing changed — and a
+   * plain `hasRun` boolean is what made "Try again" a dead end: nothing it set
+   * was in the dependency array, so the effect never fired again and the page
+   * sat on "Joining…" for good.
+   */
+  const ranFor = useRef<string | null>(null)
+  const [attempt, setAttempt] = useState(0)
   const [status, setStatus] = useState<'idle' | 'working' | 'done' | 'error'>(
     'idle',
   )
@@ -42,31 +52,42 @@ export function AcceptInvitePage() {
     window.history.replaceState(null, '', '/accept-invite')
   }, [params, token])
 
+  const userId = session?.user.id ?? null
+
   useEffect(() => {
-    if (loading || !session || !token || ran.current) return
-    ran.current = true
+    if (loading || !userId || !token) return
+    const key = `${userId}:${token}:${attempt}`
+    if (ranFor.current === key) return
+    ranFor.current = key
     setStatus('working')
     acceptInvitation(token)
       .then(async () => {
         clearPendingInvite()
-        await refresh()
+        // Awaited so the Continue button below knows where they now belong.
+        // The membership row is already written by this point, so a refetch
+        // that fails must not turn a completed join into an error screen and
+        // send them round again.
+        await refresh().catch(() => {})
         setStatus('done')
       })
       .catch((e: unknown) => {
+        // Keep the token only while the server has not answered. Anything it
+        // rejected has to go: a stashed token outranks every landing route
+        // (PendingInviteRedirect), so one that cannot die locks the person out
+        // of the app rather than out of the invitation.
+        const retry = isRetryableInviteError(e)
+        if (!retry) clearPendingInvite()
+        setRetryable(retry)
+        // `errorMessage`, not `e instanceof Error`: supabase-js returns the
+        // parsed response body, a plain object, unless the call asked for
+        // `.throwOnError()` — so the instanceof test was always false, and
+        // every reason the database gave arrived here as the generic string.
         // `translate`, not `t`: this runs from a promise callback, and adding
         // `t` to the effect deps could re-fire acceptance on a language change.
-        const msg =
-          e instanceof Error ? e.message : translate('auth.invite.error.generic')
-        // Clear the stashed token ONLY when the invite is genuinely dead. A
-        // network blip must stay retryable, or the bridge is destroyed for good.
-        const terminal = isTerminalInviteError(msg)
-        if (terminal) clearPendingInvite()
-        else ran.current = false
-        setRetryable(!terminal)
-        setMessage(msg)
+        setMessage(errorMessage(e, translate('auth.invite.error.generic')))
         setStatus('error')
       })
-  }, [loading, session, token, refresh])
+  }, [loading, userId, token, attempt, refresh])
 
   const next = `/accept-invite?token=${encodeURIComponent(token)}`
 
@@ -79,6 +100,14 @@ export function AcceptInvitePage() {
         <p className="text-muted-foreground text-sm">
           {t('auth.invite.missing_token')}
         </p>
+        {/* This branch outranks every other, so without it the card is a page
+            with no way off it. */}
+        <Button
+          className="mt-4 w-full"
+          onClick={() => navigate(landing, { replace: true })}
+        >
+          {t('common.continue')}
+        </Button>
       </AuthCard>
     )
   }
@@ -133,22 +162,32 @@ export function AcceptInvitePage() {
         subtitle={t('auth.invite.error.subtitle')}
       >
         <p className="text-destructive text-sm">{message}</p>
-        <p className="text-muted-foreground mt-2 text-xs">
-          {retryable
-            ? t('auth.invite.error.retryable')
-            : t('auth.invite.error.terminal')}
-        </p>
+        {/*
+          Only when the server said nothing. Its own reason is now on screen
+          above, and guessing "you used the wrong email" underneath "This
+          invitation is no longer valid" sends the person off to hunt for an
+          account they do not need.
+        */}
+        {retryable ? (
+          <p className="text-muted-foreground mt-2 text-xs">
+            {t('auth.invite.error.retryable')}
+          </p>
+        ) : null}
         {retryable ? (
           <Button
             className="mt-4 w-full"
-            onClick={() => {
-              setStatus('idle')
-              setMessage('')
-            }}
+            onClick={() => setAttempt((n) => n + 1)}
           >
             {t('common.retry')}
           </Button>
-        ) : null}
+        ) : (
+          <Button
+            className="mt-4 w-full"
+            onClick={() => navigate(landing, { replace: true })}
+          >
+            {t('common.continue')}
+          </Button>
+        )}
         <Button
           variant="outline"
           className="mt-2 w-full"

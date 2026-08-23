@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Tables } from '@hawary/shared'
 import { translate } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
+import { errorMessage } from '@/lib/errors'
 
 /** Non-secret gateway metadata. The secret key itself lives in Vault and is
  *  never selectable from the client — only `has_secret` / `last4` are exposed. */
@@ -66,9 +67,10 @@ export function useSaveToyyibpay(academyId: string) {
         const body = await readFunctionError(error)
         throw new Error(
           body ??
-            (error instanceof Error
-              ? error.message
-              : translate('settings.toyyibpay.error.save_failed')),
+            errorMessage(
+              error,
+              translate('settings.toyyibpay.error.save_failed'),
+            ),
         )
       }
       return (data ?? {
@@ -176,9 +178,10 @@ export function useSaveBillplz(academyId: string) {
         const body = await readFunctionError(error)
         throw new Error(
           body ??
-            (error instanceof Error
-              ? error.message
-              : translate('settings.billplz.error.save_failed')),
+            errorMessage(
+              error,
+              translate('settings.billplz.error.save_failed'),
+            ),
         )
       }
       return (data ?? {

@@ -26,6 +26,7 @@ import {
   useBookAppointment,
   type AssignmentMode,
 } from './api'
+import { errorMessage } from '@/lib/errors'
 
 /**
  * Staff booking somebody in.
@@ -112,7 +113,7 @@ export function BookForStudentDialog({
       })
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
+      setError(errorMessage(err, t('common.error')))
     }
   }
 

@@ -24,14 +24,20 @@ export function PendingInviteRedirect() {
   useEffect(() => {
     if (loading || !session) return
     if (!LANDING_PATHS.has(location.pathname)) return
+    // Only while they still have nowhere to be. Someone who already belongs
+    // somewhere is not mid-join, and yanking them off /learn would be a loop.
+    // This guard covers the token too: an academy admin who had opened an
+    // invite link meant for somebody else was sent to /accept-invite from every
+    // landing route — including the one a finished password reset ends on — and
+    // could not get back into their own academy. A person who is genuinely
+    // mid-join has no membership yet, and an invite link that still carries its
+    // ?token= reaches the page without any help from here.
+    if (academyLoading || memberships.length > 0) return
     const token = getPendingInvite()
     if (token) {
       navigate(acceptInvitePath(token), { replace: true })
       return
     }
-    // Only while they still have nowhere to be. Someone who already belongs
-    // somewhere is not mid-join, and yanking them off /learn would be a loop.
-    if (academyLoading || memberships.length > 0) return
     const slug = getEnrollIntent()
     if (slug) navigate(enrollPath(slug), { replace: true })
   }, [

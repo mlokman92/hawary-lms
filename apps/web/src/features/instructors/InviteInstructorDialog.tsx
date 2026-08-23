@@ -18,6 +18,7 @@ import {
   type SendInvitationResult,
 } from '@/features/students/api'
 import { useCreateInstructor, useCreateInstructorInvitation } from './api'
+import { errorMessage } from '@/lib/errors'
 
 export function InviteInstructorDialog({
   academyId,
@@ -85,13 +86,11 @@ export function InviteInstructorDialog({
           ok: false,
           code: 'send_failed',
           message:
-            err instanceof Error
-              ? err.message
-              : t('instructors.invite_dialog.send_failed'),
+            errorMessage(err, t('instructors.invite_dialog.send_failed')),
         })
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
+      setError(errorMessage(err, t('common.error')))
     }
   }
 

@@ -14,6 +14,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useCreateMaterial } from './api'
+import { errorMessage } from '@/lib/errors'
 
 /** Mirrors the bucket's allowed_mime_types and the Edge Function's allow-list. */
 const ACCEPT = [
@@ -90,7 +91,7 @@ export function MaterialUploadDialog({
       })
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
+      setError(errorMessage(err, t('common.error')))
     }
   }
 

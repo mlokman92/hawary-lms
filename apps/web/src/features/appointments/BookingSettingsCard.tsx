@@ -25,6 +25,7 @@ import {
   type AssignmentMode,
   type BookingSettings,
 } from './api'
+import { errorMessage } from '@/lib/errors'
 
 /** '' means unlimited, which is what a null column means. */
 function numOrNull(value: string): number | null {
@@ -89,7 +90,7 @@ export function BookingSettingsCard({
       })
       setSaved(true)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
+      setError(errorMessage(err, t('common.error')))
     }
   }
 

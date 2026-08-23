@@ -54,9 +54,61 @@ are not left chasing a "pending" invite for someone who already joined.
 worth getting right once: the archived / already-linked guards, the monotonic
 role upsert (`admin` > `trainer` > `student`, never demoted) and
 suspended-stays-suspended. Both `accept_invitation` and
-`accept_pending_invitation` call it. Its exception strings are matched by
-`apps/web/src/lib/invite.ts` to decide whether a failure is terminal — change
-them in both places or the retry logic silently inverts.
+`accept_pending_invitation` call it.
+
+Its exception *strings* used to be matched by `apps/web/src/lib/invite.ts` to
+decide whether a failure was terminal. They no longer are — see below.
+
+## Releasing the stashed token
+
+`hawary.pendingInvite` is a bearer credential parked in `localStorage`, and
+`PendingInviteRedirect` used to treat it as outranking every landing route. So
+the question "may this token be discarded?" decides whether a person can reach
+the app at all, and it has to be answerable without reading English.
+
+It was not. `isTerminalInviteError` matched the raise text against a list of
+phrases and defaulted an unrecognised failure to *retryable* — keep the token,
+try again — and the message it matched was never the server's: supabase-js only
+constructs a real `PostgrestError` when the call used `.throwOnError()`, so the
+`{ data, error }` form hands back the parsed JSON body, a plain object, and
+`e instanceof Error ? e.message : fallback` had already replaced the reason with
+"Could not accept the invitation." The list therefore never matched anything.
+
+In production this cost an academy admin access to their own academy. They
+opened an invite link meant for someone else; the token stuck; every landing
+route — including the one a finished password reset ends on — bounced them to
+`/accept-invite`, where the acceptance 400'd and the screen said it looked like
+"a connection problem". Thirteen `accept_invitation` calls in the forty
+minutes after the first reset (sixteen across the day), two password resets,
+one sign-out, all HTTP 400, none of them able to release the token.
+
+Three rules came out of it, and they are the load-bearing part:
+
+- **Classify on `error.code`, never on the message.** `lib/errors.ts` reads
+  `message`/`code` off the plain object. `isRetryableInviteError` keeps the
+  token only where the function never rendered a verdict: an empty code
+  (PostgREST did not answer in its own voice), any `PGRST…` code except
+  `PGRST1xx` (a malformed request is the one PostgREST complaint that repeating
+  cannot help), `42501` (refused as `anon` — the token did not attach) and the
+  transient Postgres classes `08`/`40`/`53`/`57`. **Everything else is final.**
+  An unrecognised failure now releases the token instead of outliving it.
+  Prose is not a contract; SQLSTATE is.
+
+  `errorMessage` applies the same signal to what a person is shown: a real
+  `Error` was built deliberately so its message is read, but a plain object is
+  only quoted when PostgREST answered — otherwise the "message" is
+  `TypeError: Failed to fetch` or a whole HTML error page. That is also why
+  `PGRST1xx` never reaches a screen: `JSON object requested, multiple (or no)
+  rows returned` is a note to a developer.
+- **A stashed credential never outranks an existing membership.**
+  `PendingInviteRedirect` now takes the same "only while they still have
+  nowhere to be" guard that `AppShell`, `StudentShell` and `useLandingTarget`
+  already had — it was the one site where the token branch sat *above* it. A
+  real invitee has no membership yet, and a live invite link carries its own
+  `?token=`.
+- **A retry has to actually retry.** The old "Try again" only set state that no
+  effect depended on, so it rendered "Joining…" forever. The acceptance effect
+  is keyed on `(account, token, attempt)`.
 
 ## Where the invitee sees it
 

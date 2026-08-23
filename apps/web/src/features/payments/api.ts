@@ -8,6 +8,7 @@ import {
 import type { Enums, Tables } from '@hawary/shared'
 import { translate, type TKey } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
+import { errorMessage } from '@/lib/errors'
 
 export type Invoice = Tables<'invoices'>
 export type InvoiceItem = Tables<'invoice_items'>
@@ -767,10 +768,7 @@ export function useSendPayLink() {
       if (error) {
         const body = await readFunctionError(error)
         throw new Error(
-          body ??
-            (error instanceof Error
-              ? error.message
-              : translate('payments.error.email_failed')),
+          body ?? errorMessage(error, translate('payments.error.email_failed')),
         )
       }
       return (data ??
@@ -878,9 +876,7 @@ export function useCreateBill() {
         const body = await readFunctionError(error)
         throw new Error(
           body ??
-            (error instanceof Error
-              ? error.message
-              : translate('payments.error.start_payment')),
+            errorMessage(error, translate('payments.error.start_payment')),
         )
       }
       return (data ??

@@ -12,6 +12,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useSaveCourseOpening, type CourseOpening } from './api'
+import { errorMessage } from '@/lib/errors'
 
 /** ISO instant -> the yyyy-mm-dd an <input type="date"> wants, in local time. */
 function toDateInput(iso: string | null): string {
@@ -75,7 +76,7 @@ export function CourseLimitsDialog({
       })
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
+      setError(errorMessage(err, t('common.error')))
     }
   }
 

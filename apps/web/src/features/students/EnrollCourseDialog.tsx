@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useEnrollStudent } from './api'
+import { errorMessage } from '@/lib/errors'
 
 export function EnrollCourseDialog({
   academyId,
@@ -52,7 +53,7 @@ export function EnrollCourseDialog({
       setCourseId('')
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
+      setError(errorMessage(err, t('common.error')))
     }
   }
 

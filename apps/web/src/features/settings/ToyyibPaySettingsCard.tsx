@@ -33,6 +33,7 @@ import {
   useSetChargeToPayor,
   useSetGatewayEnabled,
 } from './api'
+import { errorMessage } from '@/lib/errors'
 
 export function ToyyibPaySettingsCard({ academyId }: { academyId: string }) {
   const { t } = useT()
@@ -82,7 +83,7 @@ export function ToyyibPaySettingsCard({ academyId }: { academyId: string }) {
       setCategoryCode('')
       setReplacing(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
+      setError(errorMessage(err, t('common.error')))
     }
   }
 

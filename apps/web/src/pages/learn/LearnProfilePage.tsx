@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { errorMessage } from '@/lib/errors'
 
 function initials(name: string | null, email: string): string {
   const src = (name || email).trim()
@@ -85,7 +86,7 @@ export function LearnProfilePage() {
       })
       setSaved(true)
     } catch (e2) {
-      setErr(e2 instanceof Error ? e2.message : t('lacct.profile.save_failed'))
+      setErr(errorMessage(e2, t('lacct.profile.save_failed')))
     }
   }
 

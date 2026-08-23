@@ -26,6 +26,7 @@ import {
   useRecordPayment,
   type PaymentMethod,
 } from './api'
+import { errorMessage } from '@/lib/errors'
 
 export function RecordPaymentDialog({
   academyId,
@@ -80,7 +81,7 @@ export function RecordPaymentDialog({
       })
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
+      setError(errorMessage(err, t('common.error')))
     }
   }
 

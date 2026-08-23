@@ -19,6 +19,7 @@ import {
 } from '@/features/payments/api'
 import { useT, type TFn } from '@/lib/i18n'
 import { useNoReferrer } from '@/lib/useNoReferrer'
+import { errorMessage } from '@/lib/errors'
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -77,7 +78,7 @@ export function PublicPayPage() {
             : t('pay.error.start_failed')),
       )
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : t('common.error'))
+      setMessage(errorMessage(err, t('common.error')))
     }
   }
 

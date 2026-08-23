@@ -89,8 +89,6 @@ export const auth: AuthDict = {
   'auth.invite.error.generic': 'Tidak dapat menerima jemputan ini.',
   'auth.invite.error.retryable':
     'Jemputan anda masih sah — ini nampaknya masalah sambungan.',
-  'auth.invite.error.terminal':
-    'Pastikan anda log masuk dengan e-mel yang tepat seperti yang dijemput oleh akademi anda.',
   'auth.invite.other_email': 'Log masuk dengan e-mel lain',
   'auth.invite.done.title': 'Anda telah menyertai!',
   'auth.invite.done.subtitle': 'Jemputan diterima',

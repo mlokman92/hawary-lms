@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Enums, Tables } from '@hawary/shared'
 import { useT, type TFn } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
+import { errorMessage } from '@/lib/errors'
 
 export type IncentiveBatch = Tables<'incentive_batches'>
 export type IncentivePayout = Tables<'incentive_payouts'>
@@ -312,10 +313,7 @@ export function useDisburse(batchId: string) {
           await qc.invalidateQueries({ queryKey: payoutsKey(batchId) })
           const body = await readFunctionError(error)
           throw new Error(
-            body ??
-              (error instanceof Error
-                ? error.message
-                : t('incentives.error.send_failed')),
+            body ?? errorMessage(error, t('incentives.error.send_failed')),
           )
         }
         if (!data) throw new Error(t('incentives.error.no_response'))
@@ -386,10 +384,7 @@ export function useRefreshPayoutStatus(batchId: string) {
         if (error) {
           const body = await readFunctionError(error)
           throw new Error(
-            body ??
-              (error instanceof Error
-                ? error.message
-                : t('incentives.error.refresh_failed')),
+            body ?? errorMessage(error, t('incentives.error.refresh_failed')),
           )
         }
         if (!data) throw new Error(t('incentives.error.no_response'))

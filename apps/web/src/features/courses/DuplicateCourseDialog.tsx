@@ -13,6 +13,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useDuplicateCourse, type Course } from './api'
+import { errorMessage } from '@/lib/errors'
 
 /**
  * Copy a course for a new intake.
@@ -68,7 +69,7 @@ export function DuplicateCourseDialog({
       // and set this intake's dates.
       navigate(`/courses/${newId}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
+      setError(errorMessage(err, t('common.error')))
     }
   }
 

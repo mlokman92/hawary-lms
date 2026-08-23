@@ -18,6 +18,7 @@ import {
 import type { DocumentKind } from '@/features/payments/documents'
 import type { AcademyProfile } from './academy'
 import { sampleInvoice } from './sampleInvoice'
+import { errorMessage } from '@/lib/errors'
 
 type Letterhead = Pick<
   AcademyProfile,
@@ -85,7 +86,7 @@ export function InvoicePreviewDialog({
       })
       .catch((err: unknown) => {
         if (cancelled) return
-        setError(err instanceof Error ? err.message : t('doc.error.failed'))
+        setError(errorMessage(err, t('doc.error.failed')))
       })
       .finally(() => {
         if (!cancelled) setBusy(false)

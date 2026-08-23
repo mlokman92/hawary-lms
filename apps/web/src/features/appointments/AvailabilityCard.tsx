@@ -40,6 +40,7 @@ import {
   type BookingHour,
   type TimeOffRow,
 } from './api'
+import { errorMessage } from '@/lib/errors'
 
 /** Weekday name for a heading, from a date that is known to be that weekday. */
 function weekdayLabel(weekday: number, locale: string): string {
@@ -118,7 +119,7 @@ export function AvailabilityCard({
     try {
       await addHours.mutateAsync({ weekdays: days, start_time: from, end_time: to })
     } catch (err) {
-      setHoursError(err instanceof Error ? err.message : t('common.error'))
+      setHoursError(errorMessage(err, t('common.error')))
     }
   }
 
@@ -140,7 +141,7 @@ export function AvailabilityCard({
       setOffOpen(false)
       setOffReason('')
     } catch (err) {
-      setOffError(err instanceof Error ? err.message : t('common.error'))
+      setOffError(errorMessage(err, t('common.error')))
     }
   }
 

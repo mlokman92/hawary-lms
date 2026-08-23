@@ -21,6 +21,7 @@ import {
   useSetAppointmentStatus,
   type AppointmentRow,
 } from './api'
+import { errorMessage } from '@/lib/errors'
 
 /**
  * One session, and the three things staff do to it: mark it done, mark it
@@ -62,7 +63,7 @@ export function AppointmentDialog({
       await fn()
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
+      setError(errorMessage(err, t('common.error')))
     }
   }
 

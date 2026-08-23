@@ -21,6 +21,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { errorMessage } from '@/lib/errors'
 
 function ImageBlockEditor({
   block,
@@ -47,7 +48,7 @@ function ImageBlockEditor({
       const url = await uploadPublicImage(bucket, academyId, file)
       onChange({ ...block, url })
     } catch (er) {
-      setErr(er instanceof Error ? er.message : t('upload.failed'))
+      setErr(errorMessage(er, t('upload.failed')))
     } finally {
       setBusy(false)
       if (ref.current) ref.current.value = ''

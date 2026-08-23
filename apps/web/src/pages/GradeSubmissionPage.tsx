@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { errorMessage } from '@/lib/errors'
 
 export function GradeSubmissionPage() {
   const { id = '' } = useParams<{ id: string }>()
@@ -66,7 +67,7 @@ export function GradeSubmissionPage() {
     try {
       await grade.mutateAsync({ grade: n, feedback, release })
     } catch (e) {
-      setErr(e instanceof Error ? e.message : t('grading.error.save_failed'))
+      setErr(errorMessage(e, t('grading.error.save_failed')))
     }
   }
 

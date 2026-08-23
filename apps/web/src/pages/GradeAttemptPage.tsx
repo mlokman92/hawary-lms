@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { errorMessage } from '@/lib/errors'
 
 export function GradeAttemptPage() {
   const { id = '' } = useParams<{ id: string }>()
@@ -102,7 +103,7 @@ export function GradeAttemptPage() {
     try {
       await grade.mutateAsync({ score: n, maxScore })
     } catch (e) {
-      setErr(e instanceof Error ? e.message : t('grading.error.save_failed'))
+      setErr(errorMessage(e, t('grading.error.save_failed')))
     }
   }
 

@@ -24,6 +24,7 @@ import {
   type SendPayLinkResult,
   type VerifyResult,
 } from './api'
+import { errorMessage } from '@/lib/errors'
 
 export function PayLinkCard({
   academyId,
@@ -62,9 +63,7 @@ export function PayLinkCard({
       const t = await ensureToken.mutateAsync(invoiceId)
       setToken(t)
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : t('payments.pay_link.error_create'),
-      )
+      setError(errorMessage(err, t('payments.pay_link.error_create')))
     }
   }
 
@@ -78,7 +77,7 @@ export function PayLinkCard({
         ok: false,
         code: 'send_failed',
         message:
-          err instanceof Error ? err.message : t('payments.error.email_failed'),
+          errorMessage(err, t('payments.error.email_failed')),
       })
     }
   }
@@ -90,9 +89,7 @@ export function PayLinkCard({
     try {
       setChecked(await check.mutateAsync(token))
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : t('payments.pay_link.error_check'),
-      )
+      setError(errorMessage(err, t('payments.pay_link.error_check')))
     }
   }
 
@@ -257,7 +254,7 @@ function PartialPaymentTerms({
     try {
       await update.mutateAsync(next)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
+      setError(errorMessage(err, t('common.error')))
     }
   }
 

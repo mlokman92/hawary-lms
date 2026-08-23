@@ -22,6 +22,7 @@ import { uploadPublicImage } from '@/lib/storage'
 import { useT } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { errorMessage } from '@/lib/errors'
 
 /** Image files out of a paste/drop payload, ignoring anything else. */
 function imageFilesFrom(dt: DataTransfer | null): File[] {
@@ -216,7 +217,7 @@ export function RichTextEditor({
           .run()
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('upload.failed'))
+      setError(errorMessage(err, t('upload.failed')))
     } finally {
       setBusy(false)
     }

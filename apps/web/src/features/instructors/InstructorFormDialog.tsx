@@ -33,6 +33,7 @@ import {
   type Gender,
   type Instructor,
 } from './api'
+import { errorMessage } from '@/lib/errors'
 
 export function InstructorFormDialog({
   academyId,
@@ -109,7 +110,7 @@ export function InstructorFormDialog({
       }
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
+      setError(errorMessage(err, t('common.error')))
     }
   }
 

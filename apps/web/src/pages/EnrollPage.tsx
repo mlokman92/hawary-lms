@@ -22,6 +22,7 @@ import {
   useAcademyEnrollment,
   useJoinAcademy,
 } from '@/features/enrollment/api'
+import { errorMessage } from '@/lib/errors'
 
 /**
  * The academy's one public join link.
@@ -73,7 +74,7 @@ export function EnrollPage() {
       await refresh()
       navigate('/learn', { replace: true })
     } catch (e) {
-      setFailure(e instanceof Error ? e.message : t('common.error'))
+      setFailure(errorMessage(e, t('common.error')))
     }
   }
 

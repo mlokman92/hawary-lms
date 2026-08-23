@@ -41,6 +41,7 @@ import {
   useSetIncentiveRecipients,
   type IncentiveBatch,
 } from './api'
+import { errorMessage } from '@/lib/errors'
 
 /**
  * Who gets paid, and then the transfer.
@@ -146,7 +147,7 @@ export function RecipientPicker({ batch }: { batch: IncentiveBatch }) {
       }
       await disburse.mutateAsync()
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
+      setError(errorMessage(err, t('common.error')))
     }
   }
 

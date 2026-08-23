@@ -3,6 +3,7 @@ import type { Enums, Tables, TablesInsert, TablesUpdate } from '@hawary/shared'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { translate } from '@/lib/i18n'
+import { errorMessage } from '@/lib/errors'
 
 export type Student = Tables<'students'>
 export type StudentStatus = Enums<'student_status'>
@@ -283,10 +284,7 @@ export function useSendInvitation() {
         // generic SDK string; the real reason is JSON on `error.context`.
         const body = await readFunctionError(error)
         throw new Error(
-          body ??
-            (error instanceof Error
-              ? error.message
-              : translate('students.invite.send_failed')),
+          body ?? errorMessage(error, translate('students.invite.send_failed')),
         )
       }
       return (data ?? {
@@ -316,5 +314,11 @@ export async function acceptInvitation(token: string) {
     _token: token,
   })
   if (error) throw error
+  // `accept_invitation` always returns a row, so a null here is postgrest-js's
+  // workaround for supabase/postgrest-js#295 rewriting a 404-with-empty-body
+  // into a 204 with no error at all. Unguarded that reads as a successful
+  // join: the caller would clear the stashed token and say "You're in!" to
+  // somebody who is not. An Error carries no `code`, so this stays retryable.
+  if (!data) throw new Error(translate('auth.invite.error.generic'))
   return data as unknown as { academy_id: string; status: string }
 }

@@ -3,6 +3,7 @@ import { translate } from '@/lib/i18n'
 import { fetchAcademyProfile } from '@/features/settings/academy'
 import { fetchInvoiceDetail, type Invoice, type InvoiceDetail } from './api'
 import { downloadInvoicePdf, downloadReceiptPdf } from './pdf'
+import { errorMessage } from '@/lib/errors'
 
 export type DocumentKind = 'invoice' | 'receipt'
 
@@ -43,9 +44,7 @@ export function useInvoiceDocuments(academyId: string | null) {
         if (kind === 'receipt') await downloadReceiptPdf(input)
         else await downloadInvoicePdf(input)
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : translate('doc.error.failed'),
-        )
+        setError(errorMessage(err, translate('doc.error.failed')))
       } finally {
         setBusy(null)
       }

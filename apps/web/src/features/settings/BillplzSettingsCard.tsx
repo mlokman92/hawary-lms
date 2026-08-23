@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { formatMYR } from '@hawary/shared'
 import { usePaymentSettings, useRemoveBillplz, useSaveBillplz } from './api'
+import { errorMessage } from '@/lib/errors'
 
 export function BillplzSettingsCard({ academyId }: { academyId: string }) {
   const { t } = useT()
@@ -82,7 +83,7 @@ export function BillplzSettingsCard({ academyId }: { academyId: string }) {
       setReplacing(false)
       setLimitSen(typeof res.limit_sen === 'number' ? res.limit_sen : null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
+      setError(errorMessage(err, t('common.error')))
     }
   }
 

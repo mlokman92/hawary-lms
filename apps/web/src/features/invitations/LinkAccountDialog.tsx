@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useT } from '@/lib/i18n'
 import { useLinkInstructorAccount, useLinkStudentAccount } from './api'
+import { errorMessage } from '@/lib/errors'
 
 /**
  * Link an existing Hawary account to this record, admin-only.
@@ -62,9 +63,7 @@ export function LinkAccountDialog({
       }
       onOpenChange(false)
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : t('invite.link.error.failed'),
-      )
+      setError(errorMessage(err, t('invite.link.error.failed')))
     }
   }
 

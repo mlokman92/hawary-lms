@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useCreateInvoices, TOYYIBPAY_FPX_FEE_SEN } from './api'
+import { errorMessage } from '@/lib/errors'
 
 type ItemRow = {
   key: string
@@ -236,7 +237,7 @@ export function InvoiceFormDialog({
       onOpenChange(false)
       if (created.length === 1) onCreated(created[0].id)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
+      setError(errorMessage(err, t('common.error')))
     }
   }
 

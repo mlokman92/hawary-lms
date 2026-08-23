@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useCreateIncentiveBatch } from './api'
+import { errorMessage } from '@/lib/errors'
 
 /** The grant this was built for is RM500 a head, so that is what the field
  *  opens on — it is still a plain text input, not a fixed amount. */
@@ -61,7 +62,7 @@ export function NewIncentiveDialog({
       onOpenChange(false)
       navigate(`/incentives/${id}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
+      setError(errorMessage(err, t('common.error')))
     }
   }
 

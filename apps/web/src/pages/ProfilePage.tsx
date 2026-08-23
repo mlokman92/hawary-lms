@@ -19,6 +19,7 @@ import {
   useMyProfile,
   useUpdateMyProfile,
 } from '@/features/profile/api'
+import { errorMessage } from '@/lib/errors'
 
 function Field({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -80,7 +81,7 @@ export function ProfilePage() {
       })
       setSaved(true)
     } catch (e2) {
-      setErr(e2 instanceof Error ? e2.message : t('profile.save_failed'))
+      setErr(errorMessage(e2, t('profile.save_failed')))
     }
   }
 

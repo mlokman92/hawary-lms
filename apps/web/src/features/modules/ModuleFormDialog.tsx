@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useCreateModule, useUpdateModule, type CourseModule } from './api'
+import { errorMessage } from '@/lib/errors'
 
 export function ModuleFormDialog({
   academyId,
@@ -76,7 +77,7 @@ export function ModuleFormDialog({
       }
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
+      setError(errorMessage(err, t('common.error')))
     }
   }
 

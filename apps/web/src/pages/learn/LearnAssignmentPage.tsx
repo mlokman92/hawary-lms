@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { errorMessage } from '@/lib/errors'
 
 export function LearnAssignmentPage() {
   const { id = '' } = useParams<{ id: string }>()
@@ -95,7 +96,7 @@ export function LearnAssignmentPage() {
     try {
       await save.mutateAsync({ id: submission?.id, content, submit })
     } catch (e) {
-      setErr(e instanceof Error ? e.message : t('lwork.assignment.error.save'))
+      setErr(errorMessage(e, t('lwork.assignment.error.save')))
     }
   }
 
@@ -106,9 +107,7 @@ export function LearnAssignmentPage() {
       await remove.mutateAsync(submission.id)
       setContent('')
     } catch (e) {
-      setErr(
-        e instanceof Error ? e.message : t('lwork.assignment.error.delete'),
-      )
+      setErr(errorMessage(e, t('lwork.assignment.error.delete')))
     }
   }
 

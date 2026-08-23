@@ -36,6 +36,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { errorMessage } from '@/lib/errors'
 
 /** Milliseconds left until `expiresAt`, ticking once a second. 0 once past. */
 function useTimeLeft(expiresAt: string | null | undefined): number | null {
@@ -133,7 +134,7 @@ export function LearnAssessmentPage() {
       const payload = await start.mutateAsync(id)
       setAttemptId(payload.attempt.id)
     } catch (e) {
-      setErr(e instanceof Error ? e.message : t('lwork.assessment.error.start'))
+      setErr(errorMessage(e, t('lwork.assessment.error.start')))
     }
   }
 
@@ -163,11 +164,7 @@ export function LearnAssessmentPage() {
   if (attemptId && liveError) {
     return (
       <NotFoundBlock
-        message={
-          liveError instanceof Error
-            ? liveError.message
-            : t('lwork.attempt.not_available')
-        }
+        message={errorMessage(liveError, t('lwork.attempt.not_available'))}
         backTo={`/learn/courses/${meta.course_id}`}
         backLabel={t('lwork.back_to_course')}
       />
@@ -316,7 +313,7 @@ function AttemptView({
       await save.mutateAsync(next)
       return true
     } catch (e) {
-      setErr(e instanceof Error ? e.message : t('lwork.assessment.error.save'))
+      setErr(errorMessage(e, t('lwork.assessment.error.save')))
       return false
     }
   }
@@ -512,9 +509,7 @@ function AttemptView({
                         await submit.mutateAsync()
                       } catch (e) {
                         setErr(
-                          e instanceof Error
-                            ? e.message
-                            : t('lwork.assessment.error.submit'),
+                          errorMessage(e, t('lwork.assessment.error.submit')),
                         )
                       }
                     }}

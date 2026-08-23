@@ -25,6 +25,7 @@ import {
   useBulkEnroll,
   useEnrollRoster,
 } from './bulkEnroll'
+import { errorMessage } from '@/lib/errors'
 
 function Stat({ label, value }: { label: string; value: number }) {
   if (value === 0) return null
@@ -107,7 +108,7 @@ export function BulkEnrollDialog({
       const content = await file.text()
       setText((prev) => (prev.trim() ? `${prev}\n${content}` : content))
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('common.error'))
+      setError(errorMessage(e, t('common.error')))
     }
   }
 
@@ -120,7 +121,7 @@ export function BulkEnrollDialog({
       setDone(count)
       setText('')
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('common.error'))
+      setError(errorMessage(e, t('common.error')))
     }
   }
 

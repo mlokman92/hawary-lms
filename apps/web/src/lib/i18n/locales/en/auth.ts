@@ -90,8 +90,6 @@ export const auth = {
   'auth.invite.error.generic': 'Could not accept the invitation.',
   'auth.invite.error.retryable':
     'Your invitation is still valid — this looks like a connection problem.',
-  'auth.invite.error.terminal':
-    'Make sure you’re signed in with the exact email your academy invited.',
   'auth.invite.other_email': 'Sign in with a different email',
   'auth.invite.done.title': 'You’re in!',
   'auth.invite.done.subtitle': 'Invitation accepted',

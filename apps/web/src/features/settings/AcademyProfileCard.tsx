@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useAcademyProfile, useUpdateAcademyProfile } from './academy'
 import { InvoicePreviewDialog } from './InvoicePreviewDialog'
+import { errorMessage } from '@/lib/errors'
 
 /**
  * The academy's letterhead, editable by an admin.
@@ -66,7 +67,7 @@ export function AcademyProfileCard({ academyId }: { academyId: string }) {
       await refresh()
       setSaved(true)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
+      setError(errorMessage(err, t('common.error')))
     }
   }
 
@@ -246,7 +247,7 @@ function LogoUploader({
       // <academy_id>/ and re-checks staff membership server-side.
       onChange(await uploadPublicImage('avatars', academyId, file))
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('upload.failed'))
+      setError(errorMessage(err, t('upload.failed')))
     } finally {
       setBusy(false)
       if (inputRef.current) inputRef.current.value = ''

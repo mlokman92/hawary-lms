@@ -20,6 +20,7 @@ import {
   useResendInvitation,
   useRevokeInvitation,
 } from './api'
+import { errorMessage } from '@/lib/errors'
 
 /**
  * Pending invitations for one subject kind. Without this the only way to fix a
@@ -60,7 +61,7 @@ export function PendingInvitations({
       }
       setLink(`${window.location.origin}${acceptInvitePath(token)}`)
     } catch (e) {
-      setErr(e instanceof Error ? e.message : t('invite.error.resend'))
+      setErr(errorMessage(e, t('invite.error.resend')))
     }
   }
 

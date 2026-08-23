@@ -4,6 +4,7 @@ import { useT } from '@/lib/i18n'
 import { uploadPublicImage } from '@/lib/storage'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { errorMessage } from '@/lib/errors'
 
 export function AvatarUploader({
   academyId,
@@ -31,7 +32,7 @@ export function AvatarUploader({
       // object under <academy_id>/ and checks staff membership server-side.
       onChange(await uploadPublicImage('avatars', academyId, file))
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('upload.failed'))
+      setError(errorMessage(err, t('upload.failed')))
     } finally {
       setBusy(false)
       if (inputRef.current) inputRef.current.value = ''

@@ -46,6 +46,7 @@ import {
   useMyAppointments,
   type OpenSlot,
 } from '@/features/appointments/api'
+import { errorMessage } from '@/lib/errors'
 
 /** How far ahead one call reaches. The server clamps to the academy horizon. */
 const WINDOW_DAYS = 62
@@ -131,7 +132,7 @@ export function LearnAppointmentsPage() {
       setInstructorId('')
       setNote('')
     } catch (err) {
-      setBookError(err instanceof Error ? err.message : t('common.error'))
+      setBookError(errorMessage(err, t('common.error')))
     }
   }
 

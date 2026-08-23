@@ -35,6 +35,7 @@ import {
   useSaveStudentBankAccount,
   useStudentBankAccount,
 } from './api'
+import { errorMessage } from '@/lib/errors'
 
 function Field({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -101,7 +102,7 @@ export function BankAccountCard({
       setHolder(row.account_holder_name)
       setIc(row.account_holder_ic ?? '')
     } catch (e2) {
-      setErr(e2 instanceof Error ? e2.message : t('common.error'))
+      setErr(errorMessage(e2, t('common.error')))
     }
   }
 
@@ -114,7 +115,7 @@ export function BankAccountCard({
       setHolder('')
       setIc('')
     } catch (e2) {
-      setErr(e2 instanceof Error ? e2.message : t('common.error'))
+      setErr(errorMessage(e2, t('common.error')))
     }
   }
 
