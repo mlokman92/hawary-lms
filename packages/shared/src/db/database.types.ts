@@ -931,6 +931,7 @@ export type Database = {
       course_enrollment_settings: {
         Row: {
           academy_id: string
+          access_email_body: string | null
           capacity: number | null
           closes_at: string | null
           course_id: string
@@ -940,6 +941,7 @@ export type Database = {
         }
         Insert: {
           academy_id: string
+          access_email_body?: string | null
           capacity?: number | null
           closes_at?: string | null
           course_id: string
@@ -949,6 +951,7 @@ export type Database = {
         }
         Update: {
           academy_id?: string
+          access_email_body?: string | null
           capacity?: number | null
           closes_at?: string | null
           course_id?: string
@@ -1223,6 +1226,9 @@ export type Database = {
       enrollments: {
         Row: {
           academy_id: string
+          access_email_at: string | null
+          access_email_id: string | null
+          approved_at: string | null
           completed_at: string | null
           course_id: string
           created_at: string
@@ -1234,6 +1240,9 @@ export type Database = {
         }
         Insert: {
           academy_id: string
+          access_email_at?: string | null
+          access_email_id?: string | null
+          approved_at?: string | null
           completed_at?: string | null
           course_id: string
           created_at?: string
@@ -1245,6 +1254,9 @@ export type Database = {
         }
         Update: {
           academy_id?: string
+          access_email_at?: string | null
+          access_email_id?: string | null
+          approved_at?: string | null
           completed_at?: string | null
           course_id?: string
           created_at?: string
@@ -2090,6 +2102,7 @@ export type Database = {
         Args: { _kind: string; _record_id: string }
         Returns: Json
       }
+      approve_enrollment: { Args: { _enrollment_id: string }; Returns: Json }
       book_appointment: {
         Args: {
           _academy_id: string

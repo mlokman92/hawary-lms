@@ -58,12 +58,12 @@ export const enrollment: EnrollmentDict = {
   'enroll.courses.description':
     'Kursus perlu diterbitkan dan dihidupkan di sini sebelum ia muncul pada pautan.',
   'enroll.courses.empty': 'Tiada kursus lagi.',
-  'enroll.courses.limits': 'Had',
+  'enroll.courses.limits': 'Tetapan',
   'enroll.courses.seats_uncapped': '{taken} telah mendaftar',
   'enroll.courses.seats_capped': '{taken} daripada {capacity} tempat',
   'enroll.courses.no_deadline': 'Tiada tarikh tutup',
 
-  'enroll.limits.title': 'Had pendaftaran',
+  'enroll.limits.title': 'Tetapan pendaftaran',
   'enroll.limits.description': 'Terpakai untuk {course}.',
   'enroll.limits.capacity': 'Tempat',
   'enroll.limits.capacity_hint':
@@ -71,6 +71,11 @@ export const enrollment: EnrollmentDict = {
   'enroll.limits.closes_at': 'Berhenti menerima permohonan pada',
   'enroll.limits.closes_at_hint':
     'Kosongkan untuk kekal terbuka sehingga anda mematikannya.',
+  'enroll.limits.access_email': 'E-mel kelulusan',
+  'enroll.limits.access_email_placeholder':
+    'Hai {{student_name}}, selamat datang ke {{course}}. Kelas bermula pada 3 September.',
+  'enroll.limits.access_email_hint':
+    'Dihantar apabila anda meluluskan permohonan untuk kursus ini. Kosongkan untuk tidak menghantar apa-apa. Anda boleh guna {{student_name}}, {{course}} dan {{academy}}; pautan ke kursus ditambah untuk anda.',
 
   'enroll.requests.title': 'Permohonan',
   'enroll.requests.pending': 'Menunggu kelulusan',
@@ -83,6 +88,10 @@ export const enrollment: EnrollmentDict = {
   'enroll.requests.approve': 'Luluskan',
   'enroll.requests.reject': 'Tolak',
   'enroll.requests.full': 'Penuh',
+  'enroll.requests.failed': 'Permohonan ini tidak dapat dikemas kini.',
+  'enroll.requests.stale': 'Permohonan ini telah diuruskan oleh orang lain.',
+  'enroll.email.failed':
+    'Telah didaftarkan, tetapi e-mel tidak dapat dihantar.',
 
   // --- Kakitangan: pendaftaran pukal melalui e-mel --------------------------
   'enroll.bulk.action': 'Daftarkan pelajar',

@@ -130,11 +130,82 @@ a client-side compare makes `Aina@` find `aina@`. Writes are
 previously dropped from the course is reactivated rather than colliding with the
 unique index.
 
+## Approval email
+
+Approving a request is the one enrollment write that tells the student
+anything. The other three paths stay silent, deliberately: staff enrolling from
+the student page, bulk enrol, and the public link (which only creates a
+request).
+
+**The copy is per course, and silence is the default.** There is no
+product-wide template. Each course carries its own body in
+`course_enrollment_settings.access_email_body`, written by staff on
+`/enrollments` beside `is_open`, `capacity` and `closes_at` — it is enrollment
+configuration, not course metadata, and only a course that accepts requests can
+produce an approval. **A course with no settings row, or a blank body, sends
+nothing**, which is not an error: five of seven courses had no row at all when
+this shipped. `approve_enrollment` tests for the body before it claims, so a
+course that cannot send never stamps `access_email_at` — without that test the
+column would record a send that was never attempted.
+
+Staff write plain text with three placeholders (`{{student_name}}`,
+`{{course}}`, `{{academy}}`); the subject stays generated and the *Open the
+course* button is appended, so there is one field to fill, no way to ship a
+blank subject, and no way to forget the link. The body is HTML-escaped **before**
+the placeholders are filled with already-escaped values, so nothing typed can
+become markup.
+
+**Approving is now `approve_enrollment(uuid)`, not a plain UPDATE.** That
+reverses an earlier decision, and the reason is new: approving acquired an
+irreversible side effect, so the transition and the decision to email have to be
+one statement. Two staff clicking Approve on the same row is the normal case,
+and a select-then-update would send twice — the same argument as
+`app.claim_incentive_payouts`. The RPC locks the row with `SELECT … FOR UPDATE`,
+asserts it is not already active, flips it, and claims the email. The loser of
+the race gets `already_active` and sends nothing. It stays SECURITY **INVOKER**:
+RLS applies the `enrollments: staff update` policy's USING clause to the
+`FOR UPDATE`, so a caller who may not write the row finds nothing.
+
+**A trigger cannot do this job.** `bulkEnroll`'s upsert resolves to
+`ON CONFLICT DO UPDATE` and re-activates a *pending* student — `classifyEmails`
+only excludes rows already `active` — producing `old.status='pending'` →
+`new.status='active'`, byte-identical to an approve. The tuples are the same, so
+no trigger can tell them apart. Intent has to be declared by the caller.
+
+The RPC returns **no student data**. Handing the recipient to the browser and
+back to the Edge Function would make that function's recipient client input, and
+an open relay. `send-course-access` re-reads the address itself under the
+caller's own JWT, and refuses any row whose `access_email_at` is null — so the
+column is the authorization to send, and no bulk-enrolled or directly-enrolled
+student is reachable through it.
+
+Three nullable columns carry the record, because Edge Function logs are gone at
+seven days and "was this student emailed" has to stay answerable:
+`approved_at` (the gesture happened) · `access_email_at` (a send was claimed) ·
+`access_email_id` (Resend accepted it). `access_email_at` set with
+`access_email_id` null is the one otherwise-invisible failure — claimed, never
+confirmed. The claim necessarily precedes the send; a mutex that runs after the
+side effect is not a mutex.
+
+At most one email per enrollment, ever: `access_email_at IS NULL` guards it on
+top of FROM-`pending`. The two guards are kept **separate** from the transition
+on purpose — folding them together would make a legitimate re-approve silently
+refuse to move the status, which is a worse bug than a missing email.
+
+See `supabase/functions/send-course-access/README.md` for the four column
+states, the resend path and the kill switch.
+
 ## Not done
 
-- No email when a request is approved. The student sees it on `/learn`. A
-  `send-*` function in the shape of `send-invitation` is the addition once
-  transactional email is configured.
+- **Rejection is silent, and a rejected student cannot re-apply.**
+  `join_academy` inserts `on conflict (course_id, student_id) do nothing`, so
+  re-using the public link is a no-op against the surviving `cancelled` row.
+  Fixing it means deciding whether a rejected request can be re-opened.
+- **Bulk enrol silently consumes pending requests** and sends nothing, so
+  "every approved student is told" is false — the true claim is "every student
+  approved *through the request list* is told".
+- No retry, queue or sweeper for a failed send. `pgmq`/`pg_cron`/`pg_net` are
+  available but not installed, and stay that way.
 - No waitlist entity. Over-capacity requests stay `pending`.
 - No bulk approve.
 - Bulk enrol does not create student records. Deliberate — see above.

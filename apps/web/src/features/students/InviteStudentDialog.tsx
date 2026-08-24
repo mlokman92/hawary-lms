@@ -35,6 +35,11 @@ export function InviteStudentDialog({
   const createInvitation = useCreateInvitation()
   const sendInvitation = useSendInvitation()
   const [email, setEmail] = useState('')
+  // Optional, and the cheapest fix there is for "Unnamed student": the record
+  // this dialog mints carried an email and nothing else, so until the invitee
+  // claimed it there was no name in the system to find. Mirrors
+  // InviteInstructorDialog, which has always asked.
+  const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [link, setLink] = useState<string | null>(null)
   const [send, setSend] = useState<SendInvitationResult | null>(null)
@@ -51,6 +56,7 @@ export function InviteStudentDialog({
     (next: boolean) => {
       if (!next) {
         setEmail('')
+        setName('')
         setError(null)
         setLink(null)
         setSend(null)
@@ -70,7 +76,10 @@ export function InviteStudentDialog({
     try {
       // Reuse an already-created student on retry instead of inserting a duplicate.
       if (!studentIdRef.current) {
-        const student = await createStudent.mutateAsync({ email: value })
+        const student = await createStudent.mutateAsync({
+          email: value,
+          full_name: name.trim() || null,
+        })
         studentIdRef.current = student.id
       }
       const inv = await createInvitation.mutateAsync(studentIdRef.current)
@@ -134,25 +143,42 @@ export function InviteStudentDialog({
             <InviteLink url={link} note={note} />
           </div>
         ) : (
-          <form id="invite-form" className="grid gap-2" onSubmit={onSubmit}>
-            <Label htmlFor="invite-email">
-              {t('students.invite.email_label')}
-            </Label>
-            <Input
-              id="invite-email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="student@example.com"
-              aria-invalid={!!error}
-              aria-describedby={error ? 'invite-email-error' : undefined}
-            />
-            {error ? (
-              <p id="invite-email-error" role="alert" className="text-destructive text-sm">
-                {error}
-              </p>
-            ) : null}
+          <form id="invite-form" className="grid gap-4" onSubmit={onSubmit}>
+            <div className="grid gap-2">
+              <Label htmlFor="invite-name">
+                {t('students.invite.name_label')}
+              </Label>
+              <Input
+                id="invite-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t('common.full_name')}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="invite-email">
+                {t('students.invite.email_label')}
+              </Label>
+              <Input
+                id="invite-email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="student@example.com"
+                aria-invalid={!!error}
+                aria-describedby={error ? 'invite-email-error' : undefined}
+              />
+              {error ? (
+                <p
+                  id="invite-email-error"
+                  role="alert"
+                  className="text-destructive text-sm"
+                >
+                  {error}
+                </p>
+              ) : null}
+            </div>
           </form>
         )}
 

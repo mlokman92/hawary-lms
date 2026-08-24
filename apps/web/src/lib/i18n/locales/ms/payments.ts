@@ -54,6 +54,7 @@ export const payments: PaymentsDict = {
   'payments.detail.no_items': 'Tiada butiran.',
   'payments.detail.summary': 'Ringkasan',
   'payments.detail.no_payments': 'Belum ada bayaran direkodkan.',
+  'payments.detail.all_payments': 'Semua bayaran',
 
   // Dialog invois baharu
   'payments.form.description':

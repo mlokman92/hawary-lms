@@ -116,6 +116,7 @@ export const students = {
   'students.invite.description':
     'Add a student by email and send them an invite to join.',
   'students.invite.description_done': 'Student added and invitation created.',
+  'students.invite.name_label': 'Name (optional)',
   'students.invite.email_label': 'Email address',
   'students.invite.email_required': 'Email is required.',
   'students.invite.submit': 'Send invite',

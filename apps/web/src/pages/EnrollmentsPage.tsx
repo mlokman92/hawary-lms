@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { ExternalLink, Search, SlidersHorizontal, UserPlus } from 'lucide-react'
 import { useAcademy } from '@/lib/academy'
 import { enrollPath } from '@/lib/enrollIntent'
+import { errorMessage } from '@/lib/errors'
 import { fmtDate } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { PageHeader } from '@/components/patterns/PageHeader'
@@ -35,11 +36,12 @@ import { CourseLimitsDialog } from '@/features/enrollment/CourseLimitsDialog'
 import {
   ENROLLMENT_STATUS_LABEL,
   useAcademyEnrollmentSettings,
+  useApproveEnrollment,
   useCourseOpenings,
   useEnrollmentRequests,
+  useRejectEnrollment,
   useSaveAcademyEnrollment,
   useSaveCourseOpening,
-  useSetEnrollmentStatus,
   type CourseOpening,
 } from '@/features/enrollment/api'
 
@@ -66,7 +68,14 @@ export function EnrollmentsPage() {
   const { data: requests, isLoading, error } = useEnrollmentRequests(activeAcademyId)
   const saveAcademy = useSaveAcademyEnrollment(academyId)
   const saveOpening = useSaveCourseOpening(academyId)
-  const setStatus = useSetEnrollmentStatus(activeAcademyId)
+  const approve = useApproveEnrollment(activeAcademyId)
+  const reject = useRejectEnrollment(activeAcademyId)
+
+  // The only new element on this page. Until now a failed approve was entirely
+  // silent — there was no onError anywhere here — so this carries the approval
+  // failure as well as the email one.
+  const [problem, setProblem] = useState<string | null>(null)
+  const busy = approve.isPending || reject.isPending
 
   const [intro, setIntro] = useState('')
   const [limitsFor, setLimitsFor] = useState<CourseOpening | null>(null)
@@ -267,6 +276,10 @@ export function EnrollmentsPage() {
           </Select>
         </div>
 
+        {problem ? (
+          <p className="text-destructive mb-3 text-sm">{problem}</p>
+        ) : null}
+
         {isLoading ? (
           <LoadingBlock />
         ) : error ? (
@@ -306,19 +319,47 @@ export function EnrollmentsPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        disabled={setStatus.isPending}
-                        onClick={() =>
-                          setStatus.mutate({ id: r.id, status: 'cancelled' })
-                        }
+                        disabled={busy}
+                        onClick={() => {
+                          setProblem(null)
+                          reject.mutate(r.id, {
+                            onError: (e) =>
+                              setProblem(
+                                errorMessage(e, t('enroll.requests.failed')),
+                              ),
+                          })
+                        }}
                       >
                         {t('enroll.requests.reject')}
                       </Button>
                       <Button
                         size="sm"
-                        disabled={setStatus.isPending}
-                        onClick={() =>
-                          setStatus.mutate({ id: r.id, status: 'active' })
-                        }
+                        disabled={busy}
+                        onClick={() => {
+                          setProblem(null)
+                          approve.mutate(r.id, {
+                            onSuccess: ({ result, email }) => {
+                              if (!result.approved) {
+                                setProblem(
+                                  result.reason === 'already_active'
+                                    ? t('enroll.requests.stale')
+                                    : t('enroll.requests.failed'),
+                                )
+                                return
+                              }
+                              // A student with no address is not a failure
+                              // worth reporting — the row above already shows
+                              // a blank email.
+                              if (email && !email.ok && email.code !== 'no_email') {
+                                setProblem(t('enroll.email.failed'))
+                              }
+                            },
+                            onError: (e) =>
+                              setProblem(
+                                errorMessage(e, t('enroll.requests.failed')),
+                              ),
+                          })
+                        }}
                       >
                         {t('enroll.requests.approve')}
                       </Button>

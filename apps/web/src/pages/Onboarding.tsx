@@ -1,11 +1,12 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import type { TablesInsert } from '@hawary/shared'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { useAcademy } from '@/lib/academy'
 import { slugify } from '@/lib/slug'
 import { useT } from '@/lib/i18n'
+import { useLandingTarget } from '@/lib/landing'
 import { FullPageLoading } from '@/components/patterns/QueryState'
 import { PendingInviteList } from '@/features/invitations/PendingInviteList'
 import { useMyPendingInvitations } from '@/features/invitations/api'
@@ -43,13 +44,32 @@ const MY_STATES = [
  * that makes them staff and evicts them from /learn. So invitations come
  * first, and creating an academy is the fallback for someone who really is a
  * founder.
+ *
+ * Showing invitations first was not enough, because `hasInvites` goes empty the
+ * instant one is accepted: the accepted invitee who pressed Back — or reopened
+ * the confirmation email, or a bookmark — got the founder form, and filling it
+ * in named a second academy after their school and made them its admin. It
+ * happened. A student of Hawary Academy founded an empty "Hawary Academy" of
+ * her own two minutes after joining the real one, and every sign-in afterwards
+ * dropped her in the back office of it, because `useLandingTarget` puts staff
+ * above student. From her side of the screen she had been made an admin.
+ *
+ * So membership is the gate, and reaching this page has to be *deliberate*:
+ * `?new=1` is what the switcher's "Add academy" sends, and nothing else does.
+ * Founding an academy is still self-serve — for someone who has nowhere to be,
+ * which is the only person this page was ever addressed to. That a learner has
+ * no button to found one is the same decision `ShellSidebar` already makes by
+ * leaving "Add academy" out of the learner switcher.
  */
 export function Onboarding() {
   const { t } = useT()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { refresh } = useAcademy()
+  const { refresh, staffMemberships, studentMemberships, loading } = useAcademy()
   const { data: invites, isLoading: invitesLoading } = useMyPendingInvitations()
+  const landing = useLandingTarget()
+  const [params] = useSearchParams()
+  const deliberate = params.get('new') === '1'
   // Revealed on request when invitations exist — someone can be both invited
   // and a founder, but that is the rarer of the two.
   const [showCreate, setShowCreate] = useState(false)
@@ -101,8 +121,15 @@ export function Onboarding() {
   }
 
   // Wait for the answer rather than flashing "Create your academy" at someone
-  // who is about to be told they have been invited.
-  if (invitesLoading) return <FullPageLoading />
+  // who is about to be told they have been invited — or who already belongs
+  // somewhere and is about to be sent back to it.
+  if (loading || invitesLoading) return <FullPageLoading />
+
+  // Already a member of something, and did not come here on purpose. Send them
+  // where they belong instead of offering to found a school.
+  if (!deliberate && (staffMemberships.length > 0 || studentMemberships.length > 0)) {
+    return <Navigate to={landing} replace />
+  }
 
   const hasInvites = (invites ?? []).length > 0
   const showForm = !hasInvites || showCreate

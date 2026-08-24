@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Download, Search } from 'lucide-react'
 import { formatMYR } from '@hawary/shared'
 import { useAcademy } from '@/lib/academy'
@@ -47,6 +47,47 @@ import {
 } from '@/features/payments/api'
 
 const ALL = '__all__'
+
+/**
+ * The filter, in the address bar rather than in `useState`.
+ *
+ * A ledger question is asked *of somebody else* — "are these two RM500 rows on
+ * 6 May the same payment, or did she pay twice?" — so the screen showing it has
+ * to survive being pasted into a message. Every control here writes its value
+ * into the query string and reads it back, which is also what lets an invoice
+ * link straight to its own payments.
+ *
+ * A value at its default is deleted rather than written, so the everyday
+ * `/payments/log` keeps a clean URL and a link carries only what was narrowed.
+ */
+function withParams(
+  prev: URLSearchParams,
+  next: Record<string, string | null>,
+): URLSearchParams {
+  const out = new URLSearchParams(prev)
+  for (const [key, value] of Object.entries(next)) {
+    if (value) out.set(key, value)
+    else out.delete(key)
+  }
+  return out
+}
+
+/**
+ * A query string is hand-editable and links outlive the code that wrote them,
+ * so an unknown status reads as "all" rather than reaching the RPC, where it
+ * would fail the `payment_status` cast and show the reader an error instead of
+ * a ledger.
+ */
+function readStatus(raw: string | null): PaymentStatus | typeof ALL {
+  return raw && (PAYMENT_STATUSES as readonly string[]).includes(raw)
+    ? (raw as PaymentStatus)
+    : ALL
+}
+
+function readPage(raw: string | null): number {
+  const n = Number(raw)
+  return Number.isInteger(n) && n >= 1 ? n : 1
+}
 
 /** The Malaysian calendar day of an instant — the academy's zone, not the browser's. */
 const MY_DAY = new Intl.DateTimeFormat('en-CA', {
@@ -142,23 +183,49 @@ function csvRows(rows: PaymentLogRow[], t: TFn) {
 export function PaymentLogPage() {
   const { t, tn } = useT()
   const { activeAcademyId } = useAcademy()
-  const [query, setQuery] = useState('')
-  const [status, setStatus] = useState<PaymentStatus | typeof ALL>(ALL)
-  const [sort, setSort] = useState<PaymentLogSort>('recorded')
-  const [page, setPage] = useState(1)
+  const [params, setParams] = useSearchParams()
   const [exporting, setExporting] = useState(false)
 
-  // The needle only reaches the server once typing settles, or every keystroke
-  // is a round trip for both the page and its totals.
-  const search = useDebounced(query)
+  const search = params.get('q')?.trim() ?? ''
+  const status = readStatus(params.get('status'))
+  const sort: PaymentLogSort = params.get('sort') === 'paid' ? 'paid' : 'recorded'
+  const page = readPage(params.get('page'))
+
+  // `replace`, not push: a filter is not a place you navigate back through, and
+  // a history entry per settled keystroke would bury the page you arrived from.
+  const commit = useCallback(
+    (next: Record<string, string | null>) =>
+      setParams((prev) => withParams(prev, next), { replace: true }),
+    [setParams],
+  )
+
+  // The box keeps its own text so typing stays instant; the URL — and so the
+  // server — only hears about it once typing settles.
+  const [query, setQuery] = useState(search)
+  const debounced = useDebounced(query)
+  const committed = useRef(search)
+
+  useEffect(() => {
+    const needle = debounced.trim()
+    if (needle === search) return
+    committed.current = needle
+    // A new needle renumbers every page under it, so page 7 of the old search
+    // is not page 7 of the new one.
+    commit({ q: needle || null, page: null })
+  }, [debounced, search, commit])
+
+  // A pasted or restored URL wins over the box; our own write does not. Without
+  // that guard a character typed while the write lands would be rubbed out.
+  useEffect(() => {
+    if (search === committed.current) return
+    committed.current = search
+    setQuery(search)
+  }, [search])
+
   const filters: PaymentLogFilters = useMemo(
     () => ({ search, status: status === ALL ? null : status }),
     [search, status],
   )
-
-  // Page 7 of an unfiltered ledger is not page 7 of a search for one name,
-  // and re-ordering the whole ledger renumbers every page under it.
-  useEffect(() => setPage(1), [filters, sort])
 
   const rows = usePaymentLogPage(activeAcademyId, filters, sort, page)
   const totals = usePaymentLogTotals(activeAcademyId, filters)
@@ -213,7 +280,7 @@ export function PaymentLogPage() {
         </div>
         <Select
           value={status}
-          onValueChange={(v) => setStatus(v as PaymentStatus | typeof ALL)}
+          onValueChange={(v) => commit({ status: v === ALL ? null : v, page: null })}
         >
           <SelectTrigger className="w-44">
             <SelectValue />
@@ -229,7 +296,7 @@ export function PaymentLogPage() {
         </Select>
         <Select
           value={sort}
-          onValueChange={(v) => setSort(v as PaymentLogSort)}
+          onValueChange={(v) => commit({ sort: v === 'paid' ? 'paid' : null, page: null })}
         >
           <SelectTrigger className="w-44">
             <SelectValue />
@@ -346,7 +413,7 @@ export function PaymentLogPage() {
           page={page}
           total={total}
           pageSize={PAGE_SIZE}
-          onPageChange={setPage}
+          onPageChange={(n) => commit({ page: n > 1 ? String(n) : null })}
         />
       </div>
     </div>

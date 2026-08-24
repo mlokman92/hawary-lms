@@ -53,6 +53,7 @@ export const payments = {
   'payments.detail.no_items': 'No line items.',
   'payments.detail.summary': 'Summary',
   'payments.detail.no_payments': 'No payments recorded yet.',
+  'payments.detail.all_payments': 'All payments',
 
   // New-invoice dialog
   'payments.form.description':

@@ -116,6 +116,7 @@ export const students: StudentsDict = {
     'Tambah pelajar melalui e-mel dan hantar jemputan untuk menyertai.',
   'students.invite.description_done':
     'Pelajar telah ditambah dan jemputan telah dibuat.',
+  'students.invite.name_label': 'Nama (pilihan)',
   'students.invite.email_label': 'Alamat e-mel',
   'students.invite.email_required': 'E-mel diperlukan.',
   'students.invite.submit': 'Hantar jemputan',

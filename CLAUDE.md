@@ -116,8 +116,19 @@ Monorepo: **pnpm workspaces + Turborepo**.
   an academy without asking for something.
   There is **no application table**: the student record exists by the time
   anything is requested, `app.is_enrolled` already demands `'active'`, and the
-  long-standing `enrollments: staff update` policy already lets staff move it —
-  so **approving is a plain UPDATE**, not an RPC. An unlinked record carrying the
+  long-standing `enrollments: staff update` policy already lets staff move it.
+  Approving *was* a plain UPDATE for exactly that reason; it is now
+  **`approve_enrollment(uuid)`**, because approving acquired an irreversible
+  side effect (the access email) and the transition must be the same statement
+  as the decision to send — two staff clicking Approve at once is the normal
+  case. **Rejecting is still a plain UPDATE**: it has no side effect to guard.
+  See `docs/course-enrollment.md` → "Approval email", and note that a trigger
+  cannot serve here — bulk enrol's upsert produces a byte-identical
+  `pending → active` tuple pair. The email's **copy is per course**
+  (`course_enrollment_settings.access_email_body`, written on `/enrollments`
+  beside `is_open`/`capacity`/`closes_at`): **blank means that course sends
+  nothing**, which is the default, and the RPC tests for it before it claims so
+  a silent course never stamps `access_email_at`. An unlinked record carrying the
   caller's **confirmed** email is adopted rather than duplicated (the
   `my_pending_invitations` standard), which is what stops a CSV-imported student
   becoming a second row. `course_enrollment_settings` now holds only `is_open` ·
@@ -185,6 +196,22 @@ Monorepo: **pnpm workspaces + Turborepo**.
   to `is_admin`, not by special-casing the RPC. Invitees see waiting academies on
   `/onboarding` (which no longer traps them in "create your academy") and on
   `/profile` + `/learn/profile` via `features/invitations/PendingInviteList`.
+  **`/onboarding` is not a landing page**: an existing member who reaches it is
+  returned to `useLandingTarget()`, and only `?new=1` — sent by the switcher's
+  "Add academy" — still opens the founder form. Without that guard an accepted
+  invitee who pressed Back got "Create your academy", and one student founded a
+  second academy named after her own school, which then outranked her student
+  membership on every sign-in.
+  **Names cross the gap at link time**: `app.fill_record_identity` (a `BEFORE
+  INSERT OR UPDATE OF user_id` trigger on both `students` and `instructors`)
+  fills a blank `full_name` from the claimer's profile, and
+  `app.sync_profile_identity` catches a profile filled in later. On the column,
+  not in the RPCs, because `link_student_account` / `link_instructor_account`
+  and a plain staff PostgREST update all write `user_id` without going through
+  `app.link_claimed_record`. Fills blanks only, matches on `user_id` never on a
+  matching email, and **name only** — see `docs/account-claiming.md` for why
+  phone is excluded. On screen, `personName(name, email)` in `lib/format.ts`
+  prefers an address to the word "Unnamed".
 - **Members & roles** (`/members`, admin-only): the staff roster — students are
   excluded (they are an academy record, managed on their own page, where their
   app access can also be suspended). Two independent axes, never merged into one
@@ -411,10 +438,16 @@ Monorepo: **pnpm workspaces + Turborepo**.
   honoured only when it matches `ALLOWED_ORIGINS`, never raw client input.
 
 ### Deferred / next
-- **Transactional email is not configured** — sign-up confirmation uses Supabase's
-  low-rate test mailer and the functions want `APP_URL`/`ALLOWED_ORIGINS` set.
-  Less load-bearing since self-claim landed: an invitee signs up and finds the
-  academy waiting on `/onboarding` without any email being sent.
+- **Transactional email is configured** — Resend, sending from
+  `noreply@hawary.my` (domain verified). `RESEND_API_KEY`, `INVITE_FROM_EMAIL`,
+  `APP_URL` and `ALLOWED_ORIGINS` are all set and shared by every mail function.
+  Supabase Auth sends its own confirm/reset mail through Resend SMTP, which is
+  configured in the dashboard, not in this repo. Note the two limits are
+  **separate and both real**: Supabase Auth has its own per-hour email rate
+  limit (raise it under Authentication → Rate Limits — a signup surge hit it and
+  returned `429 over_email_send_rate_limit` on `/signup`, which Resend never
+  saw), and Resend's plan carries its own cap. Still deferred: BM for
+  transactional email and Edge Function errors, both of which stay English.
 - Assignment **attachments** (needs a private `submissions` bucket + a student
   branch in `upload-media`); scheduled expiry sweep for invitations.
 - Assessment settings still have **no UI**: `duration_minutes`, `max_attempts`,

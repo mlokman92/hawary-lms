@@ -41,6 +41,7 @@ import {
   type TimeOffRow,
 } from './api'
 import { errorMessage } from '@/lib/errors'
+import { personName } from '@/lib/format'
 
 /** Weekday name for a heading, from a date that is known to be that weekday. */
 function weekdayLabel(weekday: number, locale: string): string {
@@ -357,8 +358,14 @@ export function AvailabilityCard({
                 >
                   <div className="min-w-0">
                     <p className="truncate">
-                      {o.instructors?.full_name ??
-                        t('appt.timeoff.whole_academy')}
+                      {/* Whether the whole academy is closed is `instructor_id`
+                          being null — not the instructor being nameless. Read
+                          off the name, one unnamed instructor's afternoon off
+                          read as the academy shutting for the day. */}
+                      {o.instructor_id
+                        ? (personName(o.instructors?.full_name) ??
+                          t('common.unnamed'))
+                        : t('appt.timeoff.whole_academy')}
                       {o.reason ? (
                         <span className="text-muted-foreground">
                           {' '}

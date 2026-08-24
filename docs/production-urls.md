@@ -90,6 +90,7 @@ explicitly allowlisted, falling back to a hardcoded `https://app.hawary.my`.
 | `send-invitation` | `/accept-invite?token=…` | Otherwise any staff caller could have Hawary send a branded invite pointing at their own host. |
 | `send-pay-link` | `/pay/<token>` | Same, for a "Pay now" email — arguably worse, since it invites a payment. |
 | `create-bill` | ToyyibPay `billReturnUrl` | `verify_jwt = false`, so an *unauthenticated* caller would otherwise pick where the payer is sent after paying. |
+| `send-course-access` | `/learn/courses/<course_id>` | Same, for the "you're enrolled" email sent when staff approve a request. |
 
 ```bash
 supabase secrets set APP_URL="https://app.hawary.my"
@@ -105,8 +106,9 @@ built-in default). What breaks is *local* development: pay/invite links in test
 emails point at `app.hawary.my` until `ALLOWED_ORIGINS` includes
 `http://localhost:5173`.
 
-The other four functions build no app-facing URLs and need no origin config:
-`toyyibpay-connect`, `toyyibpay-callback`, `verify-payment`, `upload-media`.
+The remaining functions build no app-facing URLs and need no origin config —
+`toyyibpay-connect`, `toyyibpay-callback`, `verify-payment`, `upload-media`,
+`material-url` and the four `billplz-*` functions.
 
 ---
 

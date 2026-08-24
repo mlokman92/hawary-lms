@@ -65,6 +65,26 @@ export function initialsOf(
   return src.slice(0, 2).toUpperCase()
 }
 
+/**
+ * Name a person by the best thing known about them. A record can legitimately
+ * carry no name — the invite dialog asks for an email and nothing else — and
+ * every surface that hits that case is already holding the email, so the real
+ * choice is between an address and the word "Unnamed". An address identifies
+ * somebody; "Unnamed" identifies nobody, and on an invoice it is worse than
+ * blank. Returns null when both are empty, so the caller still supplies the
+ * last-resort label in the reader's own language.
+ *
+ * Sibling of `initialsOf`, and takes the same two arguments for the same
+ * reason: several surfaces render the same person and must not each invent
+ * their own answer to "who is this".
+ */
+export function personName(
+  name: string | null | undefined,
+  email?: string | null,
+): string | null {
+  return (name || '').trim() || (email || '').trim() || null
+}
+
 /** A row can be overdue by status alone, with no due date to measure from. */
 export function fmtDays(days: number | null): string {
   if (days === null) return '—'

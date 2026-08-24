@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Card,
+  CardAction,
   CardContent,
   CardHeader,
   CardTitle,
@@ -247,6 +248,25 @@ export function InvoiceDetailPage() {
       <Card>
         <CardHeader>
           <CardTitle>{t('payments.title')}</CardTitle>
+          {/*
+            The same payments, in the ledger. The list below is already all of
+            them, but it says only what was paid — not when it was typed in, by
+            whom, or whether the row succeeded, which is exactly what tells a
+            double entry apart from a second instalment. The log carries those
+            three, so the link earns its line. It passes the invoice number
+            because that is one of the six fields `payment_log_page` searches.
+          */}
+          {invoice.payments.length > 0 ? (
+            <CardAction>
+              <Button variant="ghost" size="sm" asChild>
+                <Link
+                  to={`/payments/log?q=${encodeURIComponent(invoice.invoice_no)}`}
+                >
+                  {t('payments.detail.all_payments')}
+                </Link>
+              </Button>
+            </CardAction>
+          ) : null}
         </CardHeader>
         <CardContent>
           {invoice.payments.length === 0 ? (

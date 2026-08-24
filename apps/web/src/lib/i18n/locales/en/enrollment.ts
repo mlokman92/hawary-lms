@@ -58,18 +58,23 @@ export const enrollment = {
   'enroll.courses.description':
     'A course must be published and switched on here before it appears on the link.',
   'enroll.courses.empty': 'No courses yet.',
-  'enroll.courses.limits': 'Limits',
+  'enroll.courses.limits': 'Settings',
   'enroll.courses.seats_uncapped': '{taken} enrolled',
   'enroll.courses.seats_capped': '{taken} of {capacity} seats',
   'enroll.courses.no_deadline': 'No closing date',
 
-  'enroll.limits.title': 'Enrollment limits',
+  'enroll.limits.title': 'Enrollment settings',
   'enroll.limits.description': 'Applies to {course}.',
   'enroll.limits.capacity': 'Seats',
   'enroll.limits.capacity_hint':
     'Blank for no limit. A full course still takes requests — you decide who gets the seat.',
   'enroll.limits.closes_at': 'Stop accepting requests on',
   'enroll.limits.closes_at_hint': 'Blank to stay open until you switch it off.',
+  'enroll.limits.access_email': 'Acceptance email',
+  'enroll.limits.access_email_placeholder':
+    'Hi {{student_name}}, welcome to {{course}}. Classes begin on 3 September.',
+  'enroll.limits.access_email_hint':
+    'Sent when you approve a request for this course. Blank sends nothing. You can use {{student_name}}, {{course}} and {{academy}}; the link to the course is added for you.',
 
   'enroll.requests.title': 'Requests',
   'enroll.requests.pending': 'Awaiting approval',
@@ -82,6 +87,9 @@ export const enrollment = {
   'enroll.requests.approve': 'Approve',
   'enroll.requests.reject': 'Reject',
   'enroll.requests.full': 'Full',
+  'enroll.requests.failed': 'Could not update this request.',
+  'enroll.requests.stale': 'Someone else already handled this request.',
+  'enroll.email.failed': 'Enrolled, but the email could not be sent.',
 
   // --- Staff: bulk enroll by email ------------------------------------------
   'enroll.bulk.action': 'Enroll students',

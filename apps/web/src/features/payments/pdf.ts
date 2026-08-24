@@ -1,6 +1,6 @@
 import type { jsPDF } from 'jspdf'
 import { formatMYR } from '@hawary/shared'
-import { fmtDate } from '@/lib/format'
+import { fmtDate, personName } from '@/lib/format'
 import { translate } from '@/lib/i18n'
 import type { AcademyProfile } from '@/features/settings/academy'
 import {
@@ -236,13 +236,14 @@ function drawParties(
   font(doc, 8, 'bold', MUTED)
   doc.text(pdfText(translate('doc.bill_to')).toUpperCase(), M, y)
 
+  // A record can legitimately have no name — the invite dialog asks only for an
+  // email — and a bill addressed to "Unnamed" identifies nobody, which on a
+  // document that outlives the screen is worse than blank. An address at least
+  // says who owes what. It must then not print twice in the block below.
+  const billTo = personName(student?.full_name, student?.email)
   font(doc, 10, 'bold')
   let ly = y + 5
-  doc.text(
-    pdfText(student?.full_name || translate('common.unnamed')),
-    M,
-    ly,
-  )
+  doc.text(pdfText(billTo ?? translate('common.unnamed')), M, ly)
   ly += 4.5
 
   font(doc, 9, 'normal', MUTED)
@@ -254,7 +255,8 @@ function drawParties(
   if (student?.address) details.push(...student.address.split('\n'))
   if (student?.student_no)
     details.push(`${translate('doc.student_no')}: ${student.student_no}`)
-  if (student?.email) details.push(student.email)
+  if (student?.email && student.email.trim() !== billTo)
+    details.push(student.email)
   if (invoice.course?.title)
     details.push(`${translate('doc.course')}: ${invoice.course.title}`)
   for (const raw of details) {

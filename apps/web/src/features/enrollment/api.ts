@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query'
 import type { Enums, Tables } from '@hawary/shared'
 import { supabase } from '@/lib/supabase'
 import type { TKey } from '@/lib/i18n'
@@ -75,6 +80,8 @@ export type CourseOpening = {
   capacity: number | null
   closesAt: string | null
   seatsTaken: number
+  /** Blank means this course sends no acceptance email — the default. */
+  accessEmailBody: string
 }
 
 const academySettingsKey = (academyId: string | null) =>
@@ -239,6 +246,7 @@ export function useCourseOpenings(academyId: string | null) {
           capacity: s?.capacity ?? null,
           closesAt: s?.closes_at ?? null,
           seatsTaken: taken.get(c.id) ?? 0,
+          accessEmailBody: s?.access_email_body ?? '',
         }
       })
     },
@@ -253,6 +261,8 @@ export function useSaveCourseOpening(academyId: string) {
       is_open?: boolean
       capacity?: number | null
       closes_at?: string | null
+      /** null clears it, and a course with no body sends no acceptance email. */
+      access_email_body?: string | null
     }) => {
       const { courseId, ...patch } = input
       const { error } = await supabase
@@ -321,29 +331,136 @@ export function usePendingEnrollmentCount(academyId: string | null) {
 }
 
 /**
- * Approve or reject: a plain UPDATE. The `enrollments: staff update` policy has
- * always allowed this — the same right staff already exercise when they enrol
- * somebody from the student page — so there is nothing for an RPC to add.
+ * The six lists an enrollment write moves. Extracted so approve and reject
+ * cannot drift apart, the way `invalidateMoney` does for the payments feature.
  */
-export function useSetEnrollmentStatus(academyId: string | null) {
+function invalidateEnrollment(qc: QueryClient, academyId: string | null) {
+  void qc.invalidateQueries({ queryKey: requestsKey(academyId) })
+  void qc.invalidateQueries({ queryKey: pendingCountKey(academyId) })
+  void qc.invalidateQueries({ queryKey: openingsKey(academyId) })
+  void qc.invalidateQueries({ queryKey: ['students', academyId] })
+  void qc.invalidateQueries({ queryKey: ['courses', academyId] })
+  void qc.invalidateQueries({
+    queryKey: ['course-enrollment-stats', academyId],
+  })
+}
+
+export type ApproveResult = {
+  approved: boolean
+  notify: boolean
+  reason?: 'not_found' | 'already_active'
+  status?: EnrollmentStatus
+}
+
+export type SendCourseAccessResult =
+  | { ok: true; id: string | null; to: string }
+  | {
+      ok: false
+      code: 'no_email' | 'email_not_configured' | 'send_failed'
+      message: string
+    }
+
+export type ApproveOutcome = {
+  result: ApproveResult
+  /** null when the RPC did not claim an email — nothing was attempted. */
+  email: SendCourseAccessResult | null
+}
+
+/** Same shape as the payments feature's copy; deliberately not shared. */
+async function readFunctionError(error: unknown): Promise<string | null> {
+  const ctx = (error as { context?: unknown })?.context
+  if (ctx && typeof (ctx as Response).json === 'function') {
+    try {
+      const parsed = (await (ctx as Response).json()) as {
+        error?: string
+        message?: string
+      }
+      return parsed.error ?? parsed.message ?? null
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
+/**
+ * Approve a request, then tell the student.
+ *
+ * `approve_enrollment` is an RPC and not the plain UPDATE this used to be for
+ * one reason: approving now has an irreversible side effect, so the transition
+ * and the decision to email have to be one statement. Two staff clicking
+ * Approve on the same row is the normal case, and a select-then-update would
+ * send twice. The RPC locks the row, asserts it is not already active, and
+ * claims the email — the loser of the race gets `already_active` and sends
+ * nothing.
+ *
+ * The RPC returns no student data on purpose. If it handed the recipient to the
+ * browser and the browser handed it to the Edge Function, that function's
+ * recipient would be client input and it would be an open relay; it re-reads
+ * the address itself under the caller's own JWT.
+ *
+ * Delivery is soft: the student is already enrolled, so a send failure is
+ * reported, never thrown.
+ */
+export function useApproveEnrollment(academyId: string | null) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (input: { id: string; status: EnrollmentStatus }) => {
+    mutationFn: async (id: string): Promise<ApproveOutcome> => {
+      const { data, error } = await supabase.rpc('approve_enrollment', {
+        _enrollment_id: id,
+      })
+      if (error) throw error
+      const result = data as unknown as ApproveResult
+
+      // Not our call to make: the RPC decides. `notify` is false for a lost
+      // race, a student with no address, and a row already emailed once.
+      if (!result?.approved || !result.notify) return { result, email: null }
+
+      const { data: sent, error: sendError } =
+        await supabase.functions.invoke<SendCourseAccessResult>(
+          'send-course-access',
+          { body: { enrollment_id: id, origin: window.location.origin } },
+        )
+      if (sendError) {
+        const body = await readFunctionError(sendError)
+        return {
+          result,
+          email: {
+            ok: false,
+            code: 'send_failed',
+            message: body ?? 'The email could not be sent.',
+          },
+        }
+      }
+      return {
+        result,
+        email:
+          sent ??
+          ({
+            ok: false,
+            code: 'send_failed',
+            message: 'The email service did not respond.',
+          } as SendCourseAccessResult),
+      }
+    },
+    onSuccess: () => invalidateEnrollment(qc, academyId),
+  })
+}
+
+/**
+ * Reject: still a plain UPDATE. It has no side effect to guard, so the
+ * `enrollments: staff update` policy is all it ever needed.
+ */
+export function useRejectEnrollment(academyId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('enrollments')
-        .update({ status: input.status })
-        .eq('id', input.id)
+        .update({ status: 'cancelled' })
+        .eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: requestsKey(academyId) })
-      void qc.invalidateQueries({ queryKey: pendingCountKey(academyId) })
-      void qc.invalidateQueries({ queryKey: openingsKey(academyId) })
-      void qc.invalidateQueries({ queryKey: ['students', academyId] })
-      void qc.invalidateQueries({ queryKey: ['courses', academyId] })
-      void qc.invalidateQueries({
-        queryKey: ['course-enrollment-stats', academyId],
-      })
-    },
+    onSuccess: () => invalidateEnrollment(qc, academyId),
   })
 }

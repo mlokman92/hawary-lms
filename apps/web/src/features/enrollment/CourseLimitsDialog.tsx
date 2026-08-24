@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { useSaveCourseOpening, type CourseOpening } from './api'
 import { errorMessage } from '@/lib/errors'
 
@@ -48,12 +49,14 @@ export function CourseLimitsDialog({
   const save = useSaveCourseOpening(academyId)
   const [capacity, setCapacity] = useState('')
   const [closesAt, setClosesAt] = useState('')
+  const [emailBody, setEmailBody] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open || !course) return
     setCapacity(course.capacity != null ? String(course.capacity) : '')
     setClosesAt(toDateInput(course.closesAt))
+    setEmailBody(course.accessEmailBody)
     setError(null)
   }, [open, course])
 
@@ -73,6 +76,8 @@ export function CourseLimitsDialog({
         courseId: course.id,
         capacity: seats,
         closes_at: fromDateInput(closesAt),
+        // Blank clears it, and a course with no body sends no acceptance email.
+        access_email_body: emailBody.trim() || null,
       })
       onOpenChange(false)
     } catch (err) {
@@ -82,7 +87,16 @@ export function CourseLimitsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      {/*
+        The acceptance email has no length limit, so this dialog is the one that
+        can outgrow the viewport. Cap it and let the FORM scroll rather than the
+        whole panel: the title says which course you are editing and the footer
+        holds Save, and losing either off-screen is how you save the wrong
+        course or cannot save at all. `minmax(0,1fr)` is what lets the middle
+        row shrink below its content — a bare `1fr` floors at the content height
+        and nothing scrolls.
+      */}
+      <DialogContent className="grid-rows-[auto_minmax(0,1fr)_auto] max-h-[calc(100dvh-2rem)] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t('enroll.limits.title')}</DialogTitle>
           <DialogDescription>
@@ -90,7 +104,12 @@ export function CourseLimitsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form id="course-limits-form" className="grid gap-4" onSubmit={onSubmit}>
+        {/* -mx-1 px-1 keeps focus rings from being clipped by the scroll box. */}
+        <form
+          id="course-limits-form"
+          className="-mx-1 grid gap-4 overflow-y-auto px-1"
+          onSubmit={onSubmit}
+        >
           <div className="grid gap-2">
             <Label htmlFor="capacity">{t('enroll.limits.capacity')}</Label>
             <Input
@@ -116,6 +135,21 @@ export function CourseLimitsDialog({
             />
             <p className="text-muted-foreground text-xs">
               {t('enroll.limits.closes_at_hint')}
+            </p>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="access-email">
+              {t('enroll.limits.access_email')}
+            </Label>
+            <Textarea
+              id="access-email"
+              rows={6}
+              value={emailBody}
+              onChange={(e) => setEmailBody(e.target.value)}
+              placeholder={t('enroll.limits.access_email_placeholder')}
+            />
+            <p className="text-muted-foreground text-xs">
+              {t('enroll.limits.access_email_hint')}
             </p>
           </div>
           {error ? <p className="text-destructive text-sm">{error}</p> : null}

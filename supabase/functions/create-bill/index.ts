@@ -267,7 +267,12 @@ Deno.serve(async (req) => {
     billCallbackUrl: callbackUrl,
     billExternalReferenceNo: intentId,
     billPaymentChannel: '0',
-    billTo: payerName || 'Customer',
+    // Falls through to the email before the generic word: this is what the
+    // payer reads on their bank's confirmation screen, and "Customer" tells
+    // them nothing about which bill they are settling. `hasFullPayer` above is
+    // deliberately NOT relaxed — an email is a usable label, not a name, and
+    // billPayorInfo='1' would lock it into a field they could not correct.
+    billTo: payerName || clean(payerEmail, 50) || 'Customer',
   }
   if (validEmail) fields.billEmail = payerEmail
   if (payerPhone) fields.billPhone = payerPhone

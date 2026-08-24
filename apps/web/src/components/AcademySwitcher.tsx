@@ -79,7 +79,10 @@ export function AcademySwitcher() {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="gap-2 p-2"
-              onClick={() => navigate('/onboarding')}
+              // `?new=1` is the only deliberate way into the founder form:
+              // /onboarding now returns an existing member to where they
+              // belong, so a stray navigation cannot mint a second academy.
+              onClick={() => navigate('/onboarding?new=1')}
             >
               <div className="flex size-6 items-center justify-center rounded-md border">
                 <Plus className="size-4" />

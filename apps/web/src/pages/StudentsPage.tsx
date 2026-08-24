@@ -14,7 +14,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { useAcademy } from '@/lib/academy'
-import { fmtMonthYear } from '@/lib/format'
+import { fmtMonthYear, personName } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import type { Tone } from '@/lib/tone'
 import { PageHeader } from '@/components/patterns/PageHeader'
@@ -326,7 +326,7 @@ export function StudentsPage() {
                     >
                       <TableCell>
                         <div className="font-medium">
-                          {s.full_name ?? (
+                          {personName(s.full_name, s.email) ?? (
                             <span className="text-muted-foreground italic">
                               {t('common.unnamed')}
                             </span>

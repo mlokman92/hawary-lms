@@ -4,7 +4,7 @@ import { ArrowLeft, Pencil, Plus, Receipt, UserPlus, X } from 'lucide-react'
 import { formatMYR, type Enums } from '@hawary/shared'
 import { useAcademy } from '@/lib/academy'
 import { getLang, useT, type TKey } from '@/lib/i18n'
-import { localeFor } from '@/lib/format'
+import { localeFor, personName } from '@/lib/format'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -216,7 +216,8 @@ export function StudentDetailPage() {
             </Avatar>
             <div className="flex-1">
               <h1 className="text-xl font-semibold tracking-tight">
-                {student.full_name ?? t('students.unnamed')}
+                {personName(student.full_name, student.email) ??
+                  t('students.unnamed')}
               </h1>
               <p className="text-muted-foreground text-sm">
                 {t('students.member_since', {
