@@ -17,7 +17,6 @@ export const appointments: AppointmentsDict = {
   // --- Satu sesi ------------------------------------------------------------
   'appt.field.instructor': 'Pengajar',
   'appt.field.status': 'Status',
-  'appt.field.location': 'Di mana',
   'appt.field.note': 'Nota',
   'appt.field.cancel_reason': 'Sebab',
   'appt.action.cancel': 'Batalkan sesi',
@@ -33,6 +32,11 @@ export const appointments: AppointmentsDict = {
   'appt.calendar.next': 'Minggu seterusnya',
   'appt.calendar.this_week': 'Minggu ini',
   'appt.calendar.all_instructors': 'Semua pengajar',
+
+  // --- Setup (its own page: /appointments/settings) -------------------------
+  'appt.setup.title': 'Tetapan tempahan',
+  'appt.setup.subtitle':
+    'Siapa boleh ditempah, bila, dan atas syarat apa. Ditetapkan sekali sahaja.',
 
   // --- Dasar ----------------------------------------------------------------
   'appt.settings.title': 'Tempahan',
@@ -55,8 +59,9 @@ export const appointments: AppointmentsDict = {
   'appt.settings.max_open': 'Sesi terbuka bagi setiap pelajar',
   'appt.settings.max_open_hint':
     'Berapa banyak sesi akan datang boleh dipegang seorang pelajar. Biarkan kosong untuk tiada had.',
-  'appt.settings.location': 'Di mana',
-  'appt.settings.location_placeholder': 'Bilik 2, atau pautan mesyuarat',
+  'appt.settings.max_week': 'Sesi bagi setiap pelajar seminggu',
+  'appt.settings.max_week_hint':
+    'Berapa banyak sesi boleh diambil seorang pelajar dalam seminggu. Biarkan kosong untuk tiada had.',
 
   // --- Waktu mingguan dan penutupan -----------------------------------------
   'appt.hours.title': 'Waktu',
@@ -119,8 +124,6 @@ export const appointments: AppointmentsDict = {
     'Akademi anda tidak menerima tempahan buat masa ini.',
   'appt.learn.book_title': 'Tempah sesi',
   'appt.learn.book_description': 'Pilih hari, kemudian masa.',
-  'appt.learn.book_where':
-    'Pilih hari, kemudian masa. Sesi diadakan di {location}.',
   'appt.learn.at_cap':
     'Anda sudah menempah sebanyak yang dibenarkan akademi. Batalkan satu untuk menempah yang lain.',
   'appt.learn.nothing_free':

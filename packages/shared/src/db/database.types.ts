@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -90,8 +90,8 @@ export type Database = {
           created_at: string
           horizon_days: number
           is_open: boolean
-          location: string | null
           max_open_per_student: number | null
+          max_per_week_per_student: number | null
           min_notice_hours: number
           slot_minutes: number
           updated_at: string
@@ -102,8 +102,8 @@ export type Database = {
           created_at?: string
           horizon_days?: number
           is_open?: boolean
-          location?: string | null
           max_open_per_student?: number | null
+          max_per_week_per_student?: number | null
           min_notice_hours?: number
           slot_minutes?: number
           updated_at?: string
@@ -114,8 +114,8 @@ export type Database = {
           created_at?: string
           horizon_days?: number
           is_open?: boolean
-          location?: string | null
           max_open_per_student?: number | null
+          max_per_week_per_student?: number | null
           min_notice_hours?: number
           slot_minutes?: number
           updated_at?: string
@@ -383,7 +383,6 @@ export type Database = {
           ends_at: string
           id: string
           instructor_id: string
-          location: string | null
           note: string | null
           staff_note: string | null
           starts_at: string
@@ -402,7 +401,6 @@ export type Database = {
           ends_at: string
           id?: string
           instructor_id: string
-          location?: string | null
           note?: string | null
           staff_note?: string | null
           starts_at: string
@@ -421,7 +419,6 @@ export type Database = {
           ends_at?: string
           id?: string
           instructor_id?: string
-          location?: string | null
           note?: string | null
           staff_note?: string | null
           starts_at?: string

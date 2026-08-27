@@ -169,10 +169,21 @@ Monorepo: **pnpm workspaces + Turborepo**.
   `cancel_appointment` are the only doors — but marking done/no-show is a plain
   staff UPDATE. `app.bookable_student` mirrors `app.is_enrolled`'s membership
   test, not `app.my_student_id`, so suspending a member revokes booking at once.
-  Staff-side `/appointments` is diary-first (week grid) with the policy, hours
-  and pool below it, admin-only; learner-side `/learn/appointments` is pick a
+  Staff-side `/appointments` is the week grid alone; the policy, hours
+  and pool moved to **`/appointments/settings`** (admin-only, reached by the gear
+  beside *Book a session*) — setup is visited once and does not belong under the
+  screen staff open daily. Learner-side `/learn/appointments` is pick a
   day → pick a time → book. Day maths is `YYYY-MM-DD` strings in the academy's
-  zone (`features/appointments/calendar.ts`), never the browser's. **No
+  zone (`features/appointments/calendar.ts`), never the browser's. Two
+  independent caps on a student: `max_open_per_student` bounds the **queue**
+  (how much future they may hold), `max_per_week_per_student` the **rate** (how
+  often they may come, counted over a **Monday-start week in the academy's
+  timezone**, `booked` + `completed`, so cancelling frees the week). Both NULL =
+  no limit, both students-only; `get_booking_options` withholds slots in a
+  filled week rather than failing the booking, and `book_appointment` checks
+  anyway. `location` is **gone** from both the policy and `appointments` —
+  nobody ever set it, and where a session happens is a per-session fact, not an
+  academy default. **No
   invoice**, no approval step, not tied to a course.
 - **Data model**: identity is global (`profiles`, one per email); roles/records are
   per-academy. A **student is an academy record** (`students`, not necessarily an auth

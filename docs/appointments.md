@@ -147,7 +147,7 @@ immediately.
 
 | table                      | holds                                                        |
 | -------------------------- | ------------------------------------------------------------ |
-| `academy_booking_settings` | one row per academy: open, slot length, mode, notice, horizon, cap, location |
+| `academy_booking_settings` | one row per academy: open, slot length, mode, notice, horizon, the two caps |
 | `booking_hours`            | recurring weekly windows, academy-wide, `weekday` 0 = Sunday   |
 | `booking_time_off`         | a closed window; `instructor_id` null closes the whole academy |
 | `appointments`             | the booking                                                    |
@@ -172,11 +172,18 @@ failing it, which is exactly the academy-wide case.
 
 ## Screens
 
-**`/appointments`** (staff) — the diary first, because that is what the page is
-opened for on an ordinary day; then the three cards that decide what goes in it:
-the policy, the hours, and the pool. Those three are admin-only and visited once.
-A trainer sees the calendar alone. `Book a session` is the one obvious action, so
-it is the header button.
+**`/appointments`** (staff) — the diary, and nothing else, because that is what
+the page is opened for on an ordinary day. `Book a session` is the one obvious
+action, so it is the header button.
+
+**`/appointments/settings`** (staff, admin-only) — the three things that decide
+what goes in the diary: the policy, the hours (with closed dates), and the pool.
+They are set up once and revisited rarely, so they are a destination rather than
+three cards trailing under the calendar on every visit. The way in is a gear
+button beside `Book a session`, drawn only for an admin — it has to live on the
+diary page because booking is *off* until it is switched on there, and an empty
+calendar with no way forward is the state a new academy starts in. A trainer
+reaching the URL gets the same admin-only notice `/settings` gives.
 
 The week grid draws only `booked` / `completed` / `no_show`. A cancelled session
 has released its slot and is not something happening on Tuesday; drawing it would
@@ -187,6 +194,32 @@ nobody can see is worse than a tall grid.
 **`/learn/appointments`** (learner) — pick a day, pick a time, book; then the
 student's own sessions with a Cancel on the upcoming ones. Under round robin
 there is no teacher picker, because there is nothing to render.
+
+## Two caps, not one
+
+`max_open_per_student` bounds the **queue** — how much of the future one student
+may hold at once. `max_per_week_per_student` bounds the **rate** — how often they
+may come. They are independent on purpose: an academy happy for a student to
+have four sessions booked may still want at most one a week, and vice versa.
+Both are NULL for no limit; the weekly one defaults to NULL, so an academy that
+never opens the page keeps the behaviour it had.
+
+The week is **Monday-start in `academies.timezone`**, the same reason day maths
+is done in the academy's zone everywhere else: "twice a week" is a claim about
+the office's own calendar. The count is over `booked` + `completed`, so a
+cancelled session frees its week with no second write, exactly as it frees its
+slot. It is the week the **session** falls in, not the week it was booked in — a
+cap of two means two sessions in that week however far ahead they were arranged.
+
+Both caps are checked for students only. Staff booking somebody in are looking at
+the diary and have already decided; `_student_id` is the staff path and skips
+them.
+
+`get_booking_options` also *withholds* slots in a week the student has filled,
+rather than offering them and failing the booking — the same rule as notice
+period and time off: what is on screen is what can be taken.
+`book_appointment` still checks, because the page is a view of a decision and
+never the decision.
 
 ## Deliberately not done
 
@@ -200,6 +233,11 @@ there is no teacher picker, because there is nothing to render.
   `starts_at`; the exclusion constraint still protects them.
 - **No reminders.** Transactional email is not configured (see
   `docs/production-urls.md`).
+- **No location.** There was a `location` on the booking policy, copied onto
+  every appointment at insert. No academy ever set it and no appointment ever
+  carried one, so both columns went. Where a session happens is a per-session
+  fact — if it comes back it belongs on the appointment, not on an academy-wide
+  default that is wrong the moment two rooms are in use.
 
 ## Notes for future work
 

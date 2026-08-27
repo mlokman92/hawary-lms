@@ -97,9 +97,6 @@ export function AppointmentDialog({
               {t(meta.labelKey)}
             </span>
           </Row>
-          {appointment.location ? (
-            <Row label={t('appt.field.location')}>{appointment.location}</Row>
-          ) : null}
           {appointment.note ? (
             <Row label={t('appt.field.note')}>{appointment.note}</Row>
           ) : null}

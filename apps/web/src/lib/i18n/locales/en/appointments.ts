@@ -19,7 +19,6 @@ export const appointments = {
   // --- One session ----------------------------------------------------------
   'appt.field.instructor': 'Instructor',
   'appt.field.status': 'Status',
-  'appt.field.location': 'Where',
   'appt.field.note': 'Note',
   'appt.field.cancel_reason': 'Reason',
   'appt.action.cancel': 'Cancel session',
@@ -34,6 +33,11 @@ export const appointments = {
   'appt.calendar.next': 'Next week',
   'appt.calendar.this_week': 'This week',
   'appt.calendar.all_instructors': 'All instructors',
+
+  // --- Setup (its own page: /appointments/settings) -------------------------
+  'appt.setup.title': 'Booking settings',
+  'appt.setup.subtitle':
+    'Who can be booked, when, and on what terms. Set up once.',
 
   // --- Policy ---------------------------------------------------------------
   'appt.settings.title': 'Booking',
@@ -56,8 +60,9 @@ export const appointments = {
   'appt.settings.max_open': 'Open sessions per student',
   'appt.settings.max_open_hint':
     'How many upcoming sessions one student may hold. Leave blank for no limit.',
-  'appt.settings.location': 'Where',
-  'appt.settings.location_placeholder': 'Room 2, or a meeting link',
+  'appt.settings.max_week': 'Sessions per student per week',
+  'appt.settings.max_week_hint':
+    'How many sessions one student may have in a week. Leave blank for no limit.',
 
   // --- Weekly hours and closures --------------------------------------------
   'appt.hours.title': 'Hours',
@@ -118,7 +123,6 @@ export const appointments = {
     'Your academy is not taking bookings at the moment.',
   'appt.learn.book_title': 'Book a session',
   'appt.learn.book_description': 'Pick a day, then a time.',
-  'appt.learn.book_where': 'Pick a day, then a time. Sessions are at {location}.',
   'appt.learn.at_cap':
     'You already have as many sessions booked as your academy allows. Cancel one to book another.',
   'appt.learn.nothing_free': 'Nothing is free to book right now.',

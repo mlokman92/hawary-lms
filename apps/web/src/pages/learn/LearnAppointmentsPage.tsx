@@ -156,9 +156,7 @@ export function LearnAppointmentsPage() {
           <CardHeader>
             <CardTitle>{t('appt.learn.book_title')}</CardTitle>
             <CardDescription>
-              {options.location
-                ? t('appt.learn.book_where', { location: options.location })
-                : t('appt.learn.book_description')}
+              {t('appt.learn.book_description')}
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
@@ -340,7 +338,6 @@ export function LearnAppointmentsPage() {
                       </p>
                       <p className="text-muted-foreground truncate text-sm">
                         {a.instructor.full_name ?? t('common.unnamed')}
-                        {a.location ? ` · ${a.location}` : ''}
                       </p>
                       <p className={cn('text-xs', TONE_CLASS[meta.tone])}>
                         {t(meta.labelKey)}

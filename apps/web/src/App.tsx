@@ -54,6 +54,7 @@ import { PayResultPage } from './pages/PayResultPage'
 import { EnrollPage } from './pages/EnrollPage'
 import { EnrollmentsPage } from './pages/EnrollmentsPage'
 import { AppointmentsPage } from './pages/AppointmentsPage'
+import { AppointmentSettingsPage } from './pages/AppointmentSettingsPage'
 import { IncentivesPage } from './pages/IncentivesPage'
 import { IncentiveBatchPage } from './pages/IncentiveBatchPage'
 
@@ -166,6 +167,12 @@ export default function App() {
                     <Route path="/students/:id" element={<StudentDetailPage />} />
                     <Route path="/instructors" element={<InstructorsPage />} />
                     <Route path="/appointments" element={<AppointmentsPage />} />
+                    {/* The booking policy, hours and pool — set up once, kept
+                        off the diary. */}
+                    <Route
+                      path="/appointments/settings"
+                      element={<AppointmentSettingsPage />}
+                    />
                     <Route
                       path="/instructors/:id"
                       element={<InstructorDetailPage />}

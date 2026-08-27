@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
-import { CalendarClock, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ChevronLeft, ChevronRight, Plus, Settings } from 'lucide-react'
 import { useAcademy } from '@/lib/academy'
 import { getLang, useT } from '@/lib/i18n'
 import { localeFor } from '@/lib/format'
 import { PageHeader } from '@/components/patterns/PageHeader'
-import { EmptyState } from '@/components/patterns/EmptyState'
 import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
 import {
   addDays,
   fmtWeekRange,
@@ -31,8 +30,6 @@ import {
 } from '@/features/appointments/calendar'
 import { WeekCalendar } from '@/features/appointments/WeekCalendar'
 import { AppointmentDialog } from '@/features/appointments/AppointmentDialog'
-import { AvailabilityCard } from '@/features/appointments/AvailabilityCard'
-import { BookingSettingsCard } from '@/features/appointments/BookingSettingsCard'
 import { BookForStudentDialog } from '@/features/appointments/BookForStudentDialog'
 import {
   DEFAULT_TZ,
@@ -41,31 +38,27 @@ import {
   useBookingHours,
   useBookingPool,
   useBookingSettings,
-  useSetInstructorBookable,
-  useTimeOff,
   type AppointmentRow,
 } from '@/features/appointments/api'
 
 /**
- * One-to-one sessions: the diary first, then the three things that decide what
- * goes in it — the policy, the hours, and who is in the pool.
+ * One-to-one sessions: the diary, and nothing else.
  *
- * The calendar is what staff open this page for on any ordinary day, so it is
- * on top; the setup cards below it are admin-only and are visited once.
+ * The three things that decide what goes in it — the policy, the hours, and
+ * who is in the pool — live on /appointments/settings. They are set up once and
+ * revisited rarely, so they are a destination rather than three cards under the
+ * screen staff open every day.
  */
 export function AppointmentsPage() {
   const { t } = useT()
   const locale = localeFor(getLang())
   const { activeAcademyId, active } = useAcademy()
-  const academyId = activeAcademyId ?? ''
   const isAdmin = active?.role === 'admin'
 
   const { data: tz = DEFAULT_TZ } = useAcademyTimezone(activeAcademyId)
   const { data: settings } = useBookingSettings(activeAcademyId)
   const { data: hours } = useBookingHours(activeAcademyId)
-  const { data: timeOff } = useTimeOff(activeAcademyId)
   const { data: pool } = useBookingPool(activeAcademyId)
-  const setBookable = useSetInstructorBookable(academyId)
 
   const [week, setWeek] = useState<Ymd>(() => startOfWeek(today(tz)))
   const [instructor, setInstructor] = useState('all')
@@ -106,9 +99,19 @@ export function AppointmentsPage() {
         >
           <Plus /> {t('appt.book_for.action')}
         </Button>
+        {/* Setup is where booking is switched on at all, so the way in has to
+            be on the page that is empty until it is. Admin-only, like the page
+            it leads to. */}
+        {isAdmin ? (
+          <Button asChild variant="outline" size="icon">
+            <Link to="/appointments/settings">
+              <Settings />
+              <span className="sr-only">{t('appt.setup.title')}</span>
+            </Link>
+          </Button>
+        ) : null}
       </PageHeader>
 
-      {/* 1 — the diary */}
       <Card className="mt-6">
         <CardHeader>
           <CardTitle>{t('appt.calendar.title')}</CardTitle>
@@ -173,78 +176,6 @@ export function AppointmentsPage() {
         </CardContent>
       </Card>
 
-      {isAdmin ? (
-        <div className="mt-6 grid gap-6">
-          {/* 2 — the policy */}
-          <BookingSettingsCard
-            academyId={academyId}
-            settings={settings ?? null}
-            canEdit={isAdmin}
-          />
-
-          {/* 3 — when */}
-          <AvailabilityCard
-            academyId={academyId}
-            tz={tz}
-            locale={locale}
-            hours={hours ?? []}
-            timeOff={timeOff ?? []}
-            instructors={pool ?? []}
-            bookingOpen={!!settings?.is_open}
-            canEdit={isAdmin}
-          />
-
-          {/* 4 — who */}
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('appt.pool.title')}</CardTitle>
-              <CardDescription>{t('appt.pool.description')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {(pool ?? []).length === 0 ? (
-                <EmptyState
-                  icon={CalendarClock}
-                  title={t('appt.pool.none')}
-                  body={t('appt.pool.none_hint')}
-                />
-              ) : (
-                <ul className="divide-y rounded-md border">
-                  {(pool ?? []).map((i) => (
-                    <li
-                      key={i.id}
-                      className="flex items-center justify-between gap-3 px-3 py-2"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">
-                          {i.full_name ?? t('common.unnamed')}
-                        </p>
-                        {i.status !== 'active' ? (
-                          <p className="text-muted-foreground text-xs">
-                            {t('appt.pool.not_active')}
-                          </p>
-                        ) : null}
-                      </div>
-                      <Switch
-                        checked={i.is_bookable}
-                        // An on_leave instructor is left out by the generator
-                        // whatever this says, so the switch would be a lie.
-                        disabled={i.status !== 'active'}
-                        onCheckedChange={(v) =>
-                          setBookable.mutate({ id: i.id, is_bookable: v })
-                        }
-                        aria-label={t('appt.pool.toggle_aria', {
-                          name: i.full_name ?? t('common.unnamed'),
-                        })}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      ) : null}
-
       <AppointmentDialog
         academyId={activeAcademyId}
         appointment={open}
@@ -254,7 +185,7 @@ export function AppointmentsPage() {
       />
       {settings?.is_open ? (
         <BookForStudentDialog
-          academyId={academyId}
+          academyId={activeAcademyId ?? ''}
           tz={tz}
           mode={settings.assignment_mode}
           open={bookOpen}

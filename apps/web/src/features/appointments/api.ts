@@ -60,8 +60,8 @@ export type BookingOptions = {
   is_open: boolean
   assignment_mode?: AssignmentMode
   slot_minutes?: number
-  location?: string | null
   max_open_per_student?: number | null
+  max_per_week_per_student?: number | null
   open_count?: number
   slots: OpenSlot[]
 }
@@ -71,7 +71,6 @@ export type MyAppointment = {
   starts_at: string
   ends_at: string
   status: AppointmentStatus
-  location: string | null
   note: string | null
   cancel_reason: string | null
   instructor: {
@@ -86,7 +85,6 @@ export type BookResult = {
   id: string
   starts_at: string
   ends_at: string
-  location: string | null
   auto_assigned: boolean
   instructor: SlotInstructor
 }

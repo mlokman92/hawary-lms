@@ -59,7 +59,7 @@ export function BookingSettingsCard({
   const [notice, setNotice] = useState('12')
   const [horizon, setHorizon] = useState('30')
   const [maxOpen, setMaxOpen] = useState('1')
-  const [location, setLocation] = useState('')
+  const [maxWeek, setMaxWeek] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
 
@@ -73,7 +73,11 @@ export function BookingSettingsCard({
         ? ''
         : String(settings.max_open_per_student),
     )
-    setLocation(settings?.location ?? '')
+    setMaxWeek(
+      settings?.max_per_week_per_student == null
+        ? ''
+        : String(settings.max_per_week_per_student),
+    )
   }, [settings])
 
   async function submit() {
@@ -86,7 +90,7 @@ export function BookingSettingsCard({
         min_notice_hours: Number(notice),
         horizon_days: Number(horizon),
         max_open_per_student: numOrNull(maxOpen),
-        location: location.trim() || null,
+        max_per_week_per_student: numOrNull(maxWeek),
       })
       setSaved(true)
     } catch (err) {
@@ -207,14 +211,20 @@ export function BookingSettingsCard({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="location">{t('appt.settings.location')}</Label>
+            <Label htmlFor="max-week">{t('appt.settings.max_week')}</Label>
             <Input
-              id="location"
-              value={location}
+              id="max-week"
+              type="number"
+              min="1"
+              step="1"
+              inputMode="numeric"
+              value={maxWeek}
               disabled={!canEdit}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder={t('appt.settings.location_placeholder')}
+              onChange={(e) => setMaxWeek(e.target.value)}
             />
+            <p className="text-muted-foreground text-xs">
+              {t('appt.settings.max_week_hint')}
+            </p>
           </div>
         </div>
 
