@@ -1,0 +1,112 @@
+# Notifications
+
+The bell in the header. One table, one bell, one event kind so far — a booked
+appointment. What follows is the shape everything else plugs into.
+
+## The row is an event, not a sentence
+
+```
+notifications(id, academy_id, user_id, kind, data, read_at, created_at)
+```
+
+`kind` says what happened; `data` carries the facts. **No text is stored.** The
+client assembles the wording from the dictionary, so the same row reads Malay
+for a Malay reader and English for an English one. Storing "Session booked with
+Cikgu Ali" would have frozen the language at write time, which is the one thing
+`docs/i18n.md` exists to prevent.
+
+`data` is also a **snapshot**: the other party's name and the session time as
+they were when it happened. The list therefore needs no joins, and a later
+rename does not rewrite history.
+
+The recipient is an **account** (`auth.users`), not a student or instructor
+record. A record nobody has claimed has no inbox to open and no way to sign in
+and read this, so `app.notify` treats a null recipient as a no-op rather than an
+error — an unclaimed record is the ordinary case, not a failure.
+
+Rows are scoped by `academy_id` like every other tenant table, and the bell
+follows the academy switcher. A trainer in two academies is two different people
+as far as their work goes.
+
+## Who may do what
+
+| | |
+|---|---|
+| SELECT | `user_id = auth.uid()` — the only policy on the table |
+| INSERT | **nobody**. `app.notify` (SECURITY DEFINER, `app` schema, unreachable over PostgREST) |
+| UPDATE | **nobody**. `mark_notifications_read(ids)` / `mark_all_notifications_read(academy)` |
+| DELETE | **nobody**. Nothing prunes yet — see below |
+
+Marking read goes through an RPC rather than a policy because
+`user_id = auth.uid()` on UPDATE would also authorise a person to rewrite their
+own notification's `kind` and `data`. Harmless in effect, but not a thing
+anybody should be able to do. Both RPCs scope to the caller *inside* the
+statement, so an id lifted from somebody else's list changes nothing, and both
+return the number of rows they actually changed.
+
+## The first event: a booking
+
+`book_appointment` gained a tail. Both parties are told **in the same
+transaction as the insert** — that is the difference between this and the
+confirmation email, which is a second call from the browser and can be lost. If
+the booking exists, so does the notification.
+
+**The person who did the booking is not notified.** A notification about your own
+click is a message telling you what you just did; the screen already said so and
+the confirmation email is the receipt. So a student booking themselves in tells
+the instructor only, and staff booking on somebody's behalf tells both. Staff at
+large are not told either: they have the diary, and a bell that fires for every
+booking in the academy is a bell people learn to ignore.
+
+`data` for `appointment_booked`:
+
+```json
+{ "appointment_id": "…", "role": "student" | "instructor",
+  "with_name": "…", "starts_at": "…", "ends_at": "…", "tz": "Asia/Kuala_Lumpur" }
+```
+
+`role` is which side the reader is on. It decides both the wording and where the
+row leads — `/learn/appointments` for a student, `/appointments` for an
+instructor — because the notification was addressed to them as one or the other,
+not because of which shell they happen to be standing in. `tz` is the academy's
+zone at the time, so the row formats without a second query.
+
+## The bell
+
+`components/NotificationBell.tsx`, mounted in `components/shell/SidebarShell`
+and therefore in **both** shells: a student waiting to hear that their session is
+confirmed and a trainer waiting to hear that one was booked want the same
+control.
+
+- The **badge polls**, not the list. `useUnreadCount` is a `head: true` count on
+  a minute's interval; the twenty rows are fetched only once the panel is
+  opened. A closed bell costs one count per minute.
+- The badge is drawn **only above zero**, the same rule the sidebar counts
+  follow: a badge showing "0" is decoration, and its absence already says it.
+- Opening a row marks it read and navigates. There is no "mark unread", no
+  filter, and no page of older notifications — twenty is what the panel holds.
+
+Adding a kind costs three cases in that one file (`titleOf`, `detailOf`,
+`linkOf`), one enum value, and two dictionary lines. It is not a schema change.
+
+## Deliberately not done
+
+- **No realtime.** A minute's polling is what a notification of this kind is
+  worth; a websocket per signed-in user is not.
+- **No preferences.** Nothing to switch off yet, and a settings page for one
+  event kind would be more product than the feature.
+- **No pruning.** Nothing deletes read notifications. At the present rate the
+  table takes years to become interesting; when it does, the sweep is a `delete
+  … where read_at < now() - interval '90 days'`, and this is the note that says
+  so.
+- **No email/push fan-out from here.** The booking email is sent by
+  `send-appointment-notice` on its own path. Routing both through one dispatcher
+  would be the right move at three or four kinds, not at one.
+
+## Notes
+
+- `notifications_academy_id_fkey` shows on the unindexed-foreign-key advisor.
+  It is the same INFO the other composite-FK tables in this schema carry: the
+  index that matters is `(user_id, academy_id, created_at desc)`, which serves
+  every query the app makes, and a bare `academy_id` index would only pay for
+  itself when an academy is deleted.

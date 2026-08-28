@@ -185,6 +185,34 @@ Monorepo: **pnpm workspaces + Turborepo**.
   nobody ever set it, and where a session happens is a per-session fact, not an
   academy default. **No
   invoice**, no approval step, not tied to a course.
+- **Notifications** (`docs/notifications.md`): the header bell, in **both**
+  shells (mounted in `shell/SidebarShell`, not per layout). A row is an
+  **event, not a sentence** — `kind` + `data`, with the words assembled client
+  side, so the same row reads Malay for a Malay reader; `data` is a snapshot
+  (the other party's name, the time, the academy's `tz`) so the list needs no
+  joins and a rename does not rewrite history. The recipient is an **account**,
+  not a record: `app.notify` no-ops on a null `user_id`, because an unclaimed
+  record is the ordinary case. Clients have **no DML** — SELECT is
+  `user_id = auth.uid()` and read state moves through
+  `mark_notifications_read` / `mark_all_notifications_read`, since an UPDATE
+  policy would also let a person rewrite their own row's `kind`. The badge
+  polls (a `head: true` count, 60s); the twenty rows load only when the panel
+  opens. First and so far only kind: `appointment_booked`, written by
+  `book_appointment` **in the same transaction as the insert** — which is what
+  makes it more reliable than the email. **The actor is not notified** (a
+  message telling you what you just clicked is not news), and neither is staff
+  at large (they have the diary). A new kind costs three cases in
+  `NotificationBell.tsx`, one enum value and two dictionary lines.
+- **Appointment confirmation email** (`send-appointment-notice`,
+  `docs/appointments.md` → "Confirmation email"): every confirmed booking
+  emails **both** parties. It is a second call after `book_appointment`, soft
+  failure only — the session is booked either way. Unlike the other mail
+  functions it uses the **service role**: it emails two people and a student
+  cannot read `instructors` at all, so it authorises under the caller's JWT
+  (RLS on `appointments`) and only then reads and sends. Addresses come from
+  the record, falling back to the linked account's auth email. Two receipts
+  (`student_notice_id` / `instructor_notice_id`) because the recipients fail
+  independently; a re-invoke fills only the gap.
 - **Data model**: identity is global (`profiles`, one per email); roles/records are
   per-academy. A **student is an academy record** (`students`, not necessarily an auth
   user); enrollment/invoices/payments reference `students`. An **instructor is the same

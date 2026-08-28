@@ -43,6 +43,7 @@ import { importCsv as enImportCsv } from './locales/en/importCsv'
 import { profile as enProfile } from './locales/en/profile'
 import { invitations as enInvitations } from './locales/en/invitations'
 import { documents as enDocuments } from './locales/en/documents'
+import { notifications as enNotifications } from './locales/en/notifications'
 
 import { common as msCommon } from './locales/ms/common'
 import { nav as msNav } from './locales/ms/nav'
@@ -72,6 +73,7 @@ import { importCsv as msImportCsv } from './locales/ms/importCsv'
 import { profile as msProfile } from './locales/ms/profile'
 import { invitations as msInvitations } from './locales/ms/invitations'
 import { documents as msDocuments } from './locales/ms/documents'
+import { notifications as msNotifications } from './locales/ms/notifications'
 
 /** `en` is the source of truth: its keys define the contract. */
 export const en = {
@@ -103,6 +105,7 @@ export const en = {
   ...enImportCsv,
   ...enInvitations,
   ...enDocuments,
+  ...enNotifications,
 } as const
 
 export type TKey = keyof typeof en
@@ -149,6 +152,7 @@ export const ms: Record<TKey, string> = {
   ...msImportCsv,
   ...msInvitations,
   ...msDocuments,
+  ...msNotifications,
 }
 
 export type Lang = 'en' | 'ms'

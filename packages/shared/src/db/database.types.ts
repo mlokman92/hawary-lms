@@ -383,11 +383,14 @@ export type Database = {
           ends_at: string
           id: string
           instructor_id: string
+          instructor_notice_id: string | null
           note: string | null
+          notice_sent_at: string | null
           staff_note: string | null
           starts_at: string
           status: Database["public"]["Enums"]["appointment_status"]
           student_id: string
+          student_notice_id: string | null
           updated_at: string
         }
         Insert: {
@@ -401,11 +404,14 @@ export type Database = {
           ends_at: string
           id?: string
           instructor_id: string
+          instructor_notice_id?: string | null
           note?: string | null
+          notice_sent_at?: string | null
           staff_note?: string | null
           starts_at: string
           status?: Database["public"]["Enums"]["appointment_status"]
           student_id: string
+          student_notice_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -419,11 +425,14 @@ export type Database = {
           ends_at?: string
           id?: string
           instructor_id?: string
+          instructor_notice_id?: string | null
           note?: string | null
+          notice_sent_at?: string | null
           staff_note?: string | null
           starts_at?: string
           status?: Database["public"]["Enums"]["appointment_status"]
           student_id?: string
+          student_notice_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1752,6 +1761,44 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          academy_id: string
+          created_at: string
+          data: Json
+          id: string
+          kind: Database["public"]["Enums"]["notification_kind"]
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          data?: Json
+          id?: string
+          kind: Database["public"]["Enums"]["notification_kind"]
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          kind?: Database["public"]["Enums"]["notification_kind"]
+          read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_intents: {
         Row: {
           academy_id: string
@@ -2253,6 +2300,11 @@ export type Database = {
           user_id: string
         }[]
       }
+      mark_all_notifications_read: {
+        Args: { _academy_id: string }
+        Returns: number
+      }
+      mark_notifications_read: { Args: { _ids: string[] }; Returns: number }
       material_download: {
         Args: { _material_id: string }
         Returns: {
@@ -2411,6 +2463,7 @@ export type Database = {
         | "void"
         | "cancelled"
       member_status: "active" | "invited" | "suspended"
+      notification_kind: "appointment_booked"
       payment_method:
         | "cash"
         | "bank_transfer"
@@ -2596,6 +2649,7 @@ export const Constants = {
         "cancelled",
       ],
       member_status: ["active", "invited", "suspended"],
+      notification_kind: ["appointment_booked"],
       payment_method: [
         "cash",
         "bank_transfer",

@@ -89,6 +89,26 @@ export type BookResult = {
   instructor: SlotInstructor
 }
 
+/** One recipient's outcome. `code` is why, when `sent` is false. */
+export type NoticeOutcome = {
+  sent: boolean
+  code?: 'no_email' | 'send_failed' | 'already_sent'
+  id?: string | null
+}
+
+/**
+ * What `send-appointment-notice` came to. `ok` is true only when BOTH parties
+ * were reached; the two outcomes say which one was not, because an instructor
+ * record with no address must not read as the student going untold.
+ */
+export type BookingNotice = {
+  ok: boolean
+  code?: 'email_not_configured'
+  message?: string
+  student?: NoticeOutcome
+  instructor?: NoticeOutcome
+}
+
 const settingsKey = (a: string | null) => ['booking-settings', a] as const
 const hoursKey = (a: string | null) => ['booking-hours', a] as const
 const timeOffKey = (a: string | null) => ['booking-time-off', a] as const
@@ -482,6 +502,16 @@ export function useSetAppointmentStatus(academyId: string | null) {
  * `studentId` set means staff booking on somebody's behalf; the server rejects
  * it from anybody who is not staff. `instructorId` is ignored by the server
  * under round robin unless the caller is staff.
+ *
+ * Then both parties are told. The email is a *second* call and not part of the
+ * booking, which is the honest shape: the session exists the moment the RPC
+ * returns, and a provider outage must not undo it or look like it did. So a
+ * failure here is reported on the result, never thrown — the same contract the
+ * enrollment approval uses.
+ *
+ * The function is handed an appointment id and nothing else: it re-reads both
+ * addresses itself. Passing them from the browser would make an email relay of
+ * it, and a student cannot read `instructors` in the first place.
  */
 export function useBookAppointment(academyId: string | null) {
   const qc = useQueryClient()
@@ -491,7 +521,7 @@ export function useBookAppointment(academyId: string | null) {
       instructorId?: string | null
       note?: string | null
       studentId?: string | null
-    }) => {
+    }): Promise<BookResult & { notice: BookingNotice | null }> => {
       const { data, error } = await supabase.rpc('book_appointment', {
         _academy_id: academyId!,
         _starts_at: input.startsAt,
@@ -500,7 +530,26 @@ export function useBookAppointment(academyId: string | null) {
         _student_id: input.studentId ?? undefined,
       })
       if (error) throw error
-      return data as unknown as BookResult
+      const booking = data as unknown as BookResult
+
+      const { data: notice, error: noticeError } =
+        await supabase.functions.invoke<BookingNotice>(
+          'send-appointment-notice',
+          {
+            body: {
+              appointment_id: booking.id,
+              origin: window.location.origin,
+            },
+          },
+        )
+      if (noticeError) {
+        // Logged, not thrown, and not surfaced: the session is booked. The row
+        // is the record of what happened — notice_sent_at with a null receipt
+        // is the one state worth a query.
+        console.error('appointment notice failed', booking.id, noticeError)
+        return { ...booking, notice: null }
+      }
+      return { ...booking, notice: notice ?? null }
     },
     onSuccess: () => invalidateBookings(qc, academyId),
   })

@@ -221,6 +221,38 @@ period and time off: what is on screen is what can be taken.
 `book_appointment` still checks, because the page is a view of a decision and
 never the decision.
 
+## Confirmation email
+
+Every confirmed booking tells **both** parties — the student, and the instructor
+the rota or a staff member picked. `supabase/functions/send-appointment-notice`
+does the sending; its README carries the trust model, the receipt columns and
+the kill switch. Three things are worth repeating here.
+
+**It is a second call, not part of the booking.** `useBookAppointment` invokes
+the function after `book_appointment` returns, and a failure is logged, never
+thrown. The session exists the moment the RPC returns; a provider outage must
+not undo it or look like it did. The cost is honest and accepted: a client that
+dies between the two calls leaves a booking nobody was told about, and
+`notice_sent_at IS NULL` is exactly that row.
+
+**It needs the service role, and the other mail functions do not.** They email
+one person whose address is on a row the caller can already read. This emails
+two, and a student cannot read `instructors` at all. So it authorizes under the
+caller's JWT — RLS on `appointments` decides — and only then reads and sends
+with the service role, for the row the database just admitted.
+
+**Two receipts, because the recipients fail independently.**
+`student_notice_id` / `instructor_notice_id` are stamped separately, and a
+re-invoke fills only the gap. An instructor record with no address must not stop
+the student being told.
+
+## In-app notification
+
+Separate from the email, and more reliable than it: `book_appointment` writes a
+`notifications` row for each party **in the same transaction as the insert**, so
+if the booking exists the notification does. The actor is not notified — a
+message telling you what you just clicked is not news. See `docs/notifications.md`.
+
 ## Deliberately not done
 
 - **No invoice.** A session is free. Billing stays a deliberate act on
@@ -231,8 +263,9 @@ never the decision.
   time, not course time.
 - **No reschedule.** Cancel and book again. Staff can move one by editing
   `starts_at`; the exclusion constraint still protects them.
-- **No reminders.** Transactional email is not configured (see
-  `docs/production-urls.md`).
+- **No reminders.** Confirmation is sent at booking; nothing is sent the day
+  before, and nothing is sent on cancel. Both are the same shape as the
+  confirmation and can be added when asked for.
 - **No location.** There was a `location` on the booking policy, copied onto
   every appointment at insert. No academy ever set it and no appointment ever
   carried one, so both columns went. Where a session happens is a per-session
