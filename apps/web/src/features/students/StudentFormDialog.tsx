@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useAuth } from '@/lib/auth'
 import { useT } from '@/lib/i18n'
+import { sendRecordInvite } from '@/features/invitations/autoInvite'
 import { Button } from '@/components/ui/button'
 import {
   Accordion,
@@ -101,7 +102,15 @@ export function StudentFormDialog({
       if (isEdit && student) {
         await updateStudent.mutateAsync({ id: student.id, patch: fields })
       } else {
-        await createStudent.mutateAsync({ ...fields, created_by: user?.id ?? null })
+        const created = await createStudent.mutateAsync({
+          ...fields,
+          created_by: user?.id ?? null,
+        })
+        // Adding a student invites them. Not awaited: the record is written and
+        // the email is a notification, not a grant — holding the dialog open
+        // for a provider round trip would make a slow inbox look like a slow
+        // save. `email_required` above is what makes this always fire.
+        void sendRecordInvite('student', created.id)
       }
       onOpenChange(false)
     } catch (err) {

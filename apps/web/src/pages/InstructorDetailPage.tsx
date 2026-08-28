@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Pencil, Plus, UserPlus, X } from 'lucide-react'
+import { ArrowLeft, Pencil, Plus, X } from 'lucide-react'
 import { useAcademy } from '@/lib/academy'
 import { fmtDate, localeFor } from '@/lib/format'
 import { getLang, useT, type TKey } from '@/lib/i18n'
@@ -35,21 +35,18 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { InviteLink } from '@/features/students/InviteLink'
 import { LinkAccountDialog } from '@/features/invitations/LinkAccountDialog'
 import { InstructorFormDialog } from '@/features/instructors/InstructorFormDialog'
 import { AssignCourseDialog } from '@/features/instructors/AssignCourseDialog'
 import { MANUAL_STATUSES, STATUS_META } from '@/features/instructors/status'
 import {
   useArchiveInstructor,
-  useCreateInstructorInvitation,
   useInstructor,
   useInstructorCourses,
   useUnassignCourse,
   useUpdateInstructor,
   type InstructorStatus,
 } from '@/features/instructors/api'
-import { useSendInvitation } from '@/features/students/api'
 import { useStaffMembers, useUpdateMember } from '@/features/members/api'
 import type { Enums } from '@hawary/shared'
 
@@ -119,13 +116,10 @@ export function InstructorDetailPage() {
   const updateInstructor = useUpdateInstructor(academyId)
   const archiveInstructor = useArchiveInstructor(academyId)
   const unassign = useUnassignCourse(academyId, id ?? '')
-  const createInvitation = useCreateInstructorInvitation()
 
   const [editOpen, setEditOpen] = useState(false)
   const [assignOpen, setAssignOpen] = useState(false)
-  const [inviteLink, setInviteLink] = useState<string | null>(null)
   const [linkOpen, setLinkOpen] = useState(false)
-  const sendInvitation = useSendInvitation()
 
   if (isLoading) {
     return (
@@ -213,49 +207,11 @@ export function InstructorDetailPage() {
                       </Label>
                     ) : null}
                   </>
-                ) : instructor.email ? (
-                  isStaff ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={createInvitation.isPending}
-                      onClick={async () => {
-                        try {
-                          const inv = await createInvitation.mutateAsync(
-                            instructor.id,
-                          )
-                          setInviteLink(
-                            `${window.location.origin}/accept-invite?token=${inv.token}`,
-                          )
-                          // Minting a token is not an invitation until
-                          // it is delivered; email is best-effort and the
-                          // copyable link is the fallback.
-                          try {
-                            await sendInvitation.mutateAsync(inv.token)
-                          } catch {
-                            /* link fallback below */
-                          }
-                        } catch {
-                          /* surfaced via createInvitation.error below */
-                        }
-                      }}
-                    >
-                      <UserPlus />
-                      {createInvitation.isPending
-                        ? t('common.creating')
-                        : t('instructors.invite_to_app')}
-                    </Button>
-                  ) : null
                 ) : null}
                 {isStaff && !instructor.user_id ? (
                   <Button size="sm" variant="ghost" onClick={() => setLinkOpen(true)}>
                     {t('instructors.link_account')}
                   </Button>
-                ) : null}
-                {isStaff && !instructor.user_id && !instructor.email ? (
-                  <span className="text-muted-foreground text-xs">
-                    {t('instructors.needs_email')}
-                  </span>
                 ) : null}
               </div>
             </div>
@@ -296,11 +252,9 @@ export function InstructorDetailPage() {
               {t('members.last_admin')}
             </p>
           ) : null}
-          {createInvitation.error || updateMember.error ? (
+          {updateMember.error ? (
             <p className="text-destructive text-sm">
-              {createInvitation.error?.message ??
-                updateMember.error?.message ??
-                t('members.access.failed')}
+              {updateMember.error.message ?? t('members.access.failed')}
             </p>
           ) : null}
       {activeAcademyId ? (
@@ -313,7 +267,6 @@ export function InstructorDetailPage() {
           onOpenChange={setLinkOpen}
         />
       ) : null}
-          {inviteLink ? <InviteLink url={inviteLink} /> : null}
         </CardContent>
       </Card>
 

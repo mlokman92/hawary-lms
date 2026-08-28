@@ -241,6 +241,20 @@ Monorepo: **pnpm workspaces + Turborepo**.
   invitee who pressed Back got "Create your academy", and one student founded a
   second academy named after her own school, which then outranked her student
   membership on every sign-in.
+  **Adding somebody invites them**: there is no "Invite to app" button and no
+  separate invite dialog — the create branch of the student/instructor form
+  calls `features/invitations/autoInvite.ts`, which mints a token and emails it.
+  It **never throws**: the record exists and is claimable without a token, so a
+  failure is a missed notification, not a missed grant. A **trainer adding an
+  instructor sends nothing** (`create_instructor_invitation` is admin-only on
+  purpose) and a record with no email sends nothing — both silently, because
+  refusing is correct and there is no action to offer. CSV import asks once, a
+  checkbox **on by default**, admin-only on instructors, and invites the batch
+  sequentially with a 550 ms gap: the provider limits *requests* and each
+  invitation costs two, and a 429 comes back as `ok: false` with no backpressure
+  signal. The dialog reports the invited count **only when it falls short** of
+  the imported count. `PendingInvitations` is now the only place staff resend or
+  revoke.
   **Names cross the gap at link time**: `app.fill_record_identity` (a `BEFORE
   INSERT OR UPDATE OF user_id` trigger on both `students` and `instructors`)
   fills a blank `full_name` from the claimer's profile, and

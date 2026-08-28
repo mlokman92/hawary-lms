@@ -74,6 +74,13 @@ export const auth: AuthDict = {
   'auth.onboarding.founder_prompt': 'Menguruskan akademi anda sendiri?',
   'auth.onboarding.create_instead': 'Cipta akademi',
 
+  'auth.onboarding.none.title': 'Tiada akademi menunggu anda',
+  'auth.onboarding.none.body_before': 'Anda log masuk sebagai',
+  'auth.onboarding.none.body_after':
+    '. Jika akademi anda menjemput alamat e-mel yang berbeza, log keluar dan log masuk dengan alamat tersebut — atau minta mereka menambah alamat ini.',
+  'auth.onboarding.none.other_email': 'Log keluar dan guna e-mel lain',
+  'auth.onboarding.help': 'Perlukan bantuan? Bersembang di WhatsApp',
+
   // Menerima jemputan
   'auth.invite.subtitle': 'Terima jemputan',
   'auth.invite.invalid.title': 'Pautan tidak sah',

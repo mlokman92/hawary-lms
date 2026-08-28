@@ -1,5 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { MessageCircle } from 'lucide-react'
 import type { TablesInsert } from '@hawary/shared'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
@@ -36,6 +37,13 @@ const MY_STATES = [
 ]
 
 /**
+ * Support, reachable from the one page whose whole problem is having nowhere to
+ * go. Everything else this screen offers assumes the person can diagnose
+ * themselves; a wrong email on the academy's side is not something they can.
+ */
+const HELP_WHATSAPP_URL = 'https://wa.me/60127967065'
+
+/**
  * Where a signed-in account with no membership lands.
  *
  * It used to be the founder form and nothing else, which was a trap: an
@@ -60,11 +68,24 @@ const MY_STATES = [
  * which is the only person this page was ever addressed to. That a learner has
  * no button to found one is the same decision `ShellSidebar` already makes by
  * leaving "Add academy" out of the learner switcher.
+ *
+ * That still left the last version of the trap, and it is the one that keeps
+ * happening: an invited student who signs up with a *different address* from
+ * the one the academy typed. `my_pending_invitations` matches on the confirmed
+ * auth email, so their list comes back empty — and an empty list was
+ * indistinguishable, on screen, from a genuine founder. They got "Create your
+ * academy", believed it was the way in, and founded one.
+ *
+ * So an empty list is no longer read as "founder". It is read as what it
+ * almost always is — *we have no record of you at this address* — and the page
+ * says which address that is, since checking it is the whole fix. The founder
+ * form moves behind the same link the invited-and-also-a-founder case already
+ * used, and `?new=1` still opens it directly.
  */
 export function Onboarding() {
   const { t } = useT()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
   const { refresh, staffMemberships, studentMemberships, loading } = useAcademy()
   const { data: invites, isLoading: invitesLoading } = useMyPendingInvitations()
   const landing = useLandingTarget()
@@ -132,7 +153,9 @@ export function Onboarding() {
   }
 
   const hasInvites = (invites ?? []).length > 0
-  const showForm = !hasInvites || showCreate
+  // Only ever shown on purpose now: the switcher's "Add academy", or the link
+  // below. Never as the fallback for "we found nothing for you".
+  const showForm = deliberate || showCreate
 
   return (
     <div className="bg-muted flex min-h-svh items-center justify-center p-6">
@@ -141,8 +164,39 @@ export function Onboarding() {
           onAccepted={() => navigate('/', { replace: true })}
         />
 
+        {!hasInvites && !showForm ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl">
+                {t('auth.onboarding.none.title')}
+              </CardTitle>
+              <CardDescription>
+                {t('auth.onboarding.none.body_before')}{' '}
+                <strong className="text-foreground font-medium">
+                  {user?.email}
+                </strong>
+                {t('auth.onboarding.none.body_after')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* The same escape hatch AcceptInvitePage offers, for the same
+                  reason: signed in as the wrong person is a state you have to
+                  be able to leave. */}
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={async () => {
+                  await signOut()
+                  navigate('/signin', { replace: true })
+                }}
+              >
+                {t('auth.onboarding.none.other_email')}
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
 
-        {hasInvites && !showCreate ? (
+        {!showForm ? (
           <p className="text-muted-foreground text-center text-sm">
             {t('auth.onboarding.founder_prompt')}{' '}
             <button
@@ -226,6 +280,16 @@ export function Onboarding() {
           </CardContent>
         </Card>
         ) : null}
+
+        <a
+          href={HELP_WHATSAPP_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 text-sm underline underline-offset-4"
+        >
+          <MessageCircle className="size-4" />
+          {t('auth.onboarding.help')}
+        </a>
       </div>
     </div>
   )

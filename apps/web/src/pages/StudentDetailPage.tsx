@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Pencil, Plus, Receipt, UserPlus, X } from 'lucide-react'
+import { ArrowLeft, Pencil, Plus, Receipt, X } from 'lucide-react'
 import { formatMYR, type Enums } from '@hawary/shared'
 import { useAcademy } from '@/lib/academy'
 import { getLang, useT, type TKey } from '@/lib/i18n'
@@ -37,7 +37,6 @@ import {
 import { BankAccountCard } from '@/features/bank/BankAccountCard'
 import { StudentFormDialog } from '@/features/students/StudentFormDialog'
 import { EnrollCourseDialog } from '@/features/students/EnrollCourseDialog'
-import { InviteLink } from '@/features/students/InviteLink'
 import { LinkAccountDialog } from '@/features/invitations/LinkAccountDialog'
 import { MANUAL_STATUSES, STATUS_META } from '@/features/students/status'
 import { InvoiceFormDialog } from '@/features/payments/InvoiceFormDialog'
@@ -49,14 +48,12 @@ import {
 } from '@/features/payments/api'
 import {
   useArchiveStudent,
-  useCreateInvitation,
   useStudent,
   useStudentEnrollments,
   useUnenroll,
   useUpdateStudent,
   type StudentStatus,
 } from '@/features/students/api'
-import { useSendInvitation } from '@/features/students/api'
 import {
   MEMBER_STATUS_META,
   useMemberAccess,
@@ -164,7 +161,6 @@ export function StudentDetailPage() {
   const updateStudent = useUpdateStudent(academyId)
   const archiveStudent = useArchiveStudent(academyId)
   const unenroll = useUnenroll(academyId, id ?? '')
-  const createInvitation = useCreateInvitation()
   const { data: invoices } = useStudentInvoices(academyId, id)
   const { data: access } = useMemberAccess(activeAcademyId, student?.user_id)
   const updateMember = useUpdateMember(activeAcademyId)
@@ -172,9 +168,7 @@ export function StudentDetailPage() {
   const [editOpen, setEditOpen] = useState(false)
   const [enrollOpen, setEnrollOpen] = useState(false)
   const [invoiceOpen, setInvoiceOpen] = useState(false)
-  const [inviteLink, setInviteLink] = useState<string | null>(null)
   const [linkOpen, setLinkOpen] = useState(false)
-  const sendInvitation = useSendInvitation()
 
   if (isLoading) {
     return (
@@ -267,49 +261,11 @@ export function StudentDetailPage() {
                       </Button>
                     ) : null}
                   </>
-                ) : student.email ? (
-                  isStaff ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={createInvitation.isPending}
-                      onClick={async () => {
-                        try {
-                          const inv = await createInvitation.mutateAsync(
-                            student.id,
-                          )
-                          setInviteLink(
-                            `${window.location.origin}/accept-invite?token=${inv.token}`,
-                          )
-                          // Minting a token is not an invitation until
-                          // it is delivered; email is best-effort and the
-                          // copyable link is the fallback.
-                          try {
-                            await sendInvitation.mutateAsync(inv.token)
-                          } catch {
-                            /* link fallback below */
-                          }
-                        } catch {
-                          /* surfaced via createInvitation.error below */
-                        }
-                      }}
-                    >
-                      <UserPlus />
-                      {createInvitation.isPending
-                        ? t('common.creating')
-                        : t('students.account.invite_to_app')}
-                    </Button>
-                  ) : null
                 ) : null}
                 {isStaff && !student.user_id ? (
                   <Button size="sm" variant="ghost" onClick={() => setLinkOpen(true)}>
                     {t('students.account.link_existing')}
                   </Button>
-                ) : null}
-                {isStaff && !student.user_id && !student.email ? (
-                  <span className="text-muted-foreground text-xs">
-                    {t('students.account.needs_email')}
-                  </span>
                 ) : null}
               </div>
             </div>
@@ -345,11 +301,6 @@ export function StudentDetailPage() {
               </Badge>
             )}
           </div>
-          {createInvitation.error ? (
-            <p className="text-destructive text-sm">
-              {createInvitation.error.message}
-            </p>
-          ) : null}
       {activeAcademyId ? (
         <LinkAccountDialog
           academyId={activeAcademyId}
@@ -360,7 +311,6 @@ export function StudentDetailPage() {
           onOpenChange={setLinkOpen}
         />
       ) : null}
-          {inviteLink ? <InviteLink url={inviteLink} /> : null}
         </CardContent>
       </Card>
 

@@ -85,7 +85,7 @@ export const dashboard = {
   'dash.invites.title': 'Pending invitations',
   'dash.invites.loading': 'Loading invitations…',
   'dash.invites.empty': 'No invitations waiting.',
-  'dash.invites.cta': 'Invite a student',
+  'dash.invites.cta': 'Add a student',
   'dash.invites.expires_today': 'Expires today',
   'dash.invites.expires_in': 'Expires in {days}',
 

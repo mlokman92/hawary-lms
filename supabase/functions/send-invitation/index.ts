@@ -145,7 +145,15 @@ Deno.serve(async (req) => {
       headers: {
         Authorization: `Bearer ${resendKey}`,
         'Content-Type': 'application/json',
+        // Adding somebody now invites them, and a CSV import calls this in a
+        // loop, so a double-click or a retried row must not send twice. The
+        // token is the natural key: resend_invitation rotates it on the same
+        // row, so a deliberate resend gets a new key and does go out.
+        'Idempotency-Key': `invitation:${token}`,
       },
+      // A hung provider would otherwise hold the invocation to the platform
+      // wall clock — and an import would hold it once per row.
+      signal: AbortSignal.timeout(8000),
       body: JSON.stringify({
         from,
         to: [inv.email],

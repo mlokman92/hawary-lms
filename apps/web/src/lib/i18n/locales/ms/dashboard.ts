@@ -88,7 +88,7 @@ export const dashboard: DashboardDict = {
   'dash.invites.title': 'Jemputan menunggu',
   'dash.invites.loading': 'Memuatkan jemputan…',
   'dash.invites.empty': 'Tiada jemputan menunggu.',
-  'dash.invites.cta': 'Jemput pelajar',
+  'dash.invites.cta': 'Tambah pelajar',
   'dash.invites.expires_today': 'Tamat hari ini',
   'dash.invites.expires_in': 'Tamat dalam {days}',
 

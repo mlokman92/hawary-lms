@@ -5,7 +5,6 @@ export const instructors: InstructorsDict = {
   'instructors.description':
     'Urus pengajar akademi anda dan kursus yang ditugaskan kepada mereka.',
   'instructors.add': 'Tambah pengajar',
-  'instructors.invite': 'Jemput pengajar',
   'instructors.search_placeholder': 'Cari nama, e-mel, telefon, IC, subjek…',
   'instructors.filter.all_statuses': 'Semua status',
   'instructors.sort.name_asc': 'Nama A–Z',
@@ -26,10 +25,7 @@ export const instructors: InstructorsDict = {
   'instructors.this_instructor': 'Pengajar ini',
   'instructors.member_since': 'Ahli sejak {date} · ID {no}',
   'instructors.account_linked': 'Akaun aplikasi dipautkan',
-  'instructors.invite_to_app': 'Jemput ke aplikasi',
   'instructors.link_account': 'Pautkan akaun sedia ada',
-  'instructors.needs_email':
-    'Tambah e-mel untuk menjemput pengajar ini melalui e-mel.',
   'instructors.edit_profile': 'Sunting profil',
 
   'instructors.personal.title': 'Butiran peribadi',
@@ -93,23 +89,4 @@ export const instructors: InstructorsDict = {
   'instructors.assign.busy': 'Menugaskan…',
 
   // Dialog jemputan pengajar
-  'instructors.invite_dialog.description':
-    'Tambah pengajar melalui e-mel dan hantar jemputan untuk menyertai sebagai kakitangan.',
-  'instructors.invite_dialog.created':
-    'Pengajar ditambah dan jemputan telah dicipta.',
-  'instructors.invite_dialog.sending': 'Menghantar e-mel jemputan…',
-  'instructors.invite_dialog.sent': 'E-mel jemputan telah dihantar.',
-  'instructors.invite_dialog.sent_to':
-    'E-mel jemputan telah dihantar kepada {email}.',
-  'instructors.invite_dialog.send_error':
-    'Jemputan telah dicipta tetapi e-mel tidak dapat dihantar.',
-  'instructors.invite_dialog.send_failed': 'E-mel tidak dapat dihantar.',
-  'instructors.invite_dialog.note_sent':
-    'Salin juga pautan ini sekiranya pengajar tidak menerima e-mel tersebut.',
-  'instructors.invite_dialog.note_unsent':
-    'Penghantaran e-mel tidak tersedia buat masa ini — kongsi pautan ini dengan pengajar.',
-  'instructors.invite_dialog.name_label': 'Nama (pilihan)',
-  'instructors.invite_dialog.email_label': 'Alamat e-mel',
-  'instructors.invite_dialog.email_required': 'E-mel diperlukan.',
-  'instructors.invite_dialog.submit': 'Hantar jemputan',
 }

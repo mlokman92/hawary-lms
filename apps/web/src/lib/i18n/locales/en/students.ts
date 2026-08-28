@@ -3,7 +3,6 @@ export const students = {
   // List page
   'students.page.description': 'Manage your academy’s students and enrollment.',
   'students.action.add': 'Add Student',
-  'students.action.invite': 'Invite Student',
   'students.search_placeholder': 'Search name, email, phone, IC…',
   'students.sort.name_asc': 'Name A–Z',
   'students.sort.name_desc': 'Name Z–A',
@@ -24,10 +23,7 @@ export const students = {
 
   // Detail — app account linking
   'students.account.linked': 'App account linked',
-  'students.account.invite_to_app': 'Invite to app',
   'students.account.link_existing': 'Link existing account',
-  'students.account.needs_email':
-    'Add an email to invite this student by email.',
 
   // Detail — personal details
   'students.personal.title': 'Personal details',
@@ -112,25 +108,6 @@ export const students = {
   'students.enroll.busy': 'Enrolling…',
 
   // Invite a student to the app
-  'students.invite.title': 'Invite student',
-  'students.invite.description':
-    'Add a student by email and send them an invite to join.',
-  'students.invite.description_done': 'Student added and invitation created.',
-  'students.invite.name_label': 'Name (optional)',
-  'students.invite.email_label': 'Email address',
-  'students.invite.email_required': 'Email is required.',
-  'students.invite.submit': 'Send invite',
-  'students.invite.sending': 'Sending invitation email…',
-  'students.invite.sent': 'Invitation email sent.',
-  'students.invite.sent_to': 'Invitation email sent to {email}.',
-  'students.invite.created_not_sent':
-    'The invitation was created but the email could not be sent.',
-  'students.invite.note_sending':
-    'You can also copy this link to share it directly.',
-  'students.invite.note_sent':
-    'Also copy this link if the student doesn’t receive the email.',
-  'students.invite.note_failed':
-    'Email delivery didn’t go through — share this link with the student.',
   'students.invite.send_failed': 'Could not send email.',
   'students.invite.no_response': 'No response from server.',
 

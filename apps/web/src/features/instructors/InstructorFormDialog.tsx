@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { useAcademy } from '@/lib/academy'
 import { useAuth } from '@/lib/auth'
 import { useT } from '@/lib/i18n'
+import { sendRecordInvite } from '@/features/invitations/autoInvite'
 import { Button } from '@/components/ui/button'
 import {
   Accordion,
@@ -49,6 +51,8 @@ export function InstructorFormDialog({
   const isEdit = !!instructor
   const { t } = useT()
   const { user } = useAuth()
+  const { active } = useAcademy()
+  const isAdmin = active?.role === 'admin'
   const createInstructor = useCreateInstructor(academyId)
   const updateInstructor = useUpdateInstructor(academyId)
 
@@ -103,10 +107,18 @@ export function InstructorFormDialog({
       if (isEdit && instructor) {
         await updateInstructor.mutateAsync({ id: instructor.id, patch: fields })
       } else {
-        await createInstructor.mutateAsync({
+        const created = await createInstructor.mutateAsync({
           ...fields,
           created_by: user?.id ?? null,
         })
+        // Adding an instructor invites them — when there is anybody to invite
+        // and the caller may do it. Email is optional on this form, and
+        // `create_instructor_invitation` is admin-only on purpose: a trainer
+        // who could mint one could invite an address they control and make
+        // themselves a second trainer. Skipping is the correct refusal, and it
+        // costs nothing, because an instructor record carrying a confirmed
+        // email is claimable without a token anyway.
+        if (isAdmin && fields.email) void sendRecordInvite('instructor', created.id)
       }
       onOpenChange(false)
     } catch (err) {

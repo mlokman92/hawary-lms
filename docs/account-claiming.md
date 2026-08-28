@@ -33,13 +33,40 @@ confirmed email, so the id disambiguates; it is not a capability.
 (student record → `student`, instructor record → `trainer`). That is what keeps
 self-claim off the admin ladder.
 
-## The token flow, unchanged
+## The token flow — same machinery, no button
 
 `create_invitation` (staff) / `create_instructor_invitation` (admin) still mint a
 14-day token, `send-invitation` still emails it, `resend_invitation` /
 `revoke_invitation` still manage it, and `/accept-invite?token=…` still works.
-It survives for what it is good at: an email or WhatsApp message that lands the
-person directly on the accept screen, plus revocation and audit.
+It survives for what it is good at: an email that lands the person directly on
+the accept screen, plus revocation and audit.
+
+**What changed is when it fires.** There is no "Invite to app" button any more,
+on either detail page, and no separate "Invite student" / "Invite instructor"
+dialog. *Adding somebody invites them*: the create branch of
+`StudentFormDialog` / `InstructorFormDialog` calls
+`features/invitations/autoInvite.ts` → `sendRecordInvite`, which mints and
+sends. A CSV import asks once — a checkbox, on by default — and then invites the
+whole batch, one at a time with a gap, because the provider limits *requests*
+and each invitation costs two.
+
+`sendRecordInvite` **never throws**, and that is the whole design: the record
+already exists and is claimable without a token, so a failure is a missed
+notification, not a missed grant. Three failures are ordinary rather than
+exceptional — no email on the record, a trainer adding an instructor (below),
+and the provider being down. None of them is reported on the single-add path;
+`PendingInvitations` on `/students` and `/instructors` is now the only place
+staff act on an invitation, which makes it more load-bearing, not less.
+
+**A trainer adding an instructor sends nothing.** `create_instructor_invitation`
+is admin-only by deliberate hardening — a trainer who could mint one could
+invite an address they control and make themselves a second trainer — while
+`instructors: staff insert` lets a trainer create the record. So the form skips
+the call for a non-admin rather than making it and showing a raw Postgres error,
+which is what the old button did. The person is still reachable: their record
+carrying their confirmed email is an invitation in itself. Making "always
+invites" literally true would mean tightening `instructors: staff insert` to
+`app.is_admin` — the fix this document already names — not relaxing the RPC.
 
 What the token never was is the authorisation: `accept_invitation` has always
 required `lower(auth email) = lower(invitation email)`. Claiming a record

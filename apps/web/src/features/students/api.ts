@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Enums, Tables, TablesInsert, TablesUpdate } from '@hawary/shared'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
+import { inviteImported } from '@/features/invitations/autoInvite'
 import { translate } from '@/lib/i18n'
 import { errorMessage } from '@/lib/errors'
 
@@ -101,7 +102,13 @@ export function useImportStudents(academyId: string) {
   const qc = useQueryClient()
   const { user } = useAuth()
   return useMutation({
-    mutationFn: async (rows: Record<string, string | null>[]) => {
+    mutationFn: async ({
+      rows,
+      invite,
+    }: {
+      rows: Record<string, string | null>[]
+      invite: boolean
+    }) => {
       const payload = rows.map((row) => ({
         ...row,
         academy_id: academyId,
@@ -111,20 +118,28 @@ export function useImportStudents(academyId: string) {
         created_by: user?.id ?? null,
       })) as unknown as TablesInsert<'students'>[]
 
-      let inserted = 0
+      // `email` comes back beside `id` rather than being zipped from the
+      // payload by index: PostgREST does not promise a bulk insert returns
+      // rows in the order they were sent, and inviting the wrong address is
+      // worse than not inviting at all.
+      const created: { id: string; email: string | null }[] = []
       for (let i = 0; i < payload.length; i += IMPORT_CHUNK) {
         const { data, error } = await supabase
           .from('students')
           .insert(payload.slice(i, i + IMPORT_CHUNK))
-          .select('id')
+          .select('id, email')
         if (error) {
           throw new Error(
-            `${translate('import.partial', { count: inserted })} ${error.message}`,
+            `${translate('import.partial', { count: created.length })} ${error.message}`,
           )
         }
-        inserted += data?.length ?? 0
+        created.push(...((data ?? []) as { id: string; email: string | null }[]))
       }
-      return inserted
+
+      // The records are written by now. Invitations are a second pass, so a
+      // provider that starts refusing loses emails, never rows.
+      const invited = invite ? await inviteImported('student', created) : null
+      return { inserted: created.length, invited }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: studentsKey(academyId) }),
   })
@@ -242,19 +257,6 @@ export function studentStats(students: StudentRow[]) {
     // "Unenrolled" is derived: a student with no courses attached.
     unenrolled: students.filter((x) => x.enrollments.length === 0).length,
   }
-}
-
-/** Create an invitation for a student record; returns a token for the accept link. */
-export function useCreateInvitation() {
-  return useMutation({
-    mutationFn: async (studentId: string) => {
-      const { data, error } = await supabase.rpc('create_invitation', {
-        _student_id: studentId,
-      })
-      if (error) throw error
-      return data as unknown as { id: string; token: string }
-    },
-  })
 }
 
 /**

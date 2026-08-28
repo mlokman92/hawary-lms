@@ -4,7 +4,6 @@ export const instructors = {
   'instructors.description':
     'Manage your academy’s instructors and course assignments.',
   'instructors.add': 'Add instructor',
-  'instructors.invite': 'Invite instructor',
   'instructors.search_placeholder': 'Search name, email, phone, IC, subject…',
   'instructors.filter.all_statuses': 'All statuses',
   'instructors.sort.name_asc': 'Name A–Z',
@@ -25,9 +24,7 @@ export const instructors = {
   'instructors.this_instructor': 'This instructor',
   'instructors.member_since': 'Member since {date} · ID {no}',
   'instructors.account_linked': 'App account linked',
-  'instructors.invite_to_app': 'Invite to app',
   'instructors.link_account': 'Link existing account',
-  'instructors.needs_email': 'Add an email to invite this instructor by email.',
   'instructors.edit_profile': 'Edit profile',
 
   'instructors.personal.title': 'Personal details',
@@ -92,24 +89,6 @@ export const instructors = {
   'instructors.assign.busy': 'Assigning…',
 
   // Invite instructor dialog
-  'instructors.invite_dialog.description':
-    'Add an instructor by email and send them an invite to join as staff.',
-  'instructors.invite_dialog.created':
-    'Instructor added and invitation created.',
-  'instructors.invite_dialog.sending': 'Sending invitation email…',
-  'instructors.invite_dialog.sent': 'Invitation email sent.',
-  'instructors.invite_dialog.sent_to': 'Invitation email sent to {email}.',
-  'instructors.invite_dialog.send_error':
-    'The invitation was created but the email could not be sent.',
-  'instructors.invite_dialog.send_failed': 'Could not send email.',
-  'instructors.invite_dialog.note_sent':
-    'Also copy this link if the instructor doesn’t receive the email.',
-  'instructors.invite_dialog.note_unsent':
-    'Email delivery is unavailable right now — share this link with the instructor.',
-  'instructors.invite_dialog.name_label': 'Name (optional)',
-  'instructors.invite_dialog.email_label': 'Email address',
-  'instructors.invite_dialog.email_required': 'Email is required.',
-  'instructors.invite_dialog.submit': 'Send invite',
 } as const
 
 export type InstructorsDict = Record<keyof typeof instructors, string>

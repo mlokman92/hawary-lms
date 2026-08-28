@@ -8,7 +8,6 @@ import {
   Search,
   UserCheck,
   UserMinus,
-  UserPlus,
   UserX,
   Users,
   type LucideIcon,
@@ -40,7 +39,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { StudentFormDialog } from '@/features/students/StudentFormDialog'
-import { InviteStudentDialog } from '@/features/students/InviteStudentDialog'
 import { ImportDialog } from '@/features/import/ImportDialog'
 import { studentImportSpec } from '@/features/students/importSpec'
 import { PendingInvitations } from '@/features/invitations/PendingInvitations'
@@ -102,7 +100,6 @@ export function StudentsPage() {
   const setCourse = (id: string) => writeParams({ course: id })
   const [sort, setSort] = useState<Sort>('joined_desc')
   const [addOpen, setAddOpen] = useState(false)
-  const [inviteOpen, setInviteOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const importStudents = useImportStudents(activeAcademyId ?? '')
 
@@ -217,9 +214,6 @@ export function StudentsPage() {
           <>
             <Button variant="outline" onClick={() => setImportOpen(true)}>
               <FileUp /> {t('import.students')}
-            </Button>
-            <Button variant="outline" onClick={() => setInviteOpen(true)}>
-              <UserPlus /> {t('students.action.invite')}
             </Button>
             <Button onClick={() => setAddOpen(true)}>
               <Plus /> {t('students.action.add')}
@@ -379,11 +373,6 @@ export function StudentsPage() {
             open={addOpen}
             onOpenChange={setAddOpen}
           />
-          <InviteStudentDialog
-            academyId={activeAcademyId}
-            open={inviteOpen}
-            onOpenChange={setInviteOpen}
-          />
           {/* `existing` is the loaded roster, so duplicate detection costs no
               extra round trip — it compares against what the page already has. */}
           <ImportDialog
@@ -391,7 +380,10 @@ export function StudentsPage() {
             onOpenChange={setImportOpen}
             spec={studentImportSpec}
             existing={students ?? []}
-            onImport={(payload) => importStudents.mutateAsync(payload)}
+            onImport={(rows, options) =>
+              importStudents.mutateAsync({ rows, ...options })
+            }
+            inviteLabelKey="import.invite_students"
             titleKey="import.students.title"
             descriptionKey="import.students.description"
           />

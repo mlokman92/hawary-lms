@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Enums, Tables, TablesInsert, TablesUpdate } from '@hawary/shared'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
+import { inviteImported } from '@/features/invitations/autoInvite'
 import { translate } from '@/lib/i18n'
 
 export type Instructor = Tables<'instructors'>
@@ -86,16 +87,24 @@ export function useCreateInstructor(academyId: string) {
 const IMPORT_CHUNK = 100
 
 /**
- * Bulk create instructor *records* from a parsed CSV. Deliberately not accounts:
- * `instructors.user_id` is only ever written by accept_invitation or
- * link_instructor_account, and granting back-office access to a row in a
- * spreadsheet is not something an import should do quietly.
+ * Bulk create instructor *records* from a parsed CSV. Still not accounts: the
+ * import never writes `instructors.user_id`, which only accept_invitation or
+ * link_instructor_account may set. What it can now do is *invite* — but only
+ * when the importer ticked the box and only for an admin, because
+ * `create_instructor_invitation` is admin-only. A trainer importing a
+ * spreadsheet still grants nobody anything.
  */
 export function useImportInstructors(academyId: string) {
   const qc = useQueryClient()
   const { user } = useAuth()
   return useMutation({
-    mutationFn: async (rows: Record<string, string | null>[]) => {
+    mutationFn: async ({
+      rows,
+      invite,
+    }: {
+      rows: Record<string, string | null>[]
+      invite: boolean
+    }) => {
       const payload = rows.map((row) => ({
         ...row,
         academy_id: academyId,
@@ -103,20 +112,23 @@ export function useImportInstructors(academyId: string) {
         created_by: user?.id ?? null,
       })) as unknown as TablesInsert<'instructors'>[]
 
-      let inserted = 0
+      // See the student importer: `email` is selected, not zipped by index.
+      const created: { id: string; email: string | null }[] = []
       for (let i = 0; i < payload.length; i += IMPORT_CHUNK) {
         const { data, error } = await supabase
           .from('instructors')
           .insert(payload.slice(i, i + IMPORT_CHUNK))
-          .select('id')
+          .select('id, email')
         if (error) {
           throw new Error(
-            `${translate('import.partial', { count: inserted })} ${error.message}`,
+            `${translate('import.partial', { count: created.length })} ${error.message}`,
           )
         }
-        inserted += data?.length ?? 0
+        created.push(...((data ?? []) as { id: string; email: string | null }[]))
       }
-      return inserted
+
+      const invited = invite ? await inviteImported('instructor', created) : null
+      return { inserted: created.length, invited }
     },
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: instructorsKey(academyId) }),
@@ -234,18 +246,4 @@ export function instructorStats(instructors: InstructorRow[]) {
     unassigned: instructors.filter((x) => x.course_instructors.length === 0)
       .length,
   }
-}
-
-/** Create an invitation for an instructor record; accepting grants the `trainer` role. */
-export function useCreateInstructorInvitation() {
-  return useMutation({
-    mutationFn: async (instructorId: string) => {
-      const { data, error } = await supabase.rpc(
-        'create_instructor_invitation',
-        { _instructor_id: instructorId },
-      )
-      if (error) throw error
-      return data as unknown as { id: string; token: string }
-    },
-  })
 }

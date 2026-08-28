@@ -7,7 +7,7 @@ export const importCsv = {
   'import.instructors': 'Import CSV',
   'import.instructors.title': 'Import instructors from a spreadsheet',
   'import.instructors.description':
-    'Add many instructor records at once. This creates records only — inviting them to sign in stays a separate step.',
+    'Add many instructor records at once. Records only — nobody gets back-office access until they claim the record.',
 
   'import.choose_file': 'Choose a CSV file',
   'import.download_template': 'Download template',
@@ -38,6 +38,9 @@ export const importCsv = {
   'import.line': 'Line {line}',
   'import.and_more': 'and {count} more.',
 
+  'import.invite_students': 'Email each student an invitation',
+  'import.invite_instructors': 'Email each instructor an invitation',
+
   'import.include_duplicates': 'Import the possible duplicates too',
   'import.duplicates_hint':
     'A row counts as a duplicate when its {columns} matches someone already in this academy, or an earlier row in this file.',
@@ -47,6 +50,10 @@ export const importCsv = {
   'import.importing': 'Importing…',
   'import.done_one': 'Imported {count} row.',
   'import.done_other': 'Imported {count} rows.',
+  // Shown only when fewer went out than were imported — a row with no email
+  // address, or a provider that refused.
+  'import.invited_one': 'Only {count} invitation email was sent.',
+  'import.invited_other': 'Only {count} invitation emails were sent.',
   'import.failed': 'The import failed.',
   'import.partial':
     '{count} rows were saved before this failed; re-import only the rest.',

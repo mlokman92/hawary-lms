@@ -48,6 +48,16 @@ const PREVIEW_ROWS = 8
  * people with the same name. They are excluded by default and can be included
  * with a checkbox.
  */
+/**
+ * What an import came to. `invited: null` means invitations were not part of
+ * this import at all — not that none were sent.
+ */
+export type ImportOutcome = { inserted: number; invited: number | null }
+
+function isOutcome(v: unknown): v is ImportOutcome {
+  return typeof v === 'object' && v !== null && 'inserted' in v
+}
+
 export function ImportDialog({
   open,
   onOpenChange,
@@ -56,15 +66,28 @@ export function ImportDialog({
   onImport,
   titleKey,
   descriptionKey,
+  inviteLabelKey,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   spec: ImportSpec
   /** Current records, for duplicate detection — the list query's rows as-is. */
   existing: Record<string, unknown>[]
-  onImport: (rows: Record<string, string | null>[]) => Promise<unknown>
+  onImport: (
+    rows: Record<string, string | null>[],
+    options: { invite: boolean },
+  ) => Promise<ImportOutcome | unknown>
   titleKey: TKey
   descriptionKey: TKey
+  /**
+   * Label for the "email them an invitation" checkbox. Omitted means no
+   * checkbox and no invitations — which is how a trainer sees the instructor
+   * import, since minting an instructor token is admin-only.
+   *
+   * A prop rather than a field on `ImportSpec` because availability depends on
+   * the caller's role, and a spec is a module constant with no way to ask.
+   */
+  inviteLabelKey?: TKey
 }) {
   const { t, tn } = useT()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -73,9 +96,12 @@ export function ImportDialog({
   const [fileName, setFileName] = useState<string | null>(null)
   const [showPaste, setShowPaste] = useState(false)
   const [includeDuplicates, setIncludeDuplicates] = useState(false)
+  // On by default, and reset to ON when the dialog closes: "yes unless you say
+  // otherwise" has to survive reopening, or the default quietly becomes no.
+  const [invite, setInvite] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [imported, setImported] = useState<number | null>(null)
+  const [imported, setImported] = useState<ImportOutcome | null>(null)
 
   useEffect(() => {
     if (open) return
@@ -83,6 +109,7 @@ export function ImportDialog({
     setFileName(null)
     setShowPaste(false)
     setIncludeDuplicates(false)
+    setInvite(true)
     setError(null)
     setImported(null)
   }, [open])
@@ -116,8 +143,14 @@ export function ImportDialog({
     setBusy(true)
     setError(null)
     try {
-      await onImport(importable.map((r) => r.values))
-      setImported(importable.length)
+      const outcome = await onImport(importable.map((r) => r.values), {
+        invite: !!inviteLabelKey && invite,
+      })
+      setImported(
+        isOutcome(outcome)
+          ? outcome
+          : { inserted: importable.length, invited: null },
+      )
       setText('')
       setFileName(null)
     } catch (e) {
@@ -277,6 +310,19 @@ export function ImportDialog({
                   </div>
                 ) : null}
 
+                {inviteLabelKey ? (
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="import-invite"
+                      checked={invite}
+                      onCheckedChange={(v) => setInvite(v === true)}
+                    />
+                    <Label htmlFor="import-invite" className="text-sm font-normal">
+                      {t(inviteLabelKey)}
+                    </Label>
+                  </div>
+                ) : null}
+
                 {duplicateRows.length > 0 ? (
                   <div className="flex items-start gap-2">
                     <Checkbox
@@ -304,7 +350,17 @@ export function ImportDialog({
           ) : null}
 
           {imported !== null ? (
-            <p className="text-sm">{tn('import.done', imported)}</p>
+            <p className="text-sm">{tn('import.done', imported.inserted)}</p>
+          ) : null}
+          {/* By exception only. When every invitation went out the checkbox
+              already said so, and repeating it back is narration; a shortfall
+              is the only thing worth a second line. */}
+          {imported !== null &&
+          imported.invited !== null &&
+          imported.invited < imported.inserted ? (
+            <p className="text-muted-foreground text-sm">
+              {tn('import.invited', imported.invited)}
+            </p>
           ) : null}
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
         </div>

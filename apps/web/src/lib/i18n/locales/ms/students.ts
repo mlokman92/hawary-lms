@@ -4,7 +4,6 @@ export const students: StudentsDict = {
   // Halaman senarai
   'students.page.description': 'Urus pelajar dan pendaftaran akademi anda.',
   'students.action.add': 'Tambah pelajar',
-  'students.action.invite': 'Jemput pelajar',
   'students.search_placeholder': 'Cari nama, e-mel, telefon, IC…',
   'students.sort.name_asc': 'Nama A–Z',
   'students.sort.name_desc': 'Nama Z–A',
@@ -25,10 +24,7 @@ export const students: StudentsDict = {
 
   // Butiran — pautan akaun aplikasi
   'students.account.linked': 'Akaun aplikasi dipautkan',
-  'students.account.invite_to_app': 'Jemput ke aplikasi',
   'students.account.link_existing': 'Pautkan akaun sedia ada',
-  'students.account.needs_email':
-    'Tambah e-mel untuk menjemput pelajar ini melalui e-mel.',
 
   // Butiran — maklumat peribadi
   'students.personal.title': 'Maklumat peribadi',
@@ -111,26 +107,6 @@ export const students: StudentsDict = {
   'students.enroll.busy': 'Mendaftar…',
 
   // Jemput pelajar ke aplikasi
-  'students.invite.title': 'Jemput pelajar',
-  'students.invite.description':
-    'Tambah pelajar melalui e-mel dan hantar jemputan untuk menyertai.',
-  'students.invite.description_done':
-    'Pelajar telah ditambah dan jemputan telah dibuat.',
-  'students.invite.name_label': 'Nama (pilihan)',
-  'students.invite.email_label': 'Alamat e-mel',
-  'students.invite.email_required': 'E-mel diperlukan.',
-  'students.invite.submit': 'Hantar jemputan',
-  'students.invite.sending': 'Menghantar e-mel jemputan…',
-  'students.invite.sent': 'E-mel jemputan telah dihantar.',
-  'students.invite.sent_to': 'E-mel jemputan telah dihantar ke {email}.',
-  'students.invite.created_not_sent':
-    'Jemputan telah dibuat tetapi e-mel tidak dapat dihantar.',
-  'students.invite.note_sending':
-    'Anda juga boleh menyalin pautan ini untuk berkongsi terus.',
-  'students.invite.note_sent':
-    'Salin juga pautan ini jika pelajar tidak menerima e-mel.',
-  'students.invite.note_failed':
-    'Penghantaran e-mel tidak berjaya — kongsi pautan ini dengan pelajar.',
   'students.invite.send_failed': 'E-mel tidak dapat dihantar.',
   'students.invite.no_response': 'Tiada respons daripada pelayan.',
 

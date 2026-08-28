@@ -8,7 +8,7 @@ export const importCsv: ImportCsvDict = {
   'import.instructors': 'Import CSV',
   'import.instructors.title': 'Import pengajar daripada hamparan',
   'import.instructors.description':
-    'Tambah banyak rekod pengajar sekali gus. Ini mencipta rekod sahaja — menjemput mereka log masuk kekal sebagai langkah berasingan.',
+    'Tambah banyak rekod pengajar sekali gus. Rekod sahaja — tiada sesiapa mendapat akses pejabat belakang sehingga mereka menuntut rekod itu.',
 
   'import.choose_file': 'Pilih fail CSV',
   'import.download_template': 'Muat turun templat',
@@ -41,6 +41,9 @@ export const importCsv: ImportCsvDict = {
   'import.line': 'Baris {line}',
   'import.and_more': 'dan {count} lagi.',
 
+  'import.invite_students': 'E-mel jemputan kepada setiap pelajar',
+  'import.invite_instructors': 'E-mel jemputan kepada setiap pengajar',
+
   'import.include_duplicates': 'Import kemungkinan pendua sekali',
   'import.duplicates_hint':
     'Sesuatu baris dikira pendua apabila {columns} sepadan dengan seseorang yang sudah ada dalam akademi ini, atau dengan baris terdahulu dalam fail ini.',
@@ -50,6 +53,8 @@ export const importCsv: ImportCsvDict = {
   'import.importing': 'Mengimport…',
   'import.done_one': '{count} baris telah diimport.',
   'import.done_other': '{count} baris telah diimport.',
+  'import.invited_one': 'Hanya {count} e-mel jemputan telah dihantar.',
+  'import.invited_other': 'Hanya {count} e-mel jemputan telah dihantar.',
   'import.failed': 'Import gagal.',
   'import.partial':
     '{count} baris telah disimpan sebelum ini gagal; import baki yang selebihnya sahaja.',

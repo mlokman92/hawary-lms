@@ -8,7 +8,6 @@ import {
   Search,
   UserCheck,
   UserMinus,
-  UserPlus,
   Users,
   type LucideIcon,
 } from 'lucide-react'
@@ -39,7 +38,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { InstructorFormDialog } from '@/features/instructors/InstructorFormDialog'
-import { InviteInstructorDialog } from '@/features/instructors/InviteInstructorDialog'
 import { PendingInvitations } from '@/features/invitations/PendingInvitations'
 import { ImportDialog } from '@/features/import/ImportDialog'
 import { instructorImportSpec } from '@/features/instructors/importSpec'
@@ -69,13 +67,14 @@ export function InstructorsPage() {
   const { t } = useT()
   const { activeAcademyId, active } = useAcademy()
   const isStaff = active?.role === 'admin' || active?.role === 'trainer'
+  // Minting an instructor token is admin-only, so a trainer gets no checkbox.
+  const isAdmin = active?.role === 'admin'
   const { data: instructors, isLoading, error } = useInstructors(activeAcademyId)
 
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
   const [sort, setSort] = useState<Sort>('joined_desc')
   const [addOpen, setAddOpen] = useState(false)
-  const [inviteOpen, setInviteOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const importInstructors = useImportInstructors(activeAcademyId ?? '')
 
@@ -164,9 +163,6 @@ export function InstructorsPage() {
           <>
             <Button variant="outline" onClick={() => setImportOpen(true)}>
               <FileUp /> {t('import.instructors')}
-            </Button>
-            <Button variant="outline" onClick={() => setInviteOpen(true)}>
-              <UserPlus /> {t('instructors.invite')}
             </Button>
             <Button onClick={() => setAddOpen(true)}>
               <Plus /> {t('instructors.add')}
@@ -334,17 +330,15 @@ export function InstructorsPage() {
             open={addOpen}
             onOpenChange={setAddOpen}
           />
-          <InviteInstructorDialog
-            academyId={activeAcademyId}
-            open={inviteOpen}
-            onOpenChange={setInviteOpen}
-          />
           <ImportDialog
             open={importOpen}
             onOpenChange={setImportOpen}
             spec={instructorImportSpec}
             existing={instructors ?? []}
-            onImport={(payload) => importInstructors.mutateAsync(payload)}
+            onImport={(rows, options) =>
+              importInstructors.mutateAsync({ rows, ...options })
+            }
+            inviteLabelKey={isAdmin ? 'import.invite_instructors' : undefined}
             titleKey="import.instructors.title"
             descriptionKey="import.instructors.description"
           />

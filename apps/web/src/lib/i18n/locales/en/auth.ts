@@ -75,6 +75,17 @@ export const auth = {
   'auth.onboarding.founder_prompt': 'Running your own academy?',
   'auth.onboarding.create_instead': 'Create one instead',
 
+  // Nothing is waiting. The common case here is not a founder but an invitee
+  // who signed up with a different address than the one their academy holds —
+  // for whom the founder form was a trap. The address is split around a
+  // <strong> like auth.signup.confirm.*, because it is the thing to check.
+  'auth.onboarding.none.title': 'No academy is waiting for you',
+  'auth.onboarding.none.body_before': 'You’re signed in as',
+  'auth.onboarding.none.body_after':
+    '. If your academy invited a different address, sign out and sign in with that one — or ask them to add this address.',
+  'auth.onboarding.none.other_email': 'Sign out and use a different email',
+  'auth.onboarding.help': 'Need help? Chat on WhatsApp',
+
   // Invitation acceptance
   'auth.invite.subtitle': 'Accept invitation',
   'auth.invite.invalid.title': 'Invalid link',
