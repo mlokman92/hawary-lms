@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Plus, Settings } from 'lucide-react'
 import { useAcademy } from '@/lib/academy'
@@ -28,6 +28,7 @@ import {
   today,
   type Ymd,
 } from '@/features/appointments/calendar'
+import { useMyInstructorRecord } from '@/features/profile/api'
 import { WeekCalendar } from '@/features/appointments/WeekCalendar'
 import { AppointmentDialog } from '@/features/appointments/AppointmentDialog'
 import { BookForStudentDialog } from '@/features/appointments/BookForStudentDialog'
@@ -62,6 +63,20 @@ export function AppointmentsPage() {
 
   const [week, setWeek] = useState<Ymd>(() => startOfWeek(today(tz)))
   const [instructor, setInstructor] = useState('all')
+
+  /**
+   * A trainer opening the diary means "my week". An admin means "the academy's
+   * week", so theirs is left on everyone. Seeded once — changing it away, or
+   * back to everyone, must stick.
+   */
+  const myInstructor = useMyInstructorRecord(activeAcademyId)
+  const seeded = useRef(false)
+  useEffect(() => {
+    if (seeded.current || !active || myInstructor.isLoading) return
+    seeded.current = true
+    if (active.role === 'admin') return
+    if (myInstructor.data?.id) setInstructor(myInstructor.data.id)
+  }, [active, myInstructor.isLoading, myInstructor.data])
   const [open, setOpen] = useState<AppointmentRow | null>(null)
   const [bookOpen, setBookOpen] = useState(false)
 

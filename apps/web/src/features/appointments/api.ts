@@ -444,6 +444,16 @@ export function useAcademyAppointments(
 /** How many rows a page of the register holds. */
 export const APPOINTMENT_PAGE_SIZE = 50
 
+/**
+ * Which side of now to look at. `''` is both — the register's original
+ * behaviour, and still what an admin gets.
+ *
+ * It decides the ORDER as well as the filter, and it has to: "upcoming, newest
+ * first" would put next month before tomorrow. Soonest-first is the only useful
+ * reading of a list you are about to act on; for the past, most-recent-first is.
+ */
+export type AppointmentWhen = 'upcoming' | 'past' | ''
+
 export type AppointmentFilters = {
   /** '' means every status, including cancelled ones. */
   status: AppointmentStatus | ''
@@ -451,13 +461,24 @@ export type AppointmentFilters = {
   instructorId: string
   /** Student name or record number. '' means no search. */
   search: string
+  when: AppointmentWhen
 }
 
 const listPageKey = (
   a: string | null,
   f: AppointmentFilters,
   page: number,
-) => ['appointments', a, 'register', f.status, f.instructorId, f.search, page] as const
+) =>
+  [
+    'appointments',
+    a,
+    'register',
+    f.status,
+    f.instructorId,
+    f.search,
+    f.when,
+    page,
+  ] as const
 
 /**
  * One page of every session the academy has ever held.
@@ -506,6 +527,12 @@ export function useAppointmentPage(
       if (filters.status) query = query.eq('status', filters.status)
       if (filters.instructorId)
         query = query.eq('instructor_id', filters.instructorId)
+      // Read at query time, not memoised into the key: the boundary should move
+      // with the clock, and a session that starts while you are looking at the
+      // list belongs on the other side of it after the next refetch.
+      const now = new Date().toISOString()
+      if (filters.when === 'upcoming') query = query.gte('starts_at', now)
+      if (filters.when === 'past') query = query.lt('starts_at', now)
       if (q) {
         // Scoped to the embedded resource: PostgREST cannot OR across a join,
         // so the search has to be expressed against `students` itself.
@@ -515,9 +542,11 @@ export function useAppointmentPage(
         )
       }
 
+      // Soonest first when looking forward, most recent first otherwise.
+      const ascending = filters.when === 'upcoming'
       const { data, error, count } = await query
-        .order('starts_at', { ascending: false })
-        .order('id', { ascending: false })
+        .order('starts_at', { ascending })
+        .order('id', { ascending })
         .range(from, from + APPOINTMENT_PAGE_SIZE - 1)
       if (error) throw error
       return {

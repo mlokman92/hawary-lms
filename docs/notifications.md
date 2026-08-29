@@ -66,9 +66,13 @@ booking in the academy is a bell people learn to ignore.
 ```
 
 `role` is which side the reader is on. It decides both the wording and where the
-row leads — `/learn/appointments` for a student, `/appointments` for an
+row leads — `/learn/appointments` for a student, `/appointments/list` for an
 instructor — because the notification was addressed to them as one or the other,
-not because of which shell they happen to be standing in. `tz` is the academy's
+not because of which shell they happen to be standing in. The instructor lands
+on the **register, not the diary**: the diary is a single week, so a session
+booked for next month is not on it, and following a notification about one would
+open a grid with nothing in it. The register opens on her own upcoming sessions,
+soonest first, which is exactly where the row she tapped lives. `tz` is the academy's
 zone at the time, so the row formats without a second query.
 
 ## The bell

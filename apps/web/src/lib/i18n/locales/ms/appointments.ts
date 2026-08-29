@@ -111,6 +111,8 @@ export const appointments: AppointmentsDict = {
   'appt.book_for.day': 'Hari',
   'appt.book_for.time': 'Masa',
   'appt.book_for.no_slots': 'Tiada yang lapang pada hari ini.',
+  'appt.book_for.no_record':
+    'Anda tiada rekod pengajar dalam akademi ini, jadi tiada sesiapa untuk menemani sesi ini. Pentadbir boleh melampirkannya di Ahli.',
   'appt.book_for.instructor': 'Pengajar',
   'appt.book_for.auto_round_robin': 'Tetapkan secara automatik',
   'appt.book_for.auto_any': 'Sesiapa yang lapang',
@@ -129,10 +131,10 @@ export const appointments: AppointmentsDict = {
   'appt.learn.nothing_free':
     'Tiada yang lapang untuk ditempah buat masa ini.',
   'appt.learn.pick_day': 'Pilih hari di atas.',
-  'appt.learn.day_slots_one': '{count} slot',
-  'appt.learn.day_slots_other': '{count} slot',
-  'appt.learn.times_available_one': '{count} masa tersedia',
-  'appt.learn.times_available_other': '{count} masa tersedia',
+  'appt.slots.day_count_one': '{count} slot',
+  'appt.slots.day_count_other': '{count} slot',
+  'appt.slots.available_one': '{count} masa tersedia',
+  'appt.slots.available_other': '{count} masa tersedia',
   'appt.learn.instructor': 'Pengajar',
   'appt.learn.instructor_placeholder': 'Pilih pengajar',
   'appt.learn.note': 'Apa yang anda mahu bincangkan?',
@@ -145,6 +147,9 @@ export const appointments: AppointmentsDict = {
   'appt.register.subtitle':
     'Setiap sesi yang telah diadakan akademi, termasuk yang dibatalkan.',
   'appt.register.search': 'Cari nama atau nombor pelajar',
+  'appt.register.upcoming': 'Akan datang',
+  'appt.register.past': 'Lepas',
+  'appt.register.any_time': 'Sebarang tarikh',
   'appt.register.any_status': 'Semua status',
   'appt.register.mine': 'Sesi saya',
   'appt.register.empty': 'Tiada sesi yang sepadan.',

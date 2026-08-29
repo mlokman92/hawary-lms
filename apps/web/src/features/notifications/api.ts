@@ -20,7 +20,8 @@ export type AppointmentBookedData = {
   appointment_id: string
   /** Which side of the session the recipient is on. Decides the wording *and*
    *  where the row leads: a student goes to /learn/appointments, an instructor
-   *  to the staff diary. */
+   *  to /appointments/list — the register, not the diary, because the diary is
+   *  one week and the session may not be in it. */
   role: 'student' | 'instructor'
   /** The other party, as they were named when it happened. */
   with_name: string | null

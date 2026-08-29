@@ -298,14 +298,43 @@ worse than no button.
 student's own sessions with a Cancel on the upcoming ones. Under round robin
 there is no teacher picker, because there is nothing to render.
 
-The day strip lists **only days that have something free**, each chip carrying
-how many, and it scrolls rather than pages. Three things fall out of that. The
-count is the point: "which day should I look at" becomes something you can see
-without tapping. Every chip is actionable, so there is no disabled state to
-explain. And the prev/next week buttons are gone — seven fixed columns left
-about 34px per day on a phone, and paging asked a student who wants next Tuesday
-to work out which week it falls in. The times below are a grid, not wrapped
-flex, so the columns line up, and each is 44px tall because a thumb presses it.
+**Picking when is one component**, `features/appointments/SlotPicker.tsx`,
+shared by the learner page and the staff booking dialog — the same question
+asked by different people. The day strip lists **only days that have something
+free**, each chip carrying how many, and it scrolls rather than pages. Three
+things fall out of that. The count is the point: "which day should I look at"
+becomes something you can see without tapping. Every chip is actionable, so
+there is no disabled state to explain. And there are no prev/next week buttons —
+seven fixed columns left about 34px per day on a phone, and paging asked
+somebody who wants next Tuesday to work out which week it falls in. The times
+below are a grid, not wrapped flex, so the columns line up, and each is 44px
+tall because a thumb presses it. Before this the staff side was a bare date
+input, which could land you on a day with nothing free and no hint where to
+look instead.
+
+## Who sees whose sessions
+
+Three screens ask the reader the same question and answer it the same way: an
+**admin** is looking at the academy, a **trainer** is looking at her own work.
+
+- **`/appointments`** (the diary) opens filtered to the trainer herself.
+- **`/appointments/list`** (the register) opens on **her sessions, upcoming
+  only, soonest first** — what has already happened is out of the way. An
+  admin's defaults are untouched: everybody, any date, most recent first.
+- **Booking**: an admin may hand the session to anyone free or leave it to the
+  rota; a trainer books *herself*, so there is no picker at all, and the times
+  she is offered are only the ones **she** is free for. Offering her a slot she
+  cannot take would be a control that fails on submit.
+
+Each default is **seeded once**, not enforced: the instant she widens the filter
+to everyone, or looks at the past, it stays widened. A starting point is not a
+permission — `app.can_grade_*`-style narrowing belongs in RLS, and none of this
+is a security boundary. `AppointmentDialog` already works out for itself who may
+mark a session done.
+
+`when` decides the ORDER as well as the filter, and it has to: "upcoming, newest
+first" would put next month before tomorrow. Soonest-first is the only useful
+reading of a list you are about to act on; for the past, most-recent-first is.
 
 ## Two caps, not one
 

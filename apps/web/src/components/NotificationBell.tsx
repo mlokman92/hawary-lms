@@ -174,9 +174,15 @@ function detailOf(row: Notification, locale: string): string {
  * Where the row leads. `role` decides, not the shell the reader happens to be
  * standing in: the notification was addressed to them as a student or as an
  * instructor, and that is the surface where the session lives.
+ *
+ * An instructor lands on the **register**, not the diary. The diary is one
+ * week: a session booked for next month is not on it, so following a
+ * notification about one would show a grid with nothing in it and no clue
+ * where the session went. The register opens on her own upcoming sessions,
+ * soonest first, which is where the row she just read actually is.
  */
 function linkOf(row: Notification): string | null {
   const d = apptData(row)
   if (!d) return null
-  return d.role === 'instructor' ? '/appointments' : '/learn/appointments'
+  return d.role === 'instructor' ? '/appointments/list' : '/learn/appointments'
 }

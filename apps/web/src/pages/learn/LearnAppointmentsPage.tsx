@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useState } from 'react'
 import { CalendarClock } from 'lucide-react'
 import { useStudentAcademy } from '@/lib/studentAcademy'
 import { getLang, useT } from '@/lib/i18n'
 import { localeFor } from '@/lib/format'
+import { SlotPicker } from '@/features/appointments/SlotPicker'
 import { cn } from '@/lib/utils'
 import { TONE_CLASS } from '@/lib/tone'
 import { PageHeader } from '@/components/patterns/PageHeader'
@@ -27,13 +28,9 @@ import {
 } from '@/components/ui/select'
 import {
   addDays,
-  fmtDayShort,
   fmtRange,
-  fmtTime,
   fmtWhen,
   today,
-  ymdOf,
-  type Ymd,
 } from '@/features/appointments/calendar'
 import {
   APPOINTMENT_STATUS,
@@ -43,7 +40,6 @@ import {
   useBookingOptions,
   useCancelAppointment,
   useMyAppointments,
-  type OpenSlot,
 } from '@/features/appointments/api'
 import { errorMessage } from '@/lib/errors'
 
@@ -59,7 +55,7 @@ const WINDOW_DAYS = 62
  * the student needs to know who they are meeting.
  */
 export function LearnAppointmentsPage() {
-  const { t, tn } = useT()
+  const { t } = useT()
   const locale = localeFor(getLang())
   const { academyId } = useStudentAcademy()
 
@@ -74,37 +70,13 @@ export function LearnAppointmentsPage() {
   const book = useBookAppointment(academyId)
   const cancel = useCancelAppointment(academyId)
 
-  const [day, setDay] = useState<Ymd | null>(null)
   const [startsAt, setStartsAt] = useState('')
   const [instructorId, setInstructorId] = useState('')
   const [note, setNote] = useState('')
   const [bookError, setBookError] = useState<string | null>(null)
 
-  /** starts_at → the slot, grouped by the day it falls on locally. */
-  const byDay = useMemo(() => {
-    const map = new Map<Ymd, OpenSlot[]>()
-    for (const s of options?.slots ?? []) {
-      const d = ymdOf(s.starts_at, tz)
-      const list = map.get(d)
-      if (list) list.push(s)
-      else map.set(d, [s])
-    }
-    return map
-  }, [options, tz])
-
-  /** Every day with something free, in order. The strip scrolls through these
-   *  rather than paging a calendar: a day with no slots is not a destination. */
-  const openDays = useMemo(() => [...byDay.keys()].sort(), [byDay])
-
-  // Land on the first day that has something, and go back to it if the chosen
-  // day empties out — booking its last slot is the ordinary way that happens.
-  useEffect(() => {
-    if (day !== null && byDay.has(day)) return
-    setDay([...byDay.keys()].sort()[0] ?? null)
-  }, [byDay, day])
-
-  const slots = day ? (byDay.get(day) ?? []) : []
-  const slot = slots.find((s) => s.starts_at === startsAt) ?? null
+  const openSlots = options?.slots ?? []
+  const slot = openSlots.find((s) => s.starts_at === startsAt) ?? null
   const choose = options?.assignment_mode === 'student_choice'
 
   const upcoming = (mine ?? []).filter(
@@ -161,92 +133,23 @@ export function LearnAppointmentsPage() {
               <p className="text-muted-foreground text-sm">
                 {t('appt.learn.at_cap')}
               </p>
-            ) : byDay.size === 0 ? (
+            ) : openSlots.length === 0 ? (
               <p className="text-muted-foreground text-sm">
                 {t('appt.learn.nothing_free')}
               </p>
             ) : (
               <>
-                {/* Days — only the ones with something free, so every chip
-                    is actionable. That is also why this scrolls instead of
-                    paging: seven fixed columns left about 34px per day on a
-                    phone, and somebody who wants next Tuesday should swipe to
-                    it rather than work out which week it falls in. */}
-                <div className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1">
-                  {openDays.map((d) => {
-                    const count = byDay.get(d)?.length ?? 0
-                    const chosen = day === d
-                    return (
-                      <button
-                        key={d}
-                        type="button"
-                        onClick={() => {
-                          setDay(d)
-                          setStartsAt('')
-                        }}
-                        aria-pressed={chosen}
-                        className={cn(
-                          'flex min-w-20 shrink-0 snap-start flex-col items-center gap-0.5',
-                          'rounded-lg border px-3 py-2',
-                          'focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none',
-                          chosen
-                            ? 'border-primary bg-primary text-primary-foreground'
-                            : 'hover:border-foreground/30',
-                        )}
-                      >
-                        <span className="text-sm font-medium whitespace-nowrap">
-                          {fmtDayShort(d, locale)}
-                        </span>
-                        <span
-                          className={cn(
-                            'text-xs tabular-nums',
-                            chosen
-                              ? 'text-primary-foreground/80'
-                              : 'text-muted-foreground',
-                          )}
-                        >
-                          {tn('appt.learn.day_slots', count)}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-
-                {/* Times. A grid rather than wrapped flex so the columns line
-                    up, and 44px tall because this is the control people press
-                    with a thumb. */}
-                {slots.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">
-                    {t('appt.learn.pick_day')}
-                  </p>
-                ) : (
-                  <div className="grid gap-2">
-                    <p className="text-muted-foreground text-xs">
-                      {tn('appt.learn.times_available', slots.length)}
-                    </p>
-                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                      {slots.map((s) => (
-                        <button
-                          key={s.starts_at}
-                          type="button"
-                          onClick={() => {
-                            setStartsAt(s.starts_at)
-                            setInstructorId('')
-                          }}
-                          className={cn(
-                            'flex min-h-11 items-center justify-center rounded-md border px-2 text-sm tabular-nums',
-                            'focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none',
-                            startsAt === s.starts_at
-                              ? 'border-primary bg-primary text-primary-foreground'
-                              : 'hover:border-foreground/30',
-                          )}
-                        >
-                          {fmtTime(s.starts_at, tz)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <SlotPicker
+                  slots={openSlots}
+                  tz={tz}
+                  locale={locale}
+                  value={startsAt}
+                  onChange={(v) => {
+                    setStartsAt(v)
+                    setInstructorId('')
+                  }}
+                  emptyLabel={t('appt.learn.nothing_free')}
+                />
 
                 {/* Instructor, only when the academy lets the student choose */}
                 {slot && choose ? (

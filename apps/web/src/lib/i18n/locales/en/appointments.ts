@@ -111,6 +111,8 @@ export const appointments = {
   'appt.book_for.day': 'Day',
   'appt.book_for.time': 'Time',
   'appt.book_for.no_slots': 'Nothing free on this day.',
+  'appt.book_for.no_record':
+    'You have no instructor record in this academy, so there is nobody to book the session with. An admin can attach one on Members.',
   'appt.book_for.instructor': 'Instructor',
   'appt.book_for.auto_round_robin': 'Assign automatically',
   'appt.book_for.auto_any': 'Anyone free',
@@ -128,14 +130,13 @@ export const appointments = {
     'You already have as many sessions booked as your academy allows. Cancel one to book another.',
   'appt.learn.nothing_free': 'Nothing is free to book right now.',
   'appt.learn.pick_day': 'Pick a day above.',
-  // On the day chips. The count is the reason the strip exists: it turns
-  // "which day should I look at" into something you can see without tapping.
-  'appt.learn.day_slots_one': '{count} slot',
-  'appt.learn.day_slots_other': '{count} slots',
-  // Above the times, because on a phone the chosen day chip may be scrolled
-  // out of view by the time you are looking at the grid.
-  'appt.learn.times_available_one': '{count} time available',
-  'appt.learn.times_available_other': '{count} times available',
+  // The shared SlotPicker — learner page and staff booking dialog both. On the
+  // day chips the count is the reason the strip exists: it turns "which day
+  // should I look at" into something you can see without tapping.
+  'appt.slots.day_count_one': '{count} slot',
+  'appt.slots.day_count_other': '{count} slots',
+  'appt.slots.available_one': '{count} time available',
+  'appt.slots.available_other': '{count} times available',
   'appt.learn.instructor': 'Instructor',
   'appt.learn.instructor_placeholder': 'Choose an instructor',
   'appt.learn.note': 'What would you like to cover?',
@@ -148,6 +149,9 @@ export const appointments = {
   'appt.register.subtitle':
     'Every session the academy has held, including cancelled ones.',
   'appt.register.search': 'Search student name or number',
+  'appt.register.upcoming': 'Upcoming',
+  'appt.register.past': 'Past',
+  'appt.register.any_time': 'Any date',
   'appt.register.any_status': 'Any status',
   'appt.register.mine': 'My sessions',
   'appt.register.empty': 'No sessions match.',
