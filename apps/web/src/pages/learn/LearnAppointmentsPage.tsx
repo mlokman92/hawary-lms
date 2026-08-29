@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CalendarClock, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarClock } from 'lucide-react'
 import { useStudentAcademy } from '@/lib/studentAcademy'
 import { getLang, useT } from '@/lib/i18n'
 import { localeFor } from '@/lib/format'
@@ -27,7 +27,6 @@ import {
 } from '@/components/ui/select'
 import {
   addDays,
-  daysFrom,
   fmtDayShort,
   fmtRange,
   fmtTime,
@@ -60,7 +59,7 @@ const WINDOW_DAYS = 62
  * the student needs to know who they are meeting.
  */
 export function LearnAppointmentsPage() {
-  const { t } = useT()
+  const { t, tn } = useT()
   const locale = localeFor(getLang())
   const { academyId } = useStudentAcademy()
 
@@ -75,7 +74,6 @@ export function LearnAppointmentsPage() {
   const book = useBookAppointment(academyId)
   const cancel = useCancelAppointment(academyId)
 
-  const [offset, setOffset] = useState(0)
   const [day, setDay] = useState<Ymd | null>(null)
   const [startsAt, setStartsAt] = useState('')
   const [instructorId, setInstructorId] = useState('')
@@ -94,10 +92,9 @@ export function LearnAppointmentsPage() {
     return map
   }, [options, tz])
 
-  const strip = useMemo(
-    () => daysFrom(addDays(from, offset), 7),
-    [from, offset],
-  )
+  /** Every day with something free, in order. The strip scrolls through these
+   *  rather than paging a calendar: a day with no slots is not a destination. */
+  const openDays = useMemo(() => [...byDay.keys()].sort(), [byDay])
 
   // Land on the first day that has something, and go back to it if the chosen
   // day empties out — booking its last slot is the ordinary way that happens.
@@ -170,81 +167,84 @@ export function LearnAppointmentsPage() {
               </p>
             ) : (
               <>
-                {/* Days */}
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    aria-label={t('appt.calendar.prev')}
-                    disabled={offset === 0}
-                    onClick={() => setOffset(Math.max(0, offset - 7))}
-                  >
-                    <ChevronLeft />
-                  </Button>
-                  <div className="grid flex-1 grid-cols-7 gap-1">
-                    {strip.map((d) => {
-                      const count = byDay.get(d)?.length ?? 0
-                      return (
-                        <button
-                          key={d}
-                          type="button"
-                          disabled={count === 0}
-                          onClick={() => {
-                            setDay(d)
-                            setStartsAt('')
-                          }}
+                {/* Days — only the ones with something free, so every chip
+                    is actionable. That is also why this scrolls instead of
+                    paging: seven fixed columns left about 34px per day on a
+                    phone, and somebody who wants next Tuesday should swipe to
+                    it rather than work out which week it falls in. */}
+                <div className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1">
+                  {openDays.map((d) => {
+                    const count = byDay.get(d)?.length ?? 0
+                    const chosen = day === d
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => {
+                          setDay(d)
+                          setStartsAt('')
+                        }}
+                        aria-pressed={chosen}
+                        className={cn(
+                          'flex min-w-20 shrink-0 snap-start flex-col items-center gap-0.5',
+                          'rounded-lg border px-3 py-2',
+                          'focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none',
+                          chosen
+                            ? 'border-primary bg-primary text-primary-foreground'
+                            : 'hover:border-foreground/30',
+                        )}
+                      >
+                        <span className="text-sm font-medium whitespace-nowrap">
+                          {fmtDayShort(d, locale)}
+                        </span>
+                        <span
                           className={cn(
-                            'rounded-md border px-1 py-2 text-center text-xs',
-                            'disabled:text-muted-foreground disabled:opacity-50',
-                            day === d
-                              ? 'border-primary bg-primary text-primary-foreground'
-                              : count > 0
-                                ? 'hover:border-foreground/30'
-                                : '',
+                            'text-xs tabular-nums',
+                            chosen
+                              ? 'text-primary-foreground/80'
+                              : 'text-muted-foreground',
                           )}
                         >
-                          {fmtDayShort(d, locale)}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    aria-label={t('appt.calendar.next')}
-                    disabled={offset + 7 >= WINDOW_DAYS}
-                    onClick={() => setOffset(offset + 7)}
-                  >
-                    <ChevronRight />
-                  </Button>
+                          {tn('appt.learn.day_slots', count)}
+                        </span>
+                      </button>
+                    )
+                  })}
                 </div>
 
-                {/* Times */}
+                {/* Times. A grid rather than wrapped flex so the columns line
+                    up, and 44px tall because this is the control people press
+                    with a thumb. */}
                 {slots.length === 0 ? (
                   <p className="text-muted-foreground text-sm">
                     {t('appt.learn.pick_day')}
                   </p>
                 ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {slots.map((s) => (
-                      <button
-                        key={s.starts_at}
-                        type="button"
-                        onClick={() => {
-                          setStartsAt(s.starts_at)
-                          setInstructorId('')
-                        }}
-                        className={cn(
-                          'rounded-md border px-3 py-1.5 text-sm tabular-nums',
-                          'focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none',
-                          startsAt === s.starts_at
-                            ? 'border-primary bg-primary text-primary-foreground'
-                            : 'hover:border-foreground/30',
-                        )}
-                      >
-                        {fmtTime(s.starts_at, tz)}
-                      </button>
-                    ))}
+                  <div className="grid gap-2">
+                    <p className="text-muted-foreground text-xs">
+                      {tn('appt.learn.times_available', slots.length)}
+                    </p>
+                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                      {slots.map((s) => (
+                        <button
+                          key={s.starts_at}
+                          type="button"
+                          onClick={() => {
+                            setStartsAt(s.starts_at)
+                            setInstructorId('')
+                          }}
+                          className={cn(
+                            'flex min-h-11 items-center justify-center rounded-md border px-2 text-sm tabular-nums',
+                            'focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none',
+                            startsAt === s.starts_at
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'hover:border-foreground/30',
+                          )}
+                        >
+                          {fmtTime(s.starts_at, tz)}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
 

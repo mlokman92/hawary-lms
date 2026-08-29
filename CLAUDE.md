@@ -168,12 +168,43 @@ Monorepo: **pnpm workspaces + Turborepo**.
   student under round robin is ignored rather than refused. Students have **no
   DML policy at all** on `appointments` — `book_appointment` /
   `cancel_appointment` are the only doors — but marking done/no-show is a plain
-  staff UPDATE. `app.bookable_student` mirrors `app.is_enrolled`'s membership
-  test, not `app.my_student_id`, so suspending a member revokes booking at once.
+  staff UPDATE — but only **their own**: the UPDATE policy and
+  `cancel_appointment`'s staff arm were both `app.is_staff`, so any trainer
+  could mark or cancel any session in the academy. Both are now
+  `app.is_admin OR app.owns_instructor(instructor_id)`; the `WITH CHECK` is on
+  the **new** row so an instructor cannot hand a session on with a plain UPDATE
+  and skip the cover rules. `app.bookable_student` mirrors `app.is_enrolled`'s
+  membership test, not `app.my_student_id`, so suspending a member revokes
+  booking at once.
+  **Cancelling means two things**, so `cancel_appointment` branches on who is
+  asking rather than the callers branching: a *student* cancelling does not want
+  the session (notice check, then cancelled), while an *admin or the session's
+  own instructor* means "I cannot take this one" — the session is handed to
+  whoever can cover, same id, student and time, and is only really called off
+  when nobody can. Reassigning what a student asked to cancel would be the exact
+  opposite of the request, which is why the branch exists.
+  `app.cover_candidates` is **not** `app.booking_slots`: that generator gates on
+  `is_open` / `min_notice_hours` / `horizon_days`, which are rules for opening a
+  booking *window*, and this session already exists at a time the academy
+  accepted. It honours only what genuinely stops somebody covering — pool
+  membership, time off, already busy — ordered by `book_appointment`'s round
+  robin verbatim, and the RPC **loops** candidates because the EXCLUDE
+  constraint is what settles a race. The fallback is not rare: 26 of 50 booked
+  sessions here have no cover, because the academy runs every instructor in
+  parallel — so the UI reports *which* of the two happened. A second
+  notification kind, `appointment_reassigned`, tells the student and the
+  incoming instructor in the same transaction.
   Staff-side `/appointments` is the week grid alone; the policy, hours
   and pool moved to **`/appointments/settings`** (admin-only, reached by the gear
   beside *Book a session*) — setup is visited once and does not belong under the
-  screen staff open daily. Learner-side `/learn/appointments` is pick a
+  screen staff open daily. **`/appointments/list`** is the register — every
+  session ever, filterable by status/instructor/student, paged 50 server-side
+  with `id` as the tie-break. The diary cannot answer "find me that session": it
+  is windowed to seven days and a grid has nowhere to put a cancelled one, which
+  is exactly the row being looked for. Same split as `/payments` and its Log.
+  Rows open the shared `AppointmentDialog`, which decides **for itself** whether
+  the reader may act, so the rule cannot drift across the three screens that
+  mount it. Learner-side `/learn/appointments` is pick a
   day → pick a time → book. Day maths is `YYYY-MM-DD` strings in the academy's
   zone (`features/appointments/calendar.ts`), never the browser's. Two
   independent caps on a student: `max_open_per_student` bounds the **queue**

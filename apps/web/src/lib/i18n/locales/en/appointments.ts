@@ -128,6 +128,14 @@ export const appointments = {
     'You already have as many sessions booked as your academy allows. Cancel one to book another.',
   'appt.learn.nothing_free': 'Nothing is free to book right now.',
   'appt.learn.pick_day': 'Pick a day above.',
+  // On the day chips. The count is the reason the strip exists: it turns
+  // "which day should I look at" into something you can see without tapping.
+  'appt.learn.day_slots_one': '{count} slot',
+  'appt.learn.day_slots_other': '{count} slots',
+  // Above the times, because on a phone the chosen day chip may be scrolled
+  // out of view by the time you are looking at the grid.
+  'appt.learn.times_available_one': '{count} time available',
+  'appt.learn.times_available_other': '{count} times available',
   'appt.learn.instructor': 'Instructor',
   'appt.learn.instructor_placeholder': 'Choose an instructor',
   'appt.learn.note': 'What would you like to cover?',

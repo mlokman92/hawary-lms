@@ -23,6 +23,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
+  useSidebar,
 } from '@/components/ui/sidebar'
 
 /**
@@ -63,6 +64,11 @@ export function ShellSidebar({
   profileTo: string
 }) {
   const { pathname } = useLocation()
+  // On a phone the sidebar is a sheet over the page, so following a link
+  // without closing it leaves the destination hidden behind the thing that
+  // sent you there. Harmless on desktop, where `openMobile` is not rendered.
+  const { setOpenMobile } = useSidebar()
+  const close = () => setOpenMobile(false)
 
   return (
     <Sidebar collapsible="icon">
@@ -95,6 +101,7 @@ export function ShellSidebar({
                     >
                       <Link
                         to={item.to}
+                        onClick={close}
                         aria-current={active ? 'page' : undefined}
                       >
                         <Icon />
@@ -123,6 +130,7 @@ export function ShellSidebar({
                               >
                                 <Link
                                   to={child.to}
+                                  onClick={close}
                                   aria-current={
                                     childActive ? 'page' : undefined
                                   }

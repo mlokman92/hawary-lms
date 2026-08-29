@@ -298,6 +298,15 @@ worse than no button.
 student's own sessions with a Cancel on the upcoming ones. Under round robin
 there is no teacher picker, because there is nothing to render.
 
+The day strip lists **only days that have something free**, each chip carrying
+how many, and it scrolls rather than pages. Three things fall out of that. The
+count is the point: "which day should I look at" becomes something you can see
+without tapping. Every chip is actionable, so there is no disabled state to
+explain. And the prev/next week buttons are gone — seven fixed columns left
+about 34px per day on a phone, and paging asked a student who wants next Tuesday
+to work out which week it falls in. The times below are a grid, not wrapped
+flex, so the columns line up, and each is 44px tall because a thumb presses it.
+
 ## Two caps, not one
 
 `max_open_per_student` bounds the **queue** — how much of the future one student
@@ -355,6 +364,14 @@ Separate from the email, and more reliable than it: `book_appointment` writes a
 `notifications` row for each party **in the same transaction as the insert**, so
 if the booking exists the notification does. The actor is not notified — a
 message telling you what you just clicked is not news. See `docs/notifications.md`.
+
+Two kinds now. `appointment_reassigned` is written by `cancel_appointment` when
+a session is handed on, to the student and the incoming instructor, on the same
+terms. Its payload is `appointment_booked`'s plus `from_name`: the session did
+not change, the teacher did, and that is the whole news. Only `titleOf` in
+`NotificationBell` branches — where the row leads and when the session is are
+the same question either way. There is still **no** notification when a session
+is genuinely cancelled; that gap predates this work and is unchanged.
 
 ## Deliberately not done
 

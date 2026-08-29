@@ -129,6 +129,10 @@ export const appointments: AppointmentsDict = {
   'appt.learn.nothing_free':
     'Tiada yang lapang untuk ditempah buat masa ini.',
   'appt.learn.pick_day': 'Pilih hari di atas.',
+  'appt.learn.day_slots_one': '{count} slot',
+  'appt.learn.day_slots_other': '{count} slot',
+  'appt.learn.times_available_one': '{count} masa tersedia',
+  'appt.learn.times_available_other': '{count} masa tersedia',
   'appt.learn.instructor': 'Pengajar',
   'appt.learn.instructor_placeholder': 'Pilih pengajar',
   'appt.learn.note': 'Apa yang anda mahu bincangkan?',

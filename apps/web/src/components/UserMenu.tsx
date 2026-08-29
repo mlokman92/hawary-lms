@@ -51,7 +51,7 @@ export function UserMenu({ profileTo }: { profileTo: string }) {
   const { user, signOut } = useAuth()
   const { theme, setTheme } = useTheme()
   const { lang, setLang, t } = useT()
-  const { isMobile } = useSidebar()
+  const { isMobile, setOpenMobile } = useSidebar()
 
   const email = user?.email ?? ''
   const fullName = (user?.user_metadata?.full_name as string | undefined) ?? ''
@@ -95,7 +95,9 @@ export function UserMenu({ profileTo }: { profileTo: string }) {
                 "edit me", and a separate menu row for it reads as a second,
                 unrelated destination. */}
             <DropdownMenuItem asChild className="py-2">
-              <Link to={profileTo}>
+              {/* Closes the mobile sheet for the same reason the nav links do:
+                  the profile page would otherwise open behind it. */}
+              <Link to={profileTo} onClick={() => setOpenMobile(false)}>
                 <Avatar className="size-8 rounded-lg">
                   <AvatarFallback className="rounded-lg text-xs">
                     {initials}
