@@ -30,6 +30,15 @@ export type AppointmentBookedData = {
   tz: string
 }
 
+/**
+ * `data` for `appointment_reassigned`, written by `cancel_appointment` when
+ * staff hand a session on. Same shape plus who it came from — the session did
+ * not change, the teacher did, and that is the whole news.
+ */
+export type AppointmentMovedData = AppointmentBookedData & {
+  from_name: string | null
+}
+
 /** How many rows the panel holds. Older ones are not paged to — see the doc. */
 export const NOTIFICATION_LIMIT = 20
 

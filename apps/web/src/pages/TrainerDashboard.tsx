@@ -225,6 +225,15 @@ export function TrainerDashboard() {
     [submissions.data],
   )
 
+  // "No assigned course" is a claim about the trainer, so only make it once the
+  // query has actually said so. `?? 0` would let the alarming message paint
+  // first and then correct itself: useMyGradableCourses is three sequential
+  // round trips (getUser → instructors → course_instructors) while
+  // useAcademyQueue is one, so the queue routinely settles first.
+  const hasCourses = gradable.isSuccess
+    ? gradable.data.courses.length > 0
+    : true
+
   const todayYmd = today(tz)
   const dayLabel = (ymd: string) =>
     ymd === todayYmd ? t('dash.week.today') : fmtDayLong(ymd, locale)
@@ -252,8 +261,17 @@ export function TrainerDashboard() {
     <PageHeader
       title={t('nav.dashboard')}
       description={t('dash.header.desc', {
+        // Both queries, not just the sessions one: `upcoming` stays disabled
+        // until the instructor record resolves, so keying on it alone prints a
+        // confident "nothing booked ahead" before anything has been read. It
+        // cannot key on isPending either — with no instructor record that query
+        // is disabled forever and the header would stick on "checking" beside
+        // the empty state that already explains why.
         date: todayLabel,
-        status: upcoming.isLoading ? t('dash.header.checking') : status,
+        status:
+          instructor.isLoading || upcoming.isLoading
+            ? t('dash.header.checking')
+            : status,
       })}
     />
   )
@@ -398,7 +416,7 @@ export function TrainerDashboard() {
             <MarkingList
               rows={awaitingAttempts}
               courses={courseTitles}
-              hasCourses={(gradable.data?.courses.length ?? 0) > 0}
+              hasCourses={hasCourses}
               t={t}
             />
           )}
@@ -416,7 +434,7 @@ export function TrainerDashboard() {
             <MarkingList
               rows={awaitingSubmissions}
               courses={courseTitles}
-              hasCourses={(gradable.data?.courses.length ?? 0) > 0}
+              hasCourses={hasCourses}
               t={t}
             />
           )}

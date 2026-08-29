@@ -55,6 +55,7 @@ import { PayResultPage } from './pages/PayResultPage'
 import { EnrollPage } from './pages/EnrollPage'
 import { EnrollmentsPage } from './pages/EnrollmentsPage'
 import { AppointmentsPage } from './pages/AppointmentsPage'
+import { AppointmentListPage } from './pages/AppointmentListPage'
 import { AppointmentSettingsPage } from './pages/AppointmentSettingsPage'
 import { IncentivesPage } from './pages/IncentivesPage'
 import { IncentiveBatchPage } from './pages/IncentiveBatchPage'
@@ -168,6 +169,13 @@ export default function App() {
                     <Route path="/students/:id" element={<StudentDetailPage />} />
                     <Route path="/instructors" element={<InstructorsPage />} />
                     <Route path="/appointments" element={<AppointmentsPage />} />
+                    {/* The register: every session ever, not the week grid.
+                        Declared before /appointments/settings for readability;
+                        both are literal segments so order does not decide. */}
+                    <Route
+                      path="/appointments/list"
+                      element={<AppointmentListPage />}
+                    />
                     {/* The booking policy, hours and pool — set up once, kept
                         off the diary. */}
                     <Route

@@ -2463,7 +2463,7 @@ export type Database = {
         | "void"
         | "cancelled"
       member_status: "active" | "invited" | "suspended"
-      notification_kind: "appointment_booked"
+      notification_kind: "appointment_booked" | "appointment_reassigned"
       payment_method:
         | "cash"
         | "bank_transfer"
@@ -2649,7 +2649,7 @@ export const Constants = {
         "cancelled",
       ],
       member_status: ["active", "invited", "suspended"],
-      notification_kind: ["appointment_booked"],
+      notification_kind: ["appointment_booked", "appointment_reassigned"],
       payment_method: [
         "cash",
         "bank_transfer",

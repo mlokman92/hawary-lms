@@ -136,8 +136,11 @@ export function NotificationBell() {
 }
 
 // ---------------------------------------------------------------------------
-// One event kind so far. Each new kind adds a case to these three — that is the
-// whole cost of a new notification, and none of it is a schema change.
+// Two event kinds. Each new kind adds a case to these three — that is the whole
+// cost of a new notification, and none of it is a schema change.
+//
+// Both appointment kinds share a payload, so only `titleOf` branches: where the
+// row leads and when the session is are the same question either way.
 // ---------------------------------------------------------------------------
 
 function apptData(row: Notification): AppointmentBookedData | null {
@@ -150,7 +153,13 @@ function apptData(row: Notification): AppointmentBookedData | null {
 function titleOf(row: Notification, t: TFn): string {
   const d = apptData(row)
   const name = d?.with_name?.trim() || t('notif.someone')
-  return d?.role === 'instructor'
+  const asInstructor = d?.role === 'instructor'
+  if (row.kind === 'appointment_reassigned') {
+    return asInstructor
+      ? t('notif.appt_moved.instructor', { name })
+      : t('notif.appt_moved.student', { name })
+  }
+  return asInstructor
     ? t('notif.appt_booked.instructor', { name })
     : t('notif.appt_booked.student', { name })
 }

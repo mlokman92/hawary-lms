@@ -32,8 +32,9 @@ Monorepo: **pnpm workspaces + Turborepo**.
   params before the Supabase client consumes them), self-serve academy creation
   (creator becomes admin), academy switcher, light/dark theme.
 - **Sections** (each: list + add/edit, staff-gated, academy-scoped by RLS):
-  Courses · Students · Instructors · Payments · Appointments. Nav is these five + Dashboard;
-  admins also get Incentive + Members + Settings. The **header search** (`HeaderSearch` +
+  Courses · Students · Instructors · Appointments. A trainer's nav is these four +
+  Dashboard; admins also get **Payments** (+ its Log child) + Incentive + Members +
+  Settings — see `docs/money-is-admin-only.md`. The **header search** (`HeaderSearch` +
   `features/search`) finds students and instructors across the active academy by
   name, email, phone, IC or record number and jumps straight to the record.
 - **Course → module → content**: a course is a card grid (`/courses`) showing per-course
@@ -213,6 +214,47 @@ Monorepo: **pnpm workspaces + Turborepo**.
   the record, falling back to the linked account's auth email. Two receipts
   (`student_notice_id` / `instructor_notice_id`) because the recipients fail
   independently; a re-invoke fills only the gap.
+- **Money is admin-only** (`docs/money-is-admin-only.md`): a trainer is staff so
+  they can **teach**, and none of that needs to know what a student was charged.
+  The five money SELECT policies — `invoices` · `invoice_items` · `payments` ·
+  `payment_intents` · `academy_payment_settings` — moved from `app.is_staff` to
+  **`app.is_admin`**, every `app.owns_student` arm preserved verbatim (that arm
+  *is* `/learn/billing` and the learner's own PDFs). This was the actual leak:
+  a trainer's own JWT plus the publishable key read the whole book straight from
+  PostgREST, so hiding cards would have changed nothing. Writes were already
+  `app.is_admin`, which is why this is read-side only — and which is why a
+  trainer's **New invoice** button had always failed with a raw `42501`.
+  `app.is_staff` itself is **not** narrowed — dozens of policies rest on it and
+  nearly all are the teaching grants a trainer must keep — and the
+  three money RPCs are left alone because SECURITY **INVOKER** means they
+  inherited the change for free. `courses.price_sen` stays trainer-readable on
+  purpose: `get_academy_enrollment` shows it to anonymous visitors on
+  `/enroll/:slug`, so hiding it would be theatre. RLS denial is **silent**, so
+  the client ships with it: nav, a new route-level `AdminRoute` over `/payments*`
+  and `/incentives*` (it **redirects** — those pages would otherwise render an
+  empty ledger with a live Export button), the `isAdmin`-gated Billing card on
+  `/students/:id`, and an explicit `role = 'admin'` check in `send-pay-link`
+  because that function **mails a customer**.
+- **Two dashboards** (`pages/DashboardRoute.tsx` forks `/` on role;
+  `Dashboard.tsx` is untouched and still serves admins). A **component
+  boundary, not an `isAdmin &&`**: hooks cannot be skipped conditionally, so
+  branching inside the 1027-line file would still *fire* `useInvoices` for a
+  trainer however many cards were hidden. `pages/TrainerDashboard.tsx` must
+  import nothing from `@/features/{payments,settings/api,dashboard/api}` and
+  never `formatMYR` — that grep is the regression test. It asks *what is in
+  front of me*: **Needs closing** (past sessions still `booked` — self-hiding,
+  and the only place they can surface, since `/appointments` is a week grid),
+  **Your week** (own sessions, 7 days, **grouped by day** — bookings cluster on
+  the two days an academy runs, so a flat list is one Tuesday and Thursday never
+  appears), and **two** marking cards (two nav destinations, so a merged card
+  could only link to one) showing how long work has **waited**, not when it
+  arrived. No stat-tile row, no chart. Marking queues carry no course filter —
+  `app.can_grade_*` already narrows them — while `.eq('instructor_id', …)` on
+  the session queries is a **display** narrowing, not a boundary. Both marking
+  cards separate "nothing waiting" from **"you are not assigned to a course"**,
+  which is the real case: `course_instructors` is nearly empty, and
+  `useMyGradableCourses` returns `linked: true` there so the existing
+  no-instructor-record message does not fire.
 - **Data model**: identity is global (`profiles`, one per email); roles/records are
   per-academy. A **student is an academy record** (`students`, not necessarily an auth
   user); enrollment/invoices/payments reference `students`. An **instructor is the same

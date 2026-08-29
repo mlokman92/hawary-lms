@@ -13,6 +13,9 @@ Living documentation for Hawary LMS.
 - [appointments.md](appointments.md) — one-to-one session booking: derived
   slots, the round-robin rota, and the overlap constraint that makes
   double-booking impossible.
+- [money-is-admin-only.md](money-is-admin-only.md) — why the five money SELECT
+  policies moved from `app.is_staff` to `app.is_admin`, what that closed, and
+  the trainer dashboard that replaced the finance one at `/`.
 
 Add an entry here when you create a new doc. Keep decisions with their rationale so
 future work (and Claude) understands *why*, not just *what*.

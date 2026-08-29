@@ -25,7 +25,8 @@ export const appointments = {
   'appt.action.complete': 'Mark done',
   'appt.action.no_show': 'Did not attend',
   'appt.cancel.reason': 'Reason',
-  'appt.cancel.reason_placeholder': 'Shown to the student. Optional.',
+  'appt.cancel.reason_placeholder':
+    'Used only if nobody can cover. Optional.',
 
   // --- Calendar -------------------------------------------------------------
   'appt.calendar.title': 'Diary',
@@ -134,6 +135,24 @@ export const appointments = {
   'appt.learn.mine': 'My sessions',
   'appt.learn.none': 'No sessions yet',
   'appt.learn.none_hint': 'Book one above and it will show here.',
+  // The register — every session, not just this week
+  'appt.register.title': 'All sessions',
+  'appt.register.subtitle':
+    'Every session the academy has held, including cancelled ones.',
+  'appt.register.search': 'Search student name or number',
+  'appt.register.any_status': 'Any status',
+  'appt.register.mine': 'My sessions',
+  'appt.register.empty': 'No sessions match.',
+  'appt.register.count': '{count} sessions',
+  'appt.register.page': 'Page {page} of {of}',
+
+  // Handing a session on. "Cancel" is what the instructor presses; what
+  // actually happens is that somebody else takes it.
+  'appt.handover.done':
+    '{name} is taking this session. Same student, same time.',
+  'appt.handover.none':
+    'Nobody else was free at that time, so the session has been cancelled.',
+
 } as const
 
 export type AppointmentsDict = Record<keyof typeof appointments, string>

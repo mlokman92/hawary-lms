@@ -74,7 +74,8 @@ export const nav = {
   'shell.no_student_record.body':
     'You’re signed in to {academy}, but no student record is linked to your account. {detail}',
   'shell.no_student_record.detail':
-    'Ask your academy to finish setting you up.',
+    'Ask your academy to finish setting you up.',  'nav.appointment_list': 'All sessions',
+
 } as const
 
 export type NavDict = Record<keyof typeof nav, string>

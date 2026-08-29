@@ -74,5 +74,6 @@ export const nav: NavDict = {
   'shell.no_student_record.body':
     'Anda telah log masuk ke {academy}, tetapi tiada rekod pelajar dipautkan dengan akaun anda. {detail}',
   'shell.no_student_record.detail':
-    'Sila hubungi akademi anda untuk melengkapkan pendaftaran.',
+    'Sila hubungi akademi anda untuk melengkapkan pendaftaran.',  'nav.appointment_list': 'Semua sesi',
+
 }

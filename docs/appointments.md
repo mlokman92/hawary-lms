@@ -130,13 +130,96 @@ notice period, and a `WITH CHECK` expression can do neither.
   `student` null means "me"; set, it means staff booking on somebody's behalf,
   and only staff may pass it. One function rather than two, because the
   round-robin ordering is the part that must not drift.
-- `cancel_appointment(id, reason?)` — staff any time; the student up to
-  `min_notice_hours` before. Status only: the row stays as the record that it
-  happened.
+- `cancel_appointment(id, reason?)` — see **Cancelling means two things** below.
+  Status only: the row stays as the record that it happened.
 
-Marking **done** or **did not attend** is a plain UPDATE — the
-`appointments: staff update` policy already grants exactly that, so an RPC would
-add nothing. Same reasoning that keeps enrolment approval an UPDATE.
+Marking **done** or **did not attend** is a plain UPDATE — the appointments
+UPDATE policy already grants exactly that, so an RPC would add nothing. Same
+reasoning that keeps enrolment approval an UPDATE.
+
+## Only the session's own instructor, or an admin
+
+The UPDATE policy was `app.is_staff`, and `cancel_appointment`'s staff arm was
+the same. That meant **any** trainer in the academy could mark **any** session
+done, missed, or cancelled — including sessions they had nothing to do with.
+Marking a lesson `no_show` is a statement about a student's attendance at a
+lesson you taught; it should not be available to a colleague who was not there.
+
+    appointments: admin or own instructor update
+      using       (app.is_admin(academy_id) or app.owns_instructor(instructor_id))
+      with check  (app.is_admin(academy_id) or app.owns_instructor(instructor_id))
+
+`app.owns_instructor` already existed and is the same test used elsewhere: the
+`instructors` row for this session is linked to `auth.uid()`.
+
+The `WITH CHECK` is on the **new** row deliberately. It stops an instructor
+handing a session to somebody else with a plain UPDATE, which would bypass the
+cover rules entirely — reassignment goes through `cancel_appointment`, which
+picks the cover itself.
+
+A student is unaffected: they never had DML here, and their own cancellation
+goes through the RPC as before.
+
+## Cancelling means two things
+
+`cancel_appointment` branches on **who is asking**, so the callers do not have
+to:
+
+| caller | meaning | what happens |
+| --- | --- | --- |
+| the student | "I don't want this session" | notice check, then cancelled |
+| admin / the session's own instructor | "I can't take this one" | handed to whoever can cover; cancelled only if nobody can |
+| any other trainer | — | `Appointment not found` |
+
+Reassigning a student's session when the **student** asked to cancel would be
+the exact opposite of what they requested, which is why the branch exists at
+all rather than one rule for everybody.
+
+The refusal for a non-owning trainer reuses the "not found" message on purpose:
+whether an id exists is not something to let a colleague probe.
+
+### Who can cover
+
+`app.cover_candidates(appointment)` returns the instructors who could take an
+existing session, best first, using **`book_appointment`'s round robin
+verbatim** — fewest sessions in the last 30 days, then longest since last
+assigned, then id.
+
+It deliberately does **not** reuse `app.booking_slots`, even though that is the
+one generator everywhere else. `booking_slots` gates on `is_open`,
+`min_notice_hours` and `horizon_days`, and those are rules about opening a
+booking **window** to students. This session already exists at a time the
+academy already accepted: closing booking for the month, or the session falling
+inside the notice period, must not strand it with nobody able to cover.
+
+`booking_hours` is not consulted either, and that is not an oversight — hours
+are **academy-wide**, identical for every instructor, so they cannot
+distinguish one candidate from another. They say when slots are generated, not
+who may teach a session already on the books.
+
+What *is* honoured is everything that means a person genuinely cannot take it:
+pool membership (`is_bookable`, active, unarchived), time off, and already
+being busy.
+
+The RPC **loops** the candidates rather than picking one, for the same reason
+`book_appointment` loops its insert: between choosing and writing, somebody can
+take that instructor's slot, and the EXCLUDE constraint is what says so.
+
+The move keeps the same **id, student and time** and sets `auto_assigned` — the
+rota chose, not a person. Both the student and the new instructor get an
+`appointment_reassigned` notification **in the same transaction**, the same
+reasoning as `book_appointment`: a student whose teacher changed without being
+told would turn up expecting somebody else.
+
+**Note the real-world hit rate.** On this database 26 of 50 booked sessions have
+*no* cover available, because the academy runs every instructor in parallel on
+the same slots — when one is teaching at 10:00 they all are. So the fallback is
+not an edge case, and the UI has to say which of the two things happened rather
+than reporting "cancelled" either way.
+
+**Consequence, accepted deliberately:** staff can no longer call a session off
+outright while another instructor is free. If that turns out to be wanted, it
+needs a separate action, not a flag on this one.
 
 `app.bookable_student` mirrors the membership + record test in `app.is_enrolled`
 rather than reusing `app.my_student_id`, which does not look at
@@ -190,6 +273,26 @@ has released its slot and is not something happening on Tuesday; drawing it woul
 say the diary is fuller than it is. The time axis covers both the configured
 window and anything already booked, because staff can book off-grid and a session
 nobody can see is worse than a tall grid.
+
+**`/appointments/list`** (staff) — the register: every session the academy has
+held, filterable by status, instructor and student, paged 50 at a time. The
+diary cannot answer "find me that session" — it is windowed to seven days, and a
+grid has nowhere to put a cancelled session, which is exactly the row somebody
+comes looking for (7 of 57 rows here). Same split as `/payments` and its Log,
+and it hangs off Appointments in the nav the same way.
+
+Paged on the server from the start rather than when it hurts: `/payments` and
+`/payments/log` both had to be retrofitted after an academy passed 500 rows, and
+PostgREST silently caps a request at the project maximum. Every ordering carries
+`id` as the final tie-break — sessions genuinely share a `starts_at` (a whole
+academy teaches the 10:00 slot at once), and OFFSET paging over a non-unique
+sort repeats one row and skips another.
+
+Rows open the shared `AppointmentDialog`, which works out **for itself** whether
+the reader may act — admin, or the instructor whose session it is. That rule
+lives in the one component all four screens mount, so it cannot drift between
+them, and it mirrors the database exactly: a button that fails at the policy is
+worse than no button.
 
 **`/learn/appointments`** (learner) — pick a day, pick a time, book; then the
 student's own sessions with a Cancel on the upcoming ones. Under round robin

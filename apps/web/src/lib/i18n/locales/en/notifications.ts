@@ -16,6 +16,10 @@ export const notifications = {
   'notif.appt_booked.student': 'Session booked with {name}',
   'notif.appt_booked.instructor': 'New session with {name}',
   'notif.someone': 'someone',
+  // --- appointment_reassigned -----------------------------------------------
+  'notif.appt_moved.student': 'Your session is now with {name}',
+  'notif.appt_moved.instructor': 'Session with {name} passed to you',
+
 } as const
 
 export type NotificationsDict = Record<keyof typeof notifications, string>

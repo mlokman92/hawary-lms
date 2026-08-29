@@ -24,7 +24,7 @@ export const appointments: AppointmentsDict = {
   'appt.action.no_show': 'Tidak hadir',
   'appt.cancel.reason': 'Sebab',
   'appt.cancel.reason_placeholder':
-    'Ditunjukkan kepada pelajar. Tidak wajib.',
+    'Digunakan hanya jika tiada pengganti. Tidak wajib.',
 
   // --- Kalendar -------------------------------------------------------------
   'appt.calendar.title': 'Diari',
@@ -136,4 +136,21 @@ export const appointments: AppointmentsDict = {
   'appt.learn.mine': 'Sesi saya',
   'appt.learn.none': 'Belum ada sesi',
   'appt.learn.none_hint': 'Tempah satu di atas dan ia akan muncul di sini.',
+  // Daftar sesi — semua sesi, bukan minggu ini sahaja
+  'appt.register.title': 'Semua sesi',
+  'appt.register.subtitle':
+    'Setiap sesi yang telah diadakan akademi, termasuk yang dibatalkan.',
+  'appt.register.search': 'Cari nama atau nombor pelajar',
+  'appt.register.any_status': 'Semua status',
+  'appt.register.mine': 'Sesi saya',
+  'appt.register.empty': 'Tiada sesi yang sepadan.',
+  'appt.register.count': '{count} sesi',
+  'appt.register.page': 'Halaman {page} daripada {of}',
+
+  // Menyerahkan sesi kepada pengajar lain
+  'appt.handover.done':
+    '{name} akan mengambil alih sesi ini. Pelajar dan masa yang sama.',
+  'appt.handover.none':
+    'Tiada pengajar lain yang lapang pada masa itu, jadi sesi ini telah dibatalkan.',
+
 }

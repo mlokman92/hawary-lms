@@ -20,13 +20,27 @@ import {
   useCancelAppointment,
   useSetAppointmentStatus,
   type AppointmentRow,
+  type CancelResult,
 } from './api'
+import { useAcademy } from '@/lib/academy'
+import { useMyInstructorRecord } from '@/features/profile/api'
 import { errorMessage } from '@/lib/errors'
 
 /**
  * One session, and the three things staff do to it: mark it done, mark it
- * missed, or call it off. Cancelling is the only one that returns the slot to
- * the pool, so it is the only one that asks for a reason.
+ * missed, or hand it on.
+ *
+ * Who may do them is worked out HERE rather than passed in by each of the four
+ * screens that mount this, so the rule cannot drift between them: an admin, or
+ * the instructor whose session it is. It mirrors the DB exactly — the
+ * `appointments: admin or own instructor update` policy and
+ * `cancel_appointment`'s own guard — because a button a person cannot use is
+ * worse than no button, and this one would fail at the database.
+ *
+ * "Cancel session" no longer means the session stops. For staff the server
+ * hands it to whoever can cover, keeping the same student and time, and only
+ * calls it off when nobody can. So the outcome is reported instead of the
+ * dialog just closing: "cancelled" would be a lie most of the time.
  */
 export function AppointmentDialog({
   academyId,
@@ -42,26 +56,47 @@ export function AppointmentDialog({
   onOpenChange: (open: boolean) => void
 }) {
   const { t } = useT()
+  const { active } = useAcademy()
+  const myInstructor = useMyInstructorRecord(academyId)
   const cancel = useCancelAppointment(academyId)
   const setStatus = useSetAppointmentStatus(academyId)
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [outcome, setOutcome] = useState<CancelResult | null>(null)
 
   useEffect(() => {
     setReason('')
     setError(null)
+    setOutcome(null)
   }, [appointment?.id])
 
   if (!appointment) return null
 
   const meta = APPOINTMENT_STATUS[appointment.status]
   const isOpen = appointment.status === 'booked'
+  const canAct =
+    active?.role === 'admin' ||
+    (!!myInstructor.data && myInstructor.data.id === appointment.instructor_id)
 
   async function run(fn: () => Promise<unknown>) {
     setError(null)
     try {
       await fn()
       onOpenChange(false)
+    } catch (err) {
+      setError(errorMessage(err, t('common.error')))
+    }
+  }
+
+  /**
+   * Cancelling stays open on success. The row underneath has already changed,
+   * but only this message can say which of the two things happened and who
+   * picked the session up.
+   */
+  async function runCancel() {
+    setError(null)
+    try {
+      setOutcome(await cancel.mutateAsync({ id: appointment!.id, reason }))
     } catch (err) {
       setError(errorMessage(err, t('common.error')))
     }
@@ -107,7 +142,7 @@ export function AppointmentDialog({
           ) : null}
         </dl>
 
-        {isOpen ? (
+        {isOpen && canAct && !outcome ? (
           <div className="grid gap-2">
             <Label htmlFor="cancel-reason">{t('appt.cancel.reason')}</Label>
             <Input
@@ -119,6 +154,25 @@ export function AppointmentDialog({
           </div>
         ) : null}
 
+        {/* What actually happened. The session usually survives with somebody
+            else, so the two outcomes read completely differently. */}
+        {outcome ? (
+          <p
+            className={
+              outcome.reassigned
+                ? 'text-sm font-medium'
+                : 'text-destructive text-sm font-medium'
+            }
+          >
+            {outcome.reassigned
+              ? t('appt.handover.done', {
+                  name:
+                    outcome.instructor?.full_name ?? t('common.unnamed'),
+                })
+              : t('appt.handover.none')}
+          </p>
+        ) : null}
+
         {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
         <DialogFooter className="sm:justify-between">
@@ -127,7 +181,7 @@ export function AppointmentDialog({
               {t('appt.open_student')}
             </Link>
           </Button>
-          {isOpen ? (
+          {isOpen && canAct && !outcome ? (
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
@@ -160,11 +214,7 @@ export function AppointmentDialog({
               <Button
                 variant="destructive"
                 disabled={busy}
-                onClick={() =>
-                  run(() =>
-                    cancel.mutateAsync({ id: appointment.id, reason }),
-                  )
-                }
+                onClick={runCancel}
               >
                 {t('appt.action.cancel')}
               </Button>

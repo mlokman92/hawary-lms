@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import type { Enums, Tables } from '@hawary/shared'
 import { supabase } from '@/lib/supabase'
 import type { TKey } from '@/lib/i18n'
@@ -87,6 +92,18 @@ export type BookResult = {
   ends_at: string
   auto_assigned: boolean
   instructor: SlotInstructor
+}
+
+/**
+ * What `cancel_appointment` came to. `reassigned` is the whole point: staff
+ * cancelling means "I cannot take this", so the session usually survives with a
+ * different instructor and is only really called off when nobody can cover.
+ */
+export type CancelResult = {
+  id: string
+  status: AppointmentStatus
+  reassigned: boolean
+  instructor?: SlotInstructor
 }
 
 /** One recipient's outcome. `code` is why, when `sent` is false. */
@@ -420,6 +437,97 @@ export function useAcademyAppointments(
   })
 }
 
+// ---------------------------------------------------------------------------
+// The register — every session, not just the week on screen
+// ---------------------------------------------------------------------------
+
+/** How many rows a page of the register holds. */
+export const APPOINTMENT_PAGE_SIZE = 50
+
+export type AppointmentFilters = {
+  /** '' means every status, including cancelled ones. */
+  status: AppointmentStatus | ''
+  /** '' means every instructor. */
+  instructorId: string
+  /** Student name or record number. '' means no search. */
+  search: string
+}
+
+const listPageKey = (
+  a: string | null,
+  f: AppointmentFilters,
+  page: number,
+) => ['appointments', a, 'register', f.status, f.instructorId, f.search, page] as const
+
+/**
+ * One page of every session the academy has ever held.
+ *
+ * The diary on `/appointments` answers "what does this week look like"; this
+ * answers "find me that session". They cannot be the same query: the diary is
+ * windowed to seven days and drops anything cancelled out of view, which is
+ * exactly the row somebody is looking for when they come here.
+ *
+ * Paged on the server from the start rather than when it hurts. `/payments`
+ * and `/payments/log` both had to be retrofitted after an academy passed 500
+ * rows, and PostgREST silently caps a request at the project's max — a
+ * register that stops at row 1000 without saying so is worse than a slow one.
+ *
+ * `id` is the final tie-break on every ordering: OFFSET paging over a
+ * non-unique sort repeats one row and skips another, and sessions genuinely do
+ * share a `starts_at` (a whole academy teaches the 10:00 slot at once).
+ */
+export function useAppointmentPage(
+  academyId: string | null,
+  filters: AppointmentFilters,
+  page: number,
+) {
+  return useQuery({
+    queryKey: listPageKey(academyId, filters, page),
+    enabled: !!academyId,
+    // Without this a page turn blanks the table through the empty state and
+    // back, which reads as an error rather than as paging.
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      const from = (page - 1) * APPOINTMENT_PAGE_SIZE
+      const q = filters.search.trim()
+      let query = supabase
+        .from('appointments')
+        .select(
+          // `!inner` only when searching: an inner join would otherwise drop a
+          // session whose student record was archived away underneath it, and
+          // those are precisely the ones worth finding in a register.
+          q
+            ? '*, students!inner(id, full_name, student_no), instructors(id, full_name)'
+            : '*, students(id, full_name, student_no), instructors(id, full_name)',
+          { count: 'exact' },
+        )
+        .eq('academy_id', academyId!)
+
+      if (filters.status) query = query.eq('status', filters.status)
+      if (filters.instructorId)
+        query = query.eq('instructor_id', filters.instructorId)
+      if (q) {
+        // Scoped to the embedded resource: PostgREST cannot OR across a join,
+        // so the search has to be expressed against `students` itself.
+        query = query.or(
+          `full_name.ilike.%${q}%,student_no.ilike.%${q}%`,
+          { referencedTable: 'students' },
+        )
+      }
+
+      const { data, error, count } = await query
+        .order('starts_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(from, from + APPOINTMENT_PAGE_SIZE - 1)
+      if (error) throw error
+      return {
+        rows: (data ?? []) as unknown as AppointmentRow[],
+        total: count ?? 0,
+      }
+    },
+  })
+}
+
 /** Free slots for the staff booking dialog. Always names the instructors. */
 export function useAcademyAvailability(
   academyId: string | null,
@@ -509,7 +617,12 @@ export function useMyUpcomingSessions(
         .eq('academy_id', academyId!)
         .eq('instructor_id', instructorId!)
         .eq('status', 'booked')
-        .gte('starts_at', new Date().toISOString())
+        // `ends_at`, not `starts_at`: a lesson is still today's lesson while it
+        // is being taught. Splitting on starts_at would drop a 10:00–11:00
+        // session out of the diary at 10:00:01 — and every live appointment is
+        // a full hour, so that is an hour of the day going missing.
+        .gte('ends_at', new Date().toISOString())
+        // The horizon stays on starts_at: it bounds how far ahead we look.
         .lt('starts_at', until)
         .order('starts_at', { ascending: true })
       if (error) throw error
@@ -543,7 +656,9 @@ export function useMyUnclosedSessions(
         .eq('academy_id', academyId!)
         .eq('instructor_id', instructorId!)
         .eq('status', 'booked')
-        .lt('starts_at', new Date().toISOString())
+        // The exact complement of `useMyUpcomingSessions` — also on `ends_at`,
+        // so a session in progress is never listed as one nobody closed off.
+        .lt('ends_at', new Date().toISOString())
         // Most recently missed first: that is the one still fresh enough to
         // remember whether they showed up.
         .order('starts_at', { ascending: false })
@@ -634,15 +749,26 @@ export function useBookAppointment(academyId: string | null) {
   })
 }
 
+/**
+ * Cancelling, which means two different things depending on who asks.
+ *
+ * For a student it calls the session off — they do not want it. For an admin or
+ * the session's own instructor it means "I cannot take this one", so the server
+ * hands the session to whoever can cover and only cancels when nobody can.
+ * Which of the two happened is in the result, and the caller has to say so:
+ * "cancelled" on screen when the session is actually still going ahead with
+ * somebody else would be a lie.
+ */
 export function useCancelAppointment(academyId: string | null) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (input: { id: string; reason?: string | null }) => {
-      const { error } = await supabase.rpc('cancel_appointment', {
+      const { data, error } = await supabase.rpc('cancel_appointment', {
         _id: input.id,
         _reason: input.reason ?? undefined,
       })
       if (error) throw error
+      return data as unknown as CancelResult
     },
     onSuccess: () => invalidateBookings(qc, academyId),
   })

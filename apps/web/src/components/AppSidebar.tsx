@@ -5,6 +5,7 @@ import {
   FileCheck2,
   HandCoins,
   LayoutDashboard,
+  ListChecks,
   Presentation,
   Receipt,
   ScrollText,
@@ -71,6 +72,16 @@ const nav = (
     // pending enrolment is.
     badge: upcomingAppointments,
     badgeTone: 'neutral',
+    children: [
+      // The diary shows a week and has nowhere to put a cancelled session.
+      // Finding one particular session is a different question, so it gets a
+      // destination — the same split as Payments and its Log.
+      {
+        title: t('nav.appointment_list'),
+        to: '/appointments/list',
+        icon: ListChecks,
+      },
+    ],
   },
 ]
 
