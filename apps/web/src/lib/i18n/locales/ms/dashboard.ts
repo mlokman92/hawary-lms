@@ -117,4 +117,16 @@ export const dashboard: DashboardDict = {
     'Bayaran yang telah dijelaskan dalam dua bulan lalu — daripada rekod bayaran, bukan baki invois.',
   'dash.payments.loading': 'Memuatkan bayaran…',
   'dash.payments.empty': 'Tiada bayaran dalam dua bulan lalu.',
+  // Papan pemuka pengajar
+  'dash.trainer.next_day_one': 'Seterusnya: {day}, {count} sesi.',
+  'dash.trainer.next_day_other': 'Seterusnya: {day}, {count} sesi.',
+  'dash.trainer.none_ahead': 'Tiada tempahan akan datang.',
+  'dash.week.title': 'Minggu anda',
+  'dash.week.today': 'Hari ini',
+  'dash.week.empty': 'Tiada sesi ditempah dalam tujuh hari akan datang.',
+  'dash.trainer.unclosed.title': 'Perlu ditutup',
+  'dash.trainer.marking.assessments': 'Penilaian untuk ditanda',
+  'dash.trainer.marking.assignments': 'Tugasan untuk ditanda',
+  'dash.trainer.no_courses':
+    'Anda belum ditugaskan ke mana-mana kursus, jadi tiada apa-apa untuk ditanda.',
 }

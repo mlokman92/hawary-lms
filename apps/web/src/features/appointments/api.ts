@@ -476,6 +476,85 @@ export function useUpcomingAppointmentCount(academyId: string | null) {
 }
 
 /**
+ * One instructor's own diary, for the trainer dashboard.
+ *
+ * `.eq('instructor_id', …)` is a DISPLAY narrowing, not an authorisation
+ * boundary: `appointments: staff read all, student read own` is
+ * `app.is_staff(academy_id) OR app.owns_student(student_id)`, so a trainer may
+ * legitimately read the whole academy diary — /appointments already shows it to
+ * them. This filter answers "mine", not "allowed".
+ *
+ * `mine` sits inside the `['appointments', academyId]` prefix on purpose:
+ * `invalidateBookings` sweeps by that prefix, so booking or cancelling from
+ * anywhere refreshes this list with no extra wiring.
+ *
+ * The select shape matches `useAcademyAppointments` exactly so a row IS an
+ * `AppointmentRow` and `AppointmentDialog` takes it unchanged.
+ */
+export function useMyUpcomingSessions(
+  academyId: string | null,
+  instructorId: string | null,
+  days: number,
+) {
+  return useQuery({
+    queryKey: ['appointments', academyId, 'mine-upcoming', instructorId, days] as const,
+    enabled: !!academyId && !!instructorId,
+    queryFn: async () => {
+      const until = new Date(Date.now() + days * 86_400_000).toISOString()
+      const { data, error } = await supabase
+        .from('appointments')
+        .select(
+          '*, students(id, full_name, student_no), instructors(id, full_name)',
+        )
+        .eq('academy_id', academyId!)
+        .eq('instructor_id', instructorId!)
+        .eq('status', 'booked')
+        .gte('starts_at', new Date().toISOString())
+        .lt('starts_at', until)
+        .order('starts_at', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as unknown as AppointmentRow[]
+    },
+  })
+}
+
+/**
+ * Sessions that have already happened and are still marked `booked` — nobody
+ * said whether the student turned up.
+ *
+ * This is the one thing on the dashboard that is genuinely waiting on the
+ * trainer, and the dashboard is the only place it can surface: /appointments is
+ * a week grid, so a session that was never closed disappears from view the
+ * moment the week turns over while staying open forever.
+ */
+export function useMyUnclosedSessions(
+  academyId: string | null,
+  instructorId: string | null,
+) {
+  return useQuery({
+    queryKey: ['appointments', academyId, 'mine-unclosed', instructorId] as const,
+    enabled: !!academyId && !!instructorId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select(
+          '*, students(id, full_name, student_no), instructors(id, full_name)',
+        )
+        .eq('academy_id', academyId!)
+        .eq('instructor_id', instructorId!)
+        .eq('status', 'booked')
+        .lt('starts_at', new Date().toISOString())
+        // Most recently missed first: that is the one still fresh enough to
+        // remember whether they showed up.
+        .order('starts_at', { ascending: false })
+        .limit(5)
+      if (error) throw error
+      return (data ?? []) as unknown as AppointmentRow[]
+    },
+  })
+}
+
+/**
  * Mark completed / no-show. A plain UPDATE, the same reasoning that keeps
  * enrollment approval an UPDATE: the `appointments: staff update` policy
  * already grants exactly this, so an RPC would add nothing.

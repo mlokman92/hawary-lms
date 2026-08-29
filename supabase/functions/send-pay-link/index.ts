@@ -5,8 +5,12 @@
 // ----------------------------------------------------------------------------
 // Security model (mirrors send-invitation)
 //   - verify_jwt = true. The invoice + student email are read with a
-//     *caller-scoped* client, so RLS decides whether this staff member may see
-//     them — staff of another academy get no row and cannot send.
+//     *caller-scoped* client, so RLS decides whether this caller may see them —
+//     staff of another academy get no row and cannot send. Since money became
+//     admin-only that read already excludes trainers, but the caller is then
+//     checked for role='admin' explicitly: this function mails a customer, and
+//     "whoever can read the row may bill the student" is too implicit a rule to
+//     leave to a policy that a future migration might widen.
 //   - The recipient is ALWAYS the student's stored email, never a request value.
 //   - No service-role key. Email delivery is best-effort: if RESEND_API_KEY is
 //     unset or sending fails, we return { ok: false, ... } and the web app falls
@@ -85,7 +89,9 @@ Deno.serve(async (req) => {
   if (!supabaseUrl || !anonKey)
     return json({ error: 'Server misconfigured: missing Supabase env' }, 500)
 
-  // Caller-scoped → RLS decides whether this staff member may read the invoice.
+  // Caller-scoped → RLS decides whether this caller may read the invoice, and
+  // since the `invoices` SELECT policy became `app.is_admin OR
+  // app.owns_student`, a trainer's read already comes back empty.
   const supabase = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authHeader } },
   })
@@ -93,12 +99,35 @@ Deno.serve(async (req) => {
   const { data: inv, error } = await supabase
     .from('invoices')
     .select(
-      'id, invoice_no, total_sen, amount_paid_sen, pay_token, students(full_name, email), academies(name)',
+      'id, academy_id, invoice_no, total_sen, amount_paid_sen, pay_token, students(full_name, email), academies(name)',
     )
     .eq('id', invoiceId)
     .maybeSingle()
   if (error) return json({ error: error.message }, 400)
   if (!inv) return json({ error: 'Invoice not found or not permitted' }, 404)
+
+  // Explicit admin check on top of RLS, deliberately belt-and-braces.
+  //
+  // RLS alone would do it today, but this function SENDS MAIL TO A CUSTOMER,
+  // and "whoever can read the row may bill the student" is too implicit a rule
+  // for that. A student can read their own invoice and must not be able to
+  // mail themselves a pay link from someone else's academy branding; the
+  // `ensure_pay_token` fallback below is admin-guarded but never fires, because
+  // `app.set_invoice_pay_token` is a BEFORE INSERT trigger so every invoice
+  // already carries a token. Same shape as toyyibpay-connect / billplz-connect.
+  const { data: userData } = await supabase.auth.getUser()
+  const caller = userData?.user
+  if (!caller) return json({ error: 'Not authenticated' }, 401)
+
+  const { data: membership } = await supabase
+    .from('academy_members')
+    .select('role')
+    .eq('academy_id', inv.academy_id)
+    .eq('user_id', caller.id)
+    .eq('status', 'active')
+    .maybeSingle()
+  if (!membership || membership.role !== 'admin')
+    return json({ error: 'Only an academy admin can send a pay link' }, 403)
 
   const student = (inv.students ?? null) as { full_name?: string; email?: string } | null
   const to = student?.email?.trim()

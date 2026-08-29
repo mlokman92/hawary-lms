@@ -161,7 +161,10 @@ export function StudentDetailPage() {
   const updateStudent = useUpdateStudent(academyId)
   const archiveStudent = useArchiveStudent(academyId)
   const unenroll = useUnenroll(academyId, id ?? '')
-  const { data: invoices } = useStudentInvoices(academyId, id)
+  // `null` disables the query outright (`enabled: !!academyId && !!studentId`),
+  // so a trainer's browser never asks for this student's invoices — which is
+  // what makes the Network tab agree with the hidden card below.
+  const { data: invoices } = useStudentInvoices(isAdmin ? academyId : null, id)
   const { data: access } = useMemberAccess(activeAcademyId, student?.user_id)
   const updateMember = useUpdateMember(activeAcademyId)
 
@@ -420,7 +423,10 @@ export function StudentDetailPage() {
         </CardContent>
       </Card>
 
-      {/* 4. Billing */}
+      {/* 4. Billing — admin only. Not just the three totals: every row of
+          the list beneath them carries an invoice number, a total and an
+          amount paid, and links to /payments/:id. */}
+      {isAdmin ? (
       <Card>
         <CardHeader>
           <CardTitle>{t('students.billing.title')}</CardTitle>
@@ -517,6 +523,7 @@ export function StudentDetailPage() {
           )}
         </CardContent>
       </Card>
+      ) : null}
 
       {/* 5. Bank account — admin only. Trainers are excluded by the table's
           own policy (`app.is_admin OR app.owns_student`), so for them the card
@@ -583,7 +590,11 @@ export function StudentDetailPage() {
         open={enrollOpen}
         onOpenChange={setEnrollOpen}
       />
-      {isStaff ? (
+      {/* isAdmin, not isStaff: `invoices: admin insert` is WITH CHECK
+          app.is_admin, so a trainer who opened this got a raw 42501 on
+          submit. It also keeps the non-admin path away from
+          usePaymentSettings, which InvoiceFormDialog calls unconditionally. */}
+      {isAdmin ? (
         <InvoiceFormDialog
           academyId={academyId}
           initialStudentId={student.id}

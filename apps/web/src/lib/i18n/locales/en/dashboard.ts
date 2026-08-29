@@ -113,6 +113,23 @@ export const dashboard = {
     'Settled payments from the last two months — the ledger, not invoice balances.',
   'dash.payments.loading': 'Loading payments…',
   'dash.payments.empty': 'No payments in the last two months.',
+  // Trainer dashboard — the other half of `/`. A trainer sees this instead of
+  // everything above; see pages/TrainerDashboard.tsx.
+  //
+  // The header line names the next TEACHING DAY, not today's count: bookings
+  // cluster onto the two or three days an academy runs, so "no sessions today"
+  // would be the answer most mornings and the line would stop being read.
+  'dash.trainer.next_day_one': 'Next: {day}, {count} session.',
+  'dash.trainer.next_day_other': 'Next: {day}, {count} sessions.',
+  'dash.trainer.none_ahead': 'Nothing booked ahead.',
+  'dash.week.title': 'Your week',
+  'dash.week.today': 'Today',
+  'dash.week.empty': 'Nothing booked in the next seven days.',
+  'dash.trainer.unclosed.title': 'Needs closing',
+  'dash.trainer.marking.assessments': 'Assessments to mark',
+  'dash.trainer.marking.assignments': 'Assignments to mark',
+  'dash.trainer.no_courses':
+    'You are not assigned to any course yet, so there is nothing to mark.',
 } as const
 
 export type DashboardDict = Record<keyof typeof dashboard, string>

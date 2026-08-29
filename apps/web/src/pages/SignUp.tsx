@@ -46,9 +46,11 @@ export function SignUp() {
     // never receive anything — and "the invited person already has a Hawary
     // account" is the common case, not an edge case.
     if (data.user && (data.user.identities?.length ?? 0) === 0) {
+      // The address goes with the notice: they just typed it, and the whole
+      // point of the bounce is that this is the account they should sign into.
       navigate(signinTo, {
         replace: true,
-        state: { notice: t('auth.signup.email_exists') },
+        state: { notice: t('auth.signup.email_exists'), email },
       })
       return
     }

@@ -9,6 +9,7 @@ import { AcademyProvider } from './lib/academy'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { PendingInviteRedirect } from './components/PendingInviteRedirect'
 import { AppShell } from './components/AppShell'
+import { AdminRoute } from './components/AdminRoute'
 import { StudentShell } from './components/StudentShell'
 import { LearnDashboardPage } from './pages/learn/LearnDashboardPage'
 import { LearnHomePage } from './pages/learn/LearnHomePage'
@@ -29,7 +30,7 @@ import { ResetPassword } from './pages/ResetPassword'
 import { AuthCallback } from './pages/AuthCallback'
 import { AcceptInvitePage } from './pages/AcceptInvitePage'
 import { Onboarding } from './pages/Onboarding'
-import { Dashboard } from './pages/Dashboard'
+import { DashboardRoute } from './pages/DashboardRoute'
 import { CoursesPage } from './pages/CoursesPage'
 import { CourseDetailPage } from './pages/CourseDetailPage'
 import { CourseGradingPage } from './pages/CourseGradingPage'
@@ -151,7 +152,7 @@ export default function App() {
                       </ProtectedRoute>
                     }
                   >
-                    <Route index element={<Dashboard />} />
+                    <Route index element={<DashboardRoute />} />
                     <Route path="/courses" element={<CoursesPage />} />
                     <Route path="/courses/:id" element={<CourseDetailPage />} />
                     <Route
@@ -198,13 +199,21 @@ export default function App() {
                       path="/assignments/:id"
                       element={<AssignmentEditorPage />}
                     />
-                    <Route path="/payments" element={<PaymentsPage />} />
-                    {/* Before /payments/:id in source order for readability —
-                        the router ranks the static segment higher regardless. */}
-                    <Route path="/payments/log" element={<PaymentLogPage />} />
-                    <Route path="/payments/:id" element={<InvoiceDetailPage />} />
-                    <Route path="/incentives" element={<IncentivesPage />} />
-                    <Route path="/incentives/:id" element={<IncentiveBatchPage />} />
+                    {/* Money is admin-only, and the guard is on the ROUTE
+                        because the sidebar not linking to a page has never
+                        stopped anyone typing its URL. The matching RLS change
+                        means a trainer who got in would see an empty ledger
+                        with a live Export button — a closed door that reads as
+                        data loss — so this redirects rather than explains. */}
+                    <Route element={<AdminRoute />}>
+                      <Route path="/payments" element={<PaymentsPage />} />
+                      {/* Before /payments/:id in source order for readability —
+                          the router ranks the static segment higher regardless. */}
+                      <Route path="/payments/log" element={<PaymentLogPage />} />
+                      <Route path="/payments/:id" element={<InvoiceDetailPage />} />
+                      <Route path="/incentives" element={<IncentivesPage />} />
+                      <Route path="/incentives/:id" element={<IncentiveBatchPage />} />
+                    </Route>
                     {/* No /members/:id: a member's page *is* their instructor
                         or student record, so the roster links straight there
                         rather than mirroring those pages badly. */}

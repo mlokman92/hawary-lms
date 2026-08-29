@@ -72,6 +72,14 @@ const nav = (
     badge: upcomingAppointments,
     badgeTone: 'neutral',
   },
+]
+
+// Money is an admin destination. A trainer is staff so they can teach — build a
+// course, mark work, take a session — and none of that needs to know what a
+// student was charged. The SELECT policies on invoices/payments now say the
+// same thing (`app.is_admin`), so leaving these in the shared list would only
+// have pointed a trainer at a page that renders an empty ledger.
+const adminNav = (t: TFn): NavItem[] => [
   {
     title: t('nav.payments'),
     to: '/payments',
@@ -82,9 +90,6 @@ const nav = (
       { title: t('nav.payment_log'), to: '/payments/log', icon: ScrollText },
     ],
   },
-]
-
-const adminNav = (t: TFn): NavItem[] => [
   { title: t('nav.incentives'), to: '/incentives', icon: HandCoins },
   { title: t('nav.members'), to: '/members', icon: ShieldCheck },
   { title: t('nav.settings'), to: '/settings', icon: Settings },

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useT } from '@/lib/i18n'
 import { AuthCard } from '@/components/AuthCard'
@@ -7,13 +7,26 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
+/**
+ * What another page sent us here to say. /signup bounces an address that
+ * already has an account to this page (Supabase answers a duplicate signup
+ * with an empty `identities` array rather than an error, so there is nothing
+ * to show on the signup form itself) — and until this was read, that bounce
+ * was silent: you pressed "Create account" and simply found yourself on "Sign
+ * in", with no reason given and the email you had just typed thrown away.
+ */
+type SignInNotice = { notice?: string; email?: string }
+
 export function SignIn() {
   const { t } = useT()
   const navigate = useNavigate()
+  const location = useLocation()
   const [params] = useSearchParams()
   const next = params.get('next') || '/'
   const signupTo = next !== '/' ? `/signup?next=${encodeURIComponent(next)}` : '/signup'
-  const [email, setEmail] = useState('')
+  const sentUs = (location.state ?? null) as SignInNotice | null
+  const notice = sentUs?.notice ?? null
+  const [email, setEmail] = useState(sentUs?.email ?? '')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -33,6 +46,11 @@ export function SignIn() {
 
   return (
     <AuthCard title={t('auth.signin.title')} subtitle={t('auth.signin.subtitle')}>
+      {notice ? (
+        <p className="bg-muted text-muted-foreground mb-4 rounded-md border p-3 text-sm">
+          {notice}
+        </p>
+      ) : null}
       <form className="grid gap-4" onSubmit={onSubmit}>
         <div className="grid gap-2">
           <Label htmlFor="email">{t('common.email')}</Label>
