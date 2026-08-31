@@ -198,10 +198,36 @@ Monorepo: **pnpm workspaces + Turborepo**.
   and pool moved to **`/appointments/settings`** (admin-only, reached by the gear
   beside *Book a session*) — setup is visited once and does not belong under the
   screen staff open daily. **`/appointments/list`** is the register — every
-  session ever, filterable by status/instructor/student, paged 50 server-side
-  with `id` as the tie-break. The diary cannot answer "find me that session": it
-  is windowed to seven days and a grid has nowhere to put a cancelled one, which
-  is exactly the row being looked for. Same split as `/payments` and its Log.
+  session the reader may see, filterable by status/student, paged 50
+  server-side with `id` as the tie-break. The diary cannot answer "find me that
+  session": it is windowed to seven days and a grid has nowhere to put a
+  cancelled one, which is exactly the row being looked for. Same split as
+  `/payments` and its Log.
+  **Who sees whose sessions is a policy, not a default**
+  (`docs/appointments.md` → "Who sees whose sessions"): the SELECT policy moved
+  from `app.is_staff OR app.owns_student` to **`appointments: admin all, own
+  instructor, own student`** = `app.is_admin OR app.owns_instructor OR
+  app.owns_student`, matching the UPDATE policy it had drifted from. Each
+  screen used to *seed* a trainer's own record into its instructor filter and
+  leave "All instructors" one click away — identical on screen, and not a
+  boundary at all: her JWT plus the publishable key read the whole academy's
+  diary from PostgREST. So the instructor filter on **both** `/appointments`
+  and `/appointments/list` is now **admin-only** (a control that cannot change
+  the result is worse than none), the sidebar's upcoming count narrows with no
+  filter added anywhere, and the seeding effects are gone. `app.is_staff` is
+  **not** narrowed, and every appointment RPC is SECURITY DEFINER so the round
+  robin and cover walk are untouched. One knock-on had to be handled:
+  `send-appointment-notice` authorised by reading the row under the caller's
+  JWT, which 404s when a trainer books for a student and the rota gives the
+  session to somebody else — it now falls back to active staff membership of
+  the appointment's academy.
+  The register has **two views, not three**: **Upcoming** (nearest first, the
+  default for both roles) and **Archive** (past, most recent first). "Any date"
+  was the old admin default and put a session from last March at the top of a
+  list opened to find out what is coming. The cut is **`ends_at`, not
+  `starts_at`** — a lesson is still today's lesson while it is being taught, and
+  splitting on `starts_at` drops a 10:00–11:00 session into the archive at
+  10:00:01.
   Rows open the shared `AppointmentDialog`, which decides **for itself** whether
   the reader may act, so the rule cannot drift across the three screens that
   mount it. Learner-side `/learn/appointments` is pick a

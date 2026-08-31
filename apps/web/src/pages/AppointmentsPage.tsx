@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Plus, Settings } from 'lucide-react'
 import { useAcademy } from '@/lib/academy'
@@ -28,7 +28,6 @@ import {
   today,
   type Ymd,
 } from '@/features/appointments/calendar'
-import { useMyInstructorRecord } from '@/features/profile/api'
 import { WeekCalendar } from '@/features/appointments/WeekCalendar'
 import { AppointmentDialog } from '@/features/appointments/AppointmentDialog'
 import { BookForStudentDialog } from '@/features/appointments/BookForStudentDialog'
@@ -62,21 +61,14 @@ export function AppointmentsPage() {
   const { data: pool } = useBookingPool(activeAcademyId)
 
   const [week, setWeek] = useState<Ymd>(() => startOfWeek(today(tz)))
+  // 'all' for both roles, and for a trainer it already means hers: the query
+  // returns only her own sessions now that `appointments: admin all, own
+  // instructor, own student` decides the read. Her record used to be *seeded*
+  // into this filter on her behalf, which looked the same on screen but was a
+  // default rather than a boundary — she could set it back to "everyone" and
+  // read the whole academy's week.
   const [instructor, setInstructor] = useState('all')
 
-  /**
-   * A trainer opening the diary means "my week". An admin means "the academy's
-   * week", so theirs is left on everyone. Seeded once — changing it away, or
-   * back to everyone, must stick.
-   */
-  const myInstructor = useMyInstructorRecord(activeAcademyId)
-  const seeded = useRef(false)
-  useEffect(() => {
-    if (seeded.current || !active || myInstructor.isLoading) return
-    seeded.current = true
-    if (active.role === 'admin') return
-    if (myInstructor.data?.id) setInstructor(myInstructor.data.id)
-  }, [active, myInstructor.isLoading, myInstructor.data])
   const [open, setOpen] = useState<AppointmentRow | null>(null)
   const [bookOpen, setBookOpen] = useState(false)
 
@@ -156,21 +148,26 @@ export function AppointmentsPage() {
             >
               <ChevronRight />
             </Button>
-            <Select value={instructor} onValueChange={setInstructor}>
-              <SelectTrigger className="ml-auto w-56">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">
-                  {t('appt.calendar.all_instructors')}
-                </SelectItem>
-                {(pool ?? []).map((i) => (
-                  <SelectItem key={i.id} value={i.id}>
-                    {i.full_name ?? t('common.unnamed')}
+            {/* Admin-only for the same reason as the register's: RLS sends a
+                trainer her own sessions and nobody else's, so picking another
+                name would only empty the grid. */}
+            {isAdmin ? (
+              <Select value={instructor} onValueChange={setInstructor}>
+                <SelectTrigger className="ml-auto w-56">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    {t('appt.calendar.all_instructors')}
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  {(pool ?? []).map((i) => (
+                    <SelectItem key={i.id} value={i.id}>
+                      {i.full_name ?? t('common.unnamed')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
           </div>
 
           {isLoading ? (

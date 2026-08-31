@@ -445,19 +445,28 @@ export function useAcademyAppointments(
 export const APPOINTMENT_PAGE_SIZE = 50
 
 /**
- * Which side of now to look at. `''` is both — the register's original
- * behaviour, and still what an admin gets.
+ * Which side of now to look at — and there is no third option.
+ *
+ * The register used to offer "Any date" as well, and that was the admin
+ * default: the top of the list was whichever session happened to sort first
+ * across all of history, so the one thing a register is opened for — what is
+ * coming — was never on screen. Two views, and only two: what is still to
+ * happen, and the **archive** of what already has.
  *
  * It decides the ORDER as well as the filter, and it has to: "upcoming, newest
  * first" would put next month before tomorrow. Soonest-first is the only useful
- * reading of a list you are about to act on; for the past, most-recent-first is.
+ * reading of a list you are about to act on; for the archive, most-recent-first
+ * is.
  */
-export type AppointmentWhen = 'upcoming' | 'past' | ''
+export type AppointmentWhen = 'upcoming' | 'archive'
 
 export type AppointmentFilters = {
   /** '' means every status, including cancelled ones. */
   status: AppointmentStatus | ''
-  /** '' means every instructor. */
+  /**
+   * '' means every instructor the reader may see — which for a trainer is
+   * already only her own, by RLS. Admin-only control.
+   */
   instructorId: string
   /** Student name or record number. '' means no search. */
   search: string
@@ -528,11 +537,21 @@ export function useAppointmentPage(
       if (filters.instructorId)
         query = query.eq('instructor_id', filters.instructorId)
       // Read at query time, not memoised into the key: the boundary should move
-      // with the clock, and a session that starts while you are looking at the
+      // with the clock, and a session that ends while you are looking at the
       // list belongs on the other side of it after the next refetch.
+      //
+      // The cut is `ends_at`, not `starts_at` — a lesson is still today's
+      // lesson while it is being taught. Splitting on `starts_at` would drop a
+      // 10:00–11:00 session into the archive at 10:00:01, and every live
+      // appointment here is a full hour, so that is an hour of the day going
+      // missing from the view somebody is working out of. Same reasoning as
+      // `useMyUpcomingSessions` / `useMyUnclosedSessions`, which have always
+      // split on `ends_at` for exactly this.
       const now = new Date().toISOString()
-      if (filters.when === 'upcoming') query = query.gte('starts_at', now)
-      if (filters.when === 'past') query = query.lt('starts_at', now)
+      query =
+        filters.when === 'upcoming'
+          ? query.gte('ends_at', now)
+          : query.lt('ends_at', now)
       if (q) {
         // Scoped to the embedded resource: PostgREST cannot OR across a join,
         // so the search has to be expressed against `students` itself.
@@ -542,7 +561,9 @@ export function useAppointmentPage(
         )
       }
 
-      // Soonest first when looking forward, most recent first otherwise.
+      // Nearest first when looking forward, most recent first in the archive.
+      // Ordered on `starts_at` even though the split is on `ends_at`: what a
+      // reader scans down is when each session begins.
       const ascending = filters.when === 'upcoming'
       const { data, error, count } = await query
         .order('starts_at', { ascending })
@@ -588,6 +609,11 @@ export function useAcademyAvailability(
  * sessions still count) and is not loaded at all outside /appointments. Same
  * shape as usePendingEnrollmentCount: a head request, so no rows cross the
  * wire to render one integer on every back-office page.
+ *
+ * It counts what the reader may see, and that is now role-dependent by RLS —
+ * the academy's booked future for an admin, her own for a trainer. No filter
+ * here says so, and none should: the badge is meant to mean "sessions coming
+ * up", and for a trainer her own sessions ARE the sessions coming up.
  */
 export function useUpcomingAppointmentCount(academyId: string | null) {
   return useQuery({
@@ -615,11 +641,12 @@ export function useUpcomingAppointmentCount(academyId: string | null) {
 /**
  * One instructor's own diary, for the trainer dashboard.
  *
- * `.eq('instructor_id', …)` is a DISPLAY narrowing, not an authorisation
- * boundary: `appointments: staff read all, student read own` is
- * `app.is_staff(academy_id) OR app.owns_student(student_id)`, so a trainer may
- * legitimately read the whole academy diary — /appointments already shows it to
- * them. This filter answers "mine", not "allowed".
+ * `.eq('instructor_id', …)` is a DISPLAY narrowing that now agrees with the
+ * boundary rather than standing in for it: `appointments: admin all, own
+ * instructor, own student` is `app.is_admin OR app.owns_instructor OR
+ * app.owns_student`, so for a trainer this filter is redundant and for an admin
+ * who also teaches it is the whole point — it answers "mine", which is not the
+ * same question as "allowed".
  *
  * `mine` sits inside the `['appointments', academyId]` prefix on purpose:
  * `invalidateBookings` sweeps by that prefix, so booking or cancelling from
@@ -665,9 +692,11 @@ export function useMyUpcomingSessions(
  * said whether the student turned up.
  *
  * This is the one thing on the dashboard that is genuinely waiting on the
- * trainer, and the dashboard is the only place it can surface: /appointments is
- * a week grid, so a session that was never closed disappears from view the
- * moment the week turns over while staying open forever.
+ * trainer, and the dashboard is the best place for it to surface: /appointments
+ * is a week grid, so a session that was never closed disappears from view the
+ * moment the week turns over while staying open forever. The register's archive
+ * holds it too — filter to Archive + Booked — but that is somewhere you go to
+ * look, and this is something that has to come and find you.
  */
 export function useMyUnclosedSessions(
   academyId: string | null,

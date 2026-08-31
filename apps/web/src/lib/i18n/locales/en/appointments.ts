@@ -147,11 +147,10 @@ export const appointments = {
   // The register — every session, not just this week
   'appt.register.title': 'All sessions',
   'appt.register.subtitle':
-    'Every session the academy has held, including cancelled ones.',
+    'Every session, including cancelled ones.',
   'appt.register.search': 'Search student name or number',
   'appt.register.upcoming': 'Upcoming',
-  'appt.register.past': 'Past',
-  'appt.register.any_time': 'Any date',
+  'appt.register.archive': 'Archive',
   'appt.register.any_status': 'Any status',
   'appt.register.mine': 'My sessions',
   'appt.register.empty': 'No sessions match.',

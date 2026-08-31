@@ -160,6 +160,11 @@ picks the cover itself.
 A student is unaffected: they never had DML here, and their own cancellation
 goes through the RPC as before.
 
+The **read** side said `app.is_staff` for a while after this landed, so a
+trainer could not mark a colleague's session but could read every one of them.
+That is closed — see **Who sees whose sessions**, where the SELECT policy now
+uses the same two tests.
+
 ## Cancelling means two things
 
 `cancel_appointment` branches on **who is asking**, so the callers do not have
@@ -274,12 +279,14 @@ say the diary is fuller than it is. The time axis covers both the configured
 window and anything already booked, because staff can book off-grid and a session
 nobody can see is worse than a tall grid.
 
-**`/appointments/list`** (staff) — the register: every session the academy has
-held, filterable by status, instructor and student, paged 50 at a time. The
-diary cannot answer "find me that session" — it is windowed to seven days, and a
-grid has nowhere to put a cancelled session, which is exactly the row somebody
-comes looking for (7 of 57 rows here). Same split as `/payments` and its Log,
-and it hangs off Appointments in the nav the same way.
+**`/appointments/list`** (staff) — the register: every session the reader may
+see, filterable by status and student and split into **Upcoming** and
+**Archive**, paged 50 at a time. The diary cannot answer "find me that session"
+— it is windowed to seven days, and a grid has nowhere to put a cancelled
+session, which is exactly the row somebody comes looking for (7 of 57 rows
+here). Same split as `/payments` and its Log, and it hangs off Appointments in
+the nav the same way. Who "the reader" is, and why there is no third time
+option, are **Who sees whose sessions** and **Upcoming, and the archive** below.
 
 Paged on the server from the start rather than when it hurts: `/payments` and
 `/payments/log` both had to be retrofitted after an academy passed 500 rows, and
@@ -314,27 +321,81 @@ look instead.
 
 ## Who sees whose sessions
 
-Three screens ask the reader the same question and answer it the same way: an
-**admin** is looking at the academy, a **trainer** is looking at her own work.
+An **admin** is looking at the academy; a **trainer** is looking at her own
+work. That is now a **policy**, not three pages agreeing to behave:
 
-- **`/appointments`** (the diary) opens filtered to the trainer herself.
-- **`/appointments/list`** (the register) opens on **her sessions, upcoming
-  only, soonest first** — what has already happened is out of the way. An
-  admin's defaults are untouched: everybody, any date, most recent first.
-- **Booking**: an admin may hand the session to anyone free or leave it to the
-  rota; a trainer books *herself*, so there is no picker at all, and the times
-  she is offered are only the ones **she** is free for. Offering her a slot she
-  cannot take would be a control that fails on submit.
+    appointments: admin all, own instructor, own student
+      using (app.is_admin(academy_id)
+             or app.owns_instructor(instructor_id)
+             or app.owns_student(student_id))
 
-Each default is **seeded once**, not enforced: the instant she widens the filter
-to everyone, or looks at the past, it stays widened. A starting point is not a
-permission — `app.can_grade_*`-style narrowing belongs in RLS, and none of this
-is a security boundary. `AppointmentDialog` already works out for itself who may
-mark a session done.
+It replaces `app.is_staff(academy_id) or app.owns_student(student_id)`, which
+let any trainer read every session in the academy straight from PostgREST with
+her own JWT and the publishable key. The read side now matches the UPDATE
+policy above, which has said `is_admin or owns_instructor` since the cover
+rules landed — reading a colleague's diary and marking their lesson `no_show`
+had no business being governed by different rules.
 
-`when` decides the ORDER as well as the filter, and it has to: "upcoming, newest
-first" would put next month before tomorrow. Soonest-first is the only useful
-reading of a list you are about to act on; for the past, most-recent-first is.
+The client used to do this job, and could not: each screen **seeded** her
+instructor record into its filter and left "All instructors" one click away. It
+looked identical and was only a default. The three surfaces therefore all
+change with the policy rather than each carrying their own rule:
+
+- **`/appointments`** (the diary) — her week, because the query returns her
+  week. The instructor filter is now **admin-only**: a control that cannot
+  change the result is worse than no control.
+- **`/appointments/list`** (the register) — same, and the instructor filter is
+  admin-only for the same reason. An admin who also teaches keeps "My sessions"
+  in it, because "mine" is a real question that "allowed" does not answer.
+- The **sidebar's upcoming count** narrows with no filter added anywhere: for a
+  trainer, her own sessions *are* the sessions coming up.
+
+Two things are deliberately **not** narrowed. `app.is_staff` itself stays as it
+is — dozens of policies rest on it and nearly all are the teaching grants a
+trainer must keep. And every appointment RPC is SECURITY DEFINER
+(`book_appointment`, `cancel_appointment`, `get_booking_options`,
+`app.booking_slots`, `app.cover_candidates`), so slot generation, the round
+robin and the cover walk see what they always saw.
+
+One consequence had to be handled rather than accepted: a trainer booking on a
+student's behalf under round robin gives the session to whoever the rota picks,
+usually somebody else — so she cannot read the row she just created.
+`send-appointment-notice` authorised by reading it under her JWT, which would
+have 404'd and left **both** parties untold. It now falls back to active staff
+membership of the appointment's own academy, which is exactly the set of people
+`book_appointment` lets book on a student's behalf.
+
+**Booking** is unchanged and was never the leak: an admin may hand the session
+to anyone free or leave it to the rota; a trainer books *herself*, so there is
+no picker at all, and the times she is offered are only the ones **she** is free
+for. Offering her a slot she cannot take would be a control that fails on
+submit.
+
+## Upcoming, and the archive
+
+The register has **two views and no third**: what is still to happen, nearest
+first, and the **archive** of what already has, most recent first. `when`
+decides the ORDER as well as the filter, and it has to — "upcoming, newest
+first" would put next month before tomorrow.
+
+It used to offer "Any date" as well, and that was the *admin default*: the top
+of the list was whichever session sorted first across all of history, so the one
+thing a register is opened for — what is coming — was never on screen. Both
+roles now open on Upcoming.
+
+The cut is **`ends_at`, not `starts_at`**. A lesson is still today's lesson
+while it is being taught; splitting on `starts_at` would drop a 10:00–11:00
+session into the archive at 10:00:01, and every live appointment here is a full
+hour, so that is an hour of the day going missing from the view somebody is
+working out of. `useMyUpcomingSessions` and `useMyUnclosedSessions` have always
+split on `ends_at` for exactly this reason. Rows are still **ordered** on
+`starts_at`: what a reader scans down is when each session begins.
+
+A past session still marked `booked` — nobody said whether the student turned
+up — therefore lives in the archive (filter to Booked), and also on the trainer
+dashboard's **Needs closing** card. That is not duplication: the archive is
+somewhere you go to look, and Needs closing is something that comes and finds
+you.
 
 ## Two caps, not one
 

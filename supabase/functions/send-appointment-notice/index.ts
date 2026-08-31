@@ -12,9 +12,12 @@
 //   follows the `material-url` shape instead:
 //
 //     1. AUTHORIZE under the caller's own JWT. The appointment is read with a
-//        caller-scoped client, so RLS decides — "staff read all, student read
-//        own". No row means 404, which is the right answer to both "not yours"
-//        and "does not exist".
+//        caller-scoped client, so RLS decides — "admin all, own instructor,
+//        own student" — falling back to active staff membership of the
+//        appointment's academy, which covers a trainer booking for a student
+//        under round robin (she cannot read the session the rota just gave to
+//        somebody else). No row and no membership means 404, which is the right
+//        answer to both "not yours" and "does not exist".
 //     2. Only then READ AND SEND under the service role, and only for the
 //        appointment the database just admitted. The request body carries an
 //        id, never an address: that is what stops this being an open relay.
@@ -124,7 +127,26 @@ Deno.serve(async (req) => {
   if (!supabaseUrl || !anonKey || !serviceKey)
     return json({ error: 'Server misconfigured: missing Supabase env' }, 500)
 
-  // --- 1. authorization: decided by RLS, under the caller's own JWT ---------
+  // --- 1. authorization: RLS first, then "could you have booked this?" ------
+  //
+  // The primary check is unchanged and is still RLS deciding: read the
+  // appointment under the caller's own JWT and let the policy answer. A row
+  // means the student it belongs to, the instructor taking it, or an admin.
+  //
+  // The second arm exists because the read policy is narrower than the set of
+  // people who can legitimately cause this call. `appointments: admin all, own
+  // instructor, own student` deliberately hides other instructors' sessions
+  // from a trainer — but a trainer booking on a student's behalf under round
+  // robin hands the session to whoever the rota picks, which is usually
+  // somebody else. She just created it and cannot read it, so the RLS probe
+  // alone would 404 and neither party would be told their session exists.
+  //
+  // So: staff of the appointment's own academy may trigger its notice. That is
+  // the honest boundary — it is exactly the set of people `book_appointment`
+  // lets book on a student's behalf. The membership is checked against the
+  // **verified JWT's** subject, the way upload-media re-checks staff for its
+  // target academy; the client still sends nothing but an id, so this is not a
+  // relay either way.
   const caller = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authHeader } },
   })
@@ -134,13 +156,38 @@ Deno.serve(async (req) => {
     .eq('id', appointmentId)
     .maybeSingle()
   if (visErr) return json({ error: visErr.message }, 400)
-  if (!visible)
-    return json({ error: 'Appointment not found or not permitted' }, 404)
 
-  // --- 2. the detail, under the service role --------------------------------
   const admin = createClient(supabaseUrl, serviceKey, {
     auth: { persistSession: false },
   })
+
+  if (!visible) {
+    const { data: auth } = await caller.auth.getUser()
+    const uid = auth?.user?.id
+    if (!uid) return json({ error: 'Appointment not found or not permitted' }, 404)
+
+    // Whose academy, read under the service role — the caller has already
+    // proved nothing at this point, so this is a lookup, not a grant.
+    const { data: owner } = await admin
+      .from('appointments')
+      .select('academy_id')
+      .eq('id', appointmentId)
+      .maybeSingle()
+    if (!owner)
+      return json({ error: 'Appointment not found or not permitted' }, 404)
+
+    const { data: member } = await admin
+      .from('academy_members')
+      .select('role')
+      .eq('academy_id', owner.academy_id)
+      .eq('user_id', uid)
+      .eq('status', 'active')
+      .maybeSingle()
+    if (!member || (member.role !== 'admin' && member.role !== 'trainer'))
+      return json({ error: 'Appointment not found or not permitted' }, 404)
+  }
+
+  // --- 2. the detail, under the service role --------------------------------
   const { data: row, error: rowErr } = await admin
     .from('appointments')
     .select(

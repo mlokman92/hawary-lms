@@ -145,11 +145,10 @@ export const appointments: AppointmentsDict = {
   // Daftar sesi — semua sesi, bukan minggu ini sahaja
   'appt.register.title': 'Semua sesi',
   'appt.register.subtitle':
-    'Setiap sesi yang telah diadakan akademi, termasuk yang dibatalkan.',
+    'Setiap sesi, termasuk yang dibatalkan.',
   'appt.register.search': 'Cari nama atau nombor pelajar',
   'appt.register.upcoming': 'Akan datang',
-  'appt.register.past': 'Lepas',
-  'appt.register.any_time': 'Sebarang tarikh',
+  'appt.register.archive': 'Arkib',
   'appt.register.any_status': 'Semua status',
   'appt.register.mine': 'Sesi saya',
   'appt.register.empty': 'Tiada sesi yang sepadan.',
