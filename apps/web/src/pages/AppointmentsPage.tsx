@@ -110,11 +110,15 @@ export function AppointmentsPage() {
             be on the page that is empty until it is. No longer admin-only: the
             page it leads to now carries an instructor's own blocked dates, and
             a trainer had no way to reach them. What each role finds there is
-            decided card by card, on the page itself. */}
-        <Button asChild variant="outline" size="icon">
+            decided card by card, on the page itself.
+
+            Labelled, not a bare gear. It was icon-only with an sr-only name,
+            which is fine for a control people already know is there — and this
+            one they do not: trainers only just got a reason to open it, and
+            reported they could not find it. */}
+        <Button asChild variant="outline">
           <Link to="/appointments/settings">
-            <Settings />
-            <span className="sr-only">{t('appt.setup.title')}</span>
+            <Settings /> {t('appt.setup.title')}
           </Link>
         </Button>
       </PageHeader>
