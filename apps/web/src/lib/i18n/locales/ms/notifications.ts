@@ -14,5 +14,8 @@ export const notifications: NotificationsDict = {
   // --- appointment_reassigned -----------------------------------------------
   'notif.appt_moved.student': 'Sesi anda kini bersama {name}',
   'notif.appt_moved.instructor': 'Sesi bersama {name} diserahkan kepada anda',
+  // --- appointment_cancelled ------------------------------------------------
+  'notif.appt_cancelled.student': 'Sesi anda bersama {name} telah dibatalkan',
+  'notif.appt_cancelled.instructor': 'Sesi bersama {name} telah dibatalkan',
 
 }

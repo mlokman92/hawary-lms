@@ -137,6 +137,10 @@ export const appointments = {
   'appt.slots.day_count_other': '{count} slots',
   'appt.slots.available_one': '{count} time available',
   'appt.slots.available_other': '{count} times available',
+  // The number on a time chip. Screen-reader only — on screen it is a digit,
+  // because the chip is 44px wide and the column of them says what it counts.
+  'appt.slots.free_one': '{count} instructor free',
+  'appt.slots.free_other': '{count} instructors free',
   'appt.learn.instructor': 'Instructor',
   'appt.learn.instructor_placeholder': 'Choose an instructor',
   'appt.learn.note': 'What would you like to cover?',

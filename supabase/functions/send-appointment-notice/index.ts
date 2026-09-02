@@ -1,7 +1,24 @@
 // ============================================================================
 // Edge Function: send-appointment-notice
-// Tells both parties a one-to-one session is booked: the student, and the
+// Tells both parties what became of a one-to-one session: the student, and the
 // instructor the rota (or a staff member) picked.
+// ----------------------------------------------------------------------------
+// Three events, one function
+//   `event` in the body says which: `booked` (the default, and what this
+//   function did when it only did one thing), `cancelled` (the session is off)
+//   and `reassigned` (staff could not take it, somebody else covered — the
+//   session survives with a different instructor). They are one function and
+//   not three because the shape is identical: two parties, an id-only body,
+//   RLS-then-service-role authorization, academy-timezone formatting and one
+//   template. Only the heading, the "with" line, the button and one detail row
+//   differ, and a second copy of the other two hundred lines would be a second
+//   place for the trust model to drift.
+//
+//   Who is told differs too, and it is decided HERE, not by the caller. For
+//   `cancelled` and `reassigned` **the actor is skipped**, the same rule the
+//   in-app notification follows: a message telling you what you just clicked is
+//   not news. `booked` is unchanged — a booking confirmation is wanted by the
+//   person who booked, and it carries the details they need to turn up.
 // ----------------------------------------------------------------------------
 // Why this one needs the service role, when send-invitation and
 // send-course-access do not
@@ -36,6 +53,13 @@
 //   settle that — a party with a receipt id is skipped, and each send carries a
 //   per-recipient Resend Idempotency-Key, which dedupes for 24h. A re-invoke
 //   after a partial failure therefore fills only the gap.
+//
+//   The two new events carry **no receipt columns**, only the key. Cancelling
+//   is terminal — `cancel_appointment` refuses a row that is not `booked`, so
+//   there is no second cancellation of the same session to distinguish — and a
+//   handover keys on the instructor who received it, so a session passed on
+//   twice mails twice, which is correct. Columns would buy nothing that the
+//   24h key does not already give, and would need a migration to say it.
 //
 // Required / optional function secrets (all already set, shared with the three
 // other mail functions — this introduces no new secret):
@@ -101,6 +125,20 @@ function one<T>(rel: T | T[] | null): T | null {
 
 type Person = { full_name?: string | null; email?: string | null; user_id?: string | null }
 
+/** What happened to the session. `booked` is the default so older clients — and
+ *  the booking call, which sends no `event` — keep working unchanged. */
+const EVENTS = ['booked', 'cancelled', 'reassigned'] as const
+type Event = (typeof EVENTS)[number]
+
+/** The status the row must be in for the event to be true of it. A session
+ *  cancelled between the RPC and this call must not send "you're booked", and a
+ *  handover leaves the row `booked` — the instructor changed, not the status. */
+const EXPECTED_STATUS: Record<Event, string> = {
+  booked: 'booked',
+  cancelled: 'cancelled',
+  reassigned: 'booked',
+}
+
 /** What one recipient's send came to. `id` set means the provider took it. */
 type Outcome = { sent: boolean; code?: string; id?: string | null }
 
@@ -111,7 +149,7 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) return json({ error: 'Missing authorization header' }, 401)
 
-  let payload: { appointment_id?: unknown; origin?: string }
+  let payload: { appointment_id?: unknown; event?: unknown; origin?: string }
   try {
     payload = await req.json()
   } catch {
@@ -120,6 +158,9 @@ Deno.serve(async (req) => {
   const appointmentId = String(payload.appointment_id ?? '').trim()
   if (!UUID_RE.test(appointmentId))
     return json({ error: 'Missing or malformed appointment_id' }, 400)
+
+  const event = (payload.event ?? 'booked') as Event
+  if (!EVENTS.includes(event)) return json({ error: 'Unknown event' }, 400)
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
@@ -150,20 +191,20 @@ Deno.serve(async (req) => {
   const caller = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authHeader } },
   })
-  const { data: visible, error: visErr } = await caller
-    .from('appointments')
-    .select('id')
-    .eq('id', appointmentId)
-    .maybeSingle()
+  const [{ data: visible, error: visErr }, { data: auth }] = await Promise.all([
+    caller.from('appointments').select('id').eq('id', appointmentId).maybeSingle(),
+    // Read up here rather than only on the fallback path: the actor decides who
+    // is *told* about a cancellation or a handover, not just who may ask.
+    caller.auth.getUser(),
+  ])
   if (visErr) return json({ error: visErr.message }, 400)
+  const uid = auth?.user?.id ?? null
 
   const admin = createClient(supabaseUrl, serviceKey, {
     auth: { persistSession: false },
   })
 
   if (!visible) {
-    const { data: auth } = await caller.auth.getUser()
-    const uid = auth?.user?.id
     if (!uid) return json({ error: 'Appointment not found or not permitted' }, 404)
 
     // Whose academy, read under the service role — the caller has already
@@ -191,7 +232,8 @@ Deno.serve(async (req) => {
   const { data: row, error: rowErr } = await admin
     .from('appointments')
     .select(
-      'id, status, starts_at, ends_at, note, student_notice_id, instructor_notice_id, ' +
+      'id, status, starts_at, ends_at, note, cancel_reason, instructor_id, ' +
+        'student_notice_id, instructor_notice_id, ' +
         'students(full_name, email, user_id), instructors(full_name, email, user_id), ' +
         'academies(name, timezone)',
     )
@@ -200,11 +242,13 @@ Deno.serve(async (req) => {
   if (rowErr) return json({ error: rowErr.message }, 400)
   if (!row) return json({ error: 'Appointment not found' }, 404)
 
-  // Only a live booking is worth confirming. A session cancelled between the
-  // insert and this call must not send "you're booked".
-  if (row.status !== 'booked')
+  // The row has to agree with the event. A session cancelled between the insert
+  // and this call must not send "you're booked", and a cancellation notice for
+  // a session that is still on would be worse.
+  if (row.status !== EXPECTED_STATUS[event])
     return json({ error: `This session is ${row.status}` }, 409)
-  if (row.student_notice_id && row.instructor_notice_id)
+  // Receipts belong to the booking confirmation alone — see the header.
+  if (event === 'booked' && row.student_notice_id && row.instructor_notice_id)
     return json({ error: 'Both parties have already been told' }, 409)
 
   const student = one(row.students as Person | Person[] | null)
@@ -236,60 +280,94 @@ Deno.serve(async (req) => {
     Deno.env.get('INVITE_FROM_EMAIL') ?? 'Hawary LMS <onboarding@resend.dev>'
   const base = resolveBase(payload.origin)
   const when = formatWhen(row.starts_at, row.ends_at, tz)
-  const note = row.note?.trim() || null
+  // On a cancellation the booking note is no longer the news; why it is off is.
+  const detail =
+    event === 'cancelled'
+      ? row.cancel_reason?.trim() || null
+      : row.note?.trim() || null
+  const detailLabel = event === 'cancelled' ? 'Reason' : 'Note'
 
-  // --- 3. send: each party independently, each skipped if already stamped ---
-  const studentOutcome: Outcome = row.student_notice_id
-    ? { sent: true, code: 'already_sent', id: row.student_notice_id }
-    : await send(resendKey, {
-        from,
-        to: studentTo,
-        idempotencyKey: `appointment-notice:${row.id}:student`,
-        subject: `Your session with ${instructorName} — ${when.subject}`,
-        heading: 'Your session is booked',
-        withLabel: 'With',
-        withName: instructorName,
-        academy: academyName,
-        when,
-        note,
-        cta: 'View my sessions',
-        url: `${base}/learn/appointments`,
-      })
+  // Whoever pressed the button already knows. Skipped only for the two events
+  // that report somebody else's decision — a booking confirmation is wanted by
+  // the person who made it, and carries the details they need to turn up.
+  const skipActor = event !== 'booked'
+  const actorIsStudent = skipActor && !!uid && student?.user_id === uid
+  const actorIsInstructor = skipActor && !!uid && instructor?.user_id === uid
 
-  const instructorOutcome: Outcome = row.instructor_notice_id
-    ? { sent: true, code: 'already_sent', id: row.instructor_notice_id }
-    : await send(resendKey, {
-        from,
-        to: instructorTo,
-        idempotencyKey: `appointment-notice:${row.id}:instructor`,
-        subject: `New session with ${studentName} — ${when.subject}`,
-        heading: 'A session has been booked with you',
-        withLabel: 'Student',
-        withName: studentName,
-        academy: academyName,
-        when,
-        note,
-        cta: 'Open the diary',
-        url: `${base}/appointments`,
-      })
+  const copy = COPY[event]
+
+  // --- 3. send: each party independently ------------------------------------
+  // A receipt short-circuits only the booking confirmation; the other two are
+  // deduped by the Resend key alone — see the header.
+  const studentOutcome: Outcome = actorIsStudent
+    ? { sent: true, code: 'is_actor', id: null }
+    : event === 'booked' && row.student_notice_id
+      ? { sent: true, code: 'already_sent', id: row.student_notice_id }
+      : await send(resendKey, {
+          from,
+          to: studentTo,
+          idempotencyKey: keyFor(event, row.id, row.instructor_id, 'student'),
+          subject: `${copy.student.subject(instructorName)} — ${when.subject}`,
+          heading: copy.student.heading,
+          withLabel: copy.student.withLabel,
+          withName: instructorName,
+          academy: academyName,
+          when,
+          detail,
+          detailLabel,
+          cta: 'View my sessions',
+          url: `${base}/learn/appointments`,
+        })
+
+  const instructorOutcome: Outcome = actorIsInstructor
+    ? { sent: true, code: 'is_actor', id: null }
+    : event === 'booked' && row.instructor_notice_id
+      ? { sent: true, code: 'already_sent', id: row.instructor_notice_id }
+      : await send(resendKey, {
+          from,
+          to: instructorTo,
+          idempotencyKey: keyFor(event, row.id, row.instructor_id, 'instructor'),
+          subject: `${copy.instructor.subject(studentName)} — ${when.subject}`,
+          heading: copy.instructor.heading,
+          withLabel: copy.instructor.withLabel,
+          withName: studentName,
+          academy: academyName,
+          when,
+          detail,
+          detailLabel,
+          cta: copy.instructor.cta,
+          // The diary is one week wide and has nowhere to draw a cancelled
+          // session, so anything but a fresh booking leads to the register.
+          url: `${base}${copy.instructor.path}`,
+        })
 
   // --- 4. the receipts ------------------------------------------------------
-  // Best-effort: the mail has already gone, so failing to record it must never
-  // be reported as failing to send it. `notice_sent_at` is stamped even when
-  // neither party had an address — it says an attempt ran, which is the
-  // difference between "nobody could be told" and "nothing was tried".
-  const patch: Record<string, string> = { notice_sent_at: new Date().toISOString() }
-  if (studentOutcome.id) patch.student_notice_id = studentOutcome.id
-  if (instructorOutcome.id) patch.instructor_notice_id = instructorOutcome.id
-  const { error: stampErr } = await admin
-    .from('appointments')
-    .update(patch)
-    .eq('id', row.id)
-  if (stampErr)
-    console.error('send-appointment-notice: sent but could not stamp', row.id, stampErr.message)
+  // Booking only. Best-effort: the mail has already gone, so failing to record
+  // it must never be reported as failing to send it. `notice_sent_at` is
+  // stamped even when neither party had an address — it says an attempt ran,
+  // which is the difference between "nobody could be told" and "nothing was
+  // tried".
+  if (event === 'booked') {
+    const patch: Record<string, string> = {
+      notice_sent_at: new Date().toISOString(),
+    }
+    if (studentOutcome.id) patch.student_notice_id = studentOutcome.id
+    if (instructorOutcome.id) patch.instructor_notice_id = instructorOutcome.id
+    const { error: stampErr } = await admin
+      .from('appointments')
+      .update(patch)
+      .eq('id', row.id)
+    if (stampErr)
+      console.error(
+        'send-appointment-notice: sent but could not stamp',
+        row.id,
+        stampErr.message,
+      )
+  }
 
   console.log(
     'send-appointment-notice:',
+    event,
     row.id,
     'student=',
     studentOutcome.code ?? studentOutcome.id,
@@ -303,6 +381,92 @@ Deno.serve(async (req) => {
     instructor: instructorOutcome,
   })
 })
+
+/**
+ * What each party is told, per event.
+ *
+ * A table rather than three branches because the only differences ARE these
+ * strings: authorization, addresses, timezone and template are one code path
+ * for all three, and that is the whole argument for one function.
+ */
+const COPY: Record<
+  Event,
+  {
+    student: {
+      subject: (other: string) => string
+      heading: string
+      withLabel: string
+    }
+    instructor: {
+      subject: (other: string) => string
+      heading: string
+      withLabel: string
+      cta: string
+      path: string
+    }
+  }
+> = {
+  booked: {
+    student: {
+      subject: (n) => `Your session with ${n}`,
+      heading: 'Your session is booked',
+      withLabel: 'With',
+    },
+    instructor: {
+      subject: (n) => `New session with ${n}`,
+      heading: 'A session has been booked with you',
+      withLabel: 'Student',
+      cta: 'Open the diary',
+      path: '/appointments',
+    },
+  },
+  cancelled: {
+    student: {
+      subject: (n) => `Cancelled: your session with ${n}`,
+      heading: 'Your session has been cancelled',
+      withLabel: 'Was with',
+    },
+    instructor: {
+      subject: (n) => `Cancelled: your session with ${n}`,
+      heading: 'A session has been cancelled',
+      withLabel: 'Student',
+      cta: 'Open the register',
+      path: '/appointments/list',
+    },
+  },
+  reassigned: {
+    student: {
+      subject: (n) => `Your session is now with ${n}`,
+      heading: 'Your session has a new instructor',
+      withLabel: 'Now with',
+    },
+    instructor: {
+      subject: (n) => `Session with ${n} passed to you`,
+      heading: 'A session has been passed to you',
+      withLabel: 'Student',
+      cta: 'Open the register',
+      path: '/appointments/list',
+    },
+  },
+}
+
+/**
+ * The Resend dedupe key. Cancelling is terminal — `cancel_appointment` refuses
+ * a row that is not `booked` — so the id and the party are enough. A handover
+ * keys on the instructor who RECEIVED it, so a session passed on twice mails
+ * twice, which is the truth.
+ */
+function keyFor(
+  event: Event,
+  id: string,
+  instructorId: string,
+  party: 'student' | 'instructor',
+): string {
+  if (event === 'cancelled') return `appointment-cancel:${id}:${party}`
+  if (event === 'reassigned')
+    return `appointment-move:${id}:${instructorId}:${party}`
+  return `appointment-notice:${id}:${party}`
+}
 
 /**
  * The record's address, or the linked account's.
@@ -362,7 +526,9 @@ type Mail = {
   withName: string
   academy: string
   when: When
-  note: string | null
+  /** The one free-text row: the booking note, or why it was cancelled. */
+  detail: string | null
+  detailLabel: string
   cta: string
   url: string
 }
@@ -423,7 +589,7 @@ function emailText(mail: Mail): string {
     '',
     `When: ${mail.when.long}`,
     `${mail.withLabel}: ${mail.withName}`,
-    ...(mail.note ? [`Note: ${mail.note}`] : []),
+    ...(mail.detail ? [`${mail.detailLabel}: ${mail.detail}`] : []),
     '',
     `${mail.cta}:`,
     mail.url,
@@ -440,7 +606,9 @@ function emailHtml(mail: Mail): string {
   const rows = [
     ['When', escapeHtml(mail.when.long)],
     [escapeHtml(mail.withLabel), escapeHtml(mail.withName)],
-    ...(mail.note ? [['Note', escapeHtml(mail.note)]] : []),
+    ...(mail.detail
+      ? [[escapeHtml(mail.detailLabel), escapeHtml(mail.detail)]]
+      : []),
   ]
     .map(
       ([label, value]) =>

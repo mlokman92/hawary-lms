@@ -41,6 +41,34 @@ slot and the function that *grants* it must not be able to disagree about what
 "free" means. A notice period enforced in one and not the other is how a student
 books a session that starts in ten minutes.
 
+### How many are free at a time
+
+Both availability RPCs already collapse the generator's `(instructor, starts_at)`
+rows into one row per `starts_at`, holding the free instructor ids in an array.
+That array's length is returned as **`capacity`**, and the `SlotPicker` draws it
+on the time chip.
+
+It is sent in **both** assignment modes. Round robin withholds `instructors` —
+naming the free teachers would leak a table students cannot read and defeat the
+point of the mode — but a count names nobody, and "three people can take you at
+10:00" is exactly what a student choosing a time is choosing between. A slot with
+one instructor left is one to book now; a slot with five will still be there
+tomorrow.
+
+The number **hides itself** when no slot in the loaded window exceeds one: in a
+single-instructor academy every chip would read "1", which is not information.
+The test is over the window, not the chosen day, so a count does not appear on
+Tuesday and vanish on Wednesday.
+
+The staff dialog narrows a *trainer* to the times she herself is free for, and
+rewrites `capacity` to 1 as it does. The academy-wide figure would be a lie on a
+chip that can only be booked one way — and rewriting it also makes the number
+self-hide for her, which is right, since the answer is always "you".
+
+`array_agg(distinct …)`: two overlapping `booking_hours` rows on one weekday
+would emit the same (instructor, starts_at) twice, and a capacity of 4 drawn
+from a pool of 2 is worse than no number at all.
+
 ### Timezones
 
 `_from`/`_to` are **calendar days in the academy's timezone**
@@ -423,30 +451,59 @@ period and time off: what is on screen is what can be taken.
 `book_appointment` still checks, because the page is a view of a decision and
 never the decision.
 
-## Confirmation email
+## Email: three events, one function
 
-Every confirmed booking tells **both** parties — the student, and the instructor
-the rota or a staff member picked. `supabase/functions/send-appointment-notice`
-does the sending; its README carries the trust model, the receipt columns and
-the kill switch. Three things are worth repeating here.
+`supabase/functions/send-appointment-notice` tells **both** parties what became
+of a session. Its body carries an appointment id and an `event`:
 
-**It is a second call, not part of the booking.** `useBookAppointment` invokes
-the function after `book_appointment` returns, and a failure is logged, never
-thrown. The session exists the moment the RPC returns; a provider outage must
-not undo it or look like it did. The cost is honest and accepted: a client that
-dies between the two calls leaves a booking nobody was told about, and
-`notice_sent_at IS NULL` is exactly that row.
+| `event` | when | row status | who is mailed |
+| --- | --- | --- | --- |
+| `booked` (default) | `book_appointment` returned | `booked` | student + instructor |
+| `cancelled` | the session is off | `cancelled` | both, minus whoever cancelled |
+| `reassigned` | staff could not take it, somebody covered | still `booked` | student + the **new** instructor, minus the actor |
+
+One function and not three because the shape is identical — two parties, an
+id-only body, RLS-then-service-role authorization, academy-timezone formatting,
+one template. Only the heading, the "with" line, the button and one detail row
+differ, and a second copy of the other two hundred lines would be a second place
+for the trust model to drift. The differences live in a `COPY` table keyed by
+event.
+
+**The event comes from the RESULT, never from the button.** `useCancelAppointment`
+picks `reassigned` or `cancelled` off what `cancel_appointment` returned. About
+half of what staff cancel here finds cover, and mailing a student "your session
+is cancelled" when it is going ahead an hour later with somebody else is the one
+message worse than sending nothing.
+
+**Who is told is decided server-side.** For `cancelled` and `reassigned` the
+actor is skipped, the same rule the in-app notification follows: a message
+telling you what you just clicked is not news. `booked` is unchanged — a booking
+confirmation is wanted by the person who made it, and carries what they need to
+turn up.
+
+**It is a second call, not part of the write.** Every caller invokes it after an
+RPC that has already committed, and a failure is logged, never thrown. The
+session is booked, cancelled or handed on the moment the RPC returns; a provider
+outage must not undo it or look like it did. The cost is honest and accepted: a
+client that dies between the two calls leaves a booking nobody was told about,
+and `notice_sent_at IS NULL` is exactly that row.
 
 **It needs the service role, and the other mail functions do not.** They email
 one person whose address is on a row the caller can already read. This emails
 two, and a student cannot read `instructors` at all. So it authorizes under the
-caller's JWT — RLS on `appointments` decides — and only then reads and sends
-with the service role, for the row the database just admitted.
+caller's JWT — RLS on `appointments` decides, falling back to active staff
+membership of the appointment's academy — and only then reads and sends with the
+service role, for the row the database just admitted.
 
 **Two receipts, because the recipients fail independently.**
 `student_notice_id` / `instructor_notice_id` are stamped separately, and a
 re-invoke fills only the gap. An instructor record with no address must not stop
-the student being told.
+the student being told. They belong to the **booking confirmation alone**: the
+two other events dedupe on the Resend `Idempotency-Key` and nothing else, since
+cancelling is terminal (`cancel_appointment` refuses a row that is not `booked`)
+and a handover keys on the instructor who *received* it, so a session passed on
+twice mails twice — which is the truth. Columns would buy nothing the 24h key
+does not already give, and would cost a migration to say it.
 
 ## In-app notification
 
@@ -455,13 +512,17 @@ Separate from the email, and more reliable than it: `book_appointment` writes a
 if the booking exists the notification does. The actor is not notified — a
 message telling you what you just clicked is not news. See `docs/notifications.md`.
 
-Two kinds now. `appointment_reassigned` is written by `cancel_appointment` when
-a session is handed on, to the student and the incoming instructor, on the same
-terms. Its payload is `appointment_booked`'s plus `from_name`: the session did
-not change, the teacher did, and that is the whole news. Only `titleOf` in
-`NotificationBell` branches — where the row leads and when the session is are
-the same question either way. There is still **no** notification when a session
-is genuinely cancelled; that gap predates this work and is unchanged.
+Three kinds now, and `cancel_appointment` writes two of them.
+`appointment_reassigned` goes to the student and the incoming instructor when a
+session is handed on; its payload is `appointment_booked`'s plus `from_name` —
+the session did not change, the teacher did, and that is the whole news.
+`appointment_cancelled` goes to both parties on the two branches that genuinely
+call a session off, through `app.notify_appointment_cancelled(id, actor)` — one
+helper called from both, because the branches differ only in who pressed the
+button and duplicating the block would be two places for the actor rule to
+drift. Its payload is `appointment_booked`'s verbatim. Only `titleOf` in
+`NotificationBell` branches: where the row leads and when the session is are the
+same question whatever became of it.
 
 ## Deliberately not done
 
@@ -473,9 +534,14 @@ is genuinely cancelled; that gap predates this work and is unchanged.
   time, not course time.
 - **No reschedule.** Cancel and book again. Staff can move one by editing
   `starts_at`; the exclusion constraint still protects them.
-- **No reminders.** Confirmation is sent at booking; nothing is sent the day
-  before, and nothing is sent on cancel. Both are the same shape as the
-  confirmation and can be added when asked for.
+- **No reminders.** Mail goes out at booking, on cancellation and on a handover;
+  nothing is sent the day before. A reminder is the same shape and can be added
+  when asked for.
+- **The outgoing instructor is not told when a session is handed off them.**
+  Neither the notification nor the email reaches them — the handover mails the
+  student and whoever picked the session up. Telling them needs the previous
+  instructor's id to survive the UPDATE, which is a column (`cancel_appointment`
+  overwrites `instructor_id` in place) and not worth one until asked for.
 - **No location.** There was a `location` on the booking policy, copied onto
   every appointment at insert. No academy ever set it and no appointment ever
   carried one, so both columns went. Where a session happens is a per-session

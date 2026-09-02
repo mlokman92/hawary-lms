@@ -1,8 +1,32 @@
 # send-appointment-notice
 
-Confirms a booked one-to-one session to **both** parties: the student, and the
-instructor the rota (or a staff member) picked. One email each, once per
-appointment.
+Tells **both** parties what became of a one-to-one session: the student, and the
+instructor the rota (or a staff member) picked.
+
+## The three events
+
+The body carries an appointment id and an `event`:
+
+| `event` | when | row must be | who is mailed |
+|---|---|---|---|
+| `booked` (default) | after `book_appointment` | `booked` | student + instructor |
+| `cancelled` | the session is off | `cancelled` | both, minus the actor |
+| `reassigned` | somebody covered for staff who could not take it | `booked` | student + the **new** instructor, minus the actor |
+
+`event` is optional and defaults to `booked`, so a caller that predates this
+still works. The row's status must agree with the event or the call is a 409: a
+session cancelled between the RPC and this call must not send "you're booked",
+and a cancellation notice for a session that is still on would be worse.
+
+One function rather than three because everything except the wording is shared —
+authorization, addresses, timezone, template. The differences live in a `COPY`
+table keyed by event; a second copy of the rest would be a second place for the
+trust model below to drift.
+
+**The actor is skipped** on `cancelled` and `reassigned`: a message telling you
+what you just clicked is not news, and it is the same rule the in-app
+notification follows. `booked` is unchanged — a booking confirmation is wanted by
+whoever made it. Who the actor is comes from the verified JWT, not the body.
 
 ## Trust model
 
@@ -48,7 +72,18 @@ and two things settle it:
 - each send carries `Idempotency-Key: appointment-notice:<id>:student|instructor`,
   which Resend dedupes for 24h.
 
+The other two events have **no receipt columns and rely on the key alone**:
+`appointment-cancel:<id>:<party>` and
+`appointment-move:<id>:<new instructor>:<party>`. Cancelling is terminal —
+`cancel_appointment` refuses a row that is not `booked` — so id plus party is
+enough; a handover keys on the instructor who *received* it, so a session passed
+on twice mails twice, which is the truth. Columns would buy nothing the 24h key
+does not already give, and would cost a migration to say it.
+
 ## The receipt columns
+
+These belong to the **booking confirmation only** — the two other events neither
+read nor write them.
 
 ```sql
 select status, notice_sent_at, student_notice_id, instructor_notice_id
@@ -79,24 +114,28 @@ Nothing watches this. It is a query a human must choose to run.
 
 Delivery problems return **HTTP 200** with `{ ok, student, instructor }`, where
 each party is `{ sent, code?, id? }` and `code` is `no_email` · `send_failed` ·
-`already_sent`. `ok` is true only when **both** were reached. A missing
-`RESEND_API_KEY` returns `{ ok: false, code: 'email_not_configured' }`.
+`already_sent` · `is_actor`. Note that `already_sent` and `is_actor` come back
+with `sent: true` — both mean the person is not owed an email, not that one
+failed. `ok` is true only when **both** were reached. A missing `RESEND_API_KEY`
+returns `{ ok: false, code: 'email_not_configured' }`.
 
-The session is booked either way, so a delivery failure must never look like the
-booking failed. Only a bad request, or a row the caller may not see, returns 4xx
-with `{ error }`.
+The write has already committed either way, so a delivery failure must never
+look like the booking, cancellation or handover failing. Only a bad request, or
+a row the caller may not see, returns 4xx with `{ error }`.
 
 ## Resending
 
 ```js
 await supabase.functions.invoke('send-appointment-notice', {
-  body: { appointment_id: '<id>' },
+  body: { appointment_id: '<id>', event: 'booked' },
 })
 ```
 
-Works for a party whose receipt is still null; if both are stamped it returns
-409. There is deliberately **no UI control** — a resend button would turn a
-feature scoped to one transition into "email anybody about any session".
+For `booked` this works for a party whose receipt is still null; if both are
+stamped it returns 409. For the other two it is the Resend key that decides —
+inside 24h the provider dedupes it, after that it sends again. There is
+deliberately **no UI control** — a resend button would turn a feature scoped to
+three transitions into "email anybody about any session".
 
 ## Kill switch
 

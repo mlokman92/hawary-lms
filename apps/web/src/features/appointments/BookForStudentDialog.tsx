@@ -101,11 +101,18 @@ export function BookForStudentDialog({
    * everything the academy has. Filtered here rather than in the RPC because
    * the same generator feeds the learner page and the booking check, and it is
    * a view of availability, not a different definition of it.
+   *
+   * `capacity` is rewritten to 1 for her, not left at the academy-wide figure:
+   * the slot she is being offered has exactly one instructor free for it —
+   * her — and "3" on a chip that can only be booked one way is wrong rather
+   * than merely unhelpful. It also self-hides, since no slot then exceeds 1.
    */
   const offered = useMemo(() => {
     const all = slots ?? []
     if (isAdmin || !mineId) return all
-    return all.filter((s) => (s.instructors ?? []).some((i) => i.id === mineId))
+    return all
+      .filter((s) => (s.instructors ?? []).some((i) => i.id === mineId))
+      .map((s) => ({ ...s, capacity: 1 }))
   }, [slots, isAdmin, mineId])
 
   const matches = useMemo(() => {

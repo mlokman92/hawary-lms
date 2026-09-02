@@ -16,6 +16,13 @@ import type { OpenSlot } from './api'
  * is no disabled state to explain, and it is why this scrolls rather than pages
  * a week at a time — seven fixed columns left about 34px per day on a phone.
  *
+ * Each time chip carries how many instructors are free at it, for the same
+ * reason the day chips carry a count: it separates "book this whenever" from
+ * "book this now or lose it", and under round robin it is the only thing the
+ * student is given to choose between — the rota is not theirs to see. The
+ * number is drawn only when some slot in the window has more than one free; in
+ * a one-instructor academy every chip would read "1", which is not information.
+ *
  * The component owns which day is showing; the caller owns which slot is
  * chosen, because that is the answer it needs.
  */
@@ -53,6 +60,11 @@ export function SlotPicker({
   }, [slots, tz])
 
   const openDays = useMemo(() => [...byDay.keys()].sort(), [byDay])
+
+  // Across the whole window, not the chosen day: a count that appears on
+  // Tuesday and vanishes on Wednesday reads as a bug rather than as a fact
+  // about Wednesday.
+  const showCounts = useMemo(() => slots.some((s) => s.capacity > 1), [slots])
 
   // Land on the first day that has something, and go back to it if the chosen
   // day empties out — booking its last slot is the ordinary way that happens.
@@ -121,22 +133,41 @@ export function SlotPicker({
           {/* A grid rather than wrapped flex so the columns line up, and 44px
               tall because this is the control people press with a thumb. */}
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {daySlots.map((s) => (
-              <button
-                key={s.starts_at}
-                type="button"
-                onClick={() => onChange(s.starts_at)}
-                className={cn(
-                  'flex min-h-11 items-center justify-center rounded-md border px-2 text-sm tabular-nums',
-                  'focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none',
-                  value === s.starts_at
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'hover:border-foreground/30',
-                )}
-              >
-                {fmtTime(s.starts_at, tz)}
-              </button>
-            ))}
+            {daySlots.map((s) => {
+              const chosen = value === s.starts_at
+              return (
+                <button
+                  key={s.starts_at}
+                  type="button"
+                  onClick={() => onChange(s.starts_at)}
+                  className={cn(
+                    'flex min-h-11 items-center justify-center gap-1.5 rounded-md border px-2 text-sm tabular-nums',
+                    'focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none',
+                    chosen
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'hover:border-foreground/30',
+                  )}
+                >
+                  {fmtTime(s.starts_at, tz)}
+                  {showCounts ? (
+                    // A bare digit beside a time reads as part of the time, so
+                    // it is set apart; the label is what a screen reader gets,
+                    // since "10:00 2" says nothing out loud.
+                    <span
+                      aria-label={tn('appt.slots.free', s.capacity)}
+                      className={cn(
+                        'rounded px-1 text-xs leading-5',
+                        chosen
+                          ? 'bg-primary-foreground/20'
+                          : 'bg-muted text-muted-foreground',
+                      )}
+                    >
+                      {s.capacity}
+                    </span>
+                  ) : null}
+                </button>
+              )
+            })}
           </div>
         </div>
       )}

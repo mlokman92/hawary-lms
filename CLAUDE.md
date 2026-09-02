@@ -231,7 +231,12 @@ Monorepo: **pnpm workspaces + Turborepo**.
   Rows open the shared `AppointmentDialog`, which decides **for itself** whether
   the reader may act, so the rule cannot drift across the three screens that
   mount it. Learner-side `/learn/appointments` is pick a
-  day → pick a time → book. Day maths is `YYYY-MM-DD` strings in the academy's
+  day → pick a time → book. Each time chip carries **`capacity`** — how many
+  instructors are free at it — returned by both availability RPCs in **both**
+  assignment modes, because a count names nobody and so survives the withholding
+  that nulls `instructors` under round robin. It hides itself when no slot in
+  the window exceeds one (every chip reading "1" is not information), and the
+  staff dialog rewrites it to 1 when narrowing a trainer to her own times. Day maths is `YYYY-MM-DD` strings in the academy's
   zone (`features/appointments/calendar.ts`), never the browser's. Two
   independent caps on a student: `max_open_per_student` bounds the **queue**
   (how much future they may hold), `max_per_week_per_student` the **rate** (how
@@ -255,22 +260,44 @@ Monorepo: **pnpm workspaces + Turborepo**.
   `mark_notifications_read` / `mark_all_notifications_read`, since an UPDATE
   policy would also let a person rewrite their own row's `kind`. The badge
   polls (a `head: true` count, 60s); the twenty rows load only when the panel
-  opens. First and so far only kind: `appointment_booked`, written by
-  `book_appointment` **in the same transaction as the insert** — which is what
-  makes it more reliable than the email. **The actor is not notified** (a
-  message telling you what you just clicked is not news), and neither is staff
-  at large (they have the diary). A new kind costs three cases in
+  opens. Three kinds, all about an appointment and all written **in the same
+  transaction as the write they report** — which is what makes them more
+  reliable than the email: `appointment_booked` (`book_appointment`),
+  `appointment_reassigned` and `appointment_cancelled` (both
+  `cancel_appointment`, the latter through
+  `app.notify_appointment_cancelled(id, actor)`, one helper called from both
+  cancelling branches because they differ only in who pressed the button).
+  All three share `appointment_booked`'s payload, so only `titleOf` branches.
+  **The actor is not notified** (a message telling you what you just clicked is
+  not news), and neither is staff at large (they have the diary). The
+  **outgoing** instructor is told nothing on a handover — a real gap, since
+  `cancel_appointment` overwrites `instructor_id` in place and recovering the
+  previous one would cost a column. A new kind costs three cases in
   `NotificationBell.tsx`, one enum value and two dictionary lines.
-- **Appointment confirmation email** (`send-appointment-notice`,
-  `docs/appointments.md` → "Confirmation email"): every confirmed booking
-  emails **both** parties. It is a second call after `book_appointment`, soft
-  failure only — the session is booked either way. Unlike the other mail
+- **Appointment email** (`send-appointment-notice`, `docs/appointments.md` →
+  "Email: three events, one function"): **three events, one function** —
+  `booked` (the default), `cancelled` and `reassigned`, chosen by an `event`
+  field in the body. One function and not three because everything but the
+  wording is shared (two parties, an id-only body, RLS-then-service-role
+  authorisation, academy-timezone formatting, one template); the differences
+  live in a `COPY` table keyed by event, and the row's status must agree with
+  the event or it is a 409. The event is picked from `cancel_appointment`'s
+  **result**, not from the button: about half of what staff cancel finds cover,
+  and "your session is cancelled" when it is going ahead an hour later with
+  somebody else is worse than silence. For the two non-booking events **the
+  actor is skipped** — resolved server-side from the verified JWT, the same rule
+  the notification follows. Always a second call after the RPC, soft failure
+  only: the write has already committed either way. Unlike the other mail
   functions it uses the **service role**: it emails two people and a student
   cannot read `instructors` at all, so it authorises under the caller's JWT
-  (RLS on `appointments`) and only then reads and sends. Addresses come from
-  the record, falling back to the linked account's auth email. Two receipts
-  (`student_notice_id` / `instructor_notice_id`) because the recipients fail
-  independently; a re-invoke fills only the gap.
+  (RLS on `appointments`, falling back to active staff membership of the
+  academy) and only then reads and sends. Addresses come from the record,
+  falling back to the linked account's auth email. The two receipts
+  (`student_notice_id` / `instructor_notice_id`) belong to **`booked` alone** —
+  they exist because the recipients fail independently and a re-invoke fills
+  only the gap; `cancelled` and `reassigned` dedupe on the Resend
+  `Idempotency-Key` and nothing else, since cancelling is terminal and a
+  handover keys on the instructor who *received* it.
 - **Money is admin-only** (`docs/money-is-admin-only.md`): a trainer is staff so
   they can **teach**, and none of that needs to know what a student was charged.
   The five money SELECT policies — `invoices` · `invoice_items` · `payments` ·

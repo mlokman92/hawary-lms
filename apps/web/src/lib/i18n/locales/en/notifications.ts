@@ -19,6 +19,9 @@ export const notifications = {
   // --- appointment_reassigned -----------------------------------------------
   'notif.appt_moved.student': 'Your session is now with {name}',
   'notif.appt_moved.instructor': 'Session with {name} passed to you',
+  // --- appointment_cancelled ------------------------------------------------
+  'notif.appt_cancelled.student': 'Your session with {name} was cancelled',
+  'notif.appt_cancelled.instructor': 'Session with {name} was cancelled',
 
 } as const
 

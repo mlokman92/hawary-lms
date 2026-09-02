@@ -54,10 +54,16 @@ export type SlotInstructor = {
 /**
  * A free slot. `instructors` is null under round robin on the learner side —
  * the server withholds it, so the client cannot accidentally reveal the rota.
+ *
+ * `capacity` is how many instructors are free at that time, and it is sent in
+ * **both** modes: a count names nobody, so it survives the withholding that
+ * nulls `instructors`, and it is what the student is actually choosing between
+ * when picking a time.
  */
 export type OpenSlot = {
   starts_at: string
   ends_at: string
+  capacity: number
   instructors: SlotInstructor[] | null
 }
 
@@ -106,10 +112,14 @@ export type CancelResult = {
   instructor?: SlotInstructor
 }
 
-/** One recipient's outcome. `code` is why, when `sent` is false. */
+/**
+ * One recipient's outcome. `code` is why, when nothing was sent — and note that
+ * `already_sent` and `is_actor` come back with `sent: true`, because both mean
+ * the person is not owed an email, not that one failed.
+ */
 export type NoticeOutcome = {
   sent: boolean
-  code?: 'no_email' | 'send_failed' | 'already_sent'
+  code?: 'no_email' | 'send_failed' | 'already_sent' | 'is_actor'
   id?: string | null
 }
 
@@ -124,6 +134,43 @@ export type BookingNotice = {
   message?: string
   student?: NoticeOutcome
   instructor?: NoticeOutcome
+}
+
+/**
+ * Which of the three things happened to the session. The same function sends
+ * all three — see `supabase/functions/send-appointment-notice` — because the
+ * only difference is the wording; the trust model is identical.
+ */
+export type NoticeEvent = 'booked' | 'cancelled' | 'reassigned'
+
+/**
+ * Tell both parties, without letting a mail failure look like the write
+ * failing.
+ *
+ * Every caller of this is a *second* call after an RPC that has already
+ * committed: the session is booked, cancelled or handed on the moment that
+ * returns, and a provider outage must not undo it or appear to. So this
+ * swallows everything and returns null — the row is the record of what
+ * happened.
+ *
+ * The function is handed an appointment id and an event, and nothing else. It
+ * re-reads both addresses itself; passing them from the browser would make an
+ * email relay of it, and a student cannot read `instructors` in the first
+ * place.
+ */
+async function sendNotice(
+  appointmentId: string,
+  event: NoticeEvent,
+): Promise<BookingNotice | null> {
+  const { data, error } = await supabase.functions.invoke<BookingNotice>(
+    'send-appointment-notice',
+    { body: { appointment_id: appointmentId, event, origin: window.location.origin } },
+  )
+  if (error) {
+    console.error('appointment notice failed', event, appointmentId, error)
+    return null
+  }
+  return data ?? null
 }
 
 const settingsKey = (a: string | null) => ['booking-settings', a] as const
@@ -755,15 +802,8 @@ export function useSetAppointmentStatus(academyId: string | null) {
  * it from anybody who is not staff. `instructorId` is ignored by the server
  * under round robin unless the caller is staff.
  *
- * Then both parties are told. The email is a *second* call and not part of the
- * booking, which is the honest shape: the session exists the moment the RPC
- * returns, and a provider outage must not undo it or look like it did. So a
- * failure here is reported on the result, never thrown — the same contract the
- * enrollment approval uses.
- *
- * The function is handed an appointment id and nothing else: it re-reads both
- * addresses itself. Passing them from the browser would make an email relay of
- * it, and a student cannot read `instructors` in the first place.
+ * Then both parties are told — see `sendNotice` for why that is a second call
+ * whose failure is reported on the result rather than thrown.
  */
 export function useBookAppointment(academyId: string | null) {
   const qc = useQueryClient()
@@ -784,24 +824,10 @@ export function useBookAppointment(academyId: string | null) {
       if (error) throw error
       const booking = data as unknown as BookResult
 
-      const { data: notice, error: noticeError } =
-        await supabase.functions.invoke<BookingNotice>(
-          'send-appointment-notice',
-          {
-            body: {
-              appointment_id: booking.id,
-              origin: window.location.origin,
-            },
-          },
-        )
-      if (noticeError) {
-        // Logged, not thrown, and not surfaced: the session is booked. The row
-        // is the record of what happened — notice_sent_at with a null receipt
-        // is the one state worth a query.
-        console.error('appointment notice failed', booking.id, noticeError)
-        return { ...booking, notice: null }
-      }
-      return { ...booking, notice: notice ?? null }
+      // Not thrown and not surfaced: the session is booked either way. The row
+      // is the record of what happened — notice_sent_at with a null receipt is
+      // the one state worth a query.
+      return { ...booking, notice: await sendNotice(booking.id, 'booked') }
     },
     onSuccess: () => invalidateBookings(qc, academyId),
   })
@@ -816,6 +842,13 @@ export function useBookAppointment(academyId: string | null) {
  * Which of the two happened is in the result, and the caller has to say so:
  * "cancelled" on screen when the session is actually still going ahead with
  * somebody else would be a lie.
+ *
+ * Which is also why the email is chosen from the RESULT and not from the
+ * button: about half of what staff cancel is covered, and mailing a student
+ * "your session is cancelled" when it is going ahead an hour later with
+ * somebody else is the one message worse than sending nothing. The server
+ * decides who hears it — whoever clicked is skipped, the same rule the in-app
+ * notification follows.
  */
 export function useCancelAppointment(academyId: string | null) {
   const qc = useQueryClient()
@@ -826,7 +859,9 @@ export function useCancelAppointment(academyId: string | null) {
         _reason: input.reason ?? undefined,
       })
       if (error) throw error
-      return data as unknown as CancelResult
+      const result = data as unknown as CancelResult
+      await sendNotice(result.id, result.reassigned ? 'reassigned' : 'cancelled')
+      return result
     },
     onSuccess: () => invalidateBookings(qc, academyId),
   })

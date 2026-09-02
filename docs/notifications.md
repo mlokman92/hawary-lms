@@ -1,7 +1,8 @@
 # Notifications
 
-The bell in the header. One table, one bell, one event kind so far — a booked
-appointment. What follows is the shape everything else plugs into.
+The bell in the header. One table, one bell, three event kinds so far — all
+three about an appointment. What follows is the shape everything else plugs
+into.
 
 ## The row is an event, not a sentence
 
@@ -75,6 +76,28 @@ open a grid with nothing in it. The register opens on her own upcoming sessions,
 soonest first, which is exactly where the row she tapped lives. `tz` is the academy's
 zone at the time, so the row formats without a second query.
 
+## The other two: a handover and a cancellation
+
+Both are written by `cancel_appointment`, in the same transaction as the UPDATE,
+on the same terms as the booking — the actor is skipped, staff at large are not
+told.
+
+`appointment_reassigned` fires when staff could not take a session and somebody
+covered. It goes to the student and the **incoming** instructor, and its payload
+is `appointment_booked`'s plus `from_name`.
+
+`appointment_cancelled` fires on the two branches that genuinely call a session
+off: a student cancelling their own, and staff cancelling when nobody can cover.
+Both go through `app.notify_appointment_cancelled(id, actor)` — one helper, two
+call sites, because the branches differ only in who pressed the button and a
+second copy would be a second place for the actor rule to drift. Its payload is
+`appointment_booked`'s verbatim, which is why `detailOf` and `linkOf` need no
+case for it: when the session was, and where the row leads, are the same
+questions whatever became of it.
+
+The **outgoing** instructor is told nothing on a handover. That is a real gap,
+not an oversight — see `docs/appointments.md` → "Deliberately not done".
+
 ## The bell
 
 `components/NotificationBell.tsx`, mounted in `components/shell/SidebarShell`
@@ -97,15 +120,18 @@ Adding a kind costs three cases in that one file (`titleOf`, `detailOf`,
 
 - **No realtime.** A minute's polling is what a notification of this kind is
   worth; a websocket per signed-in user is not.
-- **No preferences.** Nothing to switch off yet, and a settings page for one
-  event kind would be more product than the feature.
+- **No preferences.** Nothing to switch off yet, and a settings page for three
+  event kinds of the same thing would be more product than the feature.
 - **No pruning.** Nothing deletes read notifications. At the present rate the
   table takes years to become interesting; when it does, the sweep is a `delete
   … where read_at < now() - interval '90 days'`, and this is the note that says
   so.
-- **No email/push fan-out from here.** The booking email is sent by
-  `send-appointment-notice` on its own path. Routing both through one dispatcher
-  would be the right move at three or four kinds, not at one.
+- **No email/push fan-out from here.** The appointment emails are sent by
+  `send-appointment-notice` on its own path — a second call from the browser,
+  which is exactly why the notification is the more reliable of the two. The two
+  paths mirror each other kind for kind and skip the actor by the same rule;
+  routing them through one dispatcher is the move to make when a kind arrives
+  that is not an appointment.
 
 ## Notes
 
