@@ -14,11 +14,13 @@
 //   differ, and a second copy of the other two hundred lines would be a second
 //   place for the trust model to drift.
 //
-//   Who is told differs too, and it is decided HERE, not by the caller. For
-//   `cancelled` and `reassigned` **the actor is skipped**, the same rule the
-//   in-app notification follows: a message telling you what you just clicked is
-//   not news. `booked` is unchanged — a booking confirmation is wanted by the
-//   person who booked, and it carries the details they need to turn up.
+//   **Both parties are always told, including whoever pressed the button.**
+//   There was briefly an actor-skip here, mirroring the in-app notification's
+//   old rule, and it was wrong for the same reason: in this database the
+//   student is nearly always the actor — they book and cancel their own
+//   sessions on /learn/appointments — so skipping the actor meant skipping the
+//   student. A confirmation you do not get because you were the one who asked
+//   is not restraint, it is a missing receipt.
 // ----------------------------------------------------------------------------
 // Why this one needs the service role, when send-invitation and
 // send-course-access do not
@@ -193,8 +195,8 @@ Deno.serve(async (req) => {
   })
   const [{ data: visible, error: visErr }, { data: auth }] = await Promise.all([
     caller.from('appointments').select('id').eq('id', appointmentId).maybeSingle(),
-    // Read up here rather than only on the fallback path: the actor decides who
-    // is *told* about a cancellation or a handover, not just who may ask.
+    // Read alongside the probe rather than only on the fallback path: one
+    // round trip instead of two, and the fallback needs it.
     caller.auth.getUser(),
   ])
   if (visErr) return json({ error: visErr.message }, 400)
@@ -287,21 +289,13 @@ Deno.serve(async (req) => {
       : row.note?.trim() || null
   const detailLabel = event === 'cancelled' ? 'Reason' : 'Note'
 
-  // Whoever pressed the button already knows. Skipped only for the two events
-  // that report somebody else's decision — a booking confirmation is wanted by
-  // the person who made it, and carries the details they need to turn up.
-  const skipActor = event !== 'booked'
-  const actorIsStudent = skipActor && !!uid && student?.user_id === uid
-  const actorIsInstructor = skipActor && !!uid && instructor?.user_id === uid
-
   const copy = COPY[event]
 
   // --- 3. send: each party independently ------------------------------------
   // A receipt short-circuits only the booking confirmation; the other two are
   // deduped by the Resend key alone — see the header.
-  const studentOutcome: Outcome = actorIsStudent
-    ? { sent: true, code: 'is_actor', id: null }
-    : event === 'booked' && row.student_notice_id
+  const studentOutcome: Outcome =
+    event === 'booked' && row.student_notice_id
       ? { sent: true, code: 'already_sent', id: row.student_notice_id }
       : await send(resendKey, {
           from,
@@ -319,9 +313,8 @@ Deno.serve(async (req) => {
           url: `${base}/learn/appointments`,
         })
 
-  const instructorOutcome: Outcome = actorIsInstructor
-    ? { sent: true, code: 'is_actor', id: null }
-    : event === 'booked' && row.instructor_notice_id
+  const instructorOutcome: Outcome =
+    event === 'booked' && row.instructor_notice_id
       ? { sent: true, code: 'already_sent', id: row.instructor_notice_id }
       : await send(resendKey, {
           from,

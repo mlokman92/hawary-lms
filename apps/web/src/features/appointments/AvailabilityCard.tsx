@@ -13,35 +13,16 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
-import {
   WEEKDAY_ORDER,
-  addDays,
-  fmtDayLong,
   fmtMinutes,
   timeToMinutes,
-  today,
-  ymdOf,
-  zonedDayStart,
-  type Ymd,
 } from './calendar'
 import {
   useAddBookingHours,
-  useAddTimeOff,
   useDeleteBookingHours,
-  useDeleteTimeOff,
-  type BookableInstructor,
   type BookingHour,
-  type TimeOffRow,
 } from './api'
 import { errorMessage } from '@/lib/errors'
-import { personName } from '@/lib/format'
 
 /** Weekday name for a heading, from a date that is known to be that weekday. */
 function weekdayLabel(weekday: number, locale: string): string {
@@ -56,28 +37,27 @@ function weekdayLabel(weekday: number, locale: string): string {
 }
 
 /**
- * When the academy is open, and when it is shut anyway.
+ * When the academy is open.
  *
- * Both halves are one card because they answer the same question. Adding hours
- * takes several weekdays at once — "Mon to Fri, 10:00 to 18:00" is one action,
- * not five.
+ * Adding hours takes several weekdays at once — "Mon to Fri, 10:00 to 18:00" is
+ * one action, not five.
+ *
+ * Closed dates used to be the lower half of this card, on the argument that
+ * when the academy is open and when it is shut anyway are the same question.
+ * They now live in `BlockedDatesCard`, because the two halves turned out to
+ * have different audiences: opening hours are academy policy and an admin's to
+ * set, while blocking days off is something an instructor does for themselves.
  */
 export function AvailabilityCard({
   academyId,
-  tz,
   locale,
   hours,
-  timeOff,
-  instructors,
   bookingOpen,
   canEdit,
 }: {
   academyId: string
-  tz: string
   locale: string
   hours: BookingHour[]
-  timeOff: TimeOffRow[]
-  instructors: BookableInstructor[]
   /** Whether booking is switched on, for the "open but no hours" dead end. */
   bookingOpen: boolean
   canEdit: boolean
@@ -85,20 +65,11 @@ export function AvailabilityCard({
   const { t } = useT()
   const addHours = useAddBookingHours(academyId)
   const delHours = useDeleteBookingHours(academyId)
-  const addOff = useAddTimeOff(academyId)
-  const delOff = useDeleteTimeOff(academyId)
 
   const [days, setDays] = useState<number[]>([1, 2, 3, 4, 5])
   const [from, setFrom] = useState('10:00')
   const [to, setTo] = useState('18:00')
   const [hoursError, setHoursError] = useState<string | null>(null)
-
-  const [offOpen, setOffOpen] = useState(false)
-  const [offWho, setOffWho] = useState('all')
-  const [offFrom, setOffFrom] = useState<Ymd>(() => today(tz))
-  const [offTo, setOffTo] = useState<Ymd>(() => today(tz))
-  const [offReason, setOffReason] = useState('')
-  const [offError, setOffError] = useState<string | null>(null)
 
   const byWeekday = useMemo(() => {
     const map = new Map<number, BookingHour[]>()
@@ -121,28 +92,6 @@ export function AvailabilityCard({
       await addHours.mutateAsync({ weekdays: days, start_time: from, end_time: to })
     } catch (err) {
       setHoursError(errorMessage(err, t('common.error')))
-    }
-  }
-
-  async function submitTimeOff() {
-    if (offTo < offFrom) {
-      setOffError(t('appt.timeoff.range_invalid'))
-      return
-    }
-    setOffError(null)
-    try {
-      await addOff.mutateAsync({
-        instructor_id: offWho === 'all' ? null : offWho,
-        // Whole days, inclusive of the last one — so the stored window runs to
-        // the start of the day after.
-        starts_at: zonedDayStart(offFrom, tz).toISOString(),
-        ends_at: zonedDayStart(addDays(offTo, 1), tz).toISOString(),
-        reason: offReason.trim() || null,
-      })
-      setOffOpen(false)
-      setOffReason('')
-    } catch (err) {
-      setOffError(errorMessage(err, t('common.error')))
     }
   }
 
@@ -258,146 +207,6 @@ export function AvailabilityCard({
           </div>
         ) : null}
 
-        <Separator />
-
-        <div className="grid gap-3">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <h3 className="text-sm font-medium">{t('appt.timeoff.title')}</h3>
-              <p className="text-muted-foreground text-sm">
-                {t('appt.timeoff.description')}
-              </p>
-            </div>
-            {canEdit ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setOffOpen((v) => !v)}
-              >
-                <Plus /> {t('appt.timeoff.add')}
-              </Button>
-            ) : null}
-          </div>
-
-          {offOpen && canEdit ? (
-            <div className="grid gap-3 rounded-md border p-3">
-              <div className="grid gap-1.5">
-                <Label htmlFor="off-who">{t('appt.timeoff.who')}</Label>
-                <Select value={offWho} onValueChange={setOffWho}>
-                  <SelectTrigger id="off-who">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">
-                      {t('appt.timeoff.whole_academy')}
-                    </SelectItem>
-                    {instructors.map((i) => (
-                      <SelectItem key={i.id} value={i.id}>
-                        {i.full_name ?? t('common.unnamed')}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-wrap items-end gap-3">
-                <div className="grid gap-1.5">
-                  <Label htmlFor="off-from">{t('appt.timeoff.from')}</Label>
-                  <Input
-                    id="off-from"
-                    type="date"
-                    value={offFrom}
-                    onChange={(e) =>
-                      e.target.value && setOffFrom(e.target.value)
-                    }
-                  />
-                </div>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="off-to">{t('appt.timeoff.to')}</Label>
-                  <Input
-                    id="off-to"
-                    type="date"
-                    value={offTo}
-                    min={offFrom}
-                    onChange={(e) => e.target.value && setOffTo(e.target.value)}
-                  />
-                </div>
-                <div className="grid flex-1 gap-1.5">
-                  <Label htmlFor="off-reason">{t('appt.timeoff.reason')}</Label>
-                  <Input
-                    id="off-reason"
-                    value={offReason}
-                    onChange={(e) => setOffReason(e.target.value)}
-                    placeholder={t('appt.timeoff.reason_placeholder')}
-                  />
-                </div>
-                <Button
-                  type="button"
-                  disabled={addOff.isPending}
-                  onClick={submitTimeOff}
-                >
-                  {t('common.add')}
-                </Button>
-              </div>
-              {offError ? (
-                <p className="text-destructive text-sm">{offError}</p>
-              ) : null}
-            </div>
-          ) : null}
-
-          {timeOff.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              {t('appt.timeoff.none')}
-            </p>
-          ) : (
-            <ul className="divide-y rounded-md border">
-              {timeOff.map((o) => (
-                <li
-                  key={o.id}
-                  className="flex items-center justify-between gap-2 px-3 py-2 text-sm"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate">
-                      {/* Whether the whole academy is closed is `instructor_id`
-                          being null — not the instructor being nameless. Read
-                          off the name, one unnamed instructor's afternoon off
-                          read as the academy shutting for the day. */}
-                      {o.instructor_id
-                        ? (personName(o.instructors?.full_name) ??
-                          t('common.unnamed'))
-                        : t('appt.timeoff.whole_academy')}
-                      {o.reason ? (
-                        <span className="text-muted-foreground">
-                          {' '}
-                          · {o.reason}
-                        </span>
-                      ) : null}
-                    </p>
-                    <p className="text-muted-foreground">
-                      {fmtDayLong(ymdOf(o.starts_at, tz), locale)} –{' '}
-                      {/* Stored exclusive: step back inside the window to name
-                          the last day that is actually closed. */}
-                      {fmtDayLong(
-                        ymdOf(new Date(new Date(o.ends_at).getTime() - 1000), tz),
-                        locale,
-                      )}
-                    </p>
-                  </div>
-                  {canEdit ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => delOff.mutate(o.id)}
-                    >
-                      {t('common.delete')}
-                    </Button>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
       </CardContent>
     </Card>
   )

@@ -195,9 +195,21 @@ Monorepo: **pnpm workspaces + Turborepo**.
   notification kind, `appointment_reassigned`, tells the student and the
   incoming instructor in the same transaction.
   Staff-side `/appointments` is the week grid alone; the policy, hours
-  and pool moved to **`/appointments/settings`** (admin-only, reached by the gear
-  beside *Book a session*) — setup is visited once and does not belong under the
-  screen staff open daily. **`/appointments/list`** is the register — every
+  and pool moved to **`/appointments/settings`** (reached by the gear beside
+  *Book a session*) — setup is visited once and does not belong under the
+  screen staff open daily. That page is **gated card by card, not as a whole**:
+  policy, hours and pool are admin-only, but **blocked dates**
+  (`docs/appointments.md` → "Blocked dates") are the one control an instructor
+  owns. No new table — `booking_time_off` has always accepted
+  `app.is_admin OR app.owns_instructor(instructor_id)` on all three writes and a
+  null `instructor_id` closes the whole academy; only the UI ever said
+  otherwise, gating the page as one thing and telling a trainer "admins only"
+  for their own days off. An instructor gets **no "who" picker** (one option is
+  not a control) and sees their own blocks plus any academy-wide closure, which
+  carries no Delete. `BlockedDatesCard` was split out of `AvailabilityCard`
+  because the two halves acquired different audiences. Still open: `booking time
+  off: staff read` is `app.is_staff`, so the instructor's list is a **display**
+  narrowing, not a boundary. **`/appointments/list`** is the register — every
   session the reader may see, filterable by status/student, paged 50
   server-side with `id` as the tie-break. The diary cannot answer "find me that
   session": it is windowed to seven days and a grid has nowhere to put a
@@ -268,8 +280,12 @@ Monorepo: **pnpm workspaces + Turborepo**.
   `app.notify_appointment_cancelled(id, actor)`, one helper called from both
   cancelling branches because they differ only in who pressed the button).
   All three share `appointment_booked`'s payload, so only `titleOf` branches.
-  **The actor is not notified** (a message telling you what you just clicked is
-  not news), and neither is staff at large (they have the diary). The
+  **Both parties are told, the actor included.** The actor used to be skipped
+  and it silently emptied the student side — 176 `appointment_booked` rows to
+  instructors against **one** to a student, because students book themselves and
+  were therefore always the actor; 50 of 52 upcoming cancellations are likewise
+  the student's own. Staff at large are still not told (they have the diary).
+  The
   **outgoing** instructor is told nothing on a handover — a real gap, since
   `cancel_appointment` overwrites `instructor_id` in place and recovering the
   previous one would cost a column. A new kind costs three cases in
@@ -284,9 +300,10 @@ Monorepo: **pnpm workspaces + Turborepo**.
   the event or it is a 409. The event is picked from `cancel_appointment`'s
   **result**, not from the button: about half of what staff cancel finds cover,
   and "your session is cancelled" when it is going ahead an hour later with
-  somebody else is worse than silence. For the two non-booking events **the
-  actor is skipped** — resolved server-side from the verified JWT, the same rule
-  the notification follows. Always a second call after the RPC, soft failure
+  somebody else is worse than silence. **Both parties are always mailed, the
+  actor included** — an actor-skip here would mean never mailing the student,
+  for the same reason it did on the notification side. Always a second call
+  after the RPC, soft failure
   only: the write has already committed either way. Unlike the other mail
   functions it uses the **service role**: it emails two people and a student
   cannot read `instructors` at all, so it authorises under the caller's JWT

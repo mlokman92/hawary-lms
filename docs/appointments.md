@@ -451,6 +451,52 @@ period and time off: what is on screen is what can be taken.
 `book_appointment` still checks, because the page is a view of a decision and
 never the decision.
 
+## Blocked dates
+
+Days nothing can be booked. There is no new table and no new policy: this is
+`booking_time_off`, which has always had a nullable `instructor_id` (null closes
+the **whole academy**) and has always been writable by
+`app.is_admin(academy_id) OR app.owns_instructor(instructor_id)` on insert,
+update and delete. `app.booking_slots` already subtracts it, so a block takes
+effect on the learner page, the staff booking dialog and `book_appointment`'s
+own check at once.
+
+**What was missing was a way in.** `/appointments/settings` was gated as a
+single admin-only page, so an instructor who opened it was told "admins only" —
+including for the one control on it that the database had always let them use.
+The gate moved from the page to the cards:
+
+| | admin | instructor |
+|---|---|---|
+| Booking policy | yes | — |
+| Opening hours | yes | — |
+| **Blocked dates** | **anyone, incl. the whole academy** | **their own** |
+| Booking pool | yes | — |
+
+An instructor gets no "who" picker, because there is exactly one answer and a
+control with one option is not a control; the insert carries their own record's
+id and RLS agrees. Their list shows **their own blocks plus any academy-wide
+closure** — the second is context they need before deciding whether to block
+anything, and it carries no Delete, matching what `app.owns_instructor` would
+accept. A trainer with no `instructors` record is told so rather than shown a
+form that cannot submit, the same real case the trainer dashboard handles.
+
+The gear on `/appointments` is no longer admin-gated, since it is now the only
+route to a control that belongs to trainers.
+
+`BlockedDatesCard` was split out of `AvailabilityCard` for this. The two halves
+were one card on the argument that when the academy is open and when it is shut
+anyway are the same question; they stopped being the same question when they
+got different audiences.
+
+**One thing deliberately not changed.** The instructor's list is filtered *for
+display*. `booking time off: staff read` is still `app.is_staff`, so a trainer's
+own JWT can read every block in the academy straight from PostgREST — the same
+shape of gap that "Who sees whose sessions" closed for `appointments`. Narrowing
+it to `app.is_admin OR app.owns_instructor(instructor_id) OR instructor_id is
+null` would be the matching move, and is a policy decision rather than part of
+building this screen.
+
 ## Email: three events, one function
 
 `supabase/functions/send-appointment-notice` tells **both** parties what became
@@ -459,8 +505,8 @@ of a session. Its body carries an appointment id and an `event`:
 | `event` | when | row status | who is mailed |
 | --- | --- | --- | --- |
 | `booked` (default) | `book_appointment` returned | `booked` | student + instructor |
-| `cancelled` | the session is off | `cancelled` | both, minus whoever cancelled |
-| `reassigned` | staff could not take it, somebody covered | still `booked` | student + the **new** instructor, minus the actor |
+| `cancelled` | the session is off | `cancelled` | student + instructor |
+| `reassigned` | staff could not take it, somebody covered | still `booked` | student + the **new** instructor |
 
 One function and not three because the shape is identical — two parties, an
 id-only body, RLS-then-service-role authorization, academy-timezone formatting,
@@ -475,11 +521,11 @@ half of what staff cancel here finds cover, and mailing a student "your session
 is cancelled" when it is going ahead an hour later with somebody else is the one
 message worse than sending nothing.
 
-**Who is told is decided server-side.** For `cancelled` and `reassigned` the
-actor is skipped, the same rule the in-app notification follows: a message
-telling you what you just clicked is not news. `booked` is unchanged — a booking
-confirmation is wanted by the person who made it, and carries what they need to
-turn up.
+**Both parties are always mailed, the actor included.** There was briefly an
+actor-skip on the two non-booking events, mirroring the notification's old rule,
+and it was wrong for the same reason — see "In-app notification" below for the
+numbers. A student who cancels their own session gets the confirmation, because
+a receipt you do not get for having asked is a missing receipt.
 
 **It is a second call, not part of the write.** Every caller invokes it after an
 RPC that has already committed, and a failure is logged, never thrown. The
@@ -509,18 +555,23 @@ does not already give, and would cost a migration to say it.
 
 Separate from the email, and more reliable than it: `book_appointment` writes a
 `notifications` row for each party **in the same transaction as the insert**, so
-if the booking exists the notification does. The actor is not notified — a
-message telling you what you just clicked is not news. See `docs/notifications.md`.
+if the booking exists the notification does.
+
+**Both parties, the actor included.** The actor used to be skipped, which
+silently emptied the student side: 176 `appointment_booked` rows went to
+instructors and **one** went to a student, because students book themselves and
+were therefore always the actor. 50 of the 52 upcoming cancelled sessions were
+likewise cancelled by the student. Staff at large are still not told — they have
+the diary. See `docs/notifications.md`.
 
 Three kinds now, and `cancel_appointment` writes two of them.
 `appointment_reassigned` goes to the student and the incoming instructor when a
 session is handed on; its payload is `appointment_booked`'s plus `from_name` —
 the session did not change, the teacher did, and that is the whole news.
 `appointment_cancelled` goes to both parties on the two branches that genuinely
-call a session off, through `app.notify_appointment_cancelled(id, actor)` — one
-helper called from both, because the branches differ only in who pressed the
-button and duplicating the block would be two places for the actor rule to
-drift. Its payload is `appointment_booked`'s verbatim. Only `titleOf` in
+call a session off, through `app.notify_appointment_cancelled(id)` — one helper
+called from both, because the branches differ only in who pressed the button.
+Its payload is `appointment_booked`'s verbatim. Only `titleOf` in
 `NotificationBell` branches: where the row leads and when the session is are the
 same question whatever became of it.
 

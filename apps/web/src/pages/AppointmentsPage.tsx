@@ -107,16 +107,16 @@ export function AppointmentsPage() {
           <Plus /> {t('appt.book_for.action')}
         </Button>
         {/* Setup is where booking is switched on at all, so the way in has to
-            be on the page that is empty until it is. Admin-only, like the page
-            it leads to. */}
-        {isAdmin ? (
-          <Button asChild variant="outline" size="icon">
-            <Link to="/appointments/settings">
-              <Settings />
-              <span className="sr-only">{t('appt.setup.title')}</span>
-            </Link>
-          </Button>
-        ) : null}
+            be on the page that is empty until it is. No longer admin-only: the
+            page it leads to now carries an instructor's own blocked dates, and
+            a trainer had no way to reach them. What each role finds there is
+            decided card by card, on the page itself. */}
+        <Button asChild variant="outline" size="icon">
+          <Link to="/appointments/settings">
+            <Settings />
+            <span className="sr-only">{t('appt.setup.title')}</span>
+          </Link>
+        </Button>
       </PageHeader>
 
       <Card className="mt-6">

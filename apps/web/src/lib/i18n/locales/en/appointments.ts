@@ -77,7 +77,13 @@ export const appointments = {
   'appt.hours.add': 'Add hours',
   'appt.hours.remove': 'Remove',
   'appt.hours.range_invalid': 'The end time must be after the start time.',
+  'appt.setup.subtitle_own': 'Days you are not available to be booked.',
+  'appt.setup.no_instructor_record':
+    'You do not have an instructor record in this academy, so there is nothing to block dates against. An admin can create one for you.',
   'appt.timeoff.title': 'Closed dates',
+  'appt.timeoff.mine_title': 'Your blocked dates',
+  'appt.timeoff.mine_description':
+    'Days you are away. Nothing can be booked with you on these days.',
   'appt.timeoff.description':
     'A holiday, or an instructor away. Nothing can be booked in these days.',
   'appt.timeoff.add': 'Close dates',

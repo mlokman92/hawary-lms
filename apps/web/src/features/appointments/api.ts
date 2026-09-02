@@ -113,13 +113,13 @@ export type CancelResult = {
 }
 
 /**
- * One recipient's outcome. `code` is why, when nothing was sent — and note that
- * `already_sent` and `is_actor` come back with `sent: true`, because both mean
- * the person is not owed an email, not that one failed.
+ * One recipient's outcome. `code` is why, when nothing was sent — except
+ * `already_sent`, which comes back with `sent: true` because it means the
+ * person already has the email, not that one failed.
  */
 export type NoticeOutcome = {
   sent: boolean
-  code?: 'no_email' | 'send_failed' | 'already_sent' | 'is_actor'
+  code?: 'no_email' | 'send_failed' | 'already_sent'
   id?: string | null
 }
 
@@ -846,9 +846,9 @@ export function useBookAppointment(academyId: string | null) {
  * Which is also why the email is chosen from the RESULT and not from the
  * button: about half of what staff cancel is covered, and mailing a student
  * "your session is cancelled" when it is going ahead an hour later with
- * somebody else is the one message worse than sending nothing. The server
- * decides who hears it — whoever clicked is skipped, the same rule the in-app
- * notification follows.
+ * somebody else is the one message worse than sending nothing. Both parties are
+ * mailed either way, the student included when the student is the one
+ * cancelling — see the function header for why.
  */
 export function useCancelAppointment(academyId: string | null) {
   const qc = useQueryClient()

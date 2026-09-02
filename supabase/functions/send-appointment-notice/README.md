@@ -10,8 +10,8 @@ The body carries an appointment id and an `event`:
 | `event` | when | row must be | who is mailed |
 |---|---|---|---|
 | `booked` (default) | after `book_appointment` | `booked` | student + instructor |
-| `cancelled` | the session is off | `cancelled` | both, minus the actor |
-| `reassigned` | somebody covered for staff who could not take it | `booked` | student + the **new** instructor, minus the actor |
+| `cancelled` | the session is off | `cancelled` | student + instructor |
+| `reassigned` | somebody covered for staff who could not take it | `booked` | student + the **new** instructor |
 
 `event` is optional and defaults to `booked`, so a caller that predates this
 still works. The row's status must agree with the event or the call is a 409: a
@@ -23,10 +23,11 @@ authorization, addresses, timezone, template. The differences live in a `COPY`
 table keyed by event; a second copy of the rest would be a second place for the
 trust model below to drift.
 
-**The actor is skipped** on `cancelled` and `reassigned`: a message telling you
-what you just clicked is not news, and it is the same rule the in-app
-notification follows. `booked` is unchanged — a booking confirmation is wanted by
-whoever made it. Who the actor is comes from the verified JWT, not the body.
+**Both parties are always mailed, including whoever pressed the button.** There
+was briefly an actor-skip on the two non-booking events; it was removed because
+in this database the student is nearly always the actor — they book and cancel
+their own sessions — so it amounted to never mailing the student. A confirmation
+withheld because you were the one who asked is a missing receipt, not restraint.
 
 ## Trust model
 
@@ -114,10 +115,10 @@ Nothing watches this. It is a query a human must choose to run.
 
 Delivery problems return **HTTP 200** with `{ ok, student, instructor }`, where
 each party is `{ sent, code?, id? }` and `code` is `no_email` · `send_failed` ·
-`already_sent` · `is_actor`. Note that `already_sent` and `is_actor` come back
-with `sent: true` — both mean the person is not owed an email, not that one
-failed. `ok` is true only when **both** were reached. A missing `RESEND_API_KEY`
-returns `{ ok: false, code: 'email_not_configured' }`.
+`already_sent`. Note that `already_sent` comes back with `sent: true` — it means
+the person already has the email, not that one failed. `ok` is true only when
+**both** were reached. A missing `RESEND_API_KEY` returns
+`{ ok: false, code: 'email_not_configured' }`.
 
 The write has already committed either way, so a delivery failure must never
 look like the booking, cancellation or handover failing. Only a bad request, or
