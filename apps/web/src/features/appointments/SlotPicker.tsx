@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
-import { fmtDayShort, fmtTime, ymdOf, type Ymd } from './calendar'
+import { fmtDayLong, fmtTime, ymdOf, type Ymd } from './calendar'
 import type { OpenSlot } from './api'
 
 /**
@@ -95,7 +95,7 @@ export function SlotPicker({
               }}
               aria-pressed={chosen}
               className={cn(
-                'flex min-w-20 shrink-0 snap-start flex-col items-center gap-0.5',
+                'flex min-w-24 shrink-0 snap-start flex-col items-center gap-0.5',
                 'rounded-lg border px-3 py-2',
                 'focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none',
                 chosen
@@ -104,7 +104,7 @@ export function SlotPicker({
               )}
             >
               <span className="text-sm font-medium whitespace-nowrap">
-                {fmtDayShort(d, locale)}
+                {fmtDayLong(d, locale)}
               </span>
               <span
                 className={cn(
