@@ -1578,6 +1578,7 @@ export type Database = {
           academy_id: string
           allow_partial_payment: boolean
           amount_paid_sen: number
+          balance_sen: number | null
           charge_to_payor: boolean | null
           course_id: string | null
           created_at: string
@@ -1603,6 +1604,7 @@ export type Database = {
           academy_id: string
           allow_partial_payment?: boolean
           amount_paid_sen?: number
+          balance_sen?: number | null
           charge_to_payor?: boolean | null
           course_id?: string | null
           created_at?: string
@@ -1628,6 +1630,7 @@ export type Database = {
           academy_id?: string
           allow_partial_payment?: boolean
           amount_paid_sen?: number
+          balance_sen?: number | null
           charge_to_payor?: boolean | null
           course_id?: string | null
           created_at?: string
@@ -2259,8 +2262,63 @@ export type Database = {
           student_no: string
         }[]
       }
+      invoice_report: {
+        Args: {
+          _academy: string
+          _course?: string
+          _dim?: string
+          _from?: string
+          _no_course?: boolean
+          _student?: string
+          _to?: string
+        }
+        Returns: {
+          billed_sen: number
+          group_count: number
+          invoice_count: number
+          key: string
+          label: string
+          outstanding_sen: number
+          paid_sen: number
+          sublabel: string
+        }[]
+      }
+      invoice_report_page: {
+        Args: {
+          _academy: string
+          _course?: string
+          _from?: string
+          _limit?: number
+          _no_course?: boolean
+          _offset?: number
+          _student?: string
+          _to?: string
+        }
+        Returns: {
+          amount_paid_sen: number
+          balance_sen: number
+          course_id: string
+          course_title: string
+          due_at: string
+          id: string
+          invoice_no: string
+          issued_at: string
+          status: Database["public"]["Enums"]["invoice_status"]
+          student_full_name: string
+          student_id: string
+          student_no: string
+          total_sen: number
+        }[]
+      }
       invoice_totals: {
-        Args: { _academy: string; _course?: string; _no_course?: boolean }
+        Args: {
+          _academy: string
+          _course?: string
+          _from?: string
+          _no_course?: boolean
+          _student?: string
+          _to?: string
+        }
         Returns: {
           collected_sen: number
           invoiced_sen: number
@@ -2329,11 +2387,16 @@ export type Database = {
       payment_log_page: {
         Args: {
           _academy: string
+          _course?: string
+          _from?: string
           _limit?: number
+          _no_course?: boolean
           _offset?: number
           _search?: string
           _sort?: string
           _status?: Database["public"]["Enums"]["payment_status"]
+          _student?: string
+          _to?: string
         }
         Returns: {
           amount_sen: number
@@ -2357,12 +2420,36 @@ export type Database = {
       payment_log_totals: {
         Args: {
           _academy: string
+          _course?: string
+          _from?: string
+          _no_course?: boolean
           _search?: string
           _status?: Database["public"]["Enums"]["payment_status"]
+          _student?: string
+          _to?: string
         }
         Returns: {
           received_sen: number
           total_count: number
+        }[]
+      }
+      payment_report: {
+        Args: {
+          _academy: string
+          _course?: string
+          _dim?: string
+          _from?: string
+          _no_course?: boolean
+          _student?: string
+          _to?: string
+        }
+        Returns: {
+          amount_sen: number
+          group_count: number
+          key: string
+          label: string
+          payment_count: number
+          sublabel: string
         }[]
       }
       record_gateway_payment: {

@@ -1,6 +1,7 @@
 import {
   BookOpen,
   CalendarClock,
+  ChartColumn,
   ClipboardList,
   FileCheck2,
   HandCoins,
@@ -99,6 +100,9 @@ const adminNav = (t: TFn): NavItem[] => [
       // The invoice book and the ledger are different questions — "what is
       // owed" vs "what arrived" — so the log is a destination, not a tab.
       { title: t('nav.payment_log'), to: '/payments/log', icon: ScrollText },
+      // And "where did it come from" is a third: the log is a flat list and
+      // the answer is a hierarchy, so it cannot be a filter on the log.
+      { title: t('nav.payment_report'), to: '/payments/report', icon: ChartColumn },
     ],
   },
   { title: t('nav.incentives'), to: '/incentives', icon: HandCoins },

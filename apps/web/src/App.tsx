@@ -47,6 +47,7 @@ import { AssignmentEditorPage } from './pages/AssignmentEditorPage'
 import { PaymentsPage } from './pages/PaymentsPage'
 import { InvoiceDetailPage } from './pages/InvoiceDetailPage'
 import { PaymentLogPage } from './pages/PaymentLogPage'
+import { PaymentReportPage } from './pages/PaymentReportPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { MembersPage } from './pages/MembersPage'
 import { ProfilePage } from './pages/ProfilePage'
@@ -218,6 +219,10 @@ export default function App() {
                       {/* Before /payments/:id in source order for readability —
                           the router ranks the static segment higher regardless. */}
                       <Route path="/payments/log" element={<PaymentLogPage />} />
+                      <Route
+                        path="/payments/report"
+                        element={<PaymentReportPage />}
+                      />
                       <Route path="/payments/:id" element={<InvoiceDetailPage />} />
                       <Route path="/incentives" element={<IncentivesPage />} />
                       <Route path="/incentives/:id" element={<IncentiveBatchPage />} />

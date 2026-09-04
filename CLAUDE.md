@@ -534,9 +534,72 @@ Monorepo: **pnpm workspaces + Turborepo**.
   set** in 200-row chunks via `fetchPaymentLogAll`, never the 50 rows on screen:
   a reconciliation that stops at row 50 is worse than none, and 200 is the
   `_limit` clamp the RPC enforces. `invalidateMoney` is the one place a money
-  write invalidates all five cached lists.
+  write invalidates all six cached lists.
   Still unbounded and deliberately left so: the **dashboard**'s `useInvoices`,
   which reads every invoice for its 6-month chart and stat tiles.
+- **Payment report** (`/payments/report`, `docs/payment-report.md`): the third
+  money screen and the third question — `/payments` is what people were *asked*
+  for, `/payments/log` is what *arrived*, this is **where it came from and who
+  still owes**. **Two views over one drill** (month → course → student → rows):
+  *Money received* aggregates `payments`; *Paid vs outstanding* aggregates
+  `invoices` — billed · paid · outstanding, **debtors first**, with a
+  Paid/Owing badge on the label. The second view is a second query and not a
+  column because **a cash ledger cannot answer "who has not paid"**: a student
+  who owes RM800 has no payment row, and absence is invisible in a book of
+  arrivals. The two also bucket months differently on purpose — received on
+  `coalesce(paid_at, created_at)`, outstanding on `coalesce(issued_at,
+  created_at)` — which is why one query could not serve both; everything else
+  (scope, drill, breadcrumb) is shared, so switching view keeps your place.
+  `invoice_report`'s `paid_sen` is the invoice's own `amount_paid_sen`, never a
+  sum of `payments`: joining payments would multiply the billed figure by the
+  number of instalments. Money received, drilled **month → course → student →
+  the payments themselves**. Not
+  a filter on the log, because a ledger is a flat list and the answer is a
+  hierarchy; not a chart, because the dashboard's `collected` series cannot be
+  pressed to find out *which course*. The rungs are **not a path** but three
+  independent narrowings in the URL (`?m` · `?c` · `?s`, plus `?from`/`?to` and
+  `?page`), and the table groups by the first one still open — so
+  `?c=<id>` alone reads "this course, month by month" with no extra screen
+  (`nextDim()`), and dropping a crumb drops exactly that narrowing.
+  **Succeeded only**, in `payment_report` *and* in the page's log calls: the
+  ledger keeps failed and refunded rows on purpose, but a report of money
+  received that counts them overstates the takings, and the summary line and the
+  column under it must count the same rows. Days are the **academy's** —
+  `coalesce(paid_at, created_at) at time zone academies.timezone`, so a 00:30
+  UTC payment on 1 September is not filed under August.
+  The load-bearing decision: `payment_log_page` / `payment_log_totals` **grew
+  the report's scope arguments** (`_from`/`_to`/`_course`/`_no_course`/
+  `_student`) instead of the report getting a row reader of its own, so **the
+  leaf of the drill *is* the ledger, filtered**, and every rung's total comes
+  from `payment_log_totals` over the identical scope — a second copy of that
+  five-table join could drift, and drift here shows up as a group totalling
+  RM12,000 whose rows add to RM11,800. Both are drop-and-create (a new
+  signature would otherwise leave an ambiguous overload); `/payments/log` passes
+  none of them. The month rung is `_from`/`_to`, **not** a `_month` argument:
+  `'2026-08'` → first/last day is string arithmetic the client can do without
+  knowing a timezone, and it keeps one scope vocabulary across all three
+  functions. Groups are **not paged** (a report you page through is a list
+  again) but clamped at 500, and `group_count` comes back so a clipped report
+  says so rather than lying about the total; the leaf is paged at 50 and the CSV
+  walks the whole filtered set. Every function is SECURITY INVOKER, so
+  `docs/money-is-admin-only.md` already means a trainer gets zero rows;
+  `AdminRoute` covers the route anyway.
+- **Clickable money tiles** (`/payments`): the four `StatCard`s are now
+  `FilterStatCard`s — a tile is a **sum over a set of invoices**, so pressing it
+  shows that set ("who still owes me" was a figure you could read but not
+  open). Invoiced = everything the tiles count (not void/cancelled/draft),
+  Collected = `amount_paid_sen > 0`, Outstanding = `balance_sen > 0`, Overdue =
+  that plus past `due_at`. **Collected is invoices with money against them, not
+  invoices settled in full** — the tile is the raw sum of `amount_paid_sen` and a
+  part-paid invoice contributed to it, so `status = 'paid'` would open a set
+  that does not add up to the number above it. The tiles deliberately ignore
+  the filter they apply (one that emptied itself when pressed could not be
+  un-pressed by reading it) and pressing the pressed one clears.
+  **`invoices.balance_sen`** is a generated stored column (`greatest(0,
+  total_sen - amount_paid_sen)`) added for this: `total_sen - amount_paid_sen >
+  0` is a column-to-column comparison PostgREST cannot express at all. Clamped
+  at zero so one student's overpayment cannot erase another's arrears in any sum
+  over it, and **never written by a client**.
 - **ToyyibPay charge** (`docs/toyyibpay-payments.md`): the flat RM1 FPX fee can
   be passed to the payer via `billChargeToCustomer='0'`. Academy default
   `academy_payment_settings.toyyibpay_charge_to_payor`, per-invoice override

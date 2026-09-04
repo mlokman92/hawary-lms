@@ -17,6 +17,7 @@ export const nav = {
   'nav.appointments': 'Appointments',
   'nav.payments': 'Payments',
   'nav.payment_log': 'Payment log',
+  'nav.payment_report': 'Payment report',
   'nav.incentives': 'Incentive',
   'nav.members': 'Members',
   'nav.settings': 'Settings',

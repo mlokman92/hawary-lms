@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, CheckCircle2, Clock, Plus, Wallet } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { formatMYR } from '@hawary/shared'
 import { useAcademy } from '@/lib/academy'
 import { fmtDate } from '@/lib/format'
-import { useT } from '@/lib/i18n'
+import { useT, type TKey } from '@/lib/i18n'
+import type { Tone } from '@/lib/tone'
 import { useCourses } from '@/features/courses/api'
 import { PageHeader } from '@/components/patterns/PageHeader'
-import { StatCard } from '@/components/patterns/StatCard'
+import { FilterStatCard } from '@/components/patterns/FilterStatCard'
 import { EmptyState } from '@/components/patterns/EmptyState'
 import { Pager } from '@/components/patterns/Pager'
 import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
@@ -31,12 +33,14 @@ import {
 import { InvoiceFormDialog } from '@/features/payments/InvoiceFormDialog'
 import {
   ALL_COURSES,
+  ALL_MONEY,
   INVOICE_STATUS_LABEL,
   INVOICE_STATUS_VARIANT,
   NO_COURSE,
   PAGE_SIZE,
   useInvoicePage,
   useInvoiceStats,
+  type MoneyFilter,
 } from '@/features/payments/api'
 
 /**
@@ -50,6 +54,52 @@ function money(sen: number | undefined): string {
   return sen === undefined ? '—' : formatMYR(sen)
 }
 
+/**
+ * The four tiles, in one table because each is now three things at once — a
+ * label, a figure and a filter — and keeping them as four hand-written blocks
+ * meant three chances for those to drift apart.
+ *
+ * `stat` names the field on the totals, `key` the filter it applies; they are
+ * deliberately the same idea under two names so a tile cannot show one sum and
+ * open another set.
+ */
+const MONEY_TILES: {
+  key: MoneyFilter
+  stat: 'total' | 'collected' | 'outstanding' | 'overdue'
+  labelKey: TKey
+  icon: LucideIcon
+  tone: Tone
+}[] = [
+  {
+    key: 'invoiced',
+    stat: 'total',
+    labelKey: 'payments.stat.invoiced',
+    icon: Wallet,
+    tone: 'muted',
+  },
+  {
+    key: 'collected',
+    stat: 'collected',
+    labelKey: 'payments.stat.collected',
+    icon: CheckCircle2,
+    tone: 'positive',
+  },
+  {
+    key: 'outstanding',
+    stat: 'outstanding',
+    labelKey: 'payments.stat.outstanding',
+    icon: Clock,
+    tone: 'warning',
+  },
+  {
+    key: 'overdue',
+    stat: 'overdue',
+    labelKey: 'common.overdue',
+    icon: AlertTriangle,
+    tone: 'danger',
+  },
+]
+
 export function PaymentsPage() {
   const navigate = useNavigate()
   const { t } = useT()
@@ -59,18 +109,23 @@ export function PaymentsPage() {
   const { data: courses } = useCourses(activeAcademyId)
   const [open, setOpen] = useState(false)
   const [courseFilter, setCourseFilter] = useState(ALL_COURSES)
+  const [moneyFilter, setMoneyFilter] = useState<MoneyFilter>(ALL_MONEY)
   const [showAllCourses, setShowAllCourses] = useState(false)
   const [page, setPage] = useState(1)
 
-  // Page 4 of every invoice is not page 4 of one course's invoices.
-  useEffect(() => setPage(1), [courseFilter])
+  // Page 4 of every invoice is not page 4 of one course's invoices — nor of
+  // the overdue ones.
+  useEffect(() => setPage(1), [courseFilter, moneyFilter])
 
-  // The rows are one page; the tiles are the whole filtered set. Two queries
-  // because a page of 50 cannot answer "how much is outstanding".
+  // The rows are one page; the tiles are the whole course-filtered set. Two
+  // queries because a page of 50 cannot answer "how much is outstanding" — and
+  // the tiles deliberately ignore `moneyFilter`, since a tile that emptied
+  // itself when pressed could not be un-pressed by reading it.
   const { data, isLoading, error } = useInvoicePage(
     activeAcademyId,
     courseFilter,
     page,
+    moneyFilter,
   )
   const { data: stats } = useInvoiceStats(activeAcademyId, courseFilter)
 
@@ -81,7 +136,10 @@ export function PaymentsPage() {
 
   const rows = data?.rows ?? []
   const total = data?.total ?? 0
-  const filtering = courseFilter !== ALL_COURSES
+  // Either narrowing means an empty list is "nothing matched", not "nothing
+  // exists" — and the difference decides whether the reader is offered a
+  // Create button or told to widen.
+  const filtering = courseFilter !== ALL_COURSES || moneyFilter !== ALL_MONEY
 
   return (
     <div className="mx-auto w-full max-w-6xl">
@@ -132,31 +190,27 @@ export function PaymentsPage() {
         ) : null}
       </div>
 
-      {/* Stats */}
+      {/* Stats — and the list's filter. A tile is a sum over a set of
+          invoices, so pressing it shows that set: "who still owes me" was
+          otherwise a figure you could read but not open. The tiles keep
+          showing the whole picture while one is pressed, so the next question
+          is one click away rather than a click back and a click in. */}
       <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard
-          label={t('payments.stat.invoiced')}
-          value={money(stats?.total)}
-          icon={Wallet}
-        />
-        <StatCard
-          label={t('payments.stat.collected')}
-          value={money(stats?.collected)}
-          icon={CheckCircle2}
-          tone="positive"
-        />
-        <StatCard
-          label={t('payments.stat.outstanding')}
-          value={money(stats?.outstanding)}
-          icon={Clock}
-          tone="warning"
-        />
-        <StatCard
-          label={t('common.overdue')}
-          value={money(stats?.overdue)}
-          icon={AlertTriangle}
-          tone="danger"
-        />
+        {MONEY_TILES.map((tile) => (
+          <FilterStatCard
+            key={tile.key}
+            label={t(tile.labelKey)}
+            value={money(stats?.[tile.stat])}
+            icon={tile.icon}
+            tone={tile.tone}
+            active={moneyFilter === tile.key}
+            // Pressing the pressed one clears, so the tiles are also the way
+            // back out of the filter they applied.
+            onClick={() =>
+              setMoneyFilter(moneyFilter === tile.key ? ALL_MONEY : tile.key)
+            }
+          />
+        ))}
       </div>
 
       {/* Records */}

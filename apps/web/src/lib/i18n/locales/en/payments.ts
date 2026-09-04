@@ -22,7 +22,7 @@ export const payments = {
   'payments.table.invoice': 'Invoice',
   'payments.empty.none': 'No invoices yet.',
   'payments.empty.create_first': 'Create your first invoice',
-  'payments.empty.no_match': 'No invoices for this course.',
+  'payments.empty.no_match': 'No invoices match.',
 
   // Invoice status badge (draft → common.draft, overdue → common.overdue)
   'payments.status.issued': 'Issued',
@@ -131,6 +131,36 @@ export const payments = {
   'payments.log.no_match': 'No payments match.',
   'payments.log.csv.student_no': 'Student no.',
   'payments.log.csv.provider': 'Provider',
+
+  // Payment report (/payments/report) — money received, drilled
+  'payments.report.title': 'Payment report',
+  'payments.report.subtitle':
+    'Money received, by month, course and student. Open a row to go deeper.',
+  'payments.report.all': 'All payments',
+  'payments.report.trail': 'Report breakdown',
+  'payments.report.month': 'Month',
+  'payments.report.payments': 'Payments',
+  'payments.report.received': 'Received',
+  'payments.report.no_course': 'No course',
+  'payments.report.from': 'From',
+  'payments.report.to': 'to',
+  'payments.report.empty': 'No payments received in this period.',
+  'payments.report.clipped': '{count} smaller groups are not shown.',
+
+  // Report views — the payments book, and the invoice book beside it
+  'payments.report.view.received': 'Money received',
+  'payments.report.view.outstanding': 'Paid vs outstanding',
+  'payments.report.subtitle_outstanding':
+    'Billed, paid and still owing, by month, course and student. Whoever owes most is first.',
+  'payments.report.invoices': 'Invoices',
+  'payments.report.billed': 'Billed',
+  'payments.report.owing': 'Owing',
+  'payments.report.all_invoices': 'All invoices',
+  'payments.report.empty_invoices': 'No invoices issued in this period.',
+  'payments.report.summary_outstanding_one':
+    '{count} invoice · {billed} billed · {outstanding} outstanding',
+  'payments.report.summary_outstanding_other':
+    '{count} invoices · {billed} billed · {outstanding} outstanding',
 
   // Payment methods
   'payments.method.cash': 'Cash',

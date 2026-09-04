@@ -66,10 +66,47 @@ export type PaymentLogRow = {
   recorded_by_name: string | null
 }
 
+/**
+ * Which slice of the ledger a caller is asking about.
+ *
+ * Named separately from the search/status filter because it is the *report's*
+ * vocabulary: `payment_report` takes exactly these arguments, so a rung of the
+ * drill and the payments underneath it are asking the same question of the
+ * database and cannot disagree about the answer. `/payments/log` leaves every
+ * field unset and reads the whole book.
+ *
+ * `from`/`to` are academy-local calendar days (`YYYY-MM-DD`), both inclusive —
+ * never instants. A payment at 00:30 UTC on 1 September is an 8:30 a.m.
+ * Malaysian payment on the same day, and a report that filed it under August
+ * would be wrong to the person reading it.
+ */
+export type PaymentScope = {
+  from?: string | null
+  to?: string | null
+  courseId?: string | null
+  /** Invoices with no course — a real bucket `courseId` cannot express. */
+  noCourse?: boolean
+  studentId?: string | null
+}
+
 /** What both log queries filter by. Held together so they cannot drift apart. */
 export type PaymentLogFilters = {
   search: string
   status: PaymentStatus | null
+  /** Absent on `/payments/log`, which is the whole ledger by definition. */
+  scope?: PaymentScope
+}
+
+/** A scope as one cache-key segment. Undefined and all-empty must agree. */
+function scopeKey(s: PaymentScope | undefined): string {
+  if (!s) return ''
+  return [
+    s.from ?? '',
+    s.to ?? '',
+    s.courseId ?? '',
+    s.noCourse ? '1' : '',
+    s.studentId ?? '',
+  ].join('|')
 }
 
 /**
@@ -106,9 +143,10 @@ const logKey = (
   f: PaymentLogFilters,
   sort: PaymentLogSort,
   page: number,
-) => ['payment-log', a, f.search, f.status, sort, page] as const
+) =>
+  ['payment-log', a, f.search, f.status, scopeKey(f.scope), sort, page] as const
 const logTotalsKey = (a: string | null, f: PaymentLogFilters) =>
-  ['payment-log-totals', a, f.search, f.status] as const
+  ['payment-log-totals', a, f.search, f.status, scopeKey(f.scope)] as const
 
 export function useInvoices(academyId: string | null) {
   return useQuery({
@@ -174,9 +212,10 @@ export function useStudentInvoices(
 /**
  * Every cached list a money write can move.
  *
- * One helper rather than a call per mutation: there are five keys now — the
+ * One helper rather than a call per mutation: there are nine keys now — the
  * dashboard's whole-invoice read, the paged invoice list and its totals, the
- * ledger page and its totals — and the failure mode of forgetting one is a
+ * ledger page and its totals, and the report's two views — and the failure mode
+ * of forgetting one is a
  * stale money figure, which is the worst kind of stale. The paged keys are
  * invalidated by prefix because every page and filter combination is its own
  * entry and any of them may be wrong after a write.
@@ -187,6 +226,10 @@ function invalidateMoney(qc: QueryClient, academyId: string) {
   qc.invalidateQueries({ queryKey: ['invoice-totals'] })
   qc.invalidateQueries({ queryKey: ['payment-log'] })
   qc.invalidateQueries({ queryKey: ['payment-log-totals'] })
+  qc.invalidateQueries({ queryKey: ['payment-report'] })
+  qc.invalidateQueries({ queryKey: ['invoice-report'] })
+  qc.invalidateQueries({ queryKey: ['invoice-report-page'] })
+  qc.invalidateQueries({ queryKey: ['invoice-report-totals'] })
 }
 
 /** Rows per page, shared by both paged lists so they feel like one product. */
@@ -194,13 +237,24 @@ export const PAGE_SIZE = 50
 
 type PaymentLogTotalsRow = { total_count: number; received_sen: number }
 
-/** The filter arguments both log calls share, so they can never disagree. */
-function searchArgs(filters: PaymentLogFilters) {
+/**
+ * The filter arguments both log calls share, so they can never disagree.
+ *
+ * Every field is omitted rather than sent as null: an absent argument takes the
+ * SQL default, which is exactly what "no filter" means on that side. The scope
+ * half is the same shape `payment_report` takes, which is what lets the report
+ * point all three functions at one slice of the ledger.
+ */
+export function scopeArgs(filters: PaymentLogFilters) {
+  const s = filters.scope
   return {
-    // Omit rather than send null: an absent argument takes the SQL default,
-    // which is exactly what "no filter" means on that side.
     ...(filters.search.trim() ? { _search: filters.search.trim() } : {}),
     ...(filters.status ? { _status: filters.status } : {}),
+    ...(s?.from ? { _from: s.from } : {}),
+    ...(s?.to ? { _to: s.to } : {}),
+    ...(s?.courseId ? { _course: s.courseId } : {}),
+    ...(s?.noCourse ? { _no_course: true } : {}),
+    ...(s?.studentId ? { _student: s.studentId } : {}),
   }
 }
 
@@ -222,15 +276,21 @@ export function usePaymentLogPage(
   filters: PaymentLogFilters,
   sort: PaymentLogSort,
   page: number,
+  /**
+   * False while the caller is showing something else. The report renders rows
+   * only at the bottom of its drill, and fetching 50 of them behind every
+   * aggregate rung would be a request per drill nobody reads.
+   */
+  enabled = true,
 ) {
   return useQuery({
     queryKey: logKey(academyId, filters, sort, page),
-    enabled: !!academyId,
+    enabled: !!academyId && enabled,
     placeholderData: keepPreviousData,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('payment_log_page', {
         _academy: academyId!,
-        ...searchArgs(filters),
+        ...scopeArgs(filters),
         _sort: sort,
         _limit: PAGE_SIZE,
         _offset: (page - 1) * PAGE_SIZE,
@@ -260,7 +320,7 @@ export function usePaymentLogTotals(
     queryFn: async () => {
       const { data, error } = await supabase.rpc('payment_log_totals', {
         _academy: academyId!,
-        ...searchArgs(filters),
+        ...scopeArgs(filters),
       })
       if (error) throw error
       const row = (data as unknown as PaymentLogTotalsRow[] | null)?.[0]
@@ -296,7 +356,7 @@ export async function fetchPaymentLogAll(
   while (rows.length < total) {
     const { data, error } = await supabase.rpc('payment_log_page', {
       _academy: academyId,
-      ...searchArgs(filters),
+      ...scopeArgs(filters),
       // Same order as the screen: a CSV that disagrees with the table it was
       // exported from is a support ticket waiting to happen.
       _sort: sort,
@@ -317,6 +377,21 @@ export async function fetchPaymentLogAll(
 export const ALL_COURSES = 'all'
 export const NO_COURSE = '__none__'
 
+/**
+ * Which of the four money tiles is pressed, as a filter on the invoice list.
+ *
+ * The tiles are sums; this is the *set* each sum was taken over, so pressing
+ * one shows exactly the invoices behind the figure. `invoiced` is the whole
+ * set, which is why it doubles as "no filter".
+ *
+ * `collected` is invoices with money against them, not invoices settled in
+ * full: the tile is the raw sum of `amount_paid_sen`, and a part-paid invoice
+ * contributed to it. Narrowing to `status = 'paid'` would show a set that does
+ * not add up to the number above it.
+ */
+export const ALL_MONEY = 'invoiced'
+export type MoneyFilter = 'invoiced' | 'collected' | 'outstanding' | 'overdue'
+
 type InvoiceTotalsRow = {
   invoiced_sen: number
   collected_sen: number
@@ -336,9 +411,10 @@ export function useInvoicePage(
   academyId: string | null,
   courseFilter: string,
   page: number,
+  money: MoneyFilter = ALL_MONEY,
 ) {
   return useQuery({
-    queryKey: ['invoice-page', academyId, courseFilter, page] as const,
+    queryKey: ['invoice-page', academyId, courseFilter, money, page] as const,
     enabled: !!academyId,
     placeholderData: keepPreviousData,
     queryFn: async () => {
@@ -352,6 +428,20 @@ export function useInvoicePage(
         .eq('academy_id', academyId!)
       if (courseFilter === NO_COURSE) q = q.is('course_id', null)
       else if (courseFilter !== ALL_COURSES) q = q.eq('course_id', courseFilter)
+
+      if (money !== ALL_MONEY) {
+        // A tile sums only real receivables, so pressing one must not turn up
+        // rows the tile did not count. A deny-list rather than an allow-list,
+        // to match `invoice_totals` verbatim: a status added later must join
+        // both or neither, or the list stops adding up to the number above it.
+        q = q.neq('status', 'void').neq('status', 'cancelled').neq('status', 'draft')
+        if (money === 'collected') q = q.gt('amount_paid_sen', 0)
+        // `balance_sen` is a generated column precisely so this is a filter and
+        // not a column-to-column comparison PostgREST cannot express.
+        else q = q.gt('balance_sen', 0)
+        if (money === 'overdue')
+          q = q.not('due_at', 'is', null).lt('due_at', new Date().toISOString())
+      }
 
       const { data, error, count } = await q
         .order('created_at', { ascending: false })

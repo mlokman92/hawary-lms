@@ -63,6 +63,9 @@ export function sampleInvoice(academyId: string): InvoiceDetail {
     tax_sen: TAX_SEN,
     total_sen: subtotalSen + TAX_SEN,
     amount_paid_sen: PAID_SEN,
+    // Generated in the database; computed here so the fixture agrees with what
+    // a real row would hold rather than carrying a second, invented balance.
+    balance_sen: Math.max(0, subtotalSen + TAX_SEN - PAID_SEN),
     issued_at: ISSUED_AT,
     due_at: DUE_AT,
     notes: translate('doc.sample.notes'),

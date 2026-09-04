@@ -16,6 +16,10 @@ Living documentation for Hawary LMS.
 - [money-is-admin-only.md](money-is-admin-only.md) — why the five money SELECT
   policies moved from `app.is_staff` to `app.is_admin`, what that closed, and
   the trainer dashboard that replaced the finance one at `/`.
+- [payment-report.md](payment-report.md) — the money-received drill
+  (month → course → student → payments), why its rungs are independent
+  narrowings rather than a path, and why the leaf reuses the ledger's own
+  functions instead of getting one of its own.
 
 Add an entry here when you create a new doc. Keep decisions with their rationale so
 future work (and Claude) understands *why*, not just *what*.

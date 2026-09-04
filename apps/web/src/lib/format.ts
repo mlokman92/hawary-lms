@@ -49,6 +49,24 @@ export function fmtMonthYear(iso: string | null | undefined): string {
 }
 
 /**
+ * A 'YYYY-MM' bucket as a month name — "August 2026", "Ogos 2026".
+ *
+ * Takes the key, not an instant: the payment report's months are academy-local
+ * calendar buckets the database already decided, and re-parsing one as a local
+ * date would let a browser west of Kuala Lumpur render August's takings as
+ * July. Pinned to UTC for the same reason.
+ */
+export function fmtYearMonth(ym: string): string {
+  const d = new Date(`${ym}-01T00:00:00Z`)
+  if (Number.isNaN(d.getTime())) return ym
+  return d.toLocaleDateString(locale(), {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+}
+
+/**
  * Avatar fallback initials. Language-neutral, but it belongs with the other
  * display helpers: several surfaces render the same person and should not each
  * decide what a two-word name collapses to.

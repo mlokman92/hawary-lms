@@ -23,7 +23,7 @@ export const payments: PaymentsDict = {
   'payments.table.invoice': 'Invois',
   'payments.empty.none': 'Belum ada invois.',
   'payments.empty.create_first': 'Cipta invois pertama anda',
-  'payments.empty.no_match': 'Tiada invois untuk kursus ini.',
+  'payments.empty.no_match': 'Tiada invois yang sepadan.',
 
   // Status invois
   'payments.status.issued': 'Dikeluarkan',
@@ -135,6 +135,36 @@ export const payments: PaymentsDict = {
   'payments.log.no_match': 'Tiada bayaran yang sepadan.',
   'payments.log.csv.student_no': 'No. pelajar',
   'payments.log.csv.provider': 'Penyedia',
+
+  // Laporan bayaran (/payments/report) — wang diterima, boleh dileraikan
+  'payments.report.title': 'Laporan bayaran',
+  'payments.report.subtitle':
+    'Wang diterima, mengikut bulan, kursus dan pelajar. Buka satu baris untuk melihat lebih terperinci.',
+  'payments.report.all': 'Semua bayaran',
+  'payments.report.trail': 'Leraian laporan',
+  'payments.report.month': 'Bulan',
+  'payments.report.payments': 'Bayaran',
+  'payments.report.received': 'Diterima',
+  'payments.report.no_course': 'Tiada kursus',
+  'payments.report.from': 'Dari',
+  'payments.report.to': 'hingga',
+  'payments.report.empty': 'Tiada bayaran diterima dalam tempoh ini.',
+  'payments.report.clipped': '{count} kumpulan lebih kecil tidak dipaparkan.',
+
+  // Paparan laporan — buku bayaran, dan buku invois di sebelahnya
+  'payments.report.view.received': 'Wang diterima',
+  'payments.report.view.outstanding': 'Dibayar vs tertunggak',
+  'payments.report.subtitle_outstanding':
+    'Dibilkan, dibayar dan masih terhutang, mengikut bulan, kursus dan pelajar. Yang paling banyak berhutang di atas.',
+  'payments.report.invoices': 'Invois',
+  'payments.report.billed': 'Dibilkan',
+  'payments.report.owing': 'Terhutang',
+  'payments.report.all_invoices': 'Semua invois',
+  'payments.report.empty_invoices': 'Tiada invois dikeluarkan dalam tempoh ini.',
+  'payments.report.summary_outstanding_one':
+    '{count} invois · {billed} dibilkan · {outstanding} tertunggak',
+  'payments.report.summary_outstanding_other':
+    '{count} invois · {billed} dibilkan · {outstanding} tertunggak',
 
   // Kaedah bayaran
   'payments.method.cash': 'Tunai',
