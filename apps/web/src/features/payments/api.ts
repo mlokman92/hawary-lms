@@ -230,6 +230,11 @@ function invalidateMoney(qc: QueryClient, academyId: string) {
   qc.invalidateQueries({ queryKey: ['invoice-report'] })
   qc.invalidateQueries({ queryKey: ['invoice-report-page'] })
   qc.invalidateQueries({ queryKey: ['invoice-report-totals'] })
+  // The course roster is read from `enrollments`, but raising an invoice is
+  // exactly what moves a student out of its "never invoiced" bucket — so a
+  // money write has to reach it like any other list here.
+  qc.invalidateQueries({ queryKey: ['course-billing-summary'] })
+  qc.invalidateQueries({ queryKey: ['course-billing-roster'] })
 }
 
 /** Rows per page, shared by both paged lists so they feel like one product. */

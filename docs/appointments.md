@@ -425,6 +425,45 @@ dashboard's **Needs closing** card. That is not duplication: the archive is
 somewhere you go to look, and Needs closing is something that comes and finds
 you.
 
+## Message the student on WhatsApp
+
+`AppointmentDialog` carries a **WhatsApp** button beside "Open student", so the
+one screen every session opens into is where you reach the person on it. One
+button rather than three: the dialog is mounted by `/appointments`,
+`/appointments/list` **and** the trainer dashboard, and the two dashboard cards
+that mount it — *Needs closing* and *Your week* — are exactly where an
+instructor is standing when they want to send "see you at 3".
+
+Three decisions worth keeping:
+
+- **Not gated on `canAct`.** That gate exists for the three writes underneath
+  it — mark done, mark missed, hand on — and it mirrors the DB policy. Messaging
+  a student changes nothing, and anyone who can see the session can already read
+  the number on the student's own page. Gating it would be a rule the database
+  does not have.
+- **The draft is only offered for a session still going ahead.** WhatsApp opens
+  with the text in the box, not sent, so the wording is the app's suggestion and
+  the instructor still presses send. "A reminder about your session on…" under a
+  **Cancelled** badge would be the app putting words in somebody's mouth that
+  contradict the row they are looking at, so the other statuses open an empty
+  chat.
+- **Absent, not disabled, when there is no usable number.** 35 of the 676
+  student records here carry no phone at all, and a dead button says less than
+  the space it occupies.
+
+`lib/phone.ts` is the one place that turns a stored number into `wa.me` digits,
+because the column holds no single shape: of the numbers in this database 551
+already start `60`, 67 start `0`, 22 start `+`, and one is neither. A local
+`012-345 6789` becomes `60123456789` (the trunk `0` is not part of the
+international number); anything already carrying a country code **keeps it**,
+including a non-Malaysian one — guessing a country for somebody who told us
+theirs would send the message nowhere. Anything it cannot read returns null and
+the button does not render, rather than a prefix being invented for it.
+
+`AppointmentRow`'s student embed gained `phone` for this. On the row rather than
+a second read per dialog opening: one column against one request each time
+somebody clicks a session is not a trade worth making.
+
 ## Two caps, not one
 
 `max_open_per_student` bounds the **queue** — how much of the future one student

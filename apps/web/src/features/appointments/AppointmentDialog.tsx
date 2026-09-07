@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { MessageCircle } from 'lucide-react'
 import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
+import { waLink } from '@/lib/phone'
 import { TONE_CLASS } from '@/lib/tone'
 import { Button } from '@/components/ui/button'
 import {
@@ -77,6 +79,30 @@ export function AppointmentDialog({
   const canAct =
     active?.role === 'admin' ||
     (!!myInstructor.data && myInstructor.data.id === appointment.instructor_id)
+
+  /**
+   * Message the student, with the session already written into the box.
+   *
+   * Not gated on `canAct`: that gate is for the three writes below, and
+   * contacting the student before a lesson is not one of them — it changes
+   * nothing here and anyone who can see the session may already read the
+   * number on the student's own page.
+   *
+   * The draft is only offered for a session that is still going ahead. Opening
+   * WhatsApp with "a reminder about your session" typed out under a **Cancelled**
+   * badge would be the app contradicting
+   * the row they are looking at, so the other statuses open an empty chat and
+   * leave the wording to the person sending it.
+   */
+  const wa = waLink(
+    appointment.students?.phone,
+    isOpen
+      ? t('appt.whatsapp.draft', {
+          date: fmtWhen(appointment.starts_at, tz, locale),
+          time: fmtRange(appointment.starts_at, appointment.ends_at, tz),
+        })
+      : undefined,
+  )
 
   async function run(fn: () => Promise<unknown>) {
     setError(null)
@@ -176,11 +202,24 @@ export function AppointmentDialog({
         {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
         <DialogFooter className="sm:justify-between">
-          <Button asChild variant="ghost">
-            <Link to={`/students/${appointment.student_id}`}>
-              {t('appt.open_student')}
-            </Link>
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild variant="ghost">
+              <Link to={`/students/${appointment.student_id}`}>
+                {t('appt.open_student')}
+              </Link>
+            </Button>
+            {/* Absent, not disabled, when the record has no usable number:
+                35 student records here carry no phone at all, and a dead
+                button says less than the space it takes up. */}
+            {wa ? (
+              <Button asChild variant="outline">
+                <a href={wa} target="_blank" rel="noopener noreferrer">
+                  <MessageCircle />
+                  {t('appt.whatsapp')}
+                </a>
+              </Button>
+            ) : null}
+          </div>
           {isOpen && canAct && !outcome ? (
             <div className="flex flex-wrap gap-2">
               <Button

@@ -57,12 +57,27 @@ export function InvoiceFormDialog({
   onOpenChange,
   onCreated,
   initialStudentId,
+  initialStudentIds,
+  initialCourseId,
 }: {
   academyId: string
   open: boolean
   onOpenChange: (open: boolean) => void
   onCreated: (id: string) => void
   initialStudentId?: string
+  /**
+   * Preselect a whole group. The course billing roster opens this with every
+   * student it found unbilled — 94 of them on a fresh intake — and billing
+   * them one dialog at a time was the work that report exists to remove.
+   */
+  initialStudentIds?: string[]
+  /**
+   * Preselect the course. Note this is the same control as the student-list
+   * filter, and deliberately so: `courseFilter` is what stamps `course_id` on
+   * the invoices, so seeding it both narrows the list and files the bill under
+   * the course the caller came from.
+   */
+  initialCourseId?: string
 }) {
   const { user } = useAuth()
   const { t, tn } = useT()
@@ -89,11 +104,21 @@ export function InvoiceFormDialog({
   const gatewayOn = !!paymentSettings?.toyyibpay_enabled
   const chargeDefault = !!paymentSettings?.toyyibpay_charge_to_payor
 
+  // An array prop is a new object every render, so the effect below keys on
+  // its contents. Without this it would re-seed on every parent render and
+  // wipe out selections and line items the admin had already typed.
+  const seedIds = (initialStudentIds ?? []).join(',')
+
   useEffect(() => {
     if (!open) return
-    setSelected(initialStudentId ? new Set([initialStudentId]) : new Set())
-    setCourseFilter('all')
-    setShowAllCourses(false)
+    const ids = seedIds ? seedIds.split(',') : []
+    if (ids.length) setSelected(new Set(ids))
+    else setSelected(initialStudentId ? new Set([initialStudentId]) : new Set())
+    setCourseFilter(initialCourseId ?? 'all')
+    // A course arriving from a caller may be a draft, which the filter hides by
+    // default — and a filter whose current value is not in its own list reads
+    // as empty. Revealing them all is the cheaper fix of the two.
+    setShowAllCourses(!!initialCourseId)
     setSearch('')
     setItems([blankItem()])
     setTax('')
@@ -102,7 +127,7 @@ export function InvoiceFormDialog({
     setAllowPartial(false)
     setMinPartial('')
     setError(null)
-  }, [open, initialStudentId])
+  }, [open, initialStudentId, seedIds, initialCourseId])
 
   // Seed from the academy default exactly once per opening, then let the form
   // own it. The settings query may resolve after the dialog is already open, so

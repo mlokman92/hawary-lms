@@ -106,6 +106,24 @@ export const courses = {
   'courses.form.title_required': 'Title is required.',
   'courses.form.save_changes': 'Save changes',
   'courses.form.create': 'Create course',
+
+  // --- Billing (/courses/:id/billing), admin-only ---------------------------
+  // The one money question the invoice book cannot answer: a student nobody
+  // has billed has no invoice, so they appear on no other money screen.
+  'courses.billing.title': 'Billing',
+  'courses.billing.nav': 'Billing',
+  'courses.billing.search': 'Search name, number or email',
+  'courses.billing.summary':
+    '{students} enrolled · {billed} billed · {outstanding} outstanding',
+  'courses.billing.status.uninvoiced': 'Never invoiced',
+  'courses.billing.status.unpaid': 'Nothing paid',
+  'courses.billing.status.partial': 'Part paid',
+  'courses.billing.status.paid': 'Paid',
+  'courses.billing.invoice_unbilled_one': 'Invoice {count} student',
+  'courses.billing.invoice_unbilled_other': 'Invoice {count} students',
+  'courses.billing.of_invoices': 'of {count} invoices',
+  'courses.billing.empty_course': 'Nobody is enrolled on this course yet.',
+  'courses.billing.empty_filter': 'No students match this filter.',
 } as const
 
 export type CoursesDict = Record<keyof typeof courses, string>

@@ -30,9 +30,20 @@ export const APPOINTMENT_STATUS: Record<
   no_show: { labelKey: 'appt.status.no_show', tone: 'danger' },
 }
 
-/** An appointment as the staff calendar reads it. */
+/**
+ * An appointment as the staff calendar reads it.
+ *
+ * `phone` rides along on the student because every screen that opens a session
+ * offers to message them before it starts, and a second read per row to fetch
+ * one column would be a request per dialog opening.
+ */
 export type AppointmentRow = Appointment & {
-  students: { id: string; full_name: string | null; student_no: string } | null
+  students: {
+    id: string
+    full_name: string | null
+    student_no: string
+    phone: string | null
+  } | null
   instructors: { id: string; full_name: string | null } | null
 }
 
@@ -472,7 +483,7 @@ export function useAcademyAppointments(
       const { data, error } = await supabase
         .from('appointments')
         .select(
-          '*, students(id, full_name, student_no), instructors(id, full_name)',
+          '*, students(id, full_name, student_no, phone), instructors(id, full_name)',
         )
         .eq('academy_id', academyId!)
         .gte('starts_at', zonedDayStart(from, tz).toISOString())
@@ -574,8 +585,8 @@ export function useAppointmentPage(
           // session whose student record was archived away underneath it, and
           // those are precisely the ones worth finding in a register.
           q
-            ? '*, students!inner(id, full_name, student_no), instructors(id, full_name)'
-            : '*, students(id, full_name, student_no), instructors(id, full_name)',
+            ? '*, students!inner(id, full_name, student_no, phone), instructors(id, full_name)'
+            : '*, students(id, full_name, student_no, phone), instructors(id, full_name)',
           { count: 'exact' },
         )
         .eq('academy_id', academyId!)
@@ -715,7 +726,7 @@ export function useMyUpcomingSessions(
       const { data, error } = await supabase
         .from('appointments')
         .select(
-          '*, students(id, full_name, student_no), instructors(id, full_name)',
+          '*, students(id, full_name, student_no, phone), instructors(id, full_name)',
         )
         .eq('academy_id', academyId!)
         .eq('instructor_id', instructorId!)
@@ -756,7 +767,7 @@ export function useMyUnclosedSessions(
       const { data, error } = await supabase
         .from('appointments')
         .select(
-          '*, students(id, full_name, student_no), instructors(id, full_name)',
+          '*, students(id, full_name, student_no, phone), instructors(id, full_name)',
         )
         .eq('academy_id', academyId!)
         .eq('instructor_id', instructorId!)

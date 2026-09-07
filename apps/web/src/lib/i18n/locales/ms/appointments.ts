@@ -7,6 +7,9 @@ export const appointments: AppointmentsDict = {
   'appt.booking': 'Menempah…',
   'appt.auto_assigned': 'ditetapkan secara automatik',
   'appt.open_student': 'Buka pelajar',
+  'appt.whatsapp': 'WhatsApp',
+  'appt.whatsapp.draft':
+    'Peringatan tentang sesi anda pada {date}, {time}.',
 
   // --- Status ---------------------------------------------------------------
   'appt.status.booked': 'Ditempah',

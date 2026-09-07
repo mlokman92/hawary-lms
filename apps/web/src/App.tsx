@@ -34,6 +34,7 @@ import { DashboardRoute } from './pages/DashboardRoute'
 import { CoursesPage } from './pages/CoursesPage'
 import { CourseDetailPage } from './pages/CourseDetailPage'
 import { CourseGradingPage } from './pages/CourseGradingPage'
+import { CourseBillingPage } from './pages/CourseBillingPage'
 import { GradeSubmissionPage } from './pages/GradeSubmissionPage'
 import { GradeAttemptPage } from './pages/GradeAttemptPage'
 import { StudentsPage } from './pages/StudentsPage'
@@ -215,6 +216,16 @@ export default function App() {
                         with a live Export button — a closed door that reads as
                         data loss — so this redirects rather than explains. */}
                     <Route element={<AdminRoute />}>
+                      {/* A course's money. Under the course because that is
+                          what the question is about, but behind the same guard
+                          as the rest of Payments — a trainer reading it would
+                          get the roster with no invoices joined to it and every
+                          student reported as never billed, which is worse than
+                          the empty ledger this guard was invented for. */}
+                      <Route
+                        path="/courses/:id/billing"
+                        element={<CourseBillingPage />}
+                      />
                       <Route path="/payments" element={<PaymentsPage />} />
                       {/* Before /payments/:id in source order for readability —
                           the router ranks the static segment higher regardless. */}

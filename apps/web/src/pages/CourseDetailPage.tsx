@@ -13,6 +13,7 @@ import {
   Paperclip,
   Pencil,
   Plus,
+  Wallet,
   type LucideIcon,
 } from 'lucide-react'
 import { formatMYR } from '@hawary/shared'
@@ -167,6 +168,11 @@ export function CourseDetailPage() {
   const { t, tn } = useT()
   const academyId = activeAcademyId ?? ''
   const isStaff = active?.role === 'admin' || active?.role === 'trainer'
+  // Billing is admin-only for the same reason /payments is: a trainer is staff
+  // so they can teach, and none of that needs to know what a student was
+  // charged. Linking a page they would be redirected out of is worse than not
+  // linking it.
+  const isAdmin = active?.role === 'admin'
 
   const { data: course, isLoading, error } = useCourse(courseId)
   const { data: modules, isLoading: modulesLoading } = useModules(
@@ -427,6 +433,19 @@ export function CourseDetailPage() {
                 <DropdownMenuItem onClick={() => setDuplicateOpen(true)}>
                   <Copy /> {t('courses.duplicate')}
                 </DropdownMenuItem>
+                {/* In the menu, not beside "New module": this page is for
+                    building the course, and who has paid for it is a question
+                    asked occasionally rather than while authoring. */}
+                {isAdmin ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to={`/courses/${courseId}/billing`}>
+                        <Wallet /> {t('courses.billing.nav')}
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

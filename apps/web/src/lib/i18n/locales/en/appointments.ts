@@ -9,6 +9,13 @@ export const appointments = {
   'appt.booking': 'Booking…',
   'appt.auto_assigned': 'assigned automatically',
   'appt.open_student': 'Open student',
+  'appt.whatsapp': 'WhatsApp',
+  // Prefilled into the chat, not sent: the instructor still presses send, so
+  // this saves the typing without taking the last word off them. No greeting on
+  // purpose — a record can legitimately carry no name ("Hi , a reminder…"), and
+  // a teacher writing to their own student greets them better than we can.
+  'appt.whatsapp.draft':
+    'A reminder about your session on {date}, {time}.',
 
   // --- Status ---------------------------------------------------------------
   'appt.status.booked': 'Booked',

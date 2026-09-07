@@ -107,4 +107,20 @@ export const courses: CoursesDict = {
   'courses.form.title_required': 'Tajuk wajib diisi.',
   'courses.form.save_changes': 'Simpan perubahan',
   'courses.form.create': 'Cipta kursus',
+
+  // --- Bil (/courses/:id/billing), pentadbir sahaja -------------------------
+  'courses.billing.title': 'Bil',
+  'courses.billing.nav': 'Bil',
+  'courses.billing.search': 'Cari nama, nombor atau e-mel',
+  'courses.billing.summary':
+    '{students} berdaftar · {billed} dibilkan · {outstanding} tertunggak',
+  'courses.billing.status.uninvoiced': 'Belum diinvois',
+  'courses.billing.status.unpaid': 'Belum bayar',
+  'courses.billing.status.partial': 'Bayar sebahagian',
+  'courses.billing.status.paid': 'Selesai bayar',
+  'courses.billing.invoice_unbilled_one': 'Invois {count} pelajar',
+  'courses.billing.invoice_unbilled_other': 'Invois {count} pelajar',
+  'courses.billing.of_invoices': 'daripada {count} invois',
+  'courses.billing.empty_course': 'Belum ada pelajar berdaftar dalam kursus ini.',
+  'courses.billing.empty_filter': 'Tiada pelajar sepadan dengan penapis ini.',
 }

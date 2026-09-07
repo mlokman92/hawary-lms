@@ -242,7 +242,20 @@ Monorepo: **pnpm workspaces + Turborepo**.
   10:00:01.
   Rows open the shared `AppointmentDialog`, which decides **for itself** whether
   the reader may act, so the rule cannot drift across the three screens that
-  mount it. Learner-side `/learn/appointments` is pick a
+  mount it — and carries a **WhatsApp** button beside "Open student"
+  (`docs/appointments.md` → "Message the student on WhatsApp"), so the one
+  screen every session opens into is where you reach the person on it. **Not**
+  gated on `canAct`: that gate is for the three writes and mirrors a DB policy,
+  while messaging changes nothing and the number is already on the student's
+  page. The draft ("a reminder about your session on…") is offered **only for a
+  session still going ahead** — prefilled, never sent — because that sentence
+  under a *Cancelled* badge would contradict the row being read. `lib/phone.ts`
+  is the one place a stored number becomes `wa.me` digits, because the column
+  holds no single shape (551 start `60`, 67 start `0`, 22 start `+`, one is
+  neither): a local `0…` gains `60` and loses its trunk zero, anything already
+  carrying a country code **keeps it**, and anything unreadable returns null so
+  the button is **absent rather than disabled** — 35 records have no phone at
+  all. `AppointmentRow`'s student embed gained `phone` for it. Learner-side `/learn/appointments` is pick a
   day → pick a time → book. Each time chip carries **`capacity`** — how many
   instructors are free at it — returned by both availability RPCs in **both**
   assignment modes, because a count names nobody and so survives the withholding
@@ -584,6 +597,39 @@ Monorepo: **pnpm workspaces + Turborepo**.
   walks the whole filtered set. Every function is SECURITY INVOKER, so
   `docs/money-is-admin-only.md` already means a trainer gets zero rows;
   `AdminRoute` covers the route anyway.
+- **Course billing** (`/courses/:id/billing`, `docs/course-billing.md`):
+  admin-only, reached from the ⋯ menu on the course. The fourth money screen
+  and the one question the other three cannot answer — **who has never been
+  invoiced**. `payment_report` could not say who had *not paid* (no payment
+  row), so `invoice_report` read invoices instead; this is that argument one
+  level up, and it is the **invoice book** that has the hole: a student billed
+  for nothing has no row in `invoices` either, so they are absent from the
+  source every money screen draws from, not missing from a list. Not a corner
+  case — **112 of 666** live enrolments had no invoice and one intake of **94**
+  had never been billed. `enrollments` is the only table that knows somebody is
+  on a course before money is asked for, so `course_billing_summary` (the
+  roll-up, also the roster's unfiltered totals) and `course_billing_roster` (50
+  rows + the filtered count) start there and LEFT JOIN the invoices on
+  **`(student_id, course_id)`** — `invoices.enrollment_id` is NULL on every row,
+  and joining it would report everyone unbilled, the exact failure this fixes.
+  **No `_from`/`_to`**, unlike every other report function: an absence has no
+  date and a window would hide the answer. Enrolments counted are `active` +
+  `completed` (`pending` is a request nobody has accepted; archived students
+  stay, because a debt does not stop existing when a record is filed away).
+  Four states — never invoiced · nothing paid · part paid · paid — as four
+  `FilterStatCard`s, never-invoiced first and leading the sort, since ordering
+  by outstanding alone sinks it (their balance is zero *because* nobody asked).
+  It is a **route, not a panel on `/courses/:id`**: that page is where trainers
+  build the course, and with `invoices` admin-only but `enrollments`/`students`
+  staff-readable a trainer would read the roster with zero invoices attached
+  and see everyone reported as never billed — a **false** answer, worse than the
+  empty ledger `AdminRoute` exists for. Hence `app.is_admin` as a WHERE
+  predicate *inside* both functions (zero rows, not a lie), `AdminRoute` on the
+  route, and the menu item hidden. **Invoice N students** opens
+  `InvoiceFormDialog` with the whole unbilled set (`fetchCourseRosterAll`, not
+  the page on screen) via new `initialStudentIds`/`initialCourseId` props —
+  `courseFilter` is what stamps `course_id`, so seeding it both narrows the list
+  and files the bills. `invalidateMoney` gained both query keys.
 - **Clickable money tiles** (`/payments`): the four `StatCard`s are now
   `FilterStatCard`s — a tile is a **sum over a set of invoices**, so pressing it
   shows that set ("who still owes me" was a figure you could read but not
