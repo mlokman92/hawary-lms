@@ -72,7 +72,9 @@ export const auth: AuthDict = {
   'auth.onboarding.slug_taken': 'URL itu telah digunakan — sila cuba yang lain.',
   'auth.onboarding.submit': 'Cipta akademi',
   'auth.onboarding.founder_prompt': 'Menguruskan akademi anda sendiri?',
-  'auth.onboarding.create_instead': 'Cipta akademi',
+  'auth.onboarding.talk_to_us': 'Hubungi kami di WhatsApp',
+  'auth.onboarding.create_request':
+    'Hai, saya ingin membuka akademi saya sendiri di Hawary LMS. E-mel akaun saya ialah {email}.',
 
   'auth.onboarding.none.title': 'Tiada akademi menunggu anda',
   'auth.onboarding.none.body_before': 'Anda log masuk sebagai',

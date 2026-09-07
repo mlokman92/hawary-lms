@@ -78,9 +78,20 @@ const HELP_WHATSAPP_URL = 'https://wa.me/60127967065'
  *
  * So an empty list is no longer read as "founder". It is read as what it
  * almost always is — *we have no record of you at this address* — and the page
- * says which address that is, since checking it is the whole fix. The founder
- * form moves behind the same link the invited-and-also-a-founder case already
- * used, and `?new=1` still opens it directly.
+ * says which address that is, since checking it is the whole fix.
+ *
+ * And founding is no longer self-serve at all. Naming the act better did not
+ * stop it: people who came to *join* Hawary kept pressing it and creating an
+ * empty academy called "Hawary", because create was the only button on the
+ * screen that sounded like a way in. Fifteen of them in nine days, every one
+ * needing a manual repair. So the link now opens WhatsApp with the person's
+ * own email prefilled, and a real academy is opened by a human who can tell
+ * the two intents apart in one message. That is a product decision, not a
+ * technical one: the cost of a wrong "create" is a person locked out of the
+ * academy they paid for, and the cost of a wrong WhatsApp is a message.
+ *
+ * `?new=1` still opens the real form — it is only ever linked from the staff
+ * switcher's "Add academy", which a learner's switcher does not render.
  */
 export function Onboarding() {
   const { t } = useT()
@@ -91,9 +102,16 @@ export function Onboarding() {
   const landing = useLandingTarget()
   const [params] = useSearchParams()
   const deliberate = params.get('new') === '1'
-  // Revealed on request when invitations exist — someone can be both invited
-  // and a founder, but that is the rarer of the two.
-  const [showCreate, setShowCreate] = useState(false)
+
+  // The address is what lets whoever answers look the person up, and it is the
+  // one thing they cannot mistype about themselves here.
+  const createHref = useMemo(
+    () =>
+      `${HELP_WHATSAPP_URL}?text=${encodeURIComponent(
+        t('auth.onboarding.create_request', { email: user?.email ?? '' }),
+      )}`,
+    [t, user],
+  )
 
   const [name, setName] = useState('')
   const [slugEdited, setSlugEdited] = useState(false)
@@ -153,9 +171,9 @@ export function Onboarding() {
   }
 
   const hasInvites = (invites ?? []).length > 0
-  // Only ever shown on purpose now: the switcher's "Add academy", or the link
-  // below. Never as the fallback for "we found nothing for you".
-  const showForm = deliberate || showCreate
+  // `?new=1` and nothing else. There is no longer a control on this page that
+  // reveals the form — wanting an academy opens WhatsApp instead.
+  const showForm = deliberate
 
   return (
     <div className="bg-muted flex min-h-svh items-center justify-center p-6">
@@ -199,13 +217,14 @@ export function Onboarding() {
         {!showForm ? (
           <p className="text-muted-foreground text-center text-sm">
             {t('auth.onboarding.founder_prompt')}{' '}
-            <button
-              type="button"
+            <a
+              href={createHref}
+              target="_blank"
+              rel="noreferrer"
               className="text-foreground underline underline-offset-4"
-              onClick={() => setShowCreate(true)}
             >
-              {t('auth.onboarding.create_instead')}
-            </button>
+              {t('auth.onboarding.talk_to_us')}
+            </a>
           </p>
         ) : null}
 

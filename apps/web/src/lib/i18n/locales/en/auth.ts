@@ -73,7 +73,13 @@ export const auth = {
   'auth.onboarding.slug_taken': 'That URL is already taken — try a different one.',
   'auth.onboarding.submit': 'Create academy',
   'auth.onboarding.founder_prompt': 'Running your own academy?',
-  'auth.onboarding.create_instead': 'Create one instead',
+  // Opening an academy is not self-serve: too many people who came to *join*
+  // Hawary pressed "create" and made an empty copy of it. `create_request` is
+  // prefilled into WhatsApp, so whoever answers can look the person up and
+  // tell a founder from a student in one message.
+  'auth.onboarding.talk_to_us': 'Talk to us on WhatsApp',
+  'auth.onboarding.create_request':
+    'Hi, I would like to open my own academy on Hawary LMS. My account email is {email}.',
 
   // Nothing is waiting. The common case here is not a founder but an invitee
   // who signed up with a different address than the one their academy holds —
