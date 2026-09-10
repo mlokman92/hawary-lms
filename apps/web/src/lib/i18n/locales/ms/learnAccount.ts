@@ -46,6 +46,7 @@ export const learnAccount: LearnAccountDict = {
   'lacct.method.fpx': 'FPX',
   'lacct.method.card': 'Kad',
   'lacct.method.ewallet': 'E-dompet',
+  'lacct.method.kwsp': 'KWSP',
   'lacct.method.other': 'Lain-lain',
 
   // Profil

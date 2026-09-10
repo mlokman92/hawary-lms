@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -53,6 +54,7 @@ export function RecordPaymentDialog({
   const [amount, setAmount] = useState('')
   const [method, setMethod] = useState<PaymentMethod>('cash')
   const [paidDate, setPaidDate] = useState('')
+  const [note, setNote] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -60,6 +62,7 @@ export function RecordPaymentDialog({
     setAmount(senToRinggit(remaining))
     setMethod('cash')
     setPaidDate(new Date().toISOString().slice(0, 10))
+    setNote('')
     setError(null)
   }, [open, remaining])
 
@@ -75,6 +78,7 @@ export function RecordPaymentDialog({
         amountSen,
         method,
         paidAt: new Date(`${paidDate}T12:00:00`).toISOString(),
+        note,
         totalSen,
         currentPaidSen: paidSen,
         createdBy: user?.id ?? null,
@@ -131,6 +135,16 @@ export function RecordPaymentDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="payment-note">{t('payments.record.note')}</Label>
+            <Textarea
+              id="payment-note"
+              rows={2}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder={t('payments.record.note_placeholder')}
+            />
           </div>
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
         </form>

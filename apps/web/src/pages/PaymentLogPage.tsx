@@ -140,6 +140,7 @@ function csvRows(rows: PaymentLogRow[], t: TFn) {
       t('payments.log.method'),
       t('payments.log.csv.provider'),
       t('payments.log.reference'),
+      t('payments.log.csv.note'),
       t('payments.log.csv.recorded_by'),
       t('payments.log.csv.recorded_at'),
       t('common.status'),
@@ -155,6 +156,7 @@ function csvRows(rows: PaymentLogRow[], t: TFn) {
       t(PAYMENT_METHOD_LABEL[p.method]),
       PAYMENT_PROVIDER_LABEL[p.provider] || t('payments.log.recorded_manually'),
       p.provider_ref ?? '',
+      p.note ?? '',
       // Blank rather than "Recorded manually" — a name column wants a name or
       // nothing, and a gateway row genuinely has nobody to name.
       p.recorded_by_name ?? '',
@@ -398,6 +400,13 @@ export function PaymentLogPage() {
                       <div className="text-muted-foreground text-xs">
                         {sourceLine(p, t)}
                       </div>
+                      {/* The sentence a person typed when banking it — the one
+                          thing in this row no other column can reconstruct. */}
+                      {p.note ? (
+                        <div className="text-muted-foreground text-xs">
+                          {p.note}
+                        </div>
+                      ) : null}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatMYR(p.amount_sen)}

@@ -100,6 +100,8 @@ export const payments = {
   'payments.record.balance_due': 'Balance due: {amount}',
   'payments.record.amount': 'Amount (RM)',
   'payments.record.method': 'Method',
+  'payments.record.note': 'Note (optional)',
+  'payments.record.note_placeholder': 'Cheque no., who handed it over…',
   'payments.record.submitting': 'Recording…',
   'payments.record.error_amount': 'Enter an amount greater than zero.',
 
@@ -112,7 +114,8 @@ export const payments = {
   // Payment log (/payments/log) — the money-in ledger
   'payments.log.title': 'Payment log',
   'payments.log.subtitle': 'Every payment received, newest first.',
-  'payments.log.search_placeholder': 'Search student, invoice, or reference',
+  'payments.log.search_placeholder':
+    'Search student, invoice, reference, or note',
   'payments.log.all_statuses': 'All statuses',
   'payments.log.method': 'Method',
   'payments.log.reference': 'Reference',
@@ -131,6 +134,7 @@ export const payments = {
   'payments.log.no_match': 'No payments match.',
   'payments.log.csv.student_no': 'Student no.',
   'payments.log.csv.provider': 'Provider',
+  'payments.log.csv.note': 'Note',
 
   // Payment report (/payments/report) — money received, drilled
   'payments.report.title': 'Payment report',
@@ -168,6 +172,7 @@ export const payments = {
   'payments.method.fpx': 'FPX',
   'payments.method.card': 'Card',
   'payments.method.ewallet': 'E-wallet',
+  'payments.method.kwsp': 'KWSP',
   'payments.method.other': 'Other',
 
   // Pay link card (ToyyibPay)

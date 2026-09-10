@@ -46,6 +46,7 @@ export const learnAccount = {
   'lacct.method.fpx': 'FPX',
   'lacct.method.card': 'Card',
   'lacct.method.ewallet': 'E-wallet',
+  'lacct.method.kwsp': 'KWSP',
   'lacct.method.other': 'Other',
 
   // Profile

@@ -488,7 +488,19 @@ Monorepo: **pnpm workspaces + Turborepo**.
   `profiles: self or co-member can view`); a gateway row names the gateway and
   its reference instead, because a callback wrote it and there is nobody to
   name. The recorder is searchable — "everything Aisyah took in cash" is a real
-  question to ask a ledger. **Export CSV**
+  question to ask a ledger. **`payments.note`** is the sentence none of those
+  columns can reconstruct — a cheque number, who handed it over, why the amount
+  is short — written in `RecordPaymentDialog`, shown under the source line on
+  the log and on the invoice, and folded into `payment_log_page`'s **and**
+  `payment_log_totals`' search (identically, or a page of rows sums to a
+  different figure than the line above it). Blank stores as NULL. It is a note
+  *about the payment*, **not a staff-private one**: `payments: admin view all,
+  student view own` lets the student read their own rows, so nothing typed here
+  should be anything you would not say to them. **`kwsp`** joined
+  `payment_method` for the same reason `bank_transfer` is not "Other" — an EPF
+  Account 2 education withdrawal arrives by its own route, with its own
+  paperwork; it sits before `other` in the enum so the catch-all stays last in
+  the picker. **Export CSV**
   reuses `lib/csv.ts`'s `downloadCsv` and writes ISO dates + ringgit decimals,
   because the file's job is reconciliation in a spreadsheet.
   This is the **first child nested under its parent's own path**, which exposed a

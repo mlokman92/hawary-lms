@@ -54,5 +54,6 @@ export const PAYMENT_METHOD_KEY: Record<PaymentMethod, TKey> = {
   fpx: 'lacct.method.fpx',
   card: 'lacct.method.card',
   ewallet: 'lacct.method.ewallet',
+  kwsp: 'lacct.method.kwsp',
   other: 'lacct.method.other',
 }

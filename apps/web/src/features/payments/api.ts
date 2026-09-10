@@ -55,6 +55,8 @@ export type PaymentLogRow = {
   status: PaymentStatus
   paid_at: string | null
   created_at: string
+  /** Free text a person typed when banking the payment. Null on gateway rows. */
+  note: string | null
   invoice_id: string | null
   invoice_no: string | null
   course_id: string | null
@@ -652,6 +654,7 @@ export function useRecordPayment(academyId: string) {
       amountSen: number
       method: PaymentMethod
       paidAt: string
+      note?: string | null
       totalSen: number
       currentPaidSen: number
       createdBy?: string | null
@@ -665,6 +668,9 @@ export function useRecordPayment(academyId: string) {
         provider: 'manual',
         status: 'succeeded',
         paid_at: input.paidAt,
+        // Blank is stored as NULL, so "no note" has one representation and the
+        // ledger never has to tell an empty string from an absent one.
+        note: input.note?.trim() || null,
         created_by: input.createdBy ?? null,
       })
       if (error) throw error
@@ -768,6 +774,7 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, TKey> = {
   fpx: 'payments.method.fpx',
   card: 'payments.method.card',
   ewallet: 'payments.method.ewallet',
+  kwsp: 'payments.method.kwsp',
   other: 'payments.method.other',
 }
 
@@ -778,6 +785,7 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
   'fpx',
   'card',
   'ewallet',
+  'kwsp',
   'other',
 ]
 

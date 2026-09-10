@@ -278,7 +278,7 @@ export function InvoiceDetailPage() {
               {invoice.payments.map((p) => (
                 <li
                   key={p.id}
-                  className="flex items-center justify-between gap-3 py-2 first:pt-0 last:pb-0 text-sm"
+                  className="flex items-start justify-between gap-3 py-2 first:pt-0 last:pb-0 text-sm"
                 >
                   <div>
                     <span className="font-medium">{formatMYR(p.amount_sen)}</span>
@@ -286,6 +286,9 @@ export function InvoiceDetailPage() {
                       {' '}
                       · {t(PAYMENT_METHOD_LABEL[p.method])}
                     </span>
+                    {p.note ? (
+                      <div className="text-muted-foreground text-xs">{p.note}</div>
+                    ) : null}
                   </div>
                   <span className="text-muted-foreground">
                     {fmtDate(p.paid_at ?? p.created_at)}

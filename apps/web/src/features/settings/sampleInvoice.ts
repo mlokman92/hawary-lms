@@ -97,6 +97,7 @@ export function sampleInvoice(academyId: string): InvoiceDetail {
         method: 'fpx',
         provider: 'toyyibpay',
         provider_ref: null,
+        note: null,
         status: 'succeeded',
         paid_at: PAID_AT,
         created_by: null,

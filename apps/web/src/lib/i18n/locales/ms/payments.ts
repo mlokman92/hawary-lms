@@ -103,6 +103,8 @@ export const payments: PaymentsDict = {
   'payments.record.balance_due': 'Baki perlu dibayar: {amount}',
   'payments.record.amount': 'Jumlah (RM)',
   'payments.record.method': 'Kaedah',
+  'payments.record.note': 'Nota (pilihan)',
+  'payments.record.note_placeholder': 'No. cek, siapa yang menyerahkan…',
   'payments.record.submitting': 'Merekod…',
   'payments.record.error_amount':
     'Masukkan jumlah yang lebih besar daripada sifar.',
@@ -116,7 +118,8 @@ export const payments: PaymentsDict = {
   // Log bayaran (/payments/log) — lejar wang masuk
   'payments.log.title': 'Log bayaran',
   'payments.log.subtitle': 'Setiap bayaran yang diterima, terbaharu dahulu.',
-  'payments.log.search_placeholder': 'Cari pelajar, invois, atau rujukan',
+  'payments.log.search_placeholder':
+    'Cari pelajar, invois, rujukan, atau nota',
   'payments.log.all_statuses': 'Semua status',
   'payments.log.method': 'Kaedah',
   'payments.log.reference': 'Rujukan',
@@ -135,6 +138,7 @@ export const payments: PaymentsDict = {
   'payments.log.no_match': 'Tiada bayaran yang sepadan.',
   'payments.log.csv.student_no': 'No. pelajar',
   'payments.log.csv.provider': 'Penyedia',
+  'payments.log.csv.note': 'Nota',
 
   // Laporan bayaran (/payments/report) — wang diterima, boleh dileraikan
   'payments.report.title': 'Laporan bayaran',
@@ -172,6 +176,7 @@ export const payments: PaymentsDict = {
   'payments.method.fpx': 'FPX',
   'payments.method.card': 'Kad',
   'payments.method.ewallet': 'E-dompet',
+  'payments.method.kwsp': 'KWSP',
   'payments.method.other': 'Lain-lain',
 
   // Kad pautan bayaran (ToyyibPay)

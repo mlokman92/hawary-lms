@@ -1884,6 +1884,7 @@ export type Database = {
           id: string
           invoice_id: string
           method: Database["public"]["Enums"]["payment_method"]
+          note: string | null
           paid_at: string | null
           provider: Database["public"]["Enums"]["payment_provider"]
           provider_ref: string | null
@@ -1900,6 +1901,7 @@ export type Database = {
           id?: string
           invoice_id: string
           method?: Database["public"]["Enums"]["payment_method"]
+          note?: string | null
           paid_at?: string | null
           provider?: Database["public"]["Enums"]["payment_provider"]
           provider_ref?: string | null
@@ -1916,6 +1918,7 @@ export type Database = {
           id?: string
           invoice_id?: string
           method?: Database["public"]["Enums"]["payment_method"]
+          note?: string | null
           paid_at?: string | null
           provider?: Database["public"]["Enums"]["payment_provider"]
           provider_ref?: string | null
@@ -2453,6 +2456,7 @@ export type Database = {
           invoice_id: string
           invoice_no: string
           method: Database["public"]["Enums"]["payment_method"]
+          note: string
           paid_at: string
           provider: Database["public"]["Enums"]["payment_provider"]
           provider_ref: string
@@ -2606,6 +2610,7 @@ export type Database = {
         | "fpx"
         | "card"
         | "ewallet"
+        | "kwsp"
         | "other"
       payment_provider: "manual" | "billplz" | "toyyibpay" | "stripe"
       payment_status: "pending" | "succeeded" | "failed" | "refunded"
@@ -2796,6 +2801,7 @@ export const Constants = {
         "fpx",
         "card",
         "ewallet",
+        "kwsp",
         "other",
       ],
       payment_provider: ["manual", "billplz", "toyyibpay", "stripe"],
