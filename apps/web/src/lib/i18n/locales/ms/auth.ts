@@ -5,6 +5,7 @@ export const auth: AuthDict = {
   'auth.back_to_sign_in': 'Kembali ke log masuk',
   'auth.check_email.title': 'Semak e-mel anda',
   'auth.password_reset': 'Set semula kata laluan',
+  'auth.field.phone': 'Telefon',
   'auth.field.phone_optional': 'Telefon (pilihan)',
 
   // Log masuk
@@ -22,6 +23,8 @@ export const auth: AuthDict = {
   'auth.signup.have_account': 'Sudah mempunyai akaun?',
   'auth.signup.email_exists':
     'E-mel itu sudah mempunyai akaun — sila log masuk.',
+  'auth.signup.phone_invalid':
+    'Masukkan nombor telefon yang boleh dihubungi oleh akademi anda — cth. 012-345 6789.',
   'auth.signup.confirm.subtitle': 'Satu langkah lagi',
   'auth.signup.confirm.body_before': 'Kami telah menghantar pautan pengesahan ke',
   'auth.signup.confirm.body_after':

@@ -245,11 +245,24 @@ Three rules hold both triggers together:
   in this database have an auth account with the same address and are left
   alone. Guessing at a record nobody has claimed is a different decision, and a
   worse one.
-- **Name only.** Phone looks like the same problem and is not: 27 linked pairs
-  already disagree about it, and `create-bill` sets ToyyibPay's `billPayorInfo`
-  when payer name + email + phone are all present, which *locks* those fields on
-  the FPX page. Backfilling a stale self-service phone would quietly take away
-  the payer's ability to correct it.
+- **Name and phone — but phone only into a blank.** Phone was excluded
+  outright at first, on the grounds that linked pairs already disagree about it
+  (27 then, **338** now) and that `create-bill` sets ToyyibPay's
+  `billPayorInfo` when payer name + email + phone are all present, which
+  *locks* those fields on the FPX page. Backfilling a stale self-service phone
+  over one staff typed would quietly take away the payer's ability to correct
+  it. All of that still holds — and none of it describes a **blank**. An empty
+  phone locks nothing (`billPayorInfo` needs all three present, so it was never
+  being set), overwrites nothing, and contradicts no value staff chose; the
+  first rule above already says fill blanks. So phone is filled exactly when the
+  record has none, and the 338 disagreements are left alone.
+
+  What forced the change: `/learn/profile` writes `profiles` and the academy
+  reads `students`, so a student who added their own number was invisible to
+  the admin chasing them. The trigger could not have caught it in any case — it
+  was `after update of full_name` with a WHEN clause on the name changing, so
+  a phone-only save never fired it. It is now `after update of full_name,
+  phone` with a WHEN clause that accepts either column moving.
 
 What was **not** built, on purpose: a mirror writing the record's name back onto
 the profile. `profiles` is readable by `app.shares_academy`, which is

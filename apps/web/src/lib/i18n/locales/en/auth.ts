@@ -4,6 +4,10 @@ export const auth = {
   'auth.back_to_sign_in': 'Back to sign in',
   'auth.check_email.title': 'Check your email',
   'auth.password_reset': 'Password reset',
+  // Two keys, because the two fields mean different things: this one is the
+  // person signing up (mandatory — an academy has to be able to reach them),
+  // while phone_optional is the *academy's* own number on the founder form.
+  'auth.field.phone': 'Phone',
   'auth.field.phone_optional': 'Phone (optional)',
 
   // Sign in
@@ -21,6 +25,8 @@ export const auth = {
   'auth.signup.have_account': 'Already have an account?',
   'auth.signup.email_exists':
     'That email already has an account — sign in instead.',
+  'auth.signup.phone_invalid':
+    'Enter a phone number your academy can reach you on — e.g. 012-345 6789.',
   'auth.signup.confirm.subtitle': 'One more step',
   // Wraps the address in <strong>, so the sentence is split around it. Both
   // languages read "<lead> name@example.com <tail>" in this order.

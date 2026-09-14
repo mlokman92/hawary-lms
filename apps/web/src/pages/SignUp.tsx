@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useT } from '@/lib/i18n'
+import { isReachablePhone } from '@/lib/phone'
 import { AuthCard } from '@/components/AuthCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,13 +24,21 @@ export function SignUp() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
-    setBusy(true)
     setError(null)
+    // Phone is mandatory, and checked with the same function the WhatsApp
+    // button uses rather than a looser pattern of its own: a number nobody can
+    // dial is no more use to an admin than a blank one, and this is the last
+    // moment the person is here to correct it.
+    if (!isReachablePhone(phone)) {
+      setError(t('auth.signup.phone_invalid'))
+      return
+    }
+    setBusy(true)
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName, phone: phone || null },
+        data: { full_name: fullName, phone: phone.trim() },
         // Carry `next` through the confirmation hop so an invite (e.g.
         // /accept-invite?token=…) survives email confirmation.
         emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
@@ -104,11 +113,12 @@ export function SignUp() {
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="phone">{t('auth.field.phone_optional')}</Label>
+          <Label htmlFor="phone">{t('auth.field.phone')}</Label>
           <Input
             id="phone"
             type="tel"
             autoComplete="tel"
+            required
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />

@@ -69,3 +69,17 @@ export function waLink(
   const query = text?.trim() ? `?text=${encodeURIComponent(text.trim())}` : ''
   return `https://wa.me/${number}${query}`
 }
+
+/**
+ * Whether a typed number is one somebody could actually be reached on.
+ *
+ * Deliberately `waNumber` and not a looser regex of its own: the thing this
+ * guards against is an admin unable to reach a student, and WhatsApp — through
+ * `waNumber` — is the one reach-out the app offers. A number that fails here is
+ * precisely a number whose "Message on WhatsApp" button would be absent, so
+ * accepting it at sign-up would do nothing but move the failure to the day
+ * somebody needs it.
+ */
+export function isReachablePhone(raw: string | null | undefined): boolean {
+  return waNumber(raw) !== null
+}

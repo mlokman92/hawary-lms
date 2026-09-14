@@ -42,6 +42,7 @@ export type OpenCourse = {
   capacity: number | null
   seats_taken: number
   closes_at: string | null
+  created_at: string
 }
 
 export type AcademyEnrollment = {

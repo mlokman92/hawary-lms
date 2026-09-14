@@ -58,6 +58,28 @@ export function EnrollPage() {
     if (slug) setEnrollIntent(slug)
   }, [slug])
 
+  // Preselect the newest open course. The current intake is what nearly
+  // everyone arriving on this link came for, and an empty radio group makes
+  // them pick something before the button does anything at all.
+  //
+  // Ordered by `created_at` and not by the list order, which is alphabetical
+  // by title: DKM1/DKM2/DKM3 only happen to sort into intake order, and a
+  // future intake titled differently would silently preselect the wrong one.
+  // Parsed rather than string-compared, because the timestamp is whatever
+  // shape `json_build_object` gives it.
+  //
+  // Guarded on `courseId` being empty so a refetch never moves a choice the
+  // visitor has already made.
+  useEffect(() => {
+    if (courseId || !data?.courses.length) return
+    const newest = data.courses.reduce((a, b) =>
+      new Date(a.created_at).getTime() >= new Date(b.created_at).getTime()
+        ? a
+        : b,
+    )
+    setCourseId(newest.id)
+  }, [data, courseId])
+
   const membership = data
     ? memberships.find((m) => m.academyId === data.academy.id)
     : undefined

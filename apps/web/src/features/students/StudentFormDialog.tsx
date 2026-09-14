@@ -83,13 +83,13 @@ export function StudentFormDialog({
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     if (!fullName.trim()) return setError(t('students.form.name_required'))
-    if (!gender) return setError(t('students.form.gender_required'))
     if (!email.trim()) return setError(t('students.form.email_required'))
     setError(null)
 
     const fields = {
       full_name: fullName.trim(),
-      gender,
+      // Optional: the column is nullable, and '' is not a member of the enum.
+      gender: gender || null,
       ic_number: icNumber.trim() || null,
       date_of_birth: dob || null,
       phone: phone.trim() || null,

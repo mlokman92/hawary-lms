@@ -94,7 +94,6 @@ export const students = {
   'students.form.profile_picture': 'Profile picture',
   'students.form.save_changes': 'Save changes',
   'students.form.name_required': 'Name is required.',
-  'students.form.gender_required': 'Gender is required.',
   'students.form.email_required': 'Email is required.',
 
   // Enrol in a course
