@@ -22,8 +22,9 @@ export function hasReceipt(invoice: Pick<Invoice, 'amount_paid_sen'>): boolean {
  * academy letterhead are fetched on click rather than for every visible row —
  * a billing list with thirty invoices should not fetch thirty item sets to
  * render five columns. Both reads resolve under the caller's own RLS
- * (`invoices` → `app.owns_student`, `academies` → `app.is_member`), so a
- * learner gets exactly their own documents with no new grants.
+ * (`invoices` → `app.owns_student` or `app.is_admin`, `academies` →
+ * `app.is_member`), so a learner gets exactly their own documents, an admin
+ * any in the academy, with no new grants.
  */
 export function useInvoiceDocuments(academyId: string | null) {
   // Keyed by `${kind}:${invoiceId}` so two buttons in one row spin separately.

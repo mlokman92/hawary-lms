@@ -1,6 +1,12 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import {
+  ArrowLeft,
+  FileText,
+  Loader2,
+  MoreHorizontal,
+  Receipt,
+} from 'lucide-react'
 import { formatMYR } from '@hawary/shared'
 import { useAcademy } from '@/lib/academy'
 import { fmtDate } from '@/lib/format'
@@ -33,6 +39,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { hasReceipt, useInvoiceDocuments } from '@/features/payments/documents'
 import { RecordPaymentDialog } from '@/features/payments/RecordPaymentDialog'
 import { PayLinkCard } from '@/features/payments/PayLinkCard'
 import {
@@ -61,6 +74,7 @@ export function InvoiceDetailPage() {
 
   const { data: invoice, isLoading, error } = useInvoice(id)
   const voidInvoice = useVoidInvoice(academyId)
+  const docs = useInvoiceDocuments(activeAcademyId)
   const [payOpen, setPayOpen] = useState(false)
 
   if (isLoading) {
@@ -156,10 +170,44 @@ export function InvoiceDetailPage() {
                   </AlertDialogContent>
                 </AlertDialog>
               ) : null}
+              {/* The PDFs a learner downloads from /learn/billing/:id, drawn
+                  from the invoice already on screen — so staff can produce the
+                  document for someone and email it. Occasional, hence the
+                  menu; the trigger spins because the menu closes on click. */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" disabled={!!docs.busy}>
+                    {docs.busy ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      <MoreHorizontal />
+                    )}
+                    <span className="sr-only">{t('common.actions')}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => void docs.download('invoice', invoice)}
+                  >
+                    <FileText /> {t('doc.download.invoice')}
+                  </DropdownMenuItem>
+                  {hasReceipt(invoice) ? (
+                    <DropdownMenuItem
+                      onClick={() => void docs.download('receipt', invoice)}
+                    >
+                      <Receipt /> {t('doc.download.receipt')}
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           ) : null}
         </CardContent>
       </Card>
+
+      {docs.error ? (
+        <p className="text-destructive text-sm">{docs.error}</p>
+      ) : null}
 
       <div className="grid gap-6 md:grid-cols-3">
         <Card className="md:col-span-2">

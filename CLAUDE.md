@@ -463,7 +463,9 @@ Monorepo: **pnpm workspaces + Turborepo**.
   (`ensure_pay_token` remains as the idempotent repair). `/settings` has an
   **Academy details** card (name — the only mandatory field — logo, address,
   phone, SST number) writing the long-existing `academies` columns; learners
-  download **invoice / receipt PDFs** from `/learn/billing*`, drawn by
+  download **invoice / receipt PDFs** from `/learn/billing*`, and admins the same
+  two from the `⋯` menu on `/payments/:id` (to email them on somebody's behalf),
+  drawn by
   `features/payments/pdf.ts` with a dynamically imported jsPDF. `pdf.ts` splits
   **build from deliver** — `buildInvoicePdf`/`buildReceiptPdf` return
   `{doc, fileName}` and the `download*` pair are wrappers — so the same drawing

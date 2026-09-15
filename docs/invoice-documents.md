@@ -105,6 +105,13 @@ nothing further.
   paid). The click is `stopPropagation`'d because the row itself navigates.
 - `/learn/billing/:id` — **Download invoice** / **Download receipt** beside
   **Pay online**, which is now the primary button on the page.
+- `/payments/:id` (admin) — the same two, in the header's `⋯` menu beside
+  **Record payment** / **Void**. The use case is an academy producing the
+  document *for* somebody and emailing it. A menu rather than buttons because it
+  is occasional, and because a part-paid invoice would otherwise carry four
+  buttons; the trigger shows the spinner, since the menu closes on click. The
+  same `InvoiceDetail` is passed straight in, so nothing is re-fetched but the
+  letterhead.
 
 `features/payments/documents.ts` holds `useInvoiceDocuments(academyId)`. The
 list page has only the invoice header, so items and letterhead are fetched *on
@@ -113,8 +120,9 @@ render five columns. The detail page passes the already-loaded `InvoiceDetail`
 straight in and skips the re-fetch.
 
 Both reads resolve under the caller's own RLS — `invoices` via
-`app.owns_student`, `academies` via `app.is_member` — so a learner gets exactly
-their own documents and the feature needed no new policy.
+`app.owns_student` (or `app.is_admin` on the admin page), `academies` via
+`app.is_member` — so a learner gets exactly their own documents and the feature
+needed no new policy.
 
 ### Copy
 
@@ -159,9 +167,6 @@ panel rather than two, and it would have been the only `Tabs` in the app.
 
 ## Not done
 
-- No PDF affordance on the **admin** invoice page (`/payments/:id`); the request
-  was scoped to the learner's billing screens. `useInvoiceDocuments` is generic
-  and would drop straight in.
 - The receipt covers the **invoice**, not one payment. A per-payment receipt
   would need its own numbering series.
 - `city` / `state` / `postcode` stay unexposed; the address is edited as one
