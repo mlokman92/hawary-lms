@@ -512,6 +512,29 @@ already-issued invoice (`useUpdatePaymentTerms`) — the latter is the real case
 since "can I pay this in two?" is a phone call. Both are `app.is_admin` writes
 under `invoices: admin update`.
 
+## The payment date is `dd-mm-yyyy` in Malaysia time, and says so nowhere
+
+`billPaymentDate` comes back as `01-09-2026 17:03:11`. Both halves of that are
+implicit, and `Date.parse` guessed both wrong: it reads a dashed date
+**month-first**, so 1 September was stored as 9 January, and it assumes **UTC**,
+moving the time a further eight hours. The quiet half was worse — a day past the
+12th is not a month, so the parse failed outright and the old fallback stamped
+`now()`, dating a payment by when the callback or the sweep happened to run.
+
+Found in production on the academy's only gateway payment to date: RM20 on
+`INV-EEGT3H`, filed under **10 Jan 2026**, five months before the academy had a
+ToyyibPay account. The bill was created at 17:02:41 and the row written at
+17:04:59 on 1 Sep, which is what proves the real time.
+
+So `parseDate` now reads the field's actual shape — day, month, year, and an
+explicit `+08:00` — and validates the parts before trusting them, because V8
+**rolls an impossible date over** rather than rejecting it (`31-02-2026` parses
+happily as 3 March). Anything that is not that shape still falls through to
+`Date.parse`, so an ISO string keeps working. The helper is duplicated verbatim
+in **`verify-payment`** and **`toyyibpay-callback`**: they read the identical
+field from the identical API, and the functions deploy separately with no shared
+module between them, so the copy is the seam to keep in step.
+
 ## Sources
 
 Research compiled from the ToyyibPay unofficial docs (fajarhac), the fakhrullah

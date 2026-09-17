@@ -189,8 +189,56 @@ function normalizeSen(raw: unknown, ...expected: number[]): number {
   return asDecimal
 }
 
+/**
+ * ToyyibPay reports `billPaymentDate` as `dd-mm-yyyy hh:mm:ss` in Malaysia
+ * time, and says neither of those things in the value itself.
+ *
+ * `Date.parse` alone got both halves wrong: it reads a dashed date month-first,
+ * so 1 September 2026 was stored as 9 January, and it assumes UTC, which moves
+ * the time another eight hours. Worse silently: any day past the 12th is not a
+ * month, so the parse failed and the old fallback stamped `now()` — a payment
+ * dated by when the callback happened to run. Hence the explicit field order
+ * and the `+08:00` the gateway never sends.
+ */
+const MYT_OFFSET = '+08:00'
+
 function parseDate(raw: unknown): string {
   const s = str(raw)
+  const m = s.match(
+    /^(\d{1,2})-(\d{1,2})-(\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/,
+  )
+  if (m) {
+    const [, d, mo, y, hh = '00', mi = '00', ss = '00'] = m
+    if (inRange(y, mo, d, hh, mi, ss)) {
+      const iso = `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}T${hh.padStart(2, '0')}:${mi}:${ss}${MYT_OFFSET}`
+      const t = Date.parse(iso)
+      if (Number.isFinite(t)) return new Date(t).toISOString()
+    }
+  }
+  // Any other shape (an ISO string, or a format they change later) still goes
+  // to the platform parser; only what it also rejects falls through to now().
   const t = s ? Date.parse(s) : NaN
   return Number.isFinite(t) ? new Date(t).toISOString() : new Date().toISOString()
+}
+
+/**
+ * V8 rolls an impossible date over instead of rejecting it — `31-02-2026`
+ * parses happily as 3 March — so the parts are checked before they are used.
+ */
+function inRange(
+  y: string,
+  mo: string,
+  d: string,
+  hh: string,
+  mi: string,
+  ss: string,
+): boolean {
+  const month = Number(mo)
+  const day = Number(d)
+  if (month < 1 || month > 12 || day < 1) return false
+  // Day 0 of the next month is the last day of this one.
+  const lastDay = new Date(Date.UTC(Number(y), month, 0)).getUTCDate()
+  return (
+    day <= lastDay && Number(hh) <= 23 && Number(mi) <= 59 && Number(ss) <= 59
+  )
 }
