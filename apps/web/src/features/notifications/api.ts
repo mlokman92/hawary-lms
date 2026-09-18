@@ -40,6 +40,25 @@ export type AppointmentMovedData = AppointmentBookedData & {
   from_name: string | null
 }
 
+/**
+ * `data` for the four `report_*` kinds, written by the report RPCs.
+ *
+ * All four share it, so only the title line branches — the same economy the
+ * three appointment kinds have. `role` decides the wording *and* where the row
+ * leads: a student goes to /learn/reports/:id, a checker to /reports/:id, and
+ * the thread is the same thread either way.
+ */
+export type ReportEventData = {
+  report_id: string
+  role: 'student' | 'instructor'
+  /** The other party, as they were named when it happened. */
+  with_name: string | null
+  course: string | null
+  /** The batch, e.g. "LPKC, slide dan portfolio". */
+  title: string | null
+  status: 'submitted' | 'in_review' | 'changes_requested' | 'approved'
+}
+
 /** How many rows the panel holds. Older ones are not paged to — see the doc. */
 export const NOTIFICATION_LIMIT = 20
 

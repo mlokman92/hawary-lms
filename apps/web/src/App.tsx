@@ -23,6 +23,8 @@ import { LearnBillingPage } from './pages/learn/LearnBillingPage'
 import { LearnInvoicePage } from './pages/learn/LearnInvoicePage'
 import { LearnProfilePage } from './pages/learn/LearnProfilePage'
 import { LearnAppointmentsPage } from './pages/learn/LearnAppointmentsPage'
+import { LearnReportsPage } from './pages/learn/LearnReportsPage'
+import { LearnReportPage } from './pages/learn/LearnReportPage'
 import { SignIn } from './pages/SignIn'
 import { SignUp } from './pages/SignUp'
 import { ForgotPassword } from './pages/ForgotPassword'
@@ -59,6 +61,8 @@ import { EnrollmentsPage } from './pages/EnrollmentsPage'
 import { AppointmentsPage } from './pages/AppointmentsPage'
 import { AppointmentListPage } from './pages/AppointmentListPage'
 import { AppointmentSettingsPage } from './pages/AppointmentSettingsPage'
+import { ReportsPage } from './pages/ReportsPage'
+import { ReportDetailPage } from './pages/ReportDetailPage'
 import { IncentivesPage } from './pages/IncentivesPage'
 import { IncentiveBatchPage } from './pages/IncentiveBatchPage'
 
@@ -139,6 +143,13 @@ export default function App() {
                       path="/learn/appointments"
                       element={<LearnAppointmentsPage />}
                     />
+                    {/* Report checks. The list is keyed on courses, so the
+                        literal path is declared before the :id one. */}
+                    <Route path="/learn/reports" element={<LearnReportsPage />} />
+                    <Route
+                      path="/learn/reports/:id"
+                      element={<LearnReportPage />}
+                    />
                     <Route path="/learn/profile" element={<LearnProfilePage />} />
                     {/* In-tree catch-all. Without it an unknown /learn/* URL hits
                         the global '*' below, which sends it to '/' — and AppShell
@@ -184,6 +195,12 @@ export default function App() {
                       path="/appointments/settings"
                       element={<AppointmentSettingsPage />}
                     />
+                    {/* The checking queue and one thread. No AdminRoute: RLS
+                        narrows a trainer to the reports assigned to them, so
+                        the page is correct for both roles rather than empty
+                        for one — the opposite of the money screens. */}
+                    <Route path="/reports" element={<ReportsPage />} />
+                    <Route path="/reports/:id" element={<ReportDetailPage />} />
                     <Route
                       path="/instructors/:id"
                       element={<InstructorDetailPage />}

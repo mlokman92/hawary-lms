@@ -273,6 +273,73 @@ Monorepo: **pnpm workspaces + Turborepo**.
   nobody ever set it, and where a session happens is a per-session fact, not an
   academy default. **No
   invoice**, no approval step, not tied to a course.
+- **Report checks** (`docs/report-checks.md`): a student uploads the document,
+  the rota picks a checker, and the conversation happens in the app instead of
+  in a room. Built from one number: of the 179 appointments here that carry a
+  note, **154** say some version of *semakan LPKC* / *check LPKT* / *slide dan
+  portfolio* — 86% of the diary was a document being looked at, which costs a
+  room and an hour for something with no reason to be synchronous and leaves no
+  record of what was said. Appointments stay for what genuinely needs a person.
+  **Slots are not involved**: `app.report_checkers` is its own rota and consults
+  only pool membership and load, because `app.booking_slots` gates on hours,
+  notice and horizon — rules about opening a booking *window*, and a report is
+  work in a queue. It orders by **fewest OPEN reports**, not fewest in 30 days:
+  a session is over when it is over, a report sits on a desk until approved, so
+  the open count *is* the load. No insert loop, because there is no EXCLUDE
+  constraint to race — this is a load balancer, not a uniqueness guarantee.
+  **The pool is the switch** — no `academy_report_settings`; an academy with
+  nobody flagged `instructors.is_report_checker` (default false, separate from
+  `is_bookable` because only 4 of 11 actives take bookings and reading a PDF
+  needs no diary) simply cannot receive one, and `my_reports` returns
+  `is_open: false`. Edited from a dialog behind the ⋯ on `/reports`, admin-only:
+  one switch per instructor does not earn a settings page.
+  **One thread per (student, course)**, not per document — LPKC, slide and
+  portfolio are checked together, so they are versions and files on one thread;
+  resubmitting bumps `version` and **keeps the same checker**, since the person
+  who asked for the changes should see them. Four statuses: `submitted` /
+  `in_review` wait on the checker, `changes_requested` waits on the student,
+  `approved` is done — which is what makes the nav badge and both dashboard
+  cards possible. Only an upload returns a report to `submitted`, so it is not
+  one of the three verdict buttons, and a student who sends `_to_status` is
+  **ignored rather than refused** (the round-robin-instructor precedent).
+  Three tables — `report_submissions` · `report_events` · `report_files` — and a
+  file belongs to the **event** that carried it, so "version 2" is a fact the
+  table states. `actor_name`/`actor_role` are snapshots (the notifications
+  discipline). SELECT is `app.is_admin OR app.owns_instructor OR
+  app.owns_student`, **not** `app.is_staff` — the appointments lesson, since a
+  trainer's own JWT would otherwise read every student's draft thesis straight
+  from PostgREST; events and files follow the thread by EXISTS so the two cannot
+  disagree. Clients have **no DML**: `submit_report` · `comment_on_report`
+  (saying and deciding are one act) · `reassign_report` · `get_report` are the
+  only doors, and an uninvolved trainer gets `Report not found` from all of them.
+  `get_report` must be an RPC — it carries the checker's name and a student
+  cannot read `instructors` — and returns `my_role`, which is what
+  `ReportThreadView` gates on, so the rule cannot drift across the two routes
+  that mount it. Files live in the **private `student-reports`** bucket;
+  `upload-media` grew the **member branch** (its first non-staff write, the
+  deferred student-upload path) keyed `<academy_id>/<uploader uid>/<uuid>.<ext>`,
+  and `app.assert_own_upload` re-checks that prefix inside the RPC because the
+  client hands over a *path* — without it a student could attach a classmate's
+  document to their own thread and download it. Reads go through **`report-url`**
+  (`material-url`'s shape, an id never a path); a separate function because the
+  RPC that decides entitlement must not come from the client. Uploads happen as
+  files are picked, not on submit.
+  Four `notification_kind` values written in the same transaction as the write,
+  and **`send-report-notice`** — four events, one function, told only
+  `report_id` + `event_id` so *what happened and who to tell* come from the
+  stored event. It tells **the other party, never the actor** — the opposite of
+  `send-appointment-notice`, and correctly so: there the student was nearly
+  always the actor so an actor-skip meant never mailing them, here both sides
+  act repeatedly and a copy of your own comment is noise. `assigned` tells both.
+  Screens: **`/reports`** (queue, oldest first, paged 50 + `id`, four
+  `FilterStatCard`s, **no instructor filter** because RLS already narrows a
+  trainer and a control that cannot change the result is worse than none),
+  `/reports/:id` and `/learn/reports/:id` (one `ReportThreadView`, timeline
+  **oldest first** because it is a conversation, verdicts as three buttons,
+  handover behind ⋯), and **`/learn/reports`** keyed on **enrolments not
+  reports** so an unsent course is a row with a Send button.
+  Not done: no deadline, no grade, no document-type entity, and the **outgoing**
+  checker is told nothing on a handover — the same gap `cancel_appointment` has.
 - **Notifications** (`docs/notifications.md`): the header bell, in **both**
   shells (mounted in `shell/SidebarShell`, not per layout). A row is an
   **event, not a sentence** — `kind` + `data`, with the words assembled client
@@ -368,7 +435,16 @@ Monorepo: **pnpm workspaces + Turborepo**.
   cards separate "nothing waiting" from **"you are not assigned to a course"**,
   which is the real case: `course_instructors` is nearly empty, and
   `useMyGradableCourses` returns `linked: true` there so the existing
-  no-instructor-record message does not fire.
+  no-instructor-record message does not fire. It also carries **Reports to
+  check** (`docs/report-checks.md`), showing how long each has *waited* — its
+  own card and not a third marking queue, because marking ends in a grade and a
+  report goes back and forth until it is right.
+  The **learner dashboard** (`pages/learn/LearnDashboardPage.tsx`) had **no
+  appointments at all** — a student's only sight of their own sessions was
+  `/learn/appointments`. It now carries a sessions card beside a reports one,
+  cut on **`ends_at` not `starts_at`** (the register's rule: a session being
+  taught right now is still today's). `Dashboard.tsx` (admin) still has none, on
+  purpose — it answers "how is the academy doing", and a diary is not that.
 - **Data model**: identity is global (`profiles`, one per email); roles/records are
   per-academy. A **student is an academy record** (`students`, not necessarily an auth
   user); enrollment/invoices/payments reference `students`. An **instructor is the same
@@ -741,7 +817,10 @@ Monorepo: **pnpm workspaces + Turborepo**.
   Enum→label maps (`{students,instructors,learn}/status.ts`) carry
   `labelKey: TKey`, not strings. Server/Edge-Function errors are still English.
   See `docs/i18n.md` — read its house-style list before writing Malay copy.
-- **Storage**: public `avatars` + `note-media` buckets, keyed `<academy_id>/<uuid>.<ext>`.
+- **Storage**: public `avatars` + `note-media` buckets, keyed `<academy_id>/<uuid>.<ext>`;
+  private `course-materials` and `student-reports`. `upload-media` writes all
+  four, and `student-reports` is the only one it accepts a **non-staff** write
+  to — see `docs/report-checks.md` → "Files".
   Uploads go through the **`upload-media` Edge Function** (`lib/storage.ts` →
   `uploadPublicImage`), which verifies the caller's JWT, re-checks staff membership
   for the target academy, and writes with the service role. Direct browser
@@ -767,8 +846,10 @@ Monorepo: **pnpm workspaces + Turborepo**.
   returned `429 over_email_send_rate_limit` on `/signup`, which Resend never
   saw), and Resend's plan carries its own cap. Still deferred: BM for
   transactional email and Edge Function errors, both of which stay English.
-- Assignment **attachments** (needs a private `submissions` bucket + a student
-  branch in `upload-media`); scheduled expiry sweep for invitations.
+- Assignment **attachments** — the student branch in `upload-media` now exists
+  (report checks needed it), so what is left is a private `submissions` bucket
+  and the wiring to `assignment_submissions`. Scheduled expiry sweep for
+  invitations.
 - Assessment settings still have **no UI**: `duration_minutes`, `max_attempts`,
   `available_from/until` and `type` are enforced server-side but can only be set
   in SQL. The editor writes `title`, `is_published` and `instructions` only.

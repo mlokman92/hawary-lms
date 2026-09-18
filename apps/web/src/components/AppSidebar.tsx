@@ -1,6 +1,7 @@
 import {
   BookOpen,
   CalendarClock,
+  ClipboardCheck,
   ChartColumn,
   ClipboardList,
   FileCheck2,
@@ -19,6 +20,7 @@ import { useAcademy } from '@/lib/academy'
 import { useT, type TFn } from '@/lib/i18n'
 import { usePendingEnrollmentCount } from '@/features/enrollment/api'
 import { useUpcomingAppointmentCount } from '@/features/appointments/api'
+import { useReportCounts } from '@/features/reports/api'
 import { AcademySwitcher } from './AcademySwitcher'
 import { ShellSidebar } from './shell/ShellSidebar'
 import type { NavGroup, NavItem } from './shell/nav'
@@ -35,6 +37,7 @@ const nav = (
   t: TFn,
   pendingEnrollments: number,
   upcomingAppointments: number,
+  reportsToCheck: number,
 ): NavItem[] => [
   { title: t('nav.dashboard'), to: '/', icon: LayoutDashboard, exact: true },
   {
@@ -61,6 +64,15 @@ const nav = (
         badge: pendingEnrollments,
       },
     ],
+  },
+  {
+    title: t('nav.reports'),
+    to: '/reports',
+    icon: ClipboardCheck,
+    // Work waiting on somebody, so urgent (the default tone) rather than the
+    // diary's neutral count: a report nobody has looked at is a student
+    // waiting, which is the whole reason this module exists.
+    badge: reportsToCheck,
   },
   { title: t('nav.students'), to: '/students', icon: Users },
   { title: t('nav.instructors'), to: '/instructors', icon: Presentation },
@@ -116,8 +128,17 @@ export function AppSidebar() {
   const { data: pendingEnrollments } = usePendingEnrollmentCount(activeAcademyId)
   const { data: upcomingAppointments } =
     useUpcomingAppointmentCount(activeAcademyId)
+  // RLS already narrows this to the reader's own reports, so the badge means
+  // "waiting on you" for a trainer and "waiting on the academy" for an admin —
+  // which is the right answer for each of them.
+  const { data: reportCounts } = useReportCounts(activeAcademyId)
 
-  const items = nav(t, pendingEnrollments ?? 0, upcomingAppointments ?? 0)
+  const items = nav(
+    t,
+    pendingEnrollments ?? 0,
+    upcomingAppointments ?? 0,
+    (reportCounts?.submitted ?? 0) + (reportCounts?.in_review ?? 0),
+  )
   const groups: NavGroup[] = [
     {
       label: t('nav.group.platform'),

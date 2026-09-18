@@ -1,6 +1,7 @@
 import {
   BookOpen,
   CalendarClock,
+  ClipboardCheck,
   ClipboardList,
   FileCheck2,
   LayoutDashboard,
@@ -61,6 +62,13 @@ export function LearnSidebar() {
           title: t('nav.learn.appointments'),
           to: '/learn/appointments',
           icon: CalendarClock,
+        },
+        // Its own item and not a child of My work: My work is coursework with
+        // a deadline, and a report is a document you hand over and wait on.
+        {
+          title: t('nav.learn.reports'),
+          to: '/learn/reports',
+          icon: ClipboardCheck,
         },
       ],
     },

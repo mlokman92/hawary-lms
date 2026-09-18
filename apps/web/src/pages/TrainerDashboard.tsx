@@ -11,6 +11,11 @@ import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
 import { Badge } from '@/components/ui/badge'
 import { useMyInstructorRecord } from '@/features/profile/api'
 import { useAcademyQueue, useMyGradableCourses, type QueueRow } from '@/features/grading/api'
+import {
+  REPORT_STATUS,
+  useMyReportQueue,
+  type ReportRow,
+} from '@/features/reports/api'
 import { AppointmentDialog } from '@/features/appointments/AppointmentDialog'
 import {
   DEFAULT_TZ,
@@ -138,6 +143,46 @@ function MarkingRow({ row, course }: { row: QueueRow; course?: string }) {
   )
 }
 
+/**
+ * One report waiting on this trainer. The right-hand figure is how long it has
+ * waited, the same measure the marking rows use — and for the same reason: a
+ * student who sent their LPKC three weeks ago is the fact worth acting on, and
+ * a timestamp makes the reader do the arithmetic.
+ */
+function ReportRowItem({ row }: { row: ReportRow }) {
+  const { t } = useT()
+  const waited = daysSince(row.submitted_at)
+  return (
+    <li>
+      <Link
+        to={`/reports/${row.id}`}
+        className="hover:bg-muted/50 flex items-center gap-3 px-4 py-2.5 transition-colors"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-medium">
+            {personName(row.students?.full_name) ?? t('common.unnamed')}
+          </span>
+          <span className="text-muted-foreground block truncate text-xs">
+            {[row.title, row.courses?.title].filter(Boolean).join(' · ')}
+          </span>
+        </span>
+        <Badge variant="outline" className="shrink-0">
+          {t(REPORT_STATUS[row.status].labelKey)}
+        </Badge>
+        <span
+          className={
+            waited !== null && waited >= 7
+              ? 'text-destructive shrink-0 text-xs font-medium tabular-nums'
+              : 'text-muted-foreground shrink-0 text-xs tabular-nums'
+          }
+        >
+          {fmtDays(waited)}
+        </span>
+      </Link>
+    </li>
+  )
+}
+
 /** The shared body of the two marking cards. */
 function MarkingList({
   rows,
@@ -195,6 +240,10 @@ export function TrainerDashboard() {
   const attempts = useAcademyQueue('assessment', activeAcademyId)
   const submissions = useAcademyQueue('assignment', activeAcademyId)
   const gradable = useMyGradableCourses(activeAcademyId, false)
+  // Reports sitting on this trainer's desk. Narrowed by instructor for the same
+  // reason the session queries are: RLS already limits a trainer to their own,
+  // and this makes the card answer "mine" for an admin who also checks.
+  const reports = useMyReportQueue(activeAcademyId, instructorId, MARKING_LIMIT)
 
   const [openAppointment, setOpenAppointment] = useState<AppointmentRow | null>(
     null,
@@ -395,6 +444,41 @@ export function TrainerDashboard() {
                     ))}
                   </ul>
                 </li>
+              ))}
+            </ul>
+          )}
+        </ListCard>
+      </div>
+
+      {/* Reports waiting to be checked. Its own card and not a third marking
+          queue: marking is coursework with a grade at the end, and this is a
+          document going back and forth until it is right. It is also the one
+          card here that replaced a room booking, which is the point of the
+          module. */}
+      <div className="mt-8">
+        <ListCard
+          title={t('report.dash.staff.title')}
+          action={{
+            to: '/reports',
+            label: (
+              <>
+                {t('dash.view_all')} <ChevronRight />
+              </>
+            ),
+          }}
+        >
+          {reports.isLoading ? (
+            <LoadingBlock className="py-8" />
+          ) : reports.error ? (
+            <ErrorBlock error={reports.error} className="m-4" />
+          ) : (reports.data ?? []).length === 0 ? (
+            <p className="text-muted-foreground px-4 py-8 text-center text-sm">
+              {t('report.dash.staff.empty')}
+            </p>
+          ) : (
+            <ul className="divide-y">
+              {(reports.data ?? []).map((r) => (
+                <ReportRowItem key={r.id} row={r} />
               ))}
             </ul>
           )}

@@ -15,6 +15,7 @@ export const nav = {
   'nav.students': 'Students',
   'nav.instructors': 'Instructors',
   'nav.appointments': 'Appointments',
+  'nav.reports': 'Report checks',
   'nav.payments': 'Payments',
   'nav.payment_log': 'Payment log',
   'nav.payment_report': 'Payment report',
@@ -27,6 +28,7 @@ export const nav = {
   'nav.learn.courses': 'My courses',
   'nav.learn.work': 'My work',
   'nav.learn.appointments': 'Appointments',
+  'nav.learn.reports': 'My reports',
   'nav.learn.billing': 'Billing',
   'nav.learn.profile': 'My profile',
 

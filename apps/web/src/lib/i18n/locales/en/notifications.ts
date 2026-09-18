@@ -23,6 +23,19 @@ export const notifications = {
   'notif.appt_cancelled.student': 'Your session with {name} was cancelled',
   'notif.appt_cancelled.instructor': 'Session with {name} was cancelled',
 
+  // --- report checks --------------------------------------------------------
+  // Four kinds, because "your report was approved" and "somebody left a
+  // comment" are different events with different urgency. Only `titleOf`
+  // branches; the payload is identical across all four.
+  'notif.report_submitted.instructor': '{name} sent a report for checking',
+  'notif.report_submitted.student': 'Your report was sent',
+  'notif.report_comment.student': '{name} commented on your report',
+  'notif.report_comment.instructor': '{name} replied on a report',
+  'notif.report_status.student': 'Your report: {status}',
+  'notif.report_status.instructor': 'Report with {name}: {status}',
+  'notif.report_assigned.instructor': 'A report from {name} was assigned to you',
+  'notif.report_assigned.student': 'Your report is now with {name}',
+
 } as const
 
 export type NotificationsDict = Record<keyof typeof notifications, string>

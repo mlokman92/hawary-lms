@@ -160,6 +160,11 @@ export const appointments = {
   'appt.learn.note_placeholder': 'Optional.',
   'appt.learn.mine': 'My sessions',
   'appt.learn.none': 'No sessions yet',
+  // The dashboard card's empty line. Not `appt.learn.none`: that one means
+  // "you have never booked", this one means "nothing is coming up", and a
+  // student with three past sessions and none ahead would read the first as
+  // wrong.
+  'appt.dash.none': 'Nothing booked.',
   'appt.learn.none_hint': 'Book one above and it will show here.',
   // The register — every session, not just this week
   'appt.register.title': 'All sessions',

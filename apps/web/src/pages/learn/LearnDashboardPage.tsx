@@ -12,7 +12,9 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useT, type TFn } from '@/lib/i18n'
+import { getLang, useT, type TFn } from '@/lib/i18n'
+import { localeFor } from '@/lib/format'
+import { TONE_CLASS } from '@/lib/tone'
 import { useStudentAcademy } from '@/lib/studentAcademy'
 import { useMyCourses, useMyStudent } from '@/features/learn/api'
 import {
@@ -22,6 +24,13 @@ import {
   type LearnTask,
 } from '@/features/learn/dashboard'
 import { TASK_STATE_META } from '@/features/learn/status'
+import {
+  DEFAULT_TZ,
+  useAcademyTimezone,
+  useMyAppointments,
+} from '@/features/appointments/api'
+import { fmtWhen } from '@/features/appointments/calendar'
+import { REPORT_STATUS, useMyReports } from '@/features/reports/api'
 import { PageHeader } from '@/components/patterns/PageHeader'
 import { StatTile } from '@/components/patterns/StatTile'
 import { ListCard } from '@/components/patterns/ListCard'
@@ -100,6 +109,12 @@ export function LearnDashboardPage() {
     academyId,
     student?.id ?? null,
   )
+  // The two things a student comes here to check that are not coursework: when
+  // they are expected in person, and what became of the documents they sent.
+  const { data: tz = DEFAULT_TZ } = useAcademyTimezone(academyId)
+  const { data: sessions } = useMyAppointments(academyId)
+  const { data: reports } = useMyReports(academyId)
+  const locale = localeFor(getLang())
 
   const groups = useMemo(() => {
     const tasks = data?.tasks ?? []
@@ -160,6 +175,23 @@ export function LearnDashboardPage() {
       </div>
     )
   }
+
+  // Still going ahead, and not yet over. Cut on `ends_at` rather than
+  // `starts_at`, the same rule the register uses: a session being taught right
+  // now is still today's session, not history.
+  const upcoming = (sessions ?? [])
+    .filter((a) => a.status === 'booked' && Date.parse(a.ends_at) >= Date.now())
+    .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
+    .slice(0, 4)
+
+  // Only threads that exist. A course with nothing sent is a row on
+  // /learn/reports, where the Send button is; here it would be a line reporting
+  // an absence.
+  const myReports = (reports?.courses ?? [])
+    .map((c) => c.report)
+    .filter((r): r is NonNullable<typeof r> => r !== null)
+    .sort((a, b) => b.last_at.localeCompare(a.last_at))
+    .slice(0, 4)
 
   const outstanding =
     groups.overdue.length + groups.soon.length + groups.rest.length
@@ -251,6 +283,108 @@ export function LearnDashboardPage() {
                     .map((t) => (
                       <TaskRow key={`${t.kind}-${t.id}`} t={t} />
                     ))}
+                </ul>
+              )}
+            </ListCard>
+          </div>
+
+          {/* Sessions and reports, side by side. Both answer "what is
+              happening with me", which is a different question from the
+              coursework above — and neither was reachable from this page
+              before. */}
+          <div className="mt-8 grid gap-4 lg:grid-cols-2">
+            <ListCard
+              title={tr('appt.learn.mine')}
+              action={{
+                to: '/learn/appointments',
+                label: (
+                  <>
+                    {tr('learn.view_all')} <ChevronRight />
+                  </>
+                ),
+              }}
+            >
+              {upcoming.length === 0 ? (
+                <p className="text-muted-foreground px-4 py-8 text-center text-sm">
+                  {tr('appt.dash.none')}
+                </p>
+              ) : (
+                <ul className="divide-y">
+                  {upcoming.map((a) => (
+                    <li
+                      key={a.id}
+                      className="flex items-center gap-3 px-4 py-2.5"
+                    >
+                      <CalendarClock
+                        className="text-muted-foreground size-4 shrink-0"
+                        aria-hidden
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">
+                          {fmtWhen(a.starts_at, tz, locale)}
+                        </span>
+                        <span className="text-muted-foreground block truncate text-xs">
+                          {/* The instructor's name is the one fact a student
+                              cannot get anywhere else — `instructors` is
+                              staff-only, so this RPC's projection is their
+                              only sight of it. */}
+                          {a.instructor.full_name ?? tr('common.unnamed')}
+                        </span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </ListCard>
+
+            <ListCard
+              title={tr('report.dash.learn.title')}
+              action={{
+                to: '/learn/reports',
+                label: (
+                  <>
+                    {tr('learn.view_all')} <ChevronRight />
+                  </>
+                ),
+              }}
+            >
+              {myReports.length === 0 ? (
+                <p className="text-muted-foreground px-4 py-8 text-center text-sm">
+                  {tr('report.dash.learn.empty')}
+                </p>
+              ) : (
+                <ul className="divide-y">
+                  {myReports.map((r) => {
+                    const meta = REPORT_STATUS[r.status]
+                    return (
+                      <li
+                        key={r.id}
+                        className="hover:bg-muted/50 flex items-center gap-3 px-4 py-2.5 transition-colors"
+                      >
+                        <Link
+                          to={`/learn/reports/${r.id}`}
+                          className="min-w-0 flex-1 hover:underline"
+                        >
+                          <span className="block truncate text-sm font-medium">
+                            {r.title}
+                          </span>
+                          <span className="text-muted-foreground block truncate text-xs">
+                            {r.instructor_name
+                              ? tr('report.checked_by', {
+                                  name: r.instructor_name,
+                                })
+                              : tr('report.unassigned')}
+                          </span>
+                        </Link>
+                        <Badge
+                          variant="outline"
+                          className={cn('shrink-0', TONE_CLASS[meta.tone])}
+                        >
+                          {tr(meta.labelKey)}
+                        </Badge>
+                      </li>
+                    )
+                  })}
                 </ul>
               )}
             </ListCard>

@@ -152,6 +152,7 @@ export const appointments: AppointmentsDict = {
   'appt.learn.note_placeholder': 'Tidak wajib.',
   'appt.learn.mine': 'Sesi saya',
   'appt.learn.none': 'Belum ada sesi',
+  'appt.dash.none': 'Tiada tempahan.',
   'appt.learn.none_hint': 'Tempah satu di atas dan ia akan muncul di sini.',
   // Daftar sesi — semua sesi, bukan minggu ini sahaja
   'appt.register.title': 'Semua sesi',

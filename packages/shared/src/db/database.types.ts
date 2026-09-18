@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -1451,6 +1451,7 @@ export type Database = {
           id: string
           instructor_no: string
           is_bookable: boolean
+          is_report_checker: boolean
           phone: string | null
           specialization: string | null
           status: Database["public"]["Enums"]["instructor_status"]
@@ -1473,6 +1474,7 @@ export type Database = {
           id?: string
           instructor_no: string
           is_bookable?: boolean
+          is_report_checker?: boolean
           phone?: string | null
           specialization?: string | null
           status?: Database["public"]["Enums"]["instructor_status"]
@@ -1495,6 +1497,7 @@ export type Database = {
           id?: string
           instructor_no?: string
           is_bookable?: boolean
+          is_report_checker?: boolean
           phone?: string | null
           specialization?: string | null
           status?: Database["public"]["Enums"]["instructor_status"]
@@ -1984,6 +1987,207 @@ export type Database = {
         }
         Relationships: []
       }
+      report_events: {
+        Row: {
+          academy_id: string
+          actor_id: string | null
+          actor_name: string | null
+          actor_role: string
+          body: string | null
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["report_event_kind"]
+          report_id: string
+          to_status: Database["public"]["Enums"]["report_status"] | null
+          version: number | null
+        }
+        Insert: {
+          academy_id: string
+          actor_id?: string | null
+          actor_name?: string | null
+          actor_role: string
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["report_event_kind"]
+          report_id: string
+          to_status?: Database["public"]["Enums"]["report_status"] | null
+          version?: number | null
+        }
+        Update: {
+          academy_id?: string
+          actor_id?: string | null
+          actor_name?: string | null
+          actor_role?: string
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["report_event_kind"]
+          report_id?: string
+          to_status?: Database["public"]["Enums"]["report_status"] | null
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_events_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_events_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "report_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_files: {
+        Row: {
+          academy_id: string
+          created_at: string
+          event_id: string
+          file_name: string
+          file_path: string
+          id: string
+          mime_type: string | null
+          report_id: string
+          size_bytes: number | null
+          version: number
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          event_id: string
+          file_name: string
+          file_path: string
+          id?: string
+          mime_type?: string | null
+          report_id: string
+          size_bytes?: number | null
+          version: number
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          event_id?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          mime_type?: string | null
+          report_id?: string
+          size_bytes?: number | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_files_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_files_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "report_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_files_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "report_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_submissions: {
+        Row: {
+          academy_id: string
+          approved_at: string | null
+          auto_assigned: boolean
+          course_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          instructor_id: string | null
+          reviewed_at: string | null
+          status: Database["public"]["Enums"]["report_status"]
+          student_id: string
+          submitted_at: string
+          title: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          academy_id: string
+          approved_at?: string | null
+          auto_assigned?: boolean
+          course_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          instructor_id?: string | null
+          reviewed_at?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+          student_id: string
+          submitted_at?: string
+          title: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          academy_id?: string
+          approved_at?: string | null
+          auto_assigned?: boolean
+          course_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          instructor_id?: string | null
+          reviewed_at?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+          student_id?: string
+          submitted_at?: string
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_submissions_academy_id_course_id_fkey"
+            columns: ["academy_id", "course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "report_submissions_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_submissions_academy_id_instructor_id_fkey"
+            columns: ["academy_id", "instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructors"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "report_submissions_academy_id_student_id_fkey"
+            columns: ["academy_id", "student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["academy_id", "id"]
+          },
+        ]
+      }
       student_bank_accounts: {
         Row: {
           academy_id: string
@@ -2195,6 +2399,15 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      comment_on_report: {
+        Args: {
+          _body: string
+          _files?: Json
+          _report_id: string
+          _to_status?: Database["public"]["Enums"]["report_status"]
+        }
+        Returns: Json
+      }
       course_billing_roster: {
         Args: {
           _academy: string
@@ -2296,6 +2509,7 @@ export type Database = {
           total_sen: number
         }[]
       }
+      get_report: { Args: { _report_id: string }; Returns: Json }
       get_toyyibpay_secret: { Args: { _academy: string }; Returns: string }
       incentive_candidates: {
         Args: { _academy: string; _course?: string }
@@ -2433,6 +2647,7 @@ export type Database = {
           role: string
         }[]
       }
+      my_reports: { Args: { _academy_id: string }; Returns: Json }
       payment_log_page: {
         Args: {
           _academy: string
@@ -2502,6 +2717,10 @@ export type Database = {
           sublabel: string
         }[]
       }
+      reassign_report: {
+        Args: { _instructor_id?: string; _report_id: string }
+        Returns: Json
+      }
       record_gateway_payment: {
         Args: {
           _amount_sen: number
@@ -2526,6 +2745,21 @@ export type Database = {
       reorder_module_items: {
         Args: { p_kind: string; p_module_id: string; p_ordered_ids: string[] }
         Returns: undefined
+      }
+      report_counts: {
+        Args: { _academy_id: string }
+        Returns: {
+          n: number
+          status: Database["public"]["Enums"]["report_status"]
+        }[]
+      }
+      report_download: {
+        Args: { _file_id: string }
+        Returns: {
+          file_name: string
+          file_path: string
+          mime_type: string
+        }[]
       }
       resend_invitation: { Args: { _invitation_id: string }; Returns: Json }
       revoke_invitation: {
@@ -2562,6 +2796,15 @@ export type Database = {
       }
       start_attempt: { Args: { _assessment_id: string }; Returns: Json }
       submit_attempt: { Args: { _attempt_id: string }; Returns: Json }
+      submit_report: {
+        Args: {
+          _academy_id: string
+          _course_id: string
+          _files: Json
+          _title: string
+        }
+        Returns: Json
+      }
       unlink_instructor_account: {
         Args: { _instructor_id: string }
         Returns: Json
@@ -2604,6 +2847,10 @@ export type Database = {
         | "appointment_booked"
         | "appointment_reassigned"
         | "appointment_cancelled"
+        | "report_submitted"
+        | "report_comment"
+        | "report_status"
+        | "report_assigned"
       payment_method:
         | "cash"
         | "bank_transfer"
@@ -2621,6 +2868,12 @@ export type Database = {
         | "short_text"
         | "essay"
         | "matching"
+      report_event_kind: "submitted" | "comment" | "status" | "assigned"
+      report_status:
+        | "submitted"
+        | "in_review"
+        | "changes_requested"
+        | "approved"
       student_status:
         | "active"
         | "trial"
@@ -2794,6 +3047,10 @@ export const Constants = {
         "appointment_booked",
         "appointment_reassigned",
         "appointment_cancelled",
+        "report_submitted",
+        "report_comment",
+        "report_status",
+        "report_assigned",
       ],
       payment_method: [
         "cash",
@@ -2813,6 +3070,13 @@ export const Constants = {
         "short_text",
         "essay",
         "matching",
+      ],
+      report_event_kind: ["submitted", "comment", "status", "assigned"],
+      report_status: [
+        "submitted",
+        "in_review",
+        "changes_requested",
+        "approved",
       ],
       student_status: [
         "active",

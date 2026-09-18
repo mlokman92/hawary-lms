@@ -20,7 +20,9 @@ import {
   useUnreadCount,
   type AppointmentBookedData,
   type Notification,
+  type ReportEventData,
 } from '@/features/notifications/api'
+import { REPORT_STATUS } from '@/features/reports/api'
 
 /**
  * The notification centre: one bell, top right of the header, in both shells.
@@ -136,13 +138,59 @@ export function NotificationBell() {
 }
 
 // ---------------------------------------------------------------------------
-// Three event kinds. Each new kind adds a case to these three functions — that
-// is the whole cost of a new notification, and none of it is a schema change.
+// Seven event kinds in two families. Each new kind adds a case to these three
+// functions — that is the whole cost of a new notification, and none of it is a
+// schema change.
 //
-// All three appointment kinds share a payload, so only `titleOf` branches:
-// where the row leads and when the session is are the same question whatever
-// became of it.
+// Within a family the payload is shared, so only `titleOf` branches: for an
+// appointment, where the row leads and when the session is are the same
+// question whatever became of it; for a report, the thread is the thread.
+// The two families are told apart by `kind`, not by sniffing `data`.
 // ---------------------------------------------------------------------------
+
+const REPORT_KINDS = [
+  'report_submitted',
+  'report_comment',
+  'report_status',
+  'report_assigned',
+] as const
+
+const isReport = (row: Notification): boolean =>
+  (REPORT_KINDS as readonly string[]).includes(row.kind)
+
+function reportData(row: Notification): ReportEventData | null {
+  const d = row.data as Partial<ReportEventData> | null
+  return d && typeof d === 'object' && typeof d.report_id === 'string'
+    ? (d as ReportEventData)
+    : null
+}
+
+function reportTitle(row: Notification, t: TFn): string {
+  const d = reportData(row)
+  const name = d?.with_name?.trim() || t('notif.someone')
+  const asInstructor = d?.role === 'instructor'
+  // The status is rendered through the same map the queue's badges use, so a
+  // notification and the thread it opens never disagree about what to call it.
+  const status = d?.status ? t(REPORT_STATUS[d.status].labelKey) : ''
+  switch (row.kind) {
+    case 'report_comment':
+      return asInstructor
+        ? t('notif.report_comment.instructor', { name })
+        : t('notif.report_comment.student', { name })
+    case 'report_status':
+      return asInstructor
+        ? t('notif.report_status.instructor', { name, status })
+        : t('notif.report_status.student', { name, status })
+    case 'report_assigned':
+      return asInstructor
+        ? t('notif.report_assigned.instructor', { name })
+        : t('notif.report_assigned.student', { name })
+    default:
+      return asInstructor
+        ? t('notif.report_submitted.instructor', { name })
+        : t('notif.report_submitted.student')
+  }
+}
 
 function apptData(row: Notification): AppointmentBookedData | null {
   const d = row.data as Partial<AppointmentBookedData> | null
@@ -152,6 +200,7 @@ function apptData(row: Notification): AppointmentBookedData | null {
 }
 
 function titleOf(row: Notification, t: TFn): string {
+  if (isReport(row)) return reportTitle(row, t)
   const d = apptData(row)
   const name = d?.with_name?.trim() || t('notif.someone')
   const asInstructor = d?.role === 'instructor'
@@ -170,8 +219,17 @@ function titleOf(row: Notification, t: TFn): string {
     : t('notif.appt_booked.student', { name })
 }
 
-/** When the session is — in the academy's zone, snapshotted on the row. */
+/**
+ * The second line. For a session that is when it is, in the academy's zone and
+ * snapshotted on the row; for a report it is which batch, on which course —
+ * "LPKC, slide dan portfolio · DKM1" is what tells two threads apart when a
+ * student has one per course.
+ */
 function detailOf(row: Notification, locale: string): string {
+  if (isReport(row)) {
+    const d = reportData(row)
+    return d ? [d.title, d.course].filter(Boolean).join(' · ') : ''
+  }
   const d = apptData(row)
   return d ? fmtWhen(d.starts_at, d.tz || DEFAULT_TZ, locale) : ''
 }
@@ -188,6 +246,16 @@ function detailOf(row: Notification, locale: string): string {
  * soonest first, which is where the row she just read actually is.
  */
 function linkOf(row: Notification): string | null {
+  if (isReport(row)) {
+    // Straight to the thread, on the side the reader was addressed as. Unlike
+    // the appointment case there is no windowing problem to route around: a
+    // report has an id and a page of its own, whatever its status.
+    const d = reportData(row)
+    if (!d) return null
+    return d.role === 'instructor'
+      ? `/reports/${d.report_id}`
+      : `/learn/reports/${d.report_id}`
+  }
   const d = apptData(row)
   if (!d) return null
   return d.role === 'instructor' ? '/appointments/list' : '/learn/appointments'

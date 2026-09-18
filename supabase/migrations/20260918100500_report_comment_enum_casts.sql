@@ -1,0 +1,28 @@
+-- Bookkeeping, and the note that goes with it.
+--
+-- `comment_on_report` shipped with two `CASE` expressions whose branches were
+-- both unknown literals, so each resolved to `text` — and under
+-- `set search_path to ''` there is no implicit text -> enum cast to rescue
+-- them. Both failed at RUNTIME, not at creation, so `create function` reported
+-- success and the first comment anybody wrote blew up:
+--
+--   column "kind" is of type public.report_event_kind but expression is of type text
+--   function app.notify_report(uuid, text, uuid, boolean, boolean) does not exist
+--
+-- They were found and fixed in two passes against the live project, which is
+-- why the remote migration history carries two extra entries —
+-- `report_comment_enum_cast` and `report_comment_notify_kind_cast` — with no
+-- file of their own. The casts were also written back into
+-- `20260918100200_report_checks_rpcs.sql`, so a replay from these files is
+-- correct the first time and this migration is a no-op against it.
+--
+-- It is kept because the remote history has rows this directory should be able
+-- to account for, and because the trap is worth writing down: a plpgsql
+-- function body is only parsed when it runs, so "the migration applied" says
+-- nothing about whether the statements inside it can execute. Test the RPC, not
+-- the DDL.
+--
+-- The lesson generalises past enums. Any expression in a SECURITY DEFINER,
+-- empty-search_path function that leans on an implicit cast or an unqualified
+-- name is a runtime error waiting for its first caller.
+select 1;
