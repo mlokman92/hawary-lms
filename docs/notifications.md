@@ -128,6 +128,33 @@ control.
 Adding a kind costs three cases in that one file (`titleOf`, `detailOf`,
 `linkOf`), one enum value, and two dictionary lines. It is not a schema change.
 
+### Which academy it is scoped to is a prop
+
+The bell used to call `useAcademy()` and read `activeAcademyId` for itself. That
+is the **back-office's** context, and it is staff-scoped by design: its
+reconciliation effect opens with
+
+    if (staffMemberships.length === 0) return
+
+so for a student-only account the id is whatever `localStorage` happened to
+hold — **null**, for anyone who has never been staff. Both queries are
+`enabled: !!academyId`, so they never ran. The learner's bell was not "usually
+empty"; it was incapable of showing anything, for every kind, from the day it
+shipped. On this database that was **602 notifications across 284 accounts**
+that nobody could ever have seen. The failure was silent in the worst way: the
+control rendered, the panel opened, and it said "Nothing yet."
+
+`SidebarShell` now takes `academyId` and hands it down; `AppLayout` passes
+`useAcademy().activeAcademyId` and `LearnLayout` passes
+`useStudentAcademy().academyId`. The two contexts are deliberately separate
+(`lib/studentAcademy.tsx` explains why), so anything mounted in both shells has
+to be told which one it is standing in rather than guess — the same reason
+`switcher` is a prop.
+
+**The rule this leaves behind:** a component under `components/shell/` may not
+call `useAcademy()`. It is not mounted in one tree, so there is no ambient
+answer for it to read.
+
 ## Deliberately not done
 
 - **No realtime.** A minute's polling is what a notification of this kind is
@@ -139,11 +166,18 @@ Adding a kind costs three cases in that one file (`titleOf`, `detailOf`,
   … where read_at < now() - interval '90 days'`, and this is the note that says
   so.
 - **No email/push fan-out from here.** The appointment emails are sent by
-  `send-appointment-notice` on its own path — a second call from the browser,
-  which is exactly why the notification is the more reliable of the two. The two
-  paths mirror each other kind for kind and reach the same two people; routing
-  them through one dispatcher is the move to make when a kind arrives that is
-  not an appointment.
+  `send-appointment-notice`, and the report ones by `send-report-notice`, each
+  on its own path — a second call from the browser, which is exactly why the
+  notification is the more reliable of the two. Each mail function mirrors its
+  own kinds; routing them through one dispatcher is the move to make when the
+  third family arrives, not the second.
+
+  Note the two families answer "who is told" **differently**, and that is
+  deliberate, not drift: appointments tell both parties *including the actor*
+  (the student is nearly always the actor there, so skipping them meant telling
+  them nothing), while reports tell only the other party (both sides act on the
+  same thread repeatedly, so a copy of your own comment is noise). See
+  `docs/report-checks.md` → "Who is told".
 
 ## Notes
 

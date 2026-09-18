@@ -341,7 +341,17 @@ Monorepo: **pnpm workspaces + Turborepo**.
   Not done: no deadline, no grade, no document-type entity, and the **outgoing**
   checker is told nothing on a handover — the same gap `cancel_appointment` has.
 - **Notifications** (`docs/notifications.md`): the header bell, in **both**
-  shells (mounted in `shell/SidebarShell`, not per layout). A row is an
+  shells (mounted in `shell/SidebarShell`, not per layout) — and **which academy
+  it is scoped to is a prop**, which is the bug that made the learner's bell
+  dead from the day it shipped. It read `useAcademy().activeAcademyId` for
+  itself; that context is staff-scoped (its reconciliation effect opens
+  `if (staffMemberships.length === 0) return`), so for a student-only account
+  the id is null for ever, both queries stayed `enabled: false`, and the panel
+  said "Nothing yet" to **602 notifications across 284 accounts** — every kind,
+  not just reports. `SidebarShell` now takes `academyId`; `AppLayout` passes the
+  back-office's, `LearnLayout` passes `useStudentAcademy()`'s. **A component
+  under `components/shell/` may not call `useAcademy()`** — it is mounted in
+  both trees, so there is no ambient answer for it to read. A row is an
   **event, not a sentence** — `kind` + `data`, with the words assembled client
   side, so the same row reads Malay for a Malay reader; `data` is a snapshot
   (the other party's name, the time, the academy's `tz`) so the list needs no

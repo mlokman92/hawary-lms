@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bell } from 'lucide-react'
-import { useAcademy } from '@/lib/academy'
 import { getLang, useT, type TFn } from '@/lib/i18n'
 import { localeFor } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -34,20 +33,24 @@ import { REPORT_STATUS } from '@/features/reports/api'
  *
  * A row arrives as an event (`kind` + `data`), never as a sentence, so the
  * wording is assembled here and follows the reader's language.
+ *
+ * `academyId` is a PROP, not something this component reads for itself. It used
+ * to call `useAcademy()`, which is the back-office's staff-scoped context and
+ * is null for ever for a student-only account — so the learner's bell was
+ * permanently empty. `SidebarShell` now hands each shell's own academy down.
  */
-export function NotificationBell() {
+export function NotificationBell({ academyId }: { academyId: string | null }) {
   const { t } = useT()
   const locale = localeFor(getLang())
   const navigate = useNavigate()
-  const { activeAcademyId } = useAcademy()
 
   const [open, setOpen] = useState(false)
-  const { data: unread = 0 } = useUnreadCount(activeAcademyId)
+  const { data: unread = 0 } = useUnreadCount(academyId)
   // The rows are only worth fetching once somebody asks for them; the badge is
   // what polls.
-  const { data: rows = [] } = useNotifications(open ? activeAcademyId : null)
-  const markRead = useMarkNotificationsRead(activeAcademyId)
-  const markAll = useMarkAllNotificationsRead(activeAcademyId)
+  const { data: rows = [] } = useNotifications(open ? academyId : null)
+  const markRead = useMarkNotificationsRead(academyId)
+  const markAll = useMarkAllNotificationsRead(academyId)
 
   function openRow(row: Notification) {
     if (!row.read_at) markRead.mutate([row.id])
