@@ -645,6 +645,18 @@ export function useCreateInvoices(academyId: string) {
   })
 }
 
+/**
+ * Record a payment that arrived outside the gateway.
+ *
+ * The insert is the whole write. `invoices.amount_paid_sen` and the invoice
+ * status are recomputed from `sum(payments where succeeded)` by
+ * `app.sync_invoice_paid`, the same rule `record_gateway_payment` always used:
+ * this used to add `amountSen` to the figure the *page* was showing, so two
+ * payments recorded from one screen both added to the same stale number and the
+ * second one's money stayed in the ledger but left the invoice. A client cannot
+ * hold the invoice row still between reading it and writing it back; the
+ * database can.
+ */
 export function useRecordPayment(academyId: string) {
   const qc = useQueryClient()
   return useMutation({
@@ -655,8 +667,6 @@ export function useRecordPayment(academyId: string) {
       method: PaymentMethod
       paidAt: string
       note?: string | null
-      totalSen: number
-      currentPaidSen: number
       createdBy?: string | null
     }) => {
       const { error } = await supabase.from('payments').insert({
@@ -674,14 +684,6 @@ export function useRecordPayment(academyId: string) {
         created_by: input.createdBy ?? null,
       })
       if (error) throw error
-      const newPaid = input.currentPaidSen + input.amountSen
-      const status: InvoiceStatus =
-        newPaid >= input.totalSen ? 'paid' : 'partially_paid'
-      const { error: e2 } = await supabase
-        .from('invoices')
-        .update({ amount_paid_sen: newPaid, status })
-        .eq('id', input.invoiceId)
-      if (e2) throw e2
     },
     onSuccess: (_d, vars) => {
       invalidateMoney(qc, academyId)

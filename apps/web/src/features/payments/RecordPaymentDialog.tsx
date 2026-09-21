@@ -79,8 +79,6 @@ export function RecordPaymentDialog({
         method,
         paidAt: new Date(`${paidDate}T12:00:00`).toISOString(),
         note,
-        totalSen,
-        currentPaidSen: paidSen,
         createdBy: user?.id ?? null,
       })
       onOpenChange(false)

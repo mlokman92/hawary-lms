@@ -2,13 +2,18 @@
 
 Guidance for Claude Code in this repo.
 
+> **Keep this file under 200 lines.** It is loaded into every session, so it
+> holds only what an agent needs *before* reading anything else. Decisions and
+> their rationale go in `docs/` — do not record a fix here.
+
 ## Project
 
-**Hawary LMS** — Malaysian multi-tenant SaaS LMS. Each **academy** is an isolated
-tenant (trainers/students/data never cross academies). Roles: **admin** & **trainer**
-(web back-office), **student** (mobile, later). Features: courses, students/enrollment,
-notes, assessments, assignments, payments. Malaysian: MYR (store as **sen**),
-SST-aware invoices, **bilingual EN/BM** (web); payment gateways are future work.
+**Hawary LMS** — Malaysian multi-tenant SaaS LMS. Each **academy** is an
+isolated tenant (trainers/students/data never cross academies). Roles: **admin**
+& **trainer** (web back-office), **student** (mobile, later). Features: courses,
+students/enrollment, notes, assessments, assignments, payments. Malaysian: MYR
+(store as **sen**), SST-aware invoices, **bilingual EN/BM** (web); payment
+gateways are live for ToyyibPay (money in) and Billplz (money out).
 
 ## Tech stack
 
@@ -17,855 +22,74 @@ Monorepo: **pnpm workspaces + Turborepo**.
 - `apps/web` — Vite + React + TS. Admin/trainer surface. **Built.**
 - `apps/mobile` — Expo (React Native) + TS. Student surface. **Scaffolded, not wired.**
 - `packages/shared` — TS types, **generated** DB types, Supabase client, domain logic.
-- Backend — **Supabase** (Postgres + RLS, Auth, Storage). Project ref
-  `vpklztxqkvqmmzsxfqgp`; use the Supabase MCP tools. Migrations in `supabase/migrations/`.
+- Backend — **Supabase** (Postgres + RLS, Auth, Storage, Edge Functions).
+  Project ref `vpklztxqkvqmmzsxfqgp`; use the Supabase MCP tools. Migrations in
+  `supabase/migrations/`.
 - **Web UI** — shadcn/ui (Radix + **Tailwind v4**), neutral theme in
   `apps/web/src/index.css`, `@` alias, `apps/web/src/components/ui` (add via
-  `pnpm dlx shadcn@latest add <name>`). Data layer: **TanStack Query**; feature code in
-  `apps/web/src/features/*`.
+  `pnpm dlx shadcn@latest add <name>`). Data layer: **TanStack Query**; feature
+  code in `apps/web/src/features/*`; shared page vocabulary in
+  `apps/web/src/components/patterns/*`.
 - **Mobile UI** — React Native Reusables + NativeWind (pending).
+- **Email** — Resend, from `noreply@hawary.my`. `RESEND_API_KEY`,
+  `INVITE_FROM_EMAIL`, `APP_URL`, `ALLOWED_ORIGINS` are set and shared by every
+  mail function. Supabase Auth sends its own confirm/reset mail through Resend
+  SMTP, configured in the dashboard, not in this repo. Auth's per-hour rate
+  limit and Resend's plan cap are **separate and both real**.
 
-## Status — what's built (web)
+## What's built (web)
 
-- **Auth + onboarding**: email/password sign in/up, forgot → `/reset-password`
-  (the recovery link's own landing page; `lib/recoveryLink.ts` snapshots the URL
-  params before the Supabase client consumes them), self-serve academy creation
-  (creator becomes admin), academy switcher, light/dark theme.
-- **Sections** (each: list + add/edit, staff-gated, academy-scoped by RLS):
-  Courses · Students · Instructors · Appointments. A trainer's nav is these four +
-  Dashboard; admins also get **Payments** (+ its Log child) + Incentive + Members +
-  Settings — see `docs/money-is-admin-only.md`. The **header search** (`HeaderSearch` +
-  `features/search`) finds students and instructors across the active academy by
-  name, email, phone, IC or record number and jumps straight to the record.
-- **Course → module → content**: a course is a card grid (`/courses`) showing per-course
-  counts; opening one (`/courses/:id`) lists its **modules as an accordion**
-  (`type="multiple"`, open set kept per course in `sessionStorage`, first module
-  open by default), each holding notes, **materials**, assessments and
-  assignments. `course_modules` is the only hierarchy — `module_id` is **NOT
-  NULL** on all four content tables, so there is no course-level loose content
-  and notes are a flat list per module (the old note folder tree is gone).
-  Editors stay routable at `/notes/:id`, `/assessments/:id`,
-  `/assignments/:id`. Reorder/move via `reorder_course_modules` +
-  `reorder_module_items(module, kind, ordered_ids)`. Items are **drag-sortable**
-  (`features/courses/ModuleItemList.tsx`, dnd-kit): by handle, not whole-row —
-  the row also holds a link, a switch and a menu — and within one
-  (module, kind) section only, since that is what the RPC takes and a note
-  cannot be dropped into "Assessments". Crossing modules stays on the ⋯ menu,
-  which still works when the target module is collapsed. `useReorderModuleItems`
-  is optimistic or the row springs back mid-drag. Publishing is an inline
-  `PublishSwitch` on the row (also optimistic); one `useTogglePublished` covers
-  all four kinds.
-- **Sub-nav under Courses** (`NavItem.children` → `SidebarMenuSub`, always
-  open), and the two shells mean different things by it:
-  - **staff** `/assessments` · `/assignments` are the **grading queues** —
-    `GradingQueuePage` over `useAcademyQueue`, academy-wide because RLS
-    (`app.can_grade_*`) already narrows a trainer to their assigned courses.
-    `/enrollments` is the third child — the whole enrollment surface, not a
-    queue: the public link, which courses accept requests, who is waiting, and
-    bulk enrol.
-    Awaiting/Marked/All tiles, search, and a `?course=` filter. `/courses/:id`
-    carries **no Grading button** and no enrollment controls — it is for
-    building the course, so *New module* is the only button and Edit/Duplicate
-    sit in a `⋯` menu. `/courses/:id/grading` (`CourseGradingPage`) still
-    resolves for older links. Authoring stays inside a course — there is no
-    academy-wide content inventory, and `LibraryPage`/`features/library` were
-    removed when this replaced them.
-  - **learner** `/learn/assessments` · `/learn/assignments` are their own lists
-    of work (`LearnTaskListPage`, off the existing dashboard query).
+Staff back-office and a learner surface, both on the same shell. Auth,
+onboarding and academy creation; Courses · Students · Instructors ·
+Appointments; course → module → content authoring with grading queues;
+enrollment; report checks; notifications; four money screens; members & roles;
+CSV import; EN/BM throughout.
 
-  Notes and materials stay module-only on both sides.
-- **Question types** (`docs/question-types.md`): six — `essay` · `short_text`
-  (marked by a person) and `true_false` · `single_choice` · `multiple_choice` ·
-  `matching` (marked by Postgres). `options` is public, `correct_answer` never
-  leaves the server, and **a student's answer is encoded exactly like
-  `correct_answer`** (string / boolean / array of ids / `{leftId: rightId}`), so
-  scoring is a comparison and the v1 string answers still work untouched.
-  Matching's right column is shuffled by `app.shuffled_matching_options` —
-  authoring order is itself the answer key. `submit_attempt` auto-scores via
-  `app.question_fraction` (partial credit for matching) and reaches `graded` only
-  when no question needs a human; otherwise it banks the objective marks and
-  leaves the rest to the grader. `assessments.total_points` is now
-  trigger-maintained — clients must not write it. Model + client mirror:
-  `apps/web/src/lib/questions.ts`.
-- **Materials** (`docs/course-materials.md`): `course_materials` is shaped like
-  `notes` (same FKs, same four policies) but its file lives in the **private**
-  `course-materials` bucket — this is the product, and in a public bucket the URL
-  *is* the product. Upload extends `upload-media` (50 MB, document MIME list, key
-  `<academy_id>/<course_id>/<uuid>.<ext>`); reads go through the new
-  **`material-url`** function, which asks `public.material_download` — under the
-  caller's own JWT — whether they may have it, then signs for 60s with the
-  service role. The request carries an **id, never a path**. Deleting a material
-  deletes the row, **not** the object: `duplicate_course` points copies at the
-  same file.
-- **Course duplication** (`docs/course-duplication.md`): `duplicate_course(id,
-  title, code)` deep-copies modules · notes · materials · assessments +
-  questions + answer keys · assignments · instructor assignments. Not enrolments,
-  attempts, submissions or invoices. The intake lives in the **title** — there is
-  no cohort entity and none should be invented. `code` is asked for, not copied
-  (uniquely indexed per academy); status resets to `draft` and all schedule dates
-  to NULL, so a new intake never opens already closed. Gated by
-  `app.can_grade_course`, stricter than course creation because it carries a
-  question bank.
-- **Enrollment** (`docs/course-enrollment.md`): **enrolling is joining.**
-  *Anyone can enter an academy; course access is what staff grant.* The academy
-  publishes **one** public link, `/enroll/:slug` (`academy_enrollment_settings`,
-  admin-only, off by default). A visitor signs up or signs in, **picks a
-  course**, and `join_academy(slug, course)` creates the student record, links it
-  and upserts the `student` membership via `app.link_claimed_record` — then files
-  the course as `enrollments.status = 'pending'`. They land on `/learn` a member,
-  with nothing open. Picking a course is what gates joining, so nobody lands in
-  an academy without asking for something.
-  There is **no application table**: the student record exists by the time
-  anything is requested, `app.is_enrolled` already demands `'active'`, and the
-  long-standing `enrollments: staff update` policy already lets staff move it.
-  Approving *was* a plain UPDATE for exactly that reason; it is now
-  **`approve_enrollment(uuid)`**, because approving acquired an irreversible
-  side effect (the access email) and the transition must be the same statement
-  as the decision to send — two staff clicking Approve at once is the normal
-  case. **Rejecting is still a plain UPDATE**: it has no side effect to guard.
-  See `docs/course-enrollment.md` → "Approval email", and note that a trigger
-  cannot serve here — bulk enrol's upsert produces a byte-identical
-  `pending → active` tuple pair. The email's **copy is per course**
-  (`course_enrollment_settings.access_email_body`, written on `/enrollments`
-  beside `is_open`/`capacity`/`closes_at`): **blank means that course sends
-  nothing**, which is the default, and the RPC tests for it before it claims so
-  a silent course never stamps `access_email_at`. An unlinked record carrying the
-  caller's **confirmed** email is adopted rather than duplicated (the
-  `my_pending_invitations` standard), which is what stops a CSV-imported student
-  becoming a second row. `course_enrollment_settings` now holds only `is_open` ·
-  `capacity` · `closes_at`; capacity never closes a course (a queue is the
-  point). Staff also **bulk-enrol** existing records by pasted/CSV email,
-  matched against `students` in this academy only and bucketed (to enroll ·
-  already · no record · ambiguous · invalid) *before* any write.
-  **Everything staff-side lives on `/enrollments`** — the link, which courses
-  accept requests, the request list, bulk enrol. The course page is for building
-  the course. **No invoice** is created; billing stays a deliberate act on
-  `/payments`.
-  The **intent survives the auth hop** in `localStorage` (`lib/enrollIntent.ts`),
-  because GoTrue drops `emailRedirectTo` whenever the redirect allow list misses
-  the URL and the confirmation link then lands on `/onboarding` — "create your
-  academy" being the exact opposite of what the person came to do.
-  `useLandingTarget`, both shells and `PendingInviteRedirect` all consult it,
-  the same way they consult a stashed invite token.
-- **Appointments** (`docs/appointments.md`): one-to-one sessions. **Slots are
-  not rows** — `app.booking_slots(academy, from, to)` derives them from
-  `booking_hours` (recurring weekly windows, academy-wide, in
-  `academies.timezone`), `instructors.is_bookable` and what is already taken or
-  closed (`booking_time_off`, whose null `instructor_id` closes the whole
-  academy). Changing 10:00–18:00 to 09:00–17:00 is one UPDATE, not a
-  regeneration. That one generator feeds the learner page, the staff booking
-  dialog **and** `book_appointment`'s own check, the same reason
-  `app.enrollment_open` exists. Double-booking is an **EXCLUDE constraint** on
-  `(instructor_id, tstzrange)` — and a second on `student_id` — not a
-  check-then-insert, because two students taking the last 15:00 slot at once is
-  the normal case; the predicate skips `cancelled`/`no_show`, so cancelling
-  frees the slot with no second write. `assignment_mode` is `round_robin`
-  (candidates ordered fewest-sessions → longest-since-assigned → id, then walked
-  until one inserts) or `student_choice`; under round robin the RPC **omits the
-  instructor list entirely**, since `instructors` is staff-readable and naming
-  the free teachers would defeat the mode. Naming an instructor is gated on *who
-  is asking*, not the mode: staff may always name one or leave it to the rota, a
-  student under round robin is ignored rather than refused. Students have **no
-  DML policy at all** on `appointments` — `book_appointment` /
-  `cancel_appointment` are the only doors — but marking done/no-show is a plain
-  staff UPDATE — but only **their own**: the UPDATE policy and
-  `cancel_appointment`'s staff arm were both `app.is_staff`, so any trainer
-  could mark or cancel any session in the academy. Both are now
-  `app.is_admin OR app.owns_instructor(instructor_id)`; the `WITH CHECK` is on
-  the **new** row so an instructor cannot hand a session on with a plain UPDATE
-  and skip the cover rules. `app.bookable_student` mirrors `app.is_enrolled`'s
-  membership test, not `app.my_student_id`, so suspending a member revokes
-  booking at once.
-  **Cancelling means two things**, so `cancel_appointment` branches on who is
-  asking rather than the callers branching: a *student* cancelling does not want
-  the session (notice check, then cancelled), while an *admin or the session's
-  own instructor* means "I cannot take this one" — the session is handed to
-  whoever can cover, same id, student and time, and is only really called off
-  when nobody can. Reassigning what a student asked to cancel would be the exact
-  opposite of the request, which is why the branch exists.
-  `app.cover_candidates` is **not** `app.booking_slots`: that generator gates on
-  `is_open` / `min_notice_hours` / `horizon_days`, which are rules for opening a
-  booking *window*, and this session already exists at a time the academy
-  accepted. It honours only what genuinely stops somebody covering — pool
-  membership, time off, already busy — ordered by `book_appointment`'s round
-  robin verbatim, and the RPC **loops** candidates because the EXCLUDE
-  constraint is what settles a race. The fallback is not rare: 26 of 50 booked
-  sessions here have no cover, because the academy runs every instructor in
-  parallel — so the UI reports *which* of the two happened. A second
-  notification kind, `appointment_reassigned`, tells the student and the
-  incoming instructor in the same transaction.
-  Staff-side `/appointments` is the week grid alone; the policy, hours
-  and pool moved to **`/appointments/settings`** (reached by the gear beside
-  *Book a session*) — setup is visited once and does not belong under the
-  screen staff open daily. That page is **gated card by card, not as a whole**:
-  policy, hours and pool are admin-only, but **blocked dates**
-  (`docs/appointments.md` → "Blocked dates") are the one control an instructor
-  owns. No new table — `booking_time_off` has always accepted
-  `app.is_admin OR app.owns_instructor(instructor_id)` on all three writes and a
-  null `instructor_id` closes the whole academy; only the UI ever said
-  otherwise, gating the page as one thing and telling a trainer "admins only"
-  for their own days off. An instructor gets **no "who" picker** (one option is
-  not a control) and sees their own blocks plus any academy-wide closure, which
-  carries no Delete. `BlockedDatesCard` was split out of `AvailabilityCard`
-  because the two halves acquired different audiences. Still open: `booking time
-  off: staff read` is `app.is_staff`, so the instructor's list is a **display**
-  narrowing, not a boundary. **`/appointments/list`** is the register — every
-  session the reader may see, filterable by status/student, paged 50
-  server-side with `id` as the tie-break. The diary cannot answer "find me that
-  session": it is windowed to seven days and a grid has nowhere to put a
-  cancelled one, which is exactly the row being looked for. Same split as
-  `/payments` and its Log.
-  **Who sees whose sessions is a policy, not a default**
-  (`docs/appointments.md` → "Who sees whose sessions"): the SELECT policy moved
-  from `app.is_staff OR app.owns_student` to **`appointments: admin all, own
-  instructor, own student`** = `app.is_admin OR app.owns_instructor OR
-  app.owns_student`, matching the UPDATE policy it had drifted from. Each
-  screen used to *seed* a trainer's own record into its instructor filter and
-  leave "All instructors" one click away — identical on screen, and not a
-  boundary at all: her JWT plus the publishable key read the whole academy's
-  diary from PostgREST. So the instructor filter on **both** `/appointments`
-  and `/appointments/list` is now **admin-only** (a control that cannot change
-  the result is worse than none), the sidebar's upcoming count narrows with no
-  filter added anywhere, and the seeding effects are gone. `app.is_staff` is
-  **not** narrowed, and every appointment RPC is SECURITY DEFINER so the round
-  robin and cover walk are untouched. One knock-on had to be handled:
-  `send-appointment-notice` authorised by reading the row under the caller's
-  JWT, which 404s when a trainer books for a student and the rota gives the
-  session to somebody else — it now falls back to active staff membership of
-  the appointment's academy.
-  The register has **two views, not three**: **Upcoming** (nearest first, the
-  default for both roles) and **Archive** (past, most recent first). "Any date"
-  was the old admin default and put a session from last March at the top of a
-  list opened to find out what is coming. The cut is **`ends_at`, not
-  `starts_at`** — a lesson is still today's lesson while it is being taught, and
-  splitting on `starts_at` drops a 10:00–11:00 session into the archive at
-  10:00:01.
-  Rows open the shared `AppointmentDialog`, which decides **for itself** whether
-  the reader may act, so the rule cannot drift across the three screens that
-  mount it — and carries a **WhatsApp** button beside "Open student"
-  (`docs/appointments.md` → "Message the student on WhatsApp"), so the one
-  screen every session opens into is where you reach the person on it. **Not**
-  gated on `canAct`: that gate is for the three writes and mirrors a DB policy,
-  while messaging changes nothing and the number is already on the student's
-  page. The draft ("a reminder about your session on…") is offered **only for a
-  session still going ahead** — prefilled, never sent — because that sentence
-  under a *Cancelled* badge would contradict the row being read. `lib/phone.ts`
-  is the one place a stored number becomes `wa.me` digits, because the column
-  holds no single shape (551 start `60`, 67 start `0`, 22 start `+`, one is
-  neither): a local `0…` gains `60` and loses its trunk zero, anything already
-  carrying a country code **keeps it**, and anything unreadable returns null so
-  the button is **absent rather than disabled** — 35 records have no phone at
-  all. `AppointmentRow`'s student embed gained `phone` for it. Learner-side `/learn/appointments` is pick a
-  day → pick a time → book. Each time chip carries **`capacity`** — how many
-  instructors are free at it — returned by both availability RPCs in **both**
-  assignment modes, because a count names nobody and so survives the withholding
-  that nulls `instructors` under round robin. It hides itself when no slot in
-  the window exceeds one (every chip reading "1" is not information), and the
-  staff dialog rewrites it to 1 when narrowing a trainer to her own times. Day maths is `YYYY-MM-DD` strings in the academy's
-  zone (`features/appointments/calendar.ts`), never the browser's. Two
-  independent caps on a student: `max_open_per_student` bounds the **queue**
-  (how much future they may hold), `max_per_week_per_student` the **rate** (how
-  often they may come, counted over a **Monday-start week in the academy's
-  timezone**, `booked` + `completed`, so cancelling frees the week). Both NULL =
-  no limit, both students-only; `get_booking_options` withholds slots in a
-  filled week rather than failing the booking, and `book_appointment` checks
-  anyway. `location` is **gone** from both the policy and `appointments` —
-  nobody ever set it, and where a session happens is a per-session fact, not an
-  academy default. **No
-  invoice**, no approval step, not tied to a course.
-- **Report checks** (`docs/report-checks.md`): a student uploads the document,
-  the rota picks a checker, and the conversation happens in the app instead of
-  in a room. Built from one number: of the 179 appointments here that carry a
-  note, **154** say some version of *semakan LPKC* / *check LPKT* / *slide dan
-  portfolio* — 86% of the diary was a document being looked at, which costs a
-  room and an hour for something with no reason to be synchronous and leaves no
-  record of what was said. Appointments stay for what genuinely needs a person.
-  **Slots are not involved**: `app.report_checkers` is its own rota and consults
-  only pool membership and load, because `app.booking_slots` gates on hours,
-  notice and horizon — rules about opening a booking *window*, and a report is
-  work in a queue. It orders by **fewest OPEN reports**, not fewest in 30 days:
-  a session is over when it is over, a report sits on a desk until approved, so
-  the open count *is* the load. No insert loop, because there is no EXCLUDE
-  constraint to race — this is a load balancer, not a uniqueness guarantee.
-  **The pool is the switch** — no `academy_report_settings`; an academy with
-  nobody flagged `instructors.is_report_checker` (default false, separate from
-  `is_bookable` because only 4 of 11 actives take bookings and reading a PDF
-  needs no diary) simply cannot receive one, and `my_reports` returns
-  `is_open: false`. Edited from a dialog behind the ⋯ on `/reports`, admin-only:
-  one switch per instructor does not earn a settings page.
-  **One thread per (student, course)**, not per document — LPKC, slide and
-  portfolio are checked together, so they are versions and files on one thread;
-  resubmitting bumps `version` and **keeps the same checker**, since the person
-  who asked for the changes should see them. Four statuses: `submitted` /
-  `in_review` wait on the checker, `changes_requested` waits on the student,
-  `approved` is done — which is what makes the nav badge and both dashboard
-  cards possible. Only an upload returns a report to `submitted`, so it is not
-  one of the three verdict buttons, and a student who sends `_to_status` is
-  **ignored rather than refused** (the round-robin-instructor precedent).
-  Three tables — `report_submissions` · `report_events` · `report_files` — and a
-  file belongs to the **event** that carried it, so "version 2" is a fact the
-  table states. `actor_name`/`actor_role` are snapshots (the notifications
-  discipline). SELECT is `app.is_admin OR app.owns_instructor OR
-  app.owns_student`, **not** `app.is_staff` — the appointments lesson, since a
-  trainer's own JWT would otherwise read every student's draft thesis straight
-  from PostgREST; events and files follow the thread by EXISTS so the two cannot
-  disagree. Clients have **no DML**: `submit_report` · `comment_on_report`
-  (saying and deciding are one act) · `reassign_report` · `get_report` are the
-  only doors, and an uninvolved trainer gets `Report not found` from all of them.
-  `get_report` must be an RPC — it carries the checker's name and a student
-  cannot read `instructors` — and returns `my_role`, which is what
-  `ReportThreadView` gates on, so the rule cannot drift across the two routes
-  that mount it. Files live in the **private `student-reports`** bucket;
-  `upload-media` grew the **member branch** (its first non-staff write, the
-  deferred student-upload path) keyed `<academy_id>/<uploader uid>/<uuid>.<ext>`,
-  and `app.assert_own_upload` re-checks that prefix inside the RPC because the
-  client hands over a *path* — without it a student could attach a classmate's
-  document to their own thread and download it. Reads go through **`report-url`**
-  (`material-url`'s shape, an id never a path); a separate function because the
-  RPC that decides entitlement must not come from the client. Uploads happen as
-  files are picked, not on submit.
-  Four `notification_kind` values written in the same transaction as the write,
-  and **`send-report-notice`** — four events, one function, told only
-  `report_id` + `event_id` so *what happened and who to tell* come from the
-  stored event. It tells **the other party, never the actor** — the opposite of
-  `send-appointment-notice`, and correctly so: there the student was nearly
-  always the actor so an actor-skip meant never mailing them, here both sides
-  act repeatedly and a copy of your own comment is noise. `assigned` tells both.
-  Screens: **`/reports`** (queue, oldest first, paged 50 + `id`, four
-  `FilterStatCard`s, **no instructor filter** because RLS already narrows a
-  trainer and a control that cannot change the result is worse than none),
-  `/reports/:id` and `/learn/reports/:id` (one `ReportThreadView`, timeline
-  **oldest first** because it is a conversation, verdicts as three buttons,
-  handover behind ⋯), and **`/learn/reports`** keyed on **enrolments not
-  reports** so an unsent course is a row with a Send button.
-  Not done: no deadline, no grade, no document-type entity, and the **outgoing**
-  checker is told nothing on a handover — the same gap `cancel_appointment` has.
-- **Notifications** (`docs/notifications.md`): the header bell, in **both**
-  shells (mounted in `shell/SidebarShell`, not per layout) — and **which academy
-  it is scoped to is a prop**, which is the bug that made the learner's bell
-  dead from the day it shipped. It read `useAcademy().activeAcademyId` for
-  itself; that context is staff-scoped (its reconciliation effect opens
-  `if (staffMemberships.length === 0) return`), so for a student-only account
-  the id is null for ever, both queries stayed `enabled: false`, and the panel
-  said "Nothing yet" to **602 notifications across 284 accounts** — every kind,
-  not just reports. `SidebarShell` now takes `academyId`; `AppLayout` passes the
-  back-office's, `LearnLayout` passes `useStudentAcademy()`'s. **A component
-  under `components/shell/` may not call `useAcademy()`** — it is mounted in
-  both trees, so there is no ambient answer for it to read. A row is an
-  **event, not a sentence** — `kind` + `data`, with the words assembled client
-  side, so the same row reads Malay for a Malay reader; `data` is a snapshot
-  (the other party's name, the time, the academy's `tz`) so the list needs no
-  joins and a rename does not rewrite history. The recipient is an **account**,
-  not a record: `app.notify` no-ops on a null `user_id`, because an unclaimed
-  record is the ordinary case. Clients have **no DML** — SELECT is
-  `user_id = auth.uid()` and read state moves through
-  `mark_notifications_read` / `mark_all_notifications_read`, since an UPDATE
-  policy would also let a person rewrite their own row's `kind`. The badge
-  polls (a `head: true` count, 60s); the twenty rows load only when the panel
-  opens. Three kinds, all about an appointment and all written **in the same
-  transaction as the write they report** — which is what makes them more
-  reliable than the email: `appointment_booked` (`book_appointment`),
-  `appointment_reassigned` and `appointment_cancelled` (both
-  `cancel_appointment`, the latter through
-  `app.notify_appointment_cancelled(id, actor)`, one helper called from both
-  cancelling branches because they differ only in who pressed the button).
-  All three share `appointment_booked`'s payload, so only `titleOf` branches.
-  **Both parties are told, the actor included.** The actor used to be skipped
-  and it silently emptied the student side — 176 `appointment_booked` rows to
-  instructors against **one** to a student, because students book themselves and
-  were therefore always the actor; 50 of 52 upcoming cancellations are likewise
-  the student's own. Staff at large are still not told (they have the diary).
-  The
-  **outgoing** instructor is told nothing on a handover — a real gap, since
-  `cancel_appointment` overwrites `instructor_id` in place and recovering the
-  previous one would cost a column. A new kind costs three cases in
-  `NotificationBell.tsx`, one enum value and two dictionary lines.
-- **Appointment email** (`send-appointment-notice`, `docs/appointments.md` →
-  "Email: three events, one function"): **three events, one function** —
-  `booked` (the default), `cancelled` and `reassigned`, chosen by an `event`
-  field in the body. One function and not three because everything but the
-  wording is shared (two parties, an id-only body, RLS-then-service-role
-  authorisation, academy-timezone formatting, one template); the differences
-  live in a `COPY` table keyed by event, and the row's status must agree with
-  the event or it is a 409. The event is picked from `cancel_appointment`'s
-  **result**, not from the button: about half of what staff cancel finds cover,
-  and "your session is cancelled" when it is going ahead an hour later with
-  somebody else is worse than silence. **Both parties are always mailed, the
-  actor included** — an actor-skip here would mean never mailing the student,
-  for the same reason it did on the notification side. Always a second call
-  after the RPC, soft failure
-  only: the write has already committed either way. Unlike the other mail
-  functions it uses the **service role**: it emails two people and a student
-  cannot read `instructors` at all, so it authorises under the caller's JWT
-  (RLS on `appointments`, falling back to active staff membership of the
-  academy) and only then reads and sends. Addresses come from the record,
-  falling back to the linked account's auth email. The two receipts
-  (`student_notice_id` / `instructor_notice_id`) belong to **`booked` alone** —
-  they exist because the recipients fail independently and a re-invoke fills
-  only the gap; `cancelled` and `reassigned` dedupe on the Resend
-  `Idempotency-Key` and nothing else, since cancelling is terminal and a
-  handover keys on the instructor who *received* it.
-- **Money is admin-only** (`docs/money-is-admin-only.md`): a trainer is staff so
-  they can **teach**, and none of that needs to know what a student was charged.
-  The five money SELECT policies — `invoices` · `invoice_items` · `payments` ·
-  `payment_intents` · `academy_payment_settings` — moved from `app.is_staff` to
-  **`app.is_admin`**, every `app.owns_student` arm preserved verbatim (that arm
-  *is* `/learn/billing` and the learner's own PDFs). This was the actual leak:
-  a trainer's own JWT plus the publishable key read the whole book straight from
-  PostgREST, so hiding cards would have changed nothing. Writes were already
-  `app.is_admin`, which is why this is read-side only — and which is why a
-  trainer's **New invoice** button had always failed with a raw `42501`.
-  `app.is_staff` itself is **not** narrowed — dozens of policies rest on it and
-  nearly all are the teaching grants a trainer must keep — and the
-  three money RPCs are left alone because SECURITY **INVOKER** means they
-  inherited the change for free. `courses.price_sen` stays trainer-readable on
-  purpose: `get_academy_enrollment` shows it to anonymous visitors on
-  `/enroll/:slug`, so hiding it would be theatre. RLS denial is **silent**, so
-  the client ships with it: nav, a new route-level `AdminRoute` over `/payments*`
-  and `/incentives*` (it **redirects** — those pages would otherwise render an
-  empty ledger with a live Export button), the `isAdmin`-gated Billing card on
-  `/students/:id`, and an explicit `role = 'admin'` check in `send-pay-link`
-  because that function **mails a customer**.
-- **Two dashboards** (`pages/DashboardRoute.tsx` forks `/` on role;
-  `Dashboard.tsx` is untouched and still serves admins). A **component
-  boundary, not an `isAdmin &&`**: hooks cannot be skipped conditionally, so
-  branching inside the 1027-line file would still *fire* `useInvoices` for a
-  trainer however many cards were hidden. `pages/TrainerDashboard.tsx` must
-  import nothing from `@/features/{payments,settings/api,dashboard/api}` and
-  never `formatMYR` — that grep is the regression test. It asks *what is in
-  front of me*: **Needs closing** (past sessions still `booked` — self-hiding,
-  and the only place they can surface, since `/appointments` is a week grid),
-  **Your week** (own sessions, 7 days, **grouped by day** — bookings cluster on
-  the two days an academy runs, so a flat list is one Tuesday and Thursday never
-  appears), and **two** marking cards (two nav destinations, so a merged card
-  could only link to one) showing how long work has **waited**, not when it
-  arrived. No stat-tile row, no chart. Marking queues carry no course filter —
-  `app.can_grade_*` already narrows them — while `.eq('instructor_id', …)` on
-  the session queries is a **display** narrowing, not a boundary. Both marking
-  cards separate "nothing waiting" from **"you are not assigned to a course"**,
-  which is the real case: `course_instructors` is nearly empty, and
-  `useMyGradableCourses` returns `linked: true` there so the existing
-  no-instructor-record message does not fire. It also carries **Reports to
-  check** (`docs/report-checks.md`), showing how long each has *waited* — its
-  own card and not a third marking queue, because marking ends in a grade and a
-  report goes back and forth until it is right.
-  The **learner dashboard** (`pages/learn/LearnDashboardPage.tsx`) had **no
-  appointments at all** — a student's only sight of their own sessions was
-  `/learn/appointments`. It now carries a sessions card beside a reports one,
-  cut on **`ends_at` not `starts_at`** (the register's rule: a session being
-  taught right now is still today's). `Dashboard.tsx` (admin) still has none, on
-  purpose — it answers "how is the academy doing", and a diary is not that.
-- **Data model**: identity is global (`profiles`, one per email); roles/records are
-  per-academy. A **student is an academy record** (`students`, not necessarily an auth
-  user); enrollment/invoices/payments reference `students`. An **instructor is the same
-  shape** (`instructors`, CRM-style record); `course_instructors` assigns them to
-  courses. Money in integer **sen**.
-- **Account linking** (`docs/account-claiming.md`): two routes, one shared body
-  (`app.link_claimed_record` — archived/already-linked guards, monotonic role
-  upsert, suspended stays suspended). **The record is the invitation**: a
-  student/instructor row whose email matches the caller's *confirmed* auth email
-  and has no `user_id` is claimable via `my_pending_invitations()` +
-  `accept_pending_invitation(kind, record_id)` — derived from the records, not
-  from `academy_invitations`, because a CSV import mints no tokens. Role comes
-  from the record kind, never from client input. The **token flow**
-  (`create_invitation` / `create_instructor_invitation` (admin) /
-  `accept_invitation` / `resend` / `revoke` + `/accept-invite?token=`) survives
-  for emailed and shareable links; the token was never the authorisation — the
-  email match always was. Accepted risk, decided deliberately: a trainer can
-  create an instructor record with an email they control and self-claim it
-  (lateral, not escalation); close it by tightening `instructors: staff insert`
-  to `is_admin`, not by special-casing the RPC. Invitees see waiting academies on
-  `/onboarding` (which no longer traps them in "create your academy") and on
-  `/profile` + `/learn/profile` via `features/invitations/PendingInviteList`.
-  **`/onboarding` is not a landing page**: an existing member who reaches it is
-  returned to `useLandingTarget()`, and only `?new=1` — sent by the switcher's
-  "Add academy" — still opens the founder form. Without that guard an accepted
-  invitee who pressed Back got "Create your academy", and one student founded a
-  second academy named after her own school, which then outranked her student
-  membership on every sign-in.
-  **Adding somebody invites them**: there is no "Invite to app" button and no
-  separate invite dialog — the create branch of the student/instructor form
-  calls `features/invitations/autoInvite.ts`, which mints a token and emails it.
-  It **never throws**: the record exists and is claimable without a token, so a
-  failure is a missed notification, not a missed grant. A **trainer adding an
-  instructor sends nothing** (`create_instructor_invitation` is admin-only on
-  purpose) and a record with no email sends nothing — both silently, because
-  refusing is correct and there is no action to offer. CSV import asks once, a
-  checkbox **on by default**, admin-only on instructors, and invites the batch
-  sequentially with a 550 ms gap: the provider limits *requests* and each
-  invitation costs two, and a 429 comes back as `ok: false` with no backpressure
-  signal. The dialog reports the invited count **only when it falls short** of
-  the imported count. `PendingInvitations` is now the only place staff resend or
-  revoke.
-  **Names cross the gap at link time**: `app.fill_record_identity` (a `BEFORE
-  INSERT OR UPDATE OF user_id` trigger on both `students` and `instructors`)
-  fills a blank `full_name` from the claimer's profile, and
-  `app.sync_profile_identity` catches a profile filled in later. On the column,
-  not in the RPCs, because `link_student_account` / `link_instructor_account`
-  and a plain staff PostgREST update all write `user_id` without going through
-  `app.link_claimed_record`. Fills blanks only, matches on `user_id` never on a
-  matching email, and **name only** — see `docs/account-claiming.md` for why
-  phone is excluded. On screen, `personName(name, email)` in `lib/format.ts`
-  prefers an address to the word "Unnamed".
-- **Members & roles** (`/members`, admin-only): the staff roster — students are
-  excluded (they are an academy record, managed on their own page, where their
-  app access can also be suspended). Two independent axes, never merged into one
-  ladder: **access** is `academy_members.role` (admin/trainer) and **teaching**
-  is a linked `instructors` record, so one account can be an admin *and* an
-  instructor. **Director** is the academy creator (`academies.created_by`) — a
-  name for the founder, not a fourth role; `Membership.isCreator` carries it to
-  the client. Contact details come from the admin-only `list_academy_staff` RPC,
-  which joins `auth.users` for the email: `profiles` is readable by every
-  co-member, so an email column there would be an address book for students.
-  There is **no `/members/:id`** — a row opens the person's own record
-  (`memberRecordPath`: instructor, else student). `/members` is where a
-  membership is managed (role, suspend/restore, attach/detach the instructor
-  record); the instructor page carries only a **"Make admin" checkbox**, the one
-  control worth having next to the person.
-  `unlink_instructor_account` is the inverse of `link_instructor_account` (which
-  preserves an `admin` role on purpose).
-- **CSV import** (`features/import`): bulk creation for students and
-  instructors, one spec-driven dialog (`ImportSpec` → `ImportDialog`) plus a
-  hand-rolled `lib/csv.ts` (BOM, CRLF, quoted commas/newlines, `;`/tab
-  delimiters — no dependency). Headers match loosely against per-field aliases
-  in EN and BM, so a spreadsheet with `Nama Penuh` / `No. Telefon` lands without
-  a mapping step; parsing, validation and duplicate detection (`email`,
-  `ic_number`, against the loaded list *and* earlier rows) all happen in the
-  browser, and a row with a problem is listed with its line number and excluded
-  rather than dropped silently. Inserts are chunked 100 at a time and report how
-  many landed if a later chunk fails.
-- **Own profile**: `/profile` (staff) and `/learn/profile` (learner) edit the
-  same `profiles` row via `features/profile/api.ts`; both are reached by clicking
-  your name in the sidebar footer (`UserMenu`'s `profileTo` prop).
-- **Block content**: shared editor (`lib/blocks.ts` + `components/BlocksEditor.tsx`) —
-  text / image / youtube — used by assessments and assignments (notes use the
-  rich-text `content` column).
-- **Student visibility** of content is `is_published AND app.module_visible(module_id)`
-  — unpublishing a module hides everything under it. `app.is_enrolled` requires an
-  **active membership** plus an unarchived `active`/`trial` student record, so
-  suspending a member revokes content immediately.
-- **Invoice documents** (`docs/invoice-documents.md`): every invoice gets its
-  `pay_token` from a BEFORE INSERT trigger, so the pay link exists at creation
-  (`ensure_pay_token` remains as the idempotent repair). `/settings` has an
-  **Academy details** card (name — the only mandatory field — logo, address,
-  phone, SST number) writing the long-existing `academies` columns; learners
-  download **invoice / receipt PDFs** from `/learn/billing*`, and admins the same
-  two from the `⋯` menu on `/payments/:id` (to email them on somebody's behalf),
-  drawn by
-  `features/payments/pdf.ts` with a dynamically imported jsPDF. `pdf.ts` splits
-  **build from deliver** — `buildInvoicePdf`/`buildReceiptPdf` return
-  `{doc, fileName}` and the `download*` pair are wrappers — so the same drawing
-  serves a download and the **Preview invoice** button on the Academy details
-  card (`InvoicePreviewDialog`, an `<iframe>` over `doc.output('blob')`). The
-  preview reads the form's *current* values, not the saved row, and draws a
-  fictional `sampleInvoice()`, so a brand-new academy can check its letterhead
-  before saving and a stray print can never pass for a real bill.
-- **Payment log** (`/payments/log`): the money-in **ledger**, a sub-nav child of
-  Payments. `/payments` is the invoice book — what people were *asked* for;
-  this is what *arrived*, when, by what means and against which invoice. Neither
-  derives from the other: an invoice carries no paid-on date, a refund never
-  decrements `amount_paid_sen`, and one invoice can be settled by several
-  payments — which is why `usePaymentLog` reads `payments` directly rather than
-  re-deriving from `useInvoices`. Staff-wide, because `payments: staff view all`
-  is; no migration was needed. Search + status filter are client-side over one
-  unbounded ordered read (`paid_at desc nullsFirst:false`, `created_at` as the
-  tie-break — PostgREST sorts nulls first, which would float an unsettled row
-  above today's takings). Only `succeeded` rows count towards "received"; a
-  status badge is drawn **only** when the row is not succeeded. A manual row
-  names **who recorded it** (`created_by` → `profiles`, readable via
-  `profiles: self or co-member can view`); a gateway row names the gateway and
-  its reference instead, because a callback wrote it and there is nobody to
-  name. The recorder is searchable — "everything Aisyah took in cash" is a real
-  question to ask a ledger. **`payments.note`** is the sentence none of those
-  columns can reconstruct — a cheque number, who handed it over, why the amount
-  is short — written in `RecordPaymentDialog`, shown under the source line on
-  the log and on the invoice, and folded into `payment_log_page`'s **and**
-  `payment_log_totals`' search (identically, or a page of rows sums to a
-  different figure than the line above it). Blank stores as NULL. It is a note
-  *about the payment*, **not a staff-private one**: `payments: admin view all,
-  student view own` lets the student read their own rows, so nothing typed here
-  should be anything you would not say to them. **`kwsp`** joined
-  `payment_method` for the same reason `bank_transfer` is not "Other" — an EPF
-  Account 2 education withdrawal arrives by its own route, with its own
-  paperwork; it sits before `other` in the enum so the catch-all stays last in
-  the picker. **Export CSV**
-  reuses `lib/csv.ts`'s `downloadCsv` and writes ISO dates + ringgit decimals,
-  because the file's job is reconciliation in a spreadsheet.
-  This is the **first child nested under its parent's own path**, which exposed a
-  bug in `isNavActive` (`components/shell/nav.ts`): `pathname.startsWith` made
-  `/payments/log` light up the Payments row *and* the Log row, when the shell's
-  rule is that a parent whose child is active gets the brand colour on its icon
-  alone. `isNavActive` now yields to a matching child, so only one row ever
-  claims "the page you are on". `/courses`' children (`/assessments` etc.) never
-  hit this because they do not share its prefix.
-  The dashboard's recent-payments card links here as its "View all"; its revenue
-  chart is now a **single** `collected` series (the invoiced figure survives as
-  a number on the card, not a bar), so `dash.chart.invoiced` is gone.
-- **Back-dated payments** (`payment_log_page._sort`): `RecordPaymentDialog` asks
-  for the *payment* date and stores it at midday, so staff catching up on
-  historical payments enter them back-dated — **737 of 742** rows in this
-  database have a `paid_at` on a different day from their `created_at`. Ordering
-  the ledger by `paid_at` therefore buries fresh data entry: a payment banked
-  today for money that arrived in May sorted to row 338 of 742, page 7. It was
-  never missing, but "I just recorded it and cannot see it" is
-  indistinguishable from missing, and on a ledger that is the worst ambiguity
-  available. So the log takes a `_sort` of **`recorded`** (`created_at`, the
-  **default** — what a person doing data entry means by "recent") or `paid`
-  (value-date order, for reconciliation), and each row shows the recorded
-  timestamp **only when it was back-dated** — when the two days agree the
-  payment date already said it. `_sort` is **not** part of `PaymentLogFilters`:
-  a sum and a count do not care about ORDER BY, so changing it must not
-  re-fetch the totals. The ORDER BY is **dynamic SQL over a two-clause
-  whitelist**, not a CASE inside ORDER BY — a CASE is not indexable and would
-  force a full sort of the academy's payments on every page turn, defeating
-  both `payments_academy_paid_at_idx` and `payments_academy_created_at_idx`.
-- **Pagination** (`/payments` + `/payments/log`, 50 rows): both lists are paged
-  **server-side**, because both used to fetch every row and one academy is
-  already at 543 invoices / 702 payments — PostgREST caps a request at the
-  project's "Max rows" (1000 by default) and a *ledger* that silently stops at
-  row 1000 is worse than one that is slow.
-  The split that makes it work: **rows are a page, totals are an aggregate**. A
-  page of 50 cannot answer "how much is outstanding", and deriving the tiles
-  from the page would quietly reinterpret the question — so `invoice_totals`
-  (four money tiles, optionally narrowed by `_course` / `_no_course`) and
-  `payment_log_totals` (count + money received) are their own calls.
-  `invoice_totals` mirrors the old client `computeStats` **exactly**, asymmetries
-  included — `collected` is the raw sum of `amount_paid_sen`, `outstanding` and
-  `overdue` clamp each invoice at zero first — verified equal on live data, so
-  the numbers on screen did not move.
-  The **log rows need an RPC** (`payment_log_page`) because its search spans five
-  tables and PostgREST cannot OR across embedded resources; the **invoice rows
-  stay on PostgREST** (`.range()` + `count: 'exact'`) because a course filter is
-  one `eq`. All three functions are **SECURITY INVOKER** — RLS already scopes the
-  caller, so definer rights would buy nothing but risk.
-  Two details that are load-bearing, not polish: every ordering carries **`id` as
-  a final tie-break** (OFFSET paging over a non-unique sort repeats one row and
-  skips another), and both lists use **`keepPreviousData`** (without it a page
-  turn blanks the table through the empty state and back, which reads as an
-  error). Search is debounced through the extracted `lib/useDebounced.ts` —
-  otherwise a keystroke is two round trips. **CSV export walks the whole filtered
-  set** in 200-row chunks via `fetchPaymentLogAll`, never the 50 rows on screen:
-  a reconciliation that stops at row 50 is worse than none, and 200 is the
-  `_limit` clamp the RPC enforces. `invalidateMoney` is the one place a money
-  write invalidates all six cached lists.
-  Still unbounded and deliberately left so: the **dashboard**'s `useInvoices`,
-  which reads every invoice for its 6-month chart and stat tiles.
-- **Payment report** (`/payments/report`, `docs/payment-report.md`): the third
-  money screen and the third question — `/payments` is what people were *asked*
-  for, `/payments/log` is what *arrived*, this is **where it came from and who
-  still owes**. **Two views over one drill** (month → course → student → rows):
-  *Money received* aggregates `payments`; *Paid vs outstanding* aggregates
-  `invoices` — billed · paid · outstanding, **debtors first**, with a
-  Paid/Owing badge on the label. The second view is a second query and not a
-  column because **a cash ledger cannot answer "who has not paid"**: a student
-  who owes RM800 has no payment row, and absence is invisible in a book of
-  arrivals. The two also bucket months differently on purpose — received on
-  `coalesce(paid_at, created_at)`, outstanding on `coalesce(issued_at,
-  created_at)` — which is why one query could not serve both; everything else
-  (scope, drill, breadcrumb) is shared, so switching view keeps your place.
-  `invoice_report`'s `paid_sen` is the invoice's own `amount_paid_sen`, never a
-  sum of `payments`: joining payments would multiply the billed figure by the
-  number of instalments. Money received, drilled **month → course → student →
-  the payments themselves**. Not
-  a filter on the log, because a ledger is a flat list and the answer is a
-  hierarchy; not a chart, because the dashboard's `collected` series cannot be
-  pressed to find out *which course*. The rungs are **not a path** but three
-  independent narrowings in the URL (`?m` · `?c` · `?s`, plus `?from`/`?to` and
-  `?page`), and the table groups by the first one still open — so
-  `?c=<id>` alone reads "this course, month by month" with no extra screen
-  (`nextDim()`), and dropping a crumb drops exactly that narrowing.
-  **Succeeded only**, in `payment_report` *and* in the page's log calls: the
-  ledger keeps failed and refunded rows on purpose, but a report of money
-  received that counts them overstates the takings, and the summary line and the
-  column under it must count the same rows. Days are the **academy's** —
-  `coalesce(paid_at, created_at) at time zone academies.timezone`, so a 00:30
-  UTC payment on 1 September is not filed under August.
-  The load-bearing decision: `payment_log_page` / `payment_log_totals` **grew
-  the report's scope arguments** (`_from`/`_to`/`_course`/`_no_course`/
-  `_student`) instead of the report getting a row reader of its own, so **the
-  leaf of the drill *is* the ledger, filtered**, and every rung's total comes
-  from `payment_log_totals` over the identical scope — a second copy of that
-  five-table join could drift, and drift here shows up as a group totalling
-  RM12,000 whose rows add to RM11,800. Both are drop-and-create (a new
-  signature would otherwise leave an ambiguous overload); `/payments/log` passes
-  none of them. The month rung is `_from`/`_to`, **not** a `_month` argument:
-  `'2026-08'` → first/last day is string arithmetic the client can do without
-  knowing a timezone, and it keeps one scope vocabulary across all three
-  functions. Groups are **not paged** (a report you page through is a list
-  again) but clamped at 500, and `group_count` comes back so a clipped report
-  says so rather than lying about the total; the leaf is paged at 50 and the CSV
-  walks the whole filtered set. Every function is SECURITY INVOKER, so
-  `docs/money-is-admin-only.md` already means a trainer gets zero rows;
-  `AdminRoute` covers the route anyway.
-- **Course billing** (`/courses/:id/billing`, `docs/course-billing.md`):
-  admin-only, reached from the ⋯ menu on the course. The fourth money screen
-  and the one question the other three cannot answer — **who has never been
-  invoiced**. `payment_report` could not say who had *not paid* (no payment
-  row), so `invoice_report` read invoices instead; this is that argument one
-  level up, and it is the **invoice book** that has the hole: a student billed
-  for nothing has no row in `invoices` either, so they are absent from the
-  source every money screen draws from, not missing from a list. Not a corner
-  case — **112 of 666** live enrolments had no invoice and one intake of **94**
-  had never been billed. `enrollments` is the only table that knows somebody is
-  on a course before money is asked for, so `course_billing_summary` (the
-  roll-up, also the roster's unfiltered totals) and `course_billing_roster` (50
-  rows + the filtered count) start there and LEFT JOIN the invoices on
-  **`(student_id, course_id)`** — `invoices.enrollment_id` is NULL on every row,
-  and joining it would report everyone unbilled, the exact failure this fixes.
-  **No `_from`/`_to`**, unlike every other report function: an absence has no
-  date and a window would hide the answer. Enrolments counted are `active` +
-  `completed` (`pending` is a request nobody has accepted; archived students
-  stay, because a debt does not stop existing when a record is filed away).
-  Four states — never invoiced · nothing paid · part paid · paid — as four
-  `FilterStatCard`s, never-invoiced first and leading the sort, since ordering
-  by outstanding alone sinks it (their balance is zero *because* nobody asked).
-  It is a **route, not a panel on `/courses/:id`**: that page is where trainers
-  build the course, and with `invoices` admin-only but `enrollments`/`students`
-  staff-readable a trainer would read the roster with zero invoices attached
-  and see everyone reported as never billed — a **false** answer, worse than the
-  empty ledger `AdminRoute` exists for. Hence `app.is_admin` as a WHERE
-  predicate *inside* both functions (zero rows, not a lie), `AdminRoute` on the
-  route, and the menu item hidden. **Invoice N students** opens
-  `InvoiceFormDialog` with the whole unbilled set (`fetchCourseRosterAll`, not
-  the page on screen) via new `initialStudentIds`/`initialCourseId` props —
-  `courseFilter` is what stamps `course_id`, so seeding it both narrows the list
-  and files the bills. `invalidateMoney` gained both query keys.
-- **Clickable money tiles** (`/payments`): the four `StatCard`s are now
-  `FilterStatCard`s — a tile is a **sum over a set of invoices**, so pressing it
-  shows that set ("who still owes me" was a figure you could read but not
-  open). Invoiced = everything the tiles count (not void/cancelled/draft),
-  Collected = `amount_paid_sen > 0`, Outstanding = `balance_sen > 0`, Overdue =
-  that plus past `due_at`. **Collected is invoices with money against them, not
-  invoices settled in full** — the tile is the raw sum of `amount_paid_sen` and a
-  part-paid invoice contributed to it, so `status = 'paid'` would open a set
-  that does not add up to the number above it. The tiles deliberately ignore
-  the filter they apply (one that emptied itself when pressed could not be
-  un-pressed by reading it) and pressing the pressed one clears.
-  **`invoices.balance_sen`** is a generated stored column (`greatest(0,
-  total_sen - amount_paid_sen)`) added for this: `total_sen - amount_paid_sen >
-  0` is a column-to-column comparison PostgREST cannot express at all. Clamped
-  at zero so one student's overpayment cannot erase another's arrears in any sum
-  over it, and **never written by a client**.
-- **ToyyibPay charge** (`docs/toyyibpay-payments.md`): the flat RM1 FPX fee can
-  be passed to the payer via `billChargeToCustomer='0'`. Academy default
-  `academy_payment_settings.toyyibpay_charge_to_payor`, per-invoice override
-  `invoices.charge_to_payor` (**NULL = follow the default**); the terms are
-  pinned onto `payment_intents.{charge_to_payor,fee_sen}` at bill time.
-  `record_gateway_payment` no longer demands an exact amount — it accepts
-  `[amount_sen, amount_sen + fee_sen]` and **always credits `amount_sen`**, since
-  the surcharge is ToyyibPay's, not the academy's. Off by default.
-- **Part payment** (`docs/toyyibpay-payments.md` → "Part payment"): per invoice
-  (`invoices.allow_partial_payment` + `min_partial_sen`), **no academy default**.
-  The ledger always supported it — `payments` rows sum and
-  `record_gateway_payment` recomputes `amount_paid_sen` from them — so only the
-  gateway needed opening up. `create-bill` takes `amount_sen` as a **request**
-  and re-derives it under the service role; `get_public_invoice` resolves
-  `min_pay_sen = least(due_sen, greatest(min_partial_sen ?? 100, 100))`, so the
-  last instalment is always payable and the pay page hides the choice when the
-  floor has met the balance. Intent reuse is now **amount-scoped** (an
-  amount-blind reuse handed a payer the wrong bill); intents at other amounts
-  are left live so `verify-payment` still sweeps them. The RM1 charge composes
-  unchanged and applies **per transaction** — set at creation
-  (`InvoiceFormDialog`) or after issue (`PayLinkCard`, the real case).
-- **Billplz incentives** (`docs/billplz-incentives.md`): paying a per-student
-  government grant **out** to each student's own bank account — money out, so no
-  invoice and no `payments` row; `/payments` stays money in. Billplz **Payment
-  Order**: two keys (API Secret = Basic auth, X Signature = an HMAC-SHA512
-  `checksum` whose value order differs **per endpoint**), a prefunded Payment
-  Order Limit separate from the Credit Balance, `total` in sen, sandbox settles
-  only `DUMMYBANKVERIFIED`. **There is no bulk endpoint** — a bulk transfer is a
-  loop of `POST /payment_orders`, which is why `billplz-disburse` is chunked (25,
-  cap 50), claims rows in **one** `UPDATE … FOR UPDATE SKIP LOCKED` statement
-  (`claim_incentive_payouts`, service-role only) and is resumable; insufficient
-  funds releases the claim and halts. Settlement is **reconciliation-driven** —
-  the callback fires only on `completed`/`refunded` and retries once, so
-  `billplz-payout-status` is authoritative and the callback (nonce + constant-time
-  checksum) is a fast path. Bank details are a **separate table**
-  (`student_bank_accounts`, `app.is_admin OR app.owns_student` — never
-  `app.is_staff`) because RLS is row-level and columns on `students` would be
-  trainer-readable; a payout **snapshots** them. Clients have **no DML** on
-  `incentive_payouts`, and `incentive_batches` UPDATE/DELETE are pinned to
-  `status = 'draft'` so a sent batch cannot be reopened and re-sent. Admin-only
-  `/incentives`; students see their own on `/learn/billing`.
-- **Learner surface** (`/learn/*`, `StudentShell`): enrolled courses → published
-  modules → notes / assignments / assessments, plus **Billing** (own invoices,
-  read-only) and **My profile** (editable `profiles.full_name`/`phone`). It renders
-  the *same* shell as the back-office — `components/shell/{SidebarShell,ShellSidebar}`
-  is shared by `AppLayout` and `LearnLayout`, so the learner gets the shadcn sidebar,
-  `UserMenu` (identity + theme) and an academy switcher with **no** "Add academy"
-  (creating one makes the caller staff, which evicts them from `/learn`). Shared page
-  vocabulary lives in `components/patterns/*` (PageHeader, StatTile, StatCard,
-  FilterStatCard, EmptyState, QueryState, ListCard, BackLink) + `lib/{tone,format}.ts`.
-  Students submit assignments through
-  RLS; they take assessments **only** through the SECURITY DEFINER RPCs
-  `start_attempt` / `get_attempt` / `save_attempt_answers` / `submit_attempt`, which
-  project an explicit column list so `assessment_questions.correct_answer` never
-  reaches a client. `assessment_questions` has no student policy at all.
-- **Grading** (`/courses/:id/grading`): gated by `app.can_grade_course` =
-  `is_admin` OR (`is_staff` AND `teaches_course` via `course_instructors`). Admins
-  are academy-wide; trainers see only assigned courses. Never narrow `app.is_staff`
-  itself — 58 policies depend on it.
-- **Write guards**: `app.guard_attempt_write` / `app.guard_submission_write` run
-  `BEFORE INSERT OR UPDATE`, force grading fields null for non-graders, stamp
-  `graded_by`/`graded_at` from `auth.uid()`, and derive `started_at`/`submitted_at`
-  server-side (so `due_at`, `allow_late`, `available_*` and `duration_minutes` are
-  actually enforceable). See `docs/student-instructor-roles.md`.
-- **Invitations**: clients have **no** DML on `academy_invitations` (an
-  unrestricted staff UPDATE let a trainer set `role='admin'` and accept it). Use
-  `create_invitation` / `create_instructor_invitation` (admin-only) /
-  `revoke_invitation` / `resend_invitation`, plus admin-only
-  `link_student_account` / `link_instructor_account` for linking without email.
-- **i18n** (`lib/i18n/`): English (default) + **Bahasa Melayu**, one dictionary
-  per feature namespace under `locales/{en,ms}/`. Keys are flat and
-  self-prefixed, so `TKey = keyof typeof en` — a bad key **and** a missing Malay
-  entry are both compile errors, not runtime fallbacks. `useT()` → `t` / `tn`
-  (plurals via `<base>_one`/`_other`); `translate()` is the non-reactive escape
-  hatch for plain helpers only. Switcher: a **Language** submenu in `UserMenu`
-  (both shells) + standalone `LanguageToggle` on `AuthCard` for signed-out
-  pages. Preference in `localStorage['hawary.lang']`, seeded from
-  `navigator.languages`; `lib/format.ts` follows it (`en-MY` ⇄ `ms-MY`).
-  Enum→label maps (`{students,instructors,learn}/status.ts`) carry
-  `labelKey: TKey`, not strings. Server/Edge-Function errors are still English.
-  See `docs/i18n.md` — read its house-style list before writing Malay copy.
-- **Storage**: public `avatars` + `note-media` buckets, keyed `<academy_id>/<uuid>.<ext>`;
-  private `course-materials` and `student-reports`. `upload-media` writes all
-  four, and `student-reports` is the only one it accepts a **non-staff** write
-  to — see `docs/report-checks.md` → "Files".
-  Uploads go through the **`upload-media` Edge Function** (`lib/storage.ts` →
-  `uploadPublicImage`), which verifies the caller's JWT, re-checks staff membership
-  for the target academy, and writes with the service role. Direct browser
-  `storage.upload()` is not used: the storage RLS policies calling `app.is_staff`
-  rejected every upload even for valid staff on a correct path — see
-  `supabase/functions/upload-media/README.md`.
+A trainer's nav is Dashboard + those four sections. Admins also get Payments
+(+ Log), Incentive, Members and Settings.
 
-- **Production URLs** (`docs/production-urls.md`): the web app is deployed to
-  **app.hawary.my** (Netlify). Auth **Site URL + redirect allow list** must list
-  it or GoTrue silently drops `emailRedirectTo` and sends confirm/reset links to
-  the Site URL instead. `send-invitation` / `send-pay-link` / `create-bill` build
-  their links via an identical `resolveBase` — `APP_URL`, with a client `origin`
-  honoured only when it matches `ALLOWED_ORIGINS`, never raw client input.
+## Where the decisions are written down
 
-### Deferred / next
-- **Transactional email is configured** — Resend, sending from
-  `noreply@hawary.my` (domain verified). `RESEND_API_KEY`, `INVITE_FROM_EMAIL`,
-  `APP_URL` and `ALLOWED_ORIGINS` are all set and shared by every mail function.
-  Supabase Auth sends its own confirm/reset mail through Resend SMTP, which is
-  configured in the dashboard, not in this repo. Note the two limits are
-  **separate and both real**: Supabase Auth has its own per-hour email rate
-  limit (raise it under Authentication → Rate Limits — a signup surge hit it and
-  returned `429 over_email_send_rate_limit` on `/signup`, which Resend never
-  saw), and Resend's plan carries its own cap. Still deferred: BM for
-  transactional email and Edge Function errors, both of which stay English.
-- Assignment **attachments** — the student branch in `upload-media` now exists
+Read the doc before changing the area. Each one keeps the *why*.
+
+| area | doc |
+| --- | --- |
+| system shape, data model, RLS helpers, write guards | [architecture.md](docs/architecture.md) |
+| shells, nav, staff screens, dashboards, members, CSV import, storage | [web-surface.md](docs/web-surface.md) |
+| course → module → content hierarchy | [course-modules.md](docs/course-modules.md) |
+| question types and scoring | [question-types.md](docs/question-types.md) |
+| course materials (private bucket) | [course-materials.md](docs/course-materials.md) |
+| course duplication | [course-duplication.md](docs/course-duplication.md) |
+| enrollment — the public link, requests, bulk enrol | [course-enrollment.md](docs/course-enrollment.md) |
+| appointments — derived slots, rota, cover, blocked dates | [appointments.md](docs/appointments.md) |
+| report checks | [report-checks.md](docs/report-checks.md) |
+| notifications (the bell) | [notifications.md](docs/notifications.md) |
+| account claiming, invitations, name fill | [account-claiming.md](docs/account-claiming.md) |
+| why money is admin-only | [money-is-admin-only.md](docs/money-is-admin-only.md) |
+| `/payments` + `/payments/log`, pagination, tiles | [payment-screens.md](docs/payment-screens.md) |
+| `/payments/report` drill | [payment-report.md](docs/payment-report.md) |
+| `/courses/:id/billing` — who was never invoiced | [course-billing.md](docs/course-billing.md) |
+| invoice/receipt PDFs, academy details | [invoice-documents.md](docs/invoice-documents.md) |
+| ToyyibPay: FPX charge, part payment | [toyyibpay-payments.md](docs/toyyibpay-payments.md) |
+| Billplz: paying incentives out | [billplz-incentives.md](docs/billplz-incentives.md) |
+| student vs instructor roles, write guards | [student-instructor-roles.md](docs/student-instructor-roles.md) |
+| i18n — **read the house-style list before writing Malay** | [i18n.md](docs/i18n.md) |
+| deployment, URLs, redirect allow list | [production-urls.md](docs/production-urls.md) |
+| product scope | [requirements.md](docs/requirements.md) |
+
+## Not built / next
+
+- Assignment **attachments** — the student branch in `upload-media` exists
   (report checks needed it), so what is left is a private `submissions` bucket
-  and the wiring to `assignment_submissions`. Scheduled expiry sweep for
-  invitations.
-- Assessment settings still have **no UI**: `duration_minutes`, `max_attempts`,
+  and the wiring to `assignment_submissions`.
+- Assessment settings have **no UI**: `duration_minutes`, `max_attempts`,
   `available_from/until` and `type` are enforced server-side but can only be set
   in SQL. The editor writes `title`, `is_published` and `instructions` only.
-- Mobile app wiring (i18n dictionary moves to `packages/shared` when it lands);
-  BM for transactional email + Edge Function errors; web code-splitting.
-- Plans in `docs/` (academy registration/reconciliation, CI/CD).
+- Mobile app wiring (the i18n dictionary moves to `packages/shared` when it
+  lands).
+- BM for transactional email and Edge Function errors — both stay English.
+- Scheduled expiry sweep for invitations; web code-splitting.
+- Plans in `docs/`: academy registration/reconciliation, CI/CD.
 
 ## Commands (use pnpm, not npm)
 
@@ -887,17 +111,43 @@ pnpm --filter web lint
   and when a screen has one obvious action, that is a button — everything
   occasional belongs behind a `⋯` menu. A section that exists to explain the
   product back to the user is slop and will be deleted.
-- **TypeScript only.** Shared-first: cross-app types/logic go in `packages/shared`.
-- **DB types are generated** (Supabase MCP `generate_typescript_types`), not hand-written.
-- **Multi-tenancy is enforced in the DB** via RLS: every tenant table has `academy_id`
-  + policies. Tenancy checks use SECURITY DEFINER helpers in the `app` schema
-  (`app.is_staff/is_admin/owns_student/is_enrolled`). Never rely on client filtering.
-- **Secrets** (service-role key, gateway keys) never ship to clients — anon/publishable
-  key + RLS only; privileged work via SECURITY DEFINER RPCs or Edge Functions.
-- Web: `@` path alias; Vite `resolve.dedupe` pins a single React (pnpm monorepo).
+- **TypeScript only.** Shared-first: cross-app types/logic go in
+  `packages/shared`.
+- **DB types are generated** (Supabase MCP `generate_typescript_types`), not
+  hand-written.
+- **Multi-tenancy is enforced in the DB** via RLS: every tenant table has
+  `academy_id` + policies. Tenancy checks use SECURITY DEFINER helpers in the
+  `app` schema (`app.is_staff` / `is_admin` / `owns_student` / `owns_instructor`
+  / `is_enrolled` / `can_grade_course`). **Never rely on client filtering** — a
+  staff JWT plus the publishable key reads PostgREST directly, so hiding a card
+  is not a boundary.
+- **Never narrow `app.is_staff` itself.** Dozens of policies rest on it and
+  nearly all are teaching grants a trainer must keep. Narrow the individual
+  policies.
+- **Secrets** (service-role key, gateway keys) never ship to clients —
+  anon/publishable key + RLS only; privileged work via SECURITY DEFINER RPCs or
+  Edge Functions.
+- **Money in integer sen.** Never floats, never ringgit in the database.
+- **Columns a client must never write**, because a trigger or a generated column
+  owns them: `invoices.amount_paid_sen`, `invoices.balance_sen`,
+  `assessments.total_points`.
+- **Clients have no DML** on `academy_invitations`, `notifications`,
+  `incentive_payouts`, `assessment_questions`, or `appointments` — those move
+  only through RPCs. Check before adding a policy.
+- **i18n**: keys are flat and self-prefixed, so `TKey = keyof typeof en` — a bad
+  key **and** a missing Malay entry are both compile errors. Use `useT()` →
+  `t`/`tn`; `translate()` is the non-reactive escape hatch for plain helpers
+  only.
+- Web: `@` path alias; Vite `resolve.dedupe` pins a single React (pnpm
+  monorepo).
 
 ## Working agreements
 
-- Before schema work: `list_tables`; run `get_advisors` (security + perf) after any DDL.
+- Before schema work: `list_tables`; run `get_advisors` (security + perf) after
+  any DDL.
 - After a migration: update `packages/shared` DB types, then wire the app.
-- Verify: `pnpm --filter web build` + `lint`. Record decisions in `docs/`.
+- Verify: `pnpm --filter web build` + `pnpm --filter web lint`.
+- **Record decisions in `docs/`, not in this file.** Add the doc to
+  `docs/README.md` and, if it is a new area, one row to the table above.
+- Production is live at **app.hawary.my** and the owner deploys it himself —
+  push to `main` only when asked.
