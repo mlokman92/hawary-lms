@@ -11,7 +11,7 @@
  * server's reason away and shows the fallback instead.
  */
 
-type ErrorLike = { message?: unknown; code?: unknown }
+type ErrorLike = { message?: unknown; code?: unknown; status?: unknown }
 
 const asErrorLike = (e: unknown): ErrorLike =>
   typeof e === 'object' && e !== null ? (e as ErrorLike) : {}
@@ -36,6 +36,34 @@ export function errorCode(e: unknown): string {
  * `.single()`. Notes to a developer, never a reason to put in front of someone.
  */
 const isInternalCode = (code: string) => code.startsWith('PGRST1')
+
+/**
+ * The call never reached the caller's own identity — the session is the
+ * problem, not the request.
+ *
+ * When a JWT is missing, expired or unverifiable, PostgREST answers **401**
+ * and never runs `set local role authenticated`, so the statement executes as
+ * `authenticator`, the pooler's login role, which deliberately holds no
+ * grants. Postgres therefore fails it as `42501 permission denied for function
+ * …` — naming one of our own functions, which reads to the person on the other
+ * end as a broken app rather than as "sign in again".
+ *
+ * It happened: a student who had just signed up pressed Join four times and
+ * was shown `permission denied for function accept_pending_invitation`. Her
+ * invitation list had loaded seconds earlier on the same token, so nothing
+ * about her records was wrong — the token simply stopped verifying.
+ *
+ * Branch on the HTTP status, not on `42501`: that SQLSTATE is also what an
+ * ordinary RLS refusal raises, and those are a different problem with a
+ * different answer.
+ */
+export function isAuthError(e: unknown): boolean {
+  const { status } = asErrorLike(e)
+  if (status === 401) return true
+  const code = errorCode(e)
+  // PostgREST's own names for an unusable or absent token.
+  return code === 'PGRST301' || code === 'PGRST302'
+}
 
 /**
  * The reason the server gave, or `fallback` when it did not give one.

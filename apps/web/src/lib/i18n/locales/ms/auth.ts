@@ -5,6 +5,7 @@ export const auth: AuthDict = {
   'auth.back_to_sign_in': 'Kembali ke log masuk',
   'auth.check_email.title': 'Semak e-mel anda',
   'auth.password_reset': 'Set semula kata laluan',
+  'auth.session_expired': 'Sesi anda telah tamat — sila log masuk semula.',
   'auth.field.phone': 'Telefon',
   'auth.field.phone_optional': 'Telefon (pilihan)',
 
@@ -84,7 +85,6 @@ export const auth: AuthDict = {
   'auth.onboarding.none.body_after':
     '. Jika akademi anda menjemput alamat e-mel yang berbeza, log keluar dan log masuk dengan alamat tersebut — atau minta mereka menambah alamat ini.',
   'auth.onboarding.none.other_email': 'Log keluar dan guna e-mel lain',
-  'auth.onboarding.help': 'Perlukan bantuan? Bersembang di WhatsApp',
 
   // Menerima jemputan
   'auth.invite.subtitle': 'Terima jemputan',

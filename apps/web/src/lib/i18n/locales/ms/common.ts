@@ -19,6 +19,7 @@ export const common: CommonDict = {
   'common.confirm': 'Sahkan',
   'common.continue': 'Teruskan',
   'common.retry': 'Cuba lagi',
+  'common.help_whatsapp': 'Perlukan bantuan? Bersembang di WhatsApp',
   'common.search': 'Cari',
   'common.filter': 'Tapis',
   'common.sort': 'Susun ikut',

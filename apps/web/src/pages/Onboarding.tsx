@@ -8,6 +8,7 @@ import { useAcademy } from '@/lib/academy'
 import { slugify } from '@/lib/slug'
 import { useT } from '@/lib/i18n'
 import { useLandingTarget } from '@/lib/landing'
+import { supportWhatsApp } from '@/lib/support'
 import { FullPageLoading } from '@/components/patterns/QueryState'
 import { PendingInviteList } from '@/features/invitations/PendingInviteList'
 import { useMyPendingInvitations } from '@/features/invitations/api'
@@ -35,13 +36,6 @@ const MY_STATES = [
   'Perak', 'Perlis', 'Pulau Pinang', 'Sabah', 'Sarawak', 'Selangor',
   'Terengganu', 'Kuala Lumpur', 'Labuan', 'Putrajaya',
 ]
-
-/**
- * Support, reachable from the one page whose whole problem is having nowhere to
- * go. Everything else this screen offers assumes the person can diagnose
- * themselves; a wrong email on the academy's side is not something they can.
- */
-const HELP_WHATSAPP_URL = 'https://wa.me/60127967065'
 
 /**
  * Where a signed-in account with no membership lands.
@@ -106,10 +100,7 @@ export function Onboarding() {
   // The address is what lets whoever answers look the person up, and it is the
   // one thing they cannot mistype about themselves here.
   const createHref = useMemo(
-    () =>
-      `${HELP_WHATSAPP_URL}?text=${encodeURIComponent(
-        t('auth.onboarding.create_request', { email: user?.email ?? '' }),
-      )}`,
+    () => supportWhatsApp(t('auth.onboarding.create_request', { email: user?.email ?? '' })),
     [t, user],
   )
 
@@ -301,13 +292,13 @@ export function Onboarding() {
         ) : null}
 
         <a
-          href={HELP_WHATSAPP_URL}
+          href={supportWhatsApp()}
           target="_blank"
           rel="noreferrer"
           className="text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 text-sm underline underline-offset-4"
         >
           <MessageCircle className="size-4" />
-          {t('auth.onboarding.help')}
+          {t('common.help_whatsapp')}
         </a>
       </div>
     </div>

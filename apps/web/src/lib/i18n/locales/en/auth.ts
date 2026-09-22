@@ -4,6 +4,10 @@ export const auth = {
   'auth.back_to_sign_in': 'Back to sign in',
   'auth.check_email.title': 'Check your email',
   'auth.password_reset': 'Password reset',
+  // Shown on /signin after a screen sent someone back here because their token
+  // had stopped verifying. Without it the return is unexplained — see
+  // `isAuthError`.
+  'auth.session_expired': 'Your session expired — please sign in again.',
   // Two keys, because the two fields mean different things: this one is the
   // person signing up (mandatory — an academy has to be able to reach them),
   // while phone_optional is the *academy's* own number on the founder form.
@@ -96,7 +100,6 @@ export const auth = {
   'auth.onboarding.none.body_after':
     '. If your academy invited a different address, sign out and sign in with that one — or ask them to add this address.',
   'auth.onboarding.none.other_email': 'Sign out and use a different email',
-  'auth.onboarding.help': 'Need help? Chat on WhatsApp',
 
   // Invitation acceptance
   'auth.invite.subtitle': 'Accept invitation',

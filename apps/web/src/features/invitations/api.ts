@@ -88,11 +88,15 @@ export function useAcceptPendingInvitation() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (invite: Pick<PendingInvite, 'kind' | 'record_id'>) => {
-      const { data, error } = await supabase.rpc('accept_pending_invitation', {
-        _kind: invite.kind,
-        _record_id: invite.record_id,
-      })
-      if (error) throw error
+      const { data, error, status } = await supabase.rpc(
+        'accept_pending_invitation',
+        { _kind: invite.kind, _record_id: invite.record_id },
+      )
+      // The status is the only thing that separates "your token stopped
+      // verifying" from "the database refused you": both arrive as a bare
+      // `42501`, and postgrest-js drops the status when it hands back the
+      // parsed body. See `isAuthError`.
+      if (error) throw Object.assign(error, { status })
       return data as unknown as { academy_id: string; status: string }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: myInvitesKey }),

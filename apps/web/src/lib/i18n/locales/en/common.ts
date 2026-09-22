@@ -21,6 +21,9 @@ export const common = {
   'common.confirm': 'Confirm',
   'common.continue': 'Continue',
   'common.retry': 'Try again',
+  // Reaching a human. Shown where a person can be stranded with nothing left
+  // to press — onboarding, and a failed invitation claim.
+  'common.help_whatsapp': 'Need help? Chat on WhatsApp',
   'common.search': 'Search',
   'common.filter': 'Filter',
   'common.sort': 'Sort by',
