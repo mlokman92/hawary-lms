@@ -108,14 +108,22 @@ export function StudentsPage() {
   // Every course the academy has, not only the ones with students on them: a
   // course you can pick and see "no match" is clearer than one that is missing
   // from the list because nobody has enrolled yet.
-  const courseOptions = useMemo(
-    () =>
-      (courses ?? [])
-        .filter((c) => c.status !== 'archived')
-        .map((c) => ({ id: c.id, title: c.title }))
-        .sort((a, b) => a.title.localeCompare(b.title)),
-    [courses],
-  )
+  // The count is students enrolled on the course, counted the same way the
+  // filter matches (any enrolment status), so picking it shows that many rows
+  // before status or search narrow them.
+  const courseOptions = useMemo(() => {
+    const enrolled = new Map<string, number>()
+    for (const s of students ?? []) {
+      const ids = new Set(s.enrollments.map((e) => e.courses?.id))
+      for (const id of ids) {
+        if (id) enrolled.set(id, (enrolled.get(id) ?? 0) + 1)
+      }
+    }
+    return (courses ?? [])
+      .filter((c) => c.status !== 'archived')
+      .map((c) => ({ id: c.id, title: c.title, count: enrolled.get(c.id) ?? 0 }))
+      .sort((a, b) => a.title.localeCompare(b.title))
+  }, [courses, students])
 
   const rows = useMemo(() => {
     let list = students ?? []
@@ -260,7 +268,7 @@ export function StudentsPage() {
               <SelectItem value="all">{t('common.all_courses')}</SelectItem>
               {courseOptions.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
-                  {c.title}
+                  {c.title} ({c.count})
                 </SelectItem>
               ))}
             </SelectContent>
