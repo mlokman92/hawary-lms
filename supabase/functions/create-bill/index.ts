@@ -7,9 +7,10 @@
 //     boundary is the unguessable `pay_token`; tenancy is derived from data
 //     (pay_token → invoice → academy), never from the request.
 //   - `amount_sen` in the body is a REQUEST, not an instruction. Part-payment
-//     has to be enabled on the invoice, and the figure is re-derived here under
-//     the service role against the real balance and the invoice's own minimum.
-//     A caller cannot bill themselves RM1 for an RM2,500 invoice.
+//     has to be enabled — on the invoice, or on the academy the invoice defers
+//     to — and the figure is re-derived here under the service role against the
+//     real balance and the resolved minimum. A caller cannot bill themselves
+//     RM1 for an RM2,500 invoice.
 //   - Uses the SERVICE ROLE to resolve the invoice, read the academy's secret
 //     (get_toyyibpay_secret is service-role only), and write payment_intents
 //     (no authenticated write policy). The secret never leaves the function.
@@ -133,38 +134,13 @@ Deno.serve(async (req) => {
   if (dueSen < FPX_MIN_SEN)
     return json({ ok: false, code: 'below_minimum', message: 'Minimum online payment is RM1.00.' })
 
-  // 1a. Settle the amount to bill. Anything the caller asks for is bounded by
-  // three server-held facts: part-payment must be on for this invoice, the
-  // figure may not fall under the invoice's own minimum (itself never below
-  // ToyyibPay's RM1.00, and never above what is actually left), and it may not
-  // exceed the balance. Asking for more than the balance simply pays it off —
-  // that is not an error worth stopping a payment for.
-  const minSen = Math.min(
-    dueSen,
-    Math.max(invoice.min_partial_sen ?? FPX_MIN_SEN, FPX_MIN_SEN),
-  )
-  const requested = Number.isFinite(payload.amount_sen)
-    ? Math.round(payload.amount_sen as number)
-    : dueSen
-
-  let amountSen = dueSen
-  if (invoice.allow_partial_payment && requested < dueSen) {
-    if (requested < minSen) {
-      return json({
-        ok: false,
-        code: 'below_minimum',
-        min_sen: minSen,
-        message: `Minimum payment for this invoice is RM${(minSen / 100).toFixed(2)}.`,
-      })
-    }
-    amountSen = requested
-  }
-
-  // 2. Load gateway settings for this academy.
+  // 2. Load gateway settings for this academy. This has to happen BEFORE the
+  // amount is settled: the part-payment terms are two-level now, and the
+  // academy's default is one of the two levels.
   const { data: settings } = await admin
     .from('academy_payment_settings')
     .select(
-      'toyyibpay_enabled, toyyibpay_category_code, toyyibpay_is_sandbox, toyyibpay_charge_to_payor',
+      'toyyibpay_enabled, toyyibpay_category_code, toyyibpay_is_sandbox, toyyibpay_charge_to_payor, allow_partial_payment, min_partial_sen',
     )
     .eq('academy_id', invoice.academy_id)
     .maybeSingle()
@@ -178,6 +154,42 @@ Deno.serve(async (req) => {
   const chargeToPayor =
     invoice.charge_to_payor ?? settings.toyyibpay_charge_to_payor ?? false
   const feeSen = chargeToPayor ? FPX_FEE_SEN : 0
+
+  // Same two-level read for the instalment terms. `allow_partial_payment` is
+  // nullable on the invoice precisely so that "off" and "unset" are different
+  // answers — only the latter defers to the academy.
+  const allowPartial =
+    invoice.allow_partial_payment ?? settings.allow_partial_payment ?? false
+
+  // 2a. Settle the amount to bill. Anything the caller asks for is bounded by
+  // three server-held facts: part-payment must be on for this invoice, the
+  // figure may not fall under the resolved minimum (itself never below
+  // ToyyibPay's RM1.00, and never above what is actually left), and it may not
+  // exceed the balance. Asking for more than the balance simply pays it off —
+  // that is not an error worth stopping a payment for.
+  const minSen = Math.min(
+    dueSen,
+    Math.max(
+      invoice.min_partial_sen ?? settings.min_partial_sen ?? FPX_MIN_SEN,
+      FPX_MIN_SEN,
+    ),
+  )
+  const requested = Number.isFinite(payload.amount_sen)
+    ? Math.round(payload.amount_sen as number)
+    : dueSen
+
+  let amountSen = dueSen
+  if (allowPartial && requested < dueSen) {
+    if (requested < minSen) {
+      return json({
+        ok: false,
+        code: 'below_minimum',
+        min_sen: minSen,
+        message: `Minimum payment for this invoice is RM${(minSen / 100).toFixed(2)}.`,
+      })
+    }
+    amountSen = requested
+  }
 
   // 3. Reuse a live intent so a repeated click doesn't mint duplicate bills —
   // but only one for the SAME amount. A payer who opens an RM500 bill, goes

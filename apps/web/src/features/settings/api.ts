@@ -136,6 +136,38 @@ export function useSetChargeToPayor(academyId: string) {
 }
 
 /**
+ * The academy's *default* instalment terms.
+ *
+ * Same two-level shape as `useSetChargeToPayor`: each invoice carries its own
+ * `allow_partial_payment`, and `create-bill` reads `invoice ?? this`. An
+ * invoice that says true or false keeps saying it — only one left NULL follows
+ * this, so flipping it never re-prices a bill a payer has already been shown.
+ *
+ * The minimum is stored as NULL when blank, which is how "no floor of our own,
+ * use ToyyibPay's RM1.00" is represented; the CHECK constraint rejects anything
+ * under 100 sen.
+ */
+export function useSetPartialDefault(academyId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      allowPartial: boolean
+      minPartialSen: number | null
+    }) => {
+      const { error } = await supabase
+        .from('academy_payment_settings')
+        .update({
+          allow_partial_payment: input.allowPartial,
+          min_partial_sen: input.allowPartial ? input.minPartialSen : null,
+        })
+        .eq('academy_id', academyId)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: settingsKey(academyId) }),
+  })
+}
+
+/**
  * Result of the `billplz-connect` edge function. `ok: false` with a `code` is a
  * soft outcome rendered inline (the keys did not verify). `limit_sen` is the
  * Payment Order Limit — the prefunded balance a disbursement draws down — and

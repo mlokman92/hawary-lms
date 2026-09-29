@@ -577,9 +577,12 @@ export function useCreateInvoices(academyId: string) {
       createdBy?: string | null
       /** null = follow the academy's ToyyibPay default at pay time. */
       chargeToPayor?: boolean | null
-      /** Let the payer settle this invoice in instalments online. */
-      allowPartialPayment?: boolean
-      /** Floor for one instalment, in sen. null = ToyyibPay's RM1.00 minimum. */
+      /**
+       * Let the payer settle this invoice in instalments online.
+       * null = follow the academy's default at pay time.
+       */
+      allowPartialPayment?: boolean | null
+      /** Floor for one instalment, in sen. null = follow the academy default. */
       minPartialSen?: number | null
     }) => {
       const subtotal = input.items.reduce(
@@ -612,9 +615,11 @@ export function useCreateInvoices(academyId: string) {
             notes: input.notes || null,
             created_by: input.createdBy ?? null,
             charge_to_payor: input.chargeToPayor ?? null,
-            allow_partial_payment: input.allowPartialPayment ?? false,
-            // Only meaningful alongside the flag, and NULL is the "their floor"
-            // representation the CHECK constraint expects.
+            // NULL, not false: "off" and "unset" are different answers now, and
+            // only the latter defers to `academy_payment_settings`.
+            allow_partial_payment: input.allowPartialPayment ?? null,
+            // Only meaningful alongside the flag, and NULL is the "follow the
+            // default, then their floor" representation the CHECK expects.
             min_partial_sen: input.allowPartialPayment
               ? (input.minPartialSen ?? null)
               : null,

@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { formatMYR } from '@hawary/shared'
+import { formatMYR, ringgitToSen } from '@hawary/shared'
 import { TOYYIBPAY_FPX_FEE_SEN } from '@/features/payments/api'
 import {
   usePaymentSettings,
@@ -32,6 +32,8 @@ import {
   useSaveToyyibpay,
   useSetChargeToPayor,
   useSetGatewayEnabled,
+  useSetPartialDefault,
+  type PaymentSettings,
 } from './api'
 import { errorMessage } from '@/lib/errors'
 
@@ -223,6 +225,10 @@ export function ToyyibPaySettingsCard({ academyId }: { academyId: string }) {
               </div>
             ) : null}
 
+            {connected ? (
+              <PartialPaymentDefault academyId={academyId} settings={settings} />
+            ) : null}
+
             {showForm ? (
               <form onSubmit={onSubmit} className="grid gap-4">
                 <div className="grid gap-2">
@@ -322,5 +328,129 @@ export function ToyyibPaySettingsCard({ academyId }: { academyId: string }) {
         )}
       </CardContent>
     </Card>
+  )
+}
+
+/**
+ * The academy's default instalment terms.
+ *
+ * The mirror of `PartialPaymentTerms` on the invoice, one level up — same two
+ * controls, same idiom, and deliberately not a shared component: this one has
+ * no balance to clamp the minimum against, and the invoice one has no concept
+ * of a default to fall back to.
+ *
+ * An invoice that states its own terms is unaffected by anything set here;
+ * `create-bill` reads `invoice ?? academy` under the service role.
+ */
+function PartialPaymentDefault({
+  academyId,
+  settings,
+}: {
+  academyId: string
+  settings: PaymentSettings | null | undefined
+}) {
+  const { t } = useT()
+  const update = useSetPartialDefault(academyId)
+  const allow = !!settings?.allow_partial_payment
+  const storedSen = settings?.min_partial_sen ?? null
+
+  const [minimum, setMinimum] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  // Re-seed whenever the stored value changes, including after our own save, so
+  // the field always shows what is actually in force.
+  useEffect(() => {
+    setMinimum(storedSen == null ? '' : (storedSen / 100).toFixed(2))
+    setError(null)
+  }, [storedSen])
+
+  const typedSen = ringgitToSen(minimum)
+  const dirty = (storedSen ?? 0) !== typedSen
+
+  async function save(next: {
+    allowPartial: boolean
+    minPartialSen: number | null
+  }) {
+    setError(null)
+    try {
+      await update.mutateAsync(next)
+    } catch (err) {
+      setError(errorMessage(err, t('common.error')))
+    }
+  }
+
+  function saveMinimum() {
+    // Blank means "no floor of ours" — ToyyibPay's RM1.00 then applies.
+    if (minimum.trim() && typedSen < TOYYIBPAY_FPX_FEE_SEN) {
+      setError(
+        t('payments.partial.error_min', {
+          min: formatMYR(TOYYIBPAY_FPX_FEE_SEN),
+        }),
+      )
+      return
+    }
+    void save({
+      allowPartial: true,
+      minPartialSen: minimum.trim() ? typedSen : null,
+    })
+  }
+
+  return (
+    <div className="grid gap-3 rounded-lg border p-3">
+      <div className="flex items-center justify-between gap-4">
+        <div className="space-y-0.5">
+          <Label htmlFor="partial-default">
+            {t('settings.toyyibpay.partial_default')}
+          </Label>
+          <p className="text-muted-foreground text-xs">
+            {t('settings.toyyibpay.partial_default.hint')}
+          </p>
+        </div>
+        <Switch
+          id="partial-default"
+          checked={allow}
+          disabled={update.isPending}
+          onCheckedChange={(v) =>
+            void save({ allowPartial: v, minPartialSen: v ? storedSen : null })
+          }
+        />
+      </div>
+
+      {allow ? (
+        <div className="grid gap-1.5">
+          <Label htmlFor="partial-default-min">
+            {t('payments.partial.minimum')}
+          </Label>
+          <div className="flex items-center gap-2">
+            <Input
+              id="partial-default-min"
+              type="number"
+              min="1"
+              step="0.01"
+              value={minimum}
+              onChange={(e) => {
+                setMinimum(e.target.value)
+                setError(null)
+              }}
+              placeholder={t('payments.partial.minimum_placeholder')}
+              aria-invalid={!!error}
+              className="max-w-40"
+            />
+            {dirty ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={saveMinimum}
+                disabled={update.isPending}
+              >
+                {update.isPending ? t('common.saving') : t('common.save')}
+              </Button>
+            ) : null}
+          </div>
+          {error ? <p className="text-destructive text-xs">{error}</p> : null}
+        </div>
+      ) : null}
+    </div>
   )
 }

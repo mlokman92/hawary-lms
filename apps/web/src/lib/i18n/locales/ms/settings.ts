@@ -68,6 +68,10 @@ export const settings: SettingsDict = {
   'settings.toyyibpay.charge_to_payor.hint':
     'ToyyibPay menambah caj FPX {amount} pada jumlah bil, jadi pelajar yang menanggungnya dan anda menerima jumlah invois penuh. Jika dimatikan, anda yang menanggungnya. Ini ialah tetapan lalai untuk invois baharu — anda boleh mengubahnya pada setiap invois.',
 
+  'settings.toyyibpay.partial_default': 'Benarkan bayaran ansuran secara lalai',
+  'settings.toyyibpay.partial_default.hint':
+    'Invois baharu membenarkan pelajar membayar secara ansuran dalam talian melainkan anda mematikannya pada invois berkenaan. Setiap ansuran menanggung caj ToyyibPay tersendiri.',
+
   'settings.toyyibpay.secret_label': 'Kunci rahsia ToyyibPay',
   'settings.toyyibpay.secret_placeholder': 'userSecretKey anda',
   'settings.toyyibpay.secret_hint':

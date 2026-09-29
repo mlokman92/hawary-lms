@@ -103,6 +103,8 @@ export function InvoiceFormDialog({
 
   const gatewayOn = !!paymentSettings?.toyyibpay_enabled
   const chargeDefault = !!paymentSettings?.toyyibpay_charge_to_payor
+  const partialDefault = !!paymentSettings?.allow_partial_payment
+  const minPartialDefault = paymentSettings?.min_partial_sen ?? null
 
   // An array prop is a new object every render, so the effect below keys on
   // its contents. Without this it would re-seed on every parent render and
@@ -141,8 +143,12 @@ export function InvoiceFormDialog({
     }
     if (seeded.current || paymentSettings === undefined) return
     setChargeToPayor(chargeDefault)
+    setAllowPartial(partialDefault)
+    setMinPartial(
+      minPartialDefault == null ? '' : (minPartialDefault / 100).toFixed(2),
+    )
     seeded.current = true
-  }, [open, paymentSettings, chargeDefault])
+  }, [open, paymentSettings, chargeDefault, partialDefault, minPartialDefault])
 
   const all = useMemo(() => students ?? [], [students])
   const byId = useMemo(() => new Map(all.map((s) => [s.id, s])), [all])
@@ -248,7 +254,10 @@ export function InvoiceFormDialog({
         // leave NULL so the invoice picks up whatever default is in force if
         // the academy connects ToyyibPay later.
         chargeToPayor: gatewayOn ? chargeToPayor : null,
-        allowPartialPayment: gatewayOn && allowPartial,
+        // null, not false, while the gateway is off: the invoice states no
+        // opinion, so it follows the academy default if one is switched on
+        // before the student pays.
+        allowPartialPayment: gatewayOn ? allowPartial : null,
         // Blank means "no floor of ours" — ToyyibPay's RM1.00 applies instead.
         minPartialSen: minPartialSen > 0 ? minPartialSen : null,
         items: items

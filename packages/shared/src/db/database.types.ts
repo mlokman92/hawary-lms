@@ -303,6 +303,7 @@ export type Database = {
       academy_payment_settings: {
         Row: {
           academy_id: string
+          allow_partial_payment: boolean
           billplz_enabled: boolean
           billplz_has_secret: boolean
           billplz_is_sandbox: boolean
@@ -310,6 +311,7 @@ export type Database = {
           billplz_secret_set_at: string | null
           billplz_secret_set_by: string | null
           created_at: string
+          min_partial_sen: number | null
           provider: Database["public"]["Enums"]["payment_provider"]
           toyyibpay_category_code: string | null
           toyyibpay_charge_to_payor: boolean
@@ -323,6 +325,7 @@ export type Database = {
         }
         Insert: {
           academy_id: string
+          allow_partial_payment?: boolean
           billplz_enabled?: boolean
           billplz_has_secret?: boolean
           billplz_is_sandbox?: boolean
@@ -330,6 +333,7 @@ export type Database = {
           billplz_secret_set_at?: string | null
           billplz_secret_set_by?: string | null
           created_at?: string
+          min_partial_sen?: number | null
           provider?: Database["public"]["Enums"]["payment_provider"]
           toyyibpay_category_code?: string | null
           toyyibpay_charge_to_payor?: boolean
@@ -343,6 +347,7 @@ export type Database = {
         }
         Update: {
           academy_id?: string
+          allow_partial_payment?: boolean
           billplz_enabled?: boolean
           billplz_has_secret?: boolean
           billplz_is_sandbox?: boolean
@@ -350,6 +355,7 @@ export type Database = {
           billplz_secret_set_at?: string | null
           billplz_secret_set_by?: string | null
           created_at?: string
+          min_partial_sen?: number | null
           provider?: Database["public"]["Enums"]["payment_provider"]
           toyyibpay_category_code?: string | null
           toyyibpay_charge_to_payor?: boolean
@@ -386,6 +392,8 @@ export type Database = {
           instructor_notice_id: string | null
           note: string | null
           notice_sent_at: string | null
+          reminder_id: string | null
+          reminder_sent_at: string | null
           staff_note: string | null
           starts_at: string
           status: Database["public"]["Enums"]["appointment_status"]
@@ -407,6 +415,8 @@ export type Database = {
           instructor_notice_id?: string | null
           note?: string | null
           notice_sent_at?: string | null
+          reminder_id?: string | null
+          reminder_sent_at?: string | null
           staff_note?: string | null
           starts_at: string
           status?: Database["public"]["Enums"]["appointment_status"]
@@ -428,6 +438,8 @@ export type Database = {
           instructor_notice_id?: string | null
           note?: string | null
           notice_sent_at?: string | null
+          reminder_id?: string | null
+          reminder_sent_at?: string | null
           staff_note?: string | null
           starts_at?: string
           status?: Database["public"]["Enums"]["appointment_status"]
@@ -1579,7 +1591,7 @@ export type Database = {
       invoices: {
         Row: {
           academy_id: string
-          allow_partial_payment: boolean
+          allow_partial_payment: boolean | null
           amount_paid_sen: number
           balance_sen: number | null
           charge_to_payor: boolean | null
@@ -1605,7 +1617,7 @@ export type Database = {
         }
         Insert: {
           academy_id: string
-          allow_partial_payment?: boolean
+          allow_partial_payment?: boolean | null
           amount_paid_sen?: number
           balance_sen?: number | null
           charge_to_payor?: boolean | null
@@ -1631,7 +1643,7 @@ export type Database = {
         }
         Update: {
           academy_id?: string
-          allow_partial_payment?: boolean
+          allow_partial_payment?: boolean | null
           amount_paid_sen?: number
           balance_sen?: number | null
           charge_to_payor?: boolean | null
@@ -2356,6 +2368,24 @@ export type Database = {
         Args: { _kind: string; _record_id: string }
         Returns: Json
       }
+      appointment_reminders_due: {
+        Args: { _at?: string }
+        Returns: {
+          academy_name: string
+          appointment_id: string
+          cancel_reason: string
+          ends_at: string
+          instructor_name: string
+          note: string
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          student_email: string
+          student_id: string
+          student_name: string
+          tz: string
+        }[]
+      }
+      appointment_reminders_secret: { Args: never; Returns: string }
       approve_enrollment: { Args: { _enrollment_id: string }; Returns: Json }
       book_appointment: {
         Args: {

@@ -69,6 +69,10 @@ export const settings = {
   'settings.toyyibpay.charge_to_payor.hint':
     'ToyyibPay adds its {amount} FPX charge on top, so the student pays it and you receive the full invoice amount. Off means you absorb it. This is the default for new invoices — you can change it on each one.',
 
+  'settings.toyyibpay.partial_default': 'Allow part payment by default',
+  'settings.toyyibpay.partial_default.hint':
+    'New invoices let the student pay in instalments online unless you turn it off on the invoice. Each instalment carries its own ToyyibPay charge.',
+
   'settings.toyyibpay.secret_label': 'ToyyibPay secret key',
   'settings.toyyibpay.secret_placeholder': 'Your userSecretKey',
   'settings.toyyibpay.secret_hint':

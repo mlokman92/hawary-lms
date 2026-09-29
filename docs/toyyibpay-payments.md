@@ -452,14 +452,43 @@ only. If ToyyibPay reprices, a stale constant surfaces as
 
 ## Part payment
 
-An RM2,500 invoice can be settled in instalments online. Enabled **per invoice**
-— there is no academy-wide default, because an academy that instalment-bills one
-cohort rarely wants every invoice part-payable.
+An RM2,500 invoice can be settled in instalments online. Set **per invoice over
+an academy default**, the same two-level shape `charge_to_payor` has:
 
 ```
-invoices.allow_partial_payment  boolean not null default false
+academy_payment_settings.allow_partial_payment  boolean not null default false
+academy_payment_settings.min_partial_sen        integer null   -- CHECK (>= 100)
+
+invoices.allow_partial_payment  boolean null   -- NULL = follow the academy
 invoices.min_partial_sen        integer null   -- CHECK (>= 100)
 ```
+
+This **shipped without a default on purpose** — an academy that instalment-bills
+one cohort rarely wants every invoice part-payable — and that reasoning held
+until an academy turned up that instalment-bills *everyone*. There the
+per-invoice switch means setting the same two fields 726 times, and the one
+invoice somebody forgets is a phone call. So the default was added rather than
+the per-invoice control removed: both academies are real.
+
+`invoices.allow_partial_payment` had to become **nullable** for this.
+`not null default false` cannot express "follow the default", because false and
+unset were the same value — and a default only applies to rows that have no
+opinion, which requires them to be distinguishable. NULL is that third state:
+
+| invoice says | result |
+| --- | --- |
+| `true` / `false` | that, whatever the academy says |
+| `NULL` | the academy's default, then `false` |
+
+Resolved as `coalesce(invoice, academy, false)` in both places that decide —
+`get_public_invoice` for what the pay page offers, and `create-bill` for what it
+will actually bill. The minimum resolves independently, so an invoice may allow
+instalments while leaving the floor to the academy:
+`coalesce(invoice.min_partial_sen, academy.min_partial_sen, 100)`.
+
+The new-invoice form **seeds** its two controls from the academy default and
+then writes explicit values, so an admin sees the terms before creating the
+bill. The NULL path is what covers everything created outside that form.
 
 **The ledger already supported this.** `payments` rows sum, `partially_paid`
 already exists as a status, and `record_gateway_payment` recomputes
@@ -472,7 +501,7 @@ whole balance.
 returns `min_pay_sen`:
 
 ```sql
-least(due_sen, greatest(coalesce(min_partial_sen, 100), 100))
+least(due_sen, greatest(coalesce(i.min_partial_sen, s.min_partial_sen, 100), 100))
 ```
 
 RM1.00 is ToyyibPay's own minimum for an FPX bill, so a smaller academy floor

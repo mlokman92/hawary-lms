@@ -45,6 +45,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { usePaymentSettings } from '@/features/settings/api'
 import { hasReceipt, useInvoiceDocuments } from '@/features/payments/documents'
 import { RecordPaymentDialog } from '@/features/payments/RecordPaymentDialog'
 import { PayLinkCard } from '@/features/payments/PayLinkCard'
@@ -73,6 +74,9 @@ export function InvoiceDetailPage() {
   const isAdmin = active?.role === 'admin'
 
   const { data: invoice, isLoading, error } = useInvoice(id)
+  // The invoice's instalment terms are an override: NULL defers to the academy,
+  // so the card cannot show the real answer without the default beside it.
+  const { data: paymentSettings } = usePaymentSettings(isAdmin ? academyId : null)
   const voidInvoice = useVoidInvoice(academyId)
   const docs = useInvoiceDocuments(activeAcademyId)
   const [payOpen, setPayOpen] = useState(false)
@@ -354,8 +358,14 @@ export function InvoiceDetailPage() {
           invoiceId={invoice.id}
           initialToken={invoice.pay_token}
           canPay={['issued', 'partially_paid', 'overdue'].includes(invoice.status)}
-          allowPartial={invoice.allow_partial_payment}
-          minPartialSen={invoice.min_partial_sen}
+          allowPartial={
+            invoice.allow_partial_payment ??
+            paymentSettings?.allow_partial_payment ??
+            false
+          }
+          minPartialSen={
+            invoice.min_partial_sen ?? paymentSettings?.min_partial_sen ?? null
+          }
           balanceSen={balance}
         />
       ) : null}
