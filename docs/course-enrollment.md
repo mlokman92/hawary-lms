@@ -204,8 +204,8 @@ states, the resend path and the kill switch.
 - **Bulk enrol silently consumes pending requests** and sends nothing, so
   "every approved student is told" is false — the true claim is "every student
   approved *through the request list* is told".
-- No retry, queue or sweeper for a failed send. `pgmq`/`pg_cron`/`pg_net` are
-  available but not installed, and stay that way.
+- No retry, queue or sweeper for a failed send. `pg_cron`/`pg_net` are now
+  installed (for the appointment reminder) but nothing here uses them.
 - No waitlist entity. Over-capacity requests stay `pending`.
 - No bulk approve.
 - Bulk enrol does not create student records. Deliberate — see above.

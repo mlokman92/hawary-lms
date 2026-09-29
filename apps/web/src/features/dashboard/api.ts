@@ -211,7 +211,7 @@ const EXCLUDED: Enums<'invoice_status'>[] = ['draft', 'void', 'cancelled']
  * Every invoice figure the page shows, in one pass.
  *
  * `status = 'overdue'` is a dead enum value — nothing ever sets it (no trigger,
- * pg_cron is not installed), so overdue has to be derived from `due_at`. The
+ * no scheduled job), so overdue has to be derived from `due_at`. The
  * status arm is kept for parity with PaymentsPage in case that ever changes.
  */
 export function invoiceStats(invoices: InvoiceRow[]): InvoiceStats {

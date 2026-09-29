@@ -590,6 +590,57 @@ and a handover keys on the instructor who *received* it, so a session passed on
 twice mails twice — which is the truth. Columns would buy nothing the 24h key
 does not already give, and would cost a migration to say it.
 
+## Reminders: the evening before
+
+At **21:00 academy time**, every student with a session tomorrow gets one email
+listing it — and any session of theirs **staff** called off. The second half is
+why this exists: students missed the single cancellation email and turned up.
+Instructors are not reminded.
+
+`send-appointment-reminders` is a separate function, not a fourth event on
+`send-appointment-notice`, because its trust model is different: there is no
+caller JWT for RLS to judge, one party not two, and it works over a batch rather
+than one id.
+
+**Which cancellations.** Only ones the student did not make: 240 of the first
+289 cancellations were the student's own, and reminding somebody of what they
+clicked is the noise that gets the one important email skipped. A cancellation
+the student has since replaced — a live session of theirs overlapping it — is
+dropped too: "your 10:00 is cancelled" beside "your 10:00 is on" reads as a
+contradiction. On the first evening this selected 5 of 26 cancelled rows for the
+next day, all a trainer's "KURSUS LUAR NEGERI" three days earlier.
+
+**One email per student**, listing every session of theirs that day. A cancelled
+one is marked in red and says it will not take place; the button becomes *Book
+another time* when nothing is left on.
+
+**What was true at 21:00.** Rows booked or cancelled after 21:00 are left out —
+`send-appointment-notice` mailed about them a moment ago.
+
+**Hourly, and the SQL decides whose evening it is.** pg_cron job
+`appointment-reminders` posts to the function at minute 0 of every hour;
+`appointment_reminders_due(_at)` returns rows only for academies where it is
+21:00–23:59. So a tenant in another timezone needs nothing extra, and anything
+the 21:00 run failed to send is retried at 22:00 and 23:00 — one provider hiccup
+must not cost the whole night, which is the exact failure being answered.
+
+**Stamped per session.** `reminder_sent_at` / `reminder_id` on each row the
+email listed (several rows can share an id). A stamped row is never due again. A
+provider failure stamps nothing, so the next hour retries; a student with no
+address stamps the time with a null id — tried, nobody to tell. The send-then-die
+gap is closed by an `Idempotency-Key` hashing the exact set of rows.
+
+**Authenticated by a Vault secret.** The job sends `Bearer
+<appointment_reminders_cron>` and the function compares it against the same
+secret read under the service role (`appointment_reminders_secret()`,
+service_role only). The function is deployed with `verify_jwt` off for that
+reason; the body carries nothing but an optional dry-run flag. Both SQL
+functions are SECURITY DEFINER with EXECUTE revoked from `anon` and
+`authenticated`.
+
+Operations — dry run, kill switch, the health query — are in the function's
+README.
+
 ## In-app notification
 
 Separate from the email, and more reliable than it: `book_appointment` writes a
@@ -624,9 +675,8 @@ same question whatever became of it.
   time, not course time.
 - **No reschedule.** Cancel and book again. Staff can move one by editing
   `starts_at`; the exclusion constraint still protects them.
-- **No reminders.** Mail goes out at booking, on cancellation and on a handover;
-  nothing is sent the day before. A reminder is the same shape and can be added
-  when asked for.
+- **No instructor reminder.** The evening-before email goes to students only —
+  instructors have the diary. See **Reminders: the evening before**.
 - **The outgoing instructor is not told when a session is handed off them.**
   Neither the notification nor the email reaches them — the handover mails the
   student and whoever picked the session up. Telling them needs the previous
