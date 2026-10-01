@@ -119,6 +119,9 @@ export const payments = {
   'payments.log.all_statuses': 'All statuses',
   'payments.log.method': 'Method',
   'payments.log.reference': 'Reference',
+  // One key for the column and the CSV header — the same word either way.
+  'payments.log.note': 'Note',
+  'payments.log.note_edit': 'Edit note',
   'payments.log.recorded_manually': 'Recorded manually',
   'payments.log.recorded_at': 'Recorded {when}',
   'payments.log.sort.recorded': 'Newest recorded',
@@ -134,7 +137,6 @@ export const payments = {
   'payments.log.no_match': 'No payments match.',
   'payments.log.csv.student_no': 'Student no.',
   'payments.log.csv.provider': 'Provider',
-  'payments.log.csv.note': 'Note',
 
   // Payment report (/payments/report) — money received, drilled
   'payments.report.title': 'Payment report',
@@ -217,6 +219,7 @@ export const payments = {
   'payments.error.no_response': 'No response from server.',
   'payments.error.start_payment': 'Could not start payment.',
   'payments.error.check_status': 'Could not check payment status.',
+  'payments.error.note_failed': 'Could not save the note.',
 } as const
 
 export type PaymentsDict = Record<keyof typeof payments, string>

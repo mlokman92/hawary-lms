@@ -123,6 +123,9 @@ export const payments: PaymentsDict = {
   'payments.log.all_statuses': 'Semua status',
   'payments.log.method': 'Kaedah',
   'payments.log.reference': 'Rujukan',
+  // Satu kunci untuk lajur dan pengepala CSV — perkataan yang sama.
+  'payments.log.note': 'Nota',
+  'payments.log.note_edit': 'Sunting nota',
   'payments.log.recorded_manually': 'Direkod secara manual',
   'payments.log.recorded_at': 'Direkod {when}',
   'payments.log.sort.recorded': 'Terbaharu direkod',
@@ -138,7 +141,6 @@ export const payments: PaymentsDict = {
   'payments.log.no_match': 'Tiada bayaran yang sepadan.',
   'payments.log.csv.student_no': 'No. pelajar',
   'payments.log.csv.provider': 'Penyedia',
-  'payments.log.csv.note': 'Nota',
 
   // Laporan bayaran (/payments/report) — wang diterima, boleh dileraikan
   'payments.report.title': 'Laporan bayaran',
@@ -223,4 +225,5 @@ export const payments: PaymentsDict = {
   'payments.error.no_response': 'Tiada respons daripada pelayan.',
   'payments.error.start_payment': 'Pembayaran tidak dapat dimulakan.',
   'payments.error.check_status': 'Status bayaran tidak dapat disemak.',
+  'payments.error.note_failed': 'Nota tidak dapat disimpan.',
 }

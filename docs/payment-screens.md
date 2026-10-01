@@ -31,13 +31,58 @@ callback wrote it and there is nobody to name. The recorder is searchable —
 
 `payments.note` is the sentence none of the columns can reconstruct: a cheque
 number, who handed it over, why the amount is short. Written in
-`RecordPaymentDialog`, shown under the source line on the log and on the
-invoice, and folded into `payment_log_page`'s **and** `payment_log_totals`'
-search identically — or a page of rows sums to a different figure than the line
-above it. Blank stores as NULL. It is a note *about the payment*, **not a
-staff-private one**: `payments: admin view all, student view own` lets the
-student read their own rows, so nothing typed here should be anything you would
-not say to them.
+`RecordPaymentDialog`, and folded into `payment_log_page`'s **and**
+`payment_log_totals`' search identically — or a page of rows sums to a different
+figure than the line above it. Blank stores as NULL. It is a note *about the
+payment*, **not a staff-private one**: `payments: admin view all, student view
+own` lets the student read their own rows, so nothing typed here should be
+anything you would not say to them.
+
+### The note is a column, and it is editable
+
+It used to be a third sub-line under the method, below the source line. A note
+that reads as a caption on another column is a note nobody searches for by eye,
+and the log's own search box already indexes it — so it is **its own column**
+between Method and Amount, and the method cell is back to two lines.
+
+It is also the one field on a payment row that is routinely **wrong when first
+typed**: the cheque number is on a slip somebody is still holding, the reason an
+amount is short arrives on the next phone call. The only fix available before
+was to delete the payment and re-enter it, which moves `created_at` — the
+column the ledger sorts by — and so loses the record of when the money was
+actually banked, to correct a sentence.
+
+`useUpdatePaymentNote` is therefore a **plain PostgREST update**, no migration
+and no RPC: `payments: admin update` has been `app.is_admin(academy_id)` in both
+`using` and `with check` since the billing migration, so the database already
+refuses everyone this screen is closed to, and a note drags no derived column
+behind it. `app.sync_invoice_paid` does fire on the UPDATE and recompute
+`amount_paid_sen` from the same succeeded rows it already summed — idempotent,
+so the invoice does not move.
+
+Two details are load-bearing:
+
+- **`.select('id').single()`** is the point of the write. An UPDATE that RLS
+  refuses, or one whose id belongs to another academy, returns **200 with zero
+  rows** — not an error. Without reading the row back the dialog would close on
+  "saved" having saved nothing, which on a money screen is the one outcome worse
+  than an error message. `.eq('academy_id', …)` rides along for the same reason:
+  an admin of two academies holds a valid JWT for both.
+- **Blank clears back to NULL**, the single representation of "no note" the
+  insert already writes. An empty string would start matching the ledger's own
+  note search.
+
+`EditPaymentNoteDialog` is a dialog rather than an editable cell because a note
+is a sentence, and a sentence typed into a table cell either wraps the row open
+or is clipped to a width nobody can write in. One dialog is mounted for the
+page, not one per row, and the row it is editing lives in the page's state — 50
+rows is 50 subscriptions to the same mutation otherwise, and only one can be
+open. The trigger is the **whole cell**: an em dash is too small a target on a
+touch screen, and the pencil shows on hover and focus only, so a page of fifty
+rows does not read as fifty controls.
+
+The invoice detail page still *prints* the note read-only under its payment row;
+`invalidateMoney` plus the invoice key means an edit on the log reaches it.
 
 `kwsp` joined `payment_method` for the same reason `bank_transfer` is not
 "Other" — an EPF Account 2 education withdrawal arrives by its own route, with

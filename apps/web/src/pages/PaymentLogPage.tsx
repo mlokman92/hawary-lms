@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Download, Search } from 'lucide-react'
+import { Download, Pencil, Search } from 'lucide-react'
 import { formatMYR } from '@hawary/shared'
 import { useAcademy } from '@/lib/academy'
 import { downloadCsv } from '@/lib/csv'
@@ -30,6 +30,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  EditPaymentNoteDialog,
+  type NoteTarget,
+} from '@/features/payments/EditPaymentNoteDialog'
 import {
   fetchPaymentLogAll,
   PAGE_SIZE,
@@ -140,7 +144,7 @@ function csvRows(rows: PaymentLogRow[], t: TFn) {
       t('payments.log.method'),
       t('payments.log.csv.provider'),
       t('payments.log.reference'),
-      t('payments.log.csv.note'),
+      t('payments.log.note'),
       t('payments.log.csv.recorded_by'),
       t('payments.log.csv.recorded_at'),
       t('common.status'),
@@ -187,6 +191,10 @@ export function PaymentLogPage() {
   const { activeAcademyId } = useAcademy()
   const [params, setParams] = useSearchParams()
   const [exporting, setExporting] = useState(false)
+  // The row whose note is being edited, or null. Held here rather than
+  // mounting a dialog per row: 50 dialogs is 50 subscriptions to the same
+  // mutation, and only one of them can ever be open.
+  const [noteTarget, setNoteTarget] = useState<NoteTarget | null>(null)
 
   const search = params.get('q')?.trim() ?? ''
   const status = readStatus(params.get('status'))
@@ -340,6 +348,7 @@ export function PaymentLogPage() {
                   <TableHead>{t('common.student')}</TableHead>
                   <TableHead>{t('payments.table.invoice')}</TableHead>
                   <TableHead>{t('payments.log.method')}</TableHead>
+                  <TableHead>{t('payments.log.note')}</TableHead>
                   <TableHead className="text-right">
                     {t('common.amount')}
                   </TableHead>
@@ -400,13 +409,37 @@ export function PaymentLogPage() {
                       <div className="text-muted-foreground text-xs">
                         {sourceLine(p, t)}
                       </div>
-                      {/* The sentence a person typed when banking it — the one
-                          thing in this row no other column can reconstruct. */}
-                      {p.note ? (
-                        <div className="text-muted-foreground text-xs">
-                          {p.note}
-                        </div>
-                      ) : null}
+                    </TableCell>
+                    {/* The sentence a person typed when banking it — the one
+                        thing in this row no other column can reconstruct, and
+                        the only one that is routinely wrong when first typed.
+                        The whole cell is the button: an em dash is too small a
+                        target on a touch screen, and the pencil only shows on
+                        hover so fifty rows do not read as fifty controls. */}
+                    <TableCell className="max-w-[18rem] whitespace-normal">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setNoteTarget({
+                            id: p.id,
+                            invoiceId: p.invoice_id,
+                            invoiceNo: p.invoice_no,
+                            amountSen: p.amount_sen,
+                            date: p.paid_at ?? p.created_at,
+                            note: p.note,
+                          })
+                        }
+                        aria-label={t('payments.log.note_edit')}
+                        className="group text-muted-foreground hover:text-foreground focus-visible:ring-ring flex w-full items-start gap-1.5 rounded-sm text-left text-xs focus-visible:ring-2 focus-visible:outline-none"
+                      >
+                        <span className="break-words whitespace-pre-wrap">
+                          {p.note ?? '—'}
+                        </span>
+                        <Pencil
+                          className="mt-px size-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+                          aria-hidden
+                        />
+                      </button>
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatMYR(p.amount_sen)}
@@ -425,6 +458,16 @@ export function PaymentLogPage() {
           onPageChange={(n) => commit({ page: n > 1 ? String(n) : null })}
         />
       </div>
+
+      {activeAcademyId ? (
+        <EditPaymentNoteDialog
+          academyId={activeAcademyId}
+          target={noteTarget}
+          onOpenChange={(open) => {
+            if (!open) setNoteTarget(null)
+          }}
+        />
+      ) : null}
     </div>
   )
 }

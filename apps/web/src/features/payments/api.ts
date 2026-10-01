@@ -698,6 +698,62 @@ export function useRecordPayment(academyId: string) {
 }
 
 /**
+ * Change the note on a payment already in the ledger.
+ *
+ * A note is the one thing on a payment row that is routinely wrong at the time
+ * it is typed — the cheque number is on a slip somebody is still holding, the
+ * reason an amount is short arrives on the next phone call — and until now the
+ * only way to fix one was to delete the payment and re-enter it, which moves
+ * `created_at` and loses the record of when the money was actually banked.
+ *
+ * A plain PostgREST update rather than an RPC: `payments: admin update` is
+ * `app.is_admin(academy_id)` in both `using` and `with check`, so the database
+ * already refuses everyone `/payments/log` is closed to, and a note drags no
+ * derived column behind it. `app.sync_invoice_paid` does fire on the UPDATE and
+ * recompute `amount_paid_sen` from the same succeeded rows it already summed --
+ * idempotent, so the invoice does not move.
+ *
+ * `.select('id').single()` is the point of the write, not decoration: an UPDATE
+ * that RLS refuses, or one whose id belongs to another academy, returns **200
+ * with zero rows**, not an error. Without the round trip back the dialog would
+ * close on "saved" having saved nothing, which on a money screen is the one
+ * outcome worse than an error message.
+ */
+export function useUpdatePaymentNote(academyId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      id: string
+      /** Only for the cache — the invoice page prints this same note. */
+      invoiceId?: string | null
+      note: string
+    }) => {
+      const { data, error } = await supabase
+        .from('payments')
+        // Blank clears back to NULL, the single representation of "no note"
+        // that `useRecordPayment` writes. An empty string would otherwise start
+        // matching the ledger's own note search.
+        .update({ note: input.note.trim() || null })
+        .eq('id', input.id)
+        // Belt and braces over RLS, which already scopes the caller: an admin
+        // of two academies holds a valid JWT for both, so the tenant the screen
+        // is showing has to be part of the predicate.
+        .eq('academy_id', academyId)
+        .select('id')
+        .single()
+      if (error) throw error
+      if (!data) throw new Error(translate('payments.error.note_failed'))
+    },
+    onSuccess: (_d, vars) => {
+      invalidateMoney(qc, academyId)
+      if (vars.invoiceId) {
+        qc.invalidateQueries({ queryKey: oneKey(vars.invoiceId) })
+      }
+    },
+  })
+}
+
+/**
  * The online payment terms, editable after the invoice is issued.
  *
  * Turning instalments on for an invoice the student already has is the ordinary
