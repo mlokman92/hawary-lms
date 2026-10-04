@@ -6,7 +6,7 @@
 export const profile = {
   'profile.title': 'My profile',
   'profile.description':
-    'Your name, photo and phone number. This is your account, not an academy record — it follows you into every academy you belong to.',
+    'Your name, photo and phone number. This is your account, not an academy record — it follows you into every branch you belong to.',
   'profile.account': 'Account',
   'profile.photo': 'Photo',
   'profile.name_placeholder': 'Your full name',
@@ -18,7 +18,7 @@ export const profile = {
 
   'profile.membership.title': 'Your access',
   'profile.membership.description':
-    'Set by an admin of {academy}. Ask them if it needs to change.',
+    'Set by a director of {academy}. Ask them if it needs to change.',
   'profile.membership.academy': 'Academy',
   'profile.membership.access': 'Access level',
   'profile.membership.instructor': 'Instructor record',

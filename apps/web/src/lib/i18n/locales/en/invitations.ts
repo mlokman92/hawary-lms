@@ -1,4 +1,4 @@
-/** Shared invitation widgets: pending-invitation list and admin account linking. */
+/** Shared invitation widgets: pending-invitation list and account linking. */
 export const invitations = {
   // Pending invitation list
   'invite.pending.title': 'Pending invitations',
@@ -11,10 +11,10 @@ export const invitations = {
   'invite.action.revoke': 'Revoke',
   'invite.error.resend': 'Could not resend.',
 
-  // The invitee's own side: academies waiting for them
-  'invite.waiting.title': 'Academy invitations',
+  // The invitee's own side: the branches that added them
+  'invite.waiting.title': 'Your invitations',
   'invite.waiting.description':
-    'These academies have added you. Join to get access.',
+    'You have been added to Hawary Academy. Join to get access.',
   'invite.waiting.added': 'Added {date}',
   'invite.waiting.role_student': 'Student',
   'invite.waiting.role_trainer': 'Trainer',
@@ -22,7 +22,7 @@ export const invitations = {
   'invite.waiting.joining': 'Joining…',
   'invite.waiting.error': 'Could not join this academy.',
 
-  // Link an existing account (admin only)
+  // Link an existing account (student: staff; instructor: Director only)
   'invite.link.title': 'Link an existing account',
   'invite.link.description.student':
     'The person must already have signed up. Linking grants student access to this academy.',

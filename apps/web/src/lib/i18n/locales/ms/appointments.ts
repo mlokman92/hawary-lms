@@ -80,7 +80,7 @@ export const appointments: AppointmentsDict = {
   'appt.hours.range_invalid': 'Waktu tamat mesti selepas waktu mula.',
   'appt.setup.subtitle_own': 'Hari anda tidak boleh ditempah.',
   'appt.setup.no_instructor_record':
-    'Anda tiada rekod pengajar dalam akademi ini, jadi tiada apa-apa untuk disekat tarikhnya. Pentadbir boleh menciptakannya untuk anda.',
+    'Anda tiada rekod pengajar dalam akademi ini, jadi tiada apa-apa untuk disekat tarikhnya. Pengarah boleh menciptakannya untuk anda.',
   'appt.timeoff.title': 'Tarikh tutup',
   'appt.timeoff.mine_title': 'Tarikh sekatan anda',
   'appt.timeoff.mine_description':
@@ -117,11 +117,10 @@ export const appointments: AppointmentsDict = {
   'appt.book_for.student_search': 'Cari mengikut nama, e-mel atau nombor',
   'appt.book_for.no_students': 'Tiada pelajar sepadan.',
   'appt.book_for.change': 'Tukar',
-  'appt.book_for.day': 'Hari',
   'appt.book_for.time': 'Masa',
   'appt.book_for.no_slots': 'Tiada yang lapang pada hari ini.',
   'appt.book_for.no_record':
-    'Anda tiada rekod pengajar dalam akademi ini, jadi tiada sesiapa untuk menemani sesi ini. Pentadbir boleh melampirkannya di Ahli.',
+    'Anda tiada rekod pengajar dalam akademi ini, jadi tiada sesiapa untuk menemani sesi ini. Pengarah boleh melampirkannya di Ahli.',
   'appt.book_for.instructor': 'Pengajar',
   'appt.book_for.auto_round_robin': 'Tetapkan secara automatik',
   'appt.book_for.auto_any': 'Sesiapa yang lapang',

@@ -1,11 +1,16 @@
 # Plan · Academy registration & account setup
 
+> **Flow A is superseded (2026-10-04).** Academies are no longer self-registered:
+> the LMS belongs to Hawary Academy and a branch is opened by the owner — see
+> [single-owner.md](single-owner.md). Flow B and the identity/reconciliation
+> section below still describe how people get in.
+
 How people get into Hawary LMS. Two flows:
 
 - **A. Academy registration** — self-serve. A person signs up and creates an academy;
   they become its first **admin**.
-- **B. Account setup** — the academy admin **invites** trainers and students into that
-  academy (email invitation). Not Hawary-managed.
+- **B. Account setup** — a **Director** invites trainers (and makes admins); admins
+  add and invite students (email invitation). Hawary-managed.
 
 This builds on the schema already applied (`academies`, `profiles`, `academy_members`,
 and the `app.*` tenancy helpers). Auth is **Supabase Auth (email + password)** with
@@ -17,9 +22,9 @@ and the `app.*` tenancy helpers). Auth is **Supabase Auth (email + password)** w
 
 **Identity is global; roles/records are per-academy.** One email = one Supabase auth
 account = one `profiles` row, globally. That single profile can simultaneously be admin
-of the academy it created, a **student** in academy X, and a student in academy Y
-(each = a `students` row + an `academy_members` row). A person can also self-register
-and create their own academy. So the single-origin app + academy switcher is correct —
+of one branch, a **student** in branch X, and a student in branch Y
+(each = a `students` row + an `academy_members` row). So the single-origin app + branch
+switcher is correct —
 **no subdomains** (per-origin sessions would fragment the multi-academy user; slugs stay
 for invite/public links, subdomains only ever for future public/marketing pages).
 
@@ -62,13 +67,13 @@ first path segment (`<academy_id>/…`) via `storage.objects` RLS.
 ## Building blocks already in place
 
 - `profiles` is auto-created for every new auth user (trigger `app.handle_new_user`).
-- Creating an academy makes the creator its admin (trigger `app.handle_new_academy`,
-  which fires when `academies.created_by = auth.uid()`).
-- RLS: `academies` INSERT is allowed for any authenticated user **only** when
-  `created_by = auth.uid()` → safe self-serve academy creation.
-- RLS: `academy_members` INSERT is **admin-only**. This is why adding a
-  trainer/student runs through an **Edge Function (service role)**, not a direct client
-  insert — the invitee cannot add themselves.
+- Creating an academy makes `created_by` its admin (trigger `app.handle_new_academy`).
+  Only the owner creates one, in SQL: `academies` INSERT and DELETE are closed to
+  every JWT ([single-owner.md](single-owner.md)).
+- RLS: `academy_members` INSERT is **Director-only** for staff rows (admins may add
+  student rows). This is why joining runs through SECURITY DEFINER RPCs
+  (`app.link_claimed_record`), not a direct client insert — the invitee cannot add
+  themselves.
 
 ---
 

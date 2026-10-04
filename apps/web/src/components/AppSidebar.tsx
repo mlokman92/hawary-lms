@@ -102,8 +102,9 @@ const nav = (
 // course, mark work, take a session — and none of that needs to know what a
 // student was charged. The SELECT policies on invoices/payments now say the
 // same thing (`app.is_admin`), so leaving these in the shared list would only
-// have pointed a trainer at a page that renders an empty ledger.
-const adminNav = (t: TFn): NavItem[] => [
+// have pointed a trainer at a page that renders an empty ledger. Settings is
+// narrower still: every control on it is a Director write.
+const adminNav = (t: TFn, isDirector: boolean): NavItem[] => [
   {
     title: t('nav.payments'),
     to: '/payments',
@@ -119,7 +120,9 @@ const adminNav = (t: TFn): NavItem[] => [
   },
   { title: t('nav.incentives'), to: '/incentives', icon: HandCoins },
   { title: t('nav.members'), to: '/members', icon: ShieldCheck },
-  { title: t('nav.settings'), to: '/settings', icon: Settings },
+  ...(isDirector
+    ? [{ title: t('nav.settings'), to: '/settings', icon: Settings }]
+    : []),
 ]
 
 export function AppSidebar() {
@@ -142,7 +145,10 @@ export function AppSidebar() {
   const groups: NavGroup[] = [
     {
       label: t('nav.group.platform'),
-      items: active?.role === 'admin' ? [...items, ...adminNav(t)] : items,
+      items:
+        active?.role === 'admin'
+          ? [...items, ...adminNav(t, active.isDirector)]
+          : items,
     },
   ]
 

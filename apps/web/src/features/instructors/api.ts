@@ -89,10 +89,9 @@ const IMPORT_CHUNK = 100
 /**
  * Bulk create instructor *records* from a parsed CSV. Still not accounts: the
  * import never writes `instructors.user_id`, which only accept_invitation or
- * link_instructor_account may set. What it can now do is *invite* — but only
- * when the importer ticked the box and only for an admin, because
- * `create_instructor_invitation` is admin-only. A trainer importing a
- * spreadsheet still grants nobody anything.
+ * link_instructor_account may set. What it can do is *invite*, when the
+ * importer ticked the box. Both the insert and `create_instructor_invitation`
+ * are Director-only, because a claimable instructor record is itself a grant.
  */
 export function useImportInstructors(academyId: string) {
   const qc = useQueryClient()

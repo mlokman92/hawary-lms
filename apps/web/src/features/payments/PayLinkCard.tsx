@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CheckCircle2, Link2, Mail, RefreshCw } from 'lucide-react'
 import { formatMYR, ringgitToSen } from '@hawary/shared'
+import { useAcademy } from '@/lib/academy'
 import { useT } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import {
@@ -44,6 +45,7 @@ export function PayLinkCard({
   balanceSen: number
 }) {
   const { t } = useT()
+  const { active } = useAcademy()
   const { data: settings } = usePaymentSettings(academyId)
   const ensureToken = useEnsurePayToken()
   const sendLink = useSendPayLink()
@@ -103,11 +105,20 @@ export function PayLinkCard({
       <CardContent className="space-y-4">
         {!enabled ? (
           <p className="text-muted-foreground text-sm">
-            {t('payments.pay_link.disabled')}{' '}
-            <Link to="/settings" className="text-primary underline underline-offset-4">
-              {t('payments.pay_link.connect')}
-            </Link>{' '}
-            {t('payments.pay_link.disabled_suffix')}
+            {t('payments.pay_link.disabled')}
+            {/* /settings is a Director's; anyone else gets the bare sentence. */}
+            {active?.isDirector ? (
+              <>
+                {' '}
+                <Link
+                  to="/settings"
+                  className="text-primary underline underline-offset-4"
+                >
+                  {t('payments.pay_link.connect')}
+                </Link>{' '}
+                {t('payments.pay_link.disabled_suffix')}
+              </>
+            ) : null}
           </p>
         ) : !canPay ? (
           <p className="text-muted-foreground text-sm">

@@ -19,11 +19,12 @@ export type Membership = {
   role: Role
   academy: { id: string; name: string; slug: string } | null
   /**
-   * This user created the academy. Surfaced as "Director" — a name for the
-   * founder, not a fourth role: the permissions are an admin's, and
-   * `academies.created_by` is the only thing that distinguishes them.
+   * This user is a Director: `academy_members.is_director` on an active admin
+   * membership, the same test as `app.is_director`. A Director grants and
+   * revokes staff access and owns the gateway and billing settings. A UI hint
+   * only — RLS and the RPCs are the boundary.
    */
-  isCreator: boolean
+  isDirector: boolean
 }
 
 type AcademyContextValue = {
@@ -48,11 +49,11 @@ const AcademyContext = createContext<AcademyContextValue | undefined>(undefined)
 type MemberRow = {
   academy_id: string
   role: Role
+  is_director: boolean
   academies: {
     id: string
     name: string
     slug: string
-    created_by: string | null
   } | null
 }
 
@@ -96,7 +97,7 @@ export function AcademyProvider({ children }: { children: ReactNode }) {
     if (resolvedFor.current !== userId) setLoading(true)
     const { data, error } = await supabase
       .from('academy_members')
-      .select('academy_id, role, academies(id, name, slug, created_by)')
+      .select('academy_id, role, is_director, academies(id, name, slug)')
       .eq('user_id', userId)
       .eq('status', 'active')
 
@@ -113,7 +114,8 @@ export function AcademyProvider({ children }: { children: ReactNode }) {
           academyId: r.academy_id,
           role: r.role,
           academy: r.academies,
-          isCreator: !!r.academies?.created_by && r.academies.created_by === userId,
+          // `status = 'active'` is already a filter above.
+          isDirector: r.role === 'admin' && r.is_director === true,
         })),
       )
     }

@@ -1,7 +1,7 @@
 /** App chrome: sidebars, header, academy switcher, user menu. */
 export const nav = {
   // Sidebar groups
-  'nav.group.platform': 'Platform',
+  'nav.group.platform': 'Academy',
   'nav.group.learning': 'Learning',
   'nav.group.account': 'Account',
 
@@ -15,6 +15,7 @@ export const nav = {
   'nav.students': 'Students',
   'nav.instructors': 'Instructors',
   'nav.appointments': 'Appointments',
+  'nav.appointment_list': 'All sessions',
   'nav.reports': 'Report checks',
   'nav.payments': 'Payments',
   'nav.payment_log': 'Payment log',
@@ -48,10 +49,9 @@ export const nav = {
   'nav.sidebar': 'Sidebar',
   'nav.sidebar_description': 'Displays the mobile sidebar.',
 
-  // Academy switcher
-  'academy.select': 'Select academy',
-  'academy.heading': 'Academies',
-  'academy.add': 'Add academy',
+  // Branch switcher — only rendered as a menu when a member belongs to more
+  // than one Hawary Academy branch.
+  'academy.heading': 'Branches',
   'academy.fallback': 'Academy',
   'academy.this_academy': 'this academy',
 
@@ -63,7 +63,6 @@ export const nav = {
   // User menu
   'user.account': 'Account',
   'user.profile': 'My profile',
-  'nav.profile': 'My profile',
   'user.theme': 'Theme',
   'user.theme.light': 'Light',
   'user.theme.dark': 'Dark',
@@ -77,8 +76,7 @@ export const nav = {
   'shell.no_student_record.body':
     'You’re signed in to {academy}, but no student record is linked to your account. {detail}',
   'shell.no_student_record.detail':
-    'Ask your academy to finish setting you up.',  'nav.appointment_list': 'All sessions',
-
+    'Ask your academy to finish setting you up.',
 } as const
 
 export type NavDict = Record<keyof typeof nav, string>

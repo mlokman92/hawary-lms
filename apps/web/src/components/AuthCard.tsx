@@ -24,7 +24,7 @@ export function AuthCard({
       <LanguageToggle className="absolute top-4 right-4" />
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center text-xl font-bold tracking-tight">
-          Hawary <span className="text-primary">LMS</span>
+          Hawary <span className="text-primary">Academy</span>
         </div>
         <Card>
           <CardHeader>

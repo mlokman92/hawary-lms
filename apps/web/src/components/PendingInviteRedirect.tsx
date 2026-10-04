@@ -10,8 +10,8 @@ import { LANDING_PATHS } from '@/lib/landing'
  * Belt-and-suspenders for the two flows that cross the auth hop: a stashed
  * invite token, and a stashed academy-join intent. Either means the person was
  * on their way somewhere specific when the redirect dropped the `?next=` query
- * and dumped them on a landing route — most often "create your academy", which
- * is the opposite of what they were doing.
+ * and dumped them on a landing route — most often /onboarding, which would tell
+ * them there is no record of them.
  *
  * Renders nothing. Mounted once, inside the router.
  */

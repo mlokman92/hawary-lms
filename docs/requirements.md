@@ -4,19 +4,25 @@
 
 ## Vision
 
-A Malaysian SaaS Learning Management System that academies subscribe to in order to
-run their learning operations: material, assessment, enrollment, and billing.
+Hawary Academy's own Learning Management System, steered toward delivering the
+**Diploma Kemahiran Malaysia (DKM) dalam bidang Pengasuhan dan Pendidikan Awal
+Kanak-Kanak** under JPK: material, assessment, enrollment, and billing.
 
-## Tenancy
+## Branches
 
-Multi-tenant. **Academy** is the tenant boundary. All data is scoped to an academy
-and isolated from other academies (enforced via Supabase RLS on `academy_id`).
+Hawary Academy may open branches. A branch is an academy row, opened by the owner
+([single-owner.md](single-owner.md)). All data is scoped to a branch and isolated
+from the others (enforced via Supabase RLS on `academy_id`).
 
 ## Roles
 
 - **Trainer** — authoring + grading + progress tracking.
 - **Student** — learning + submissions + enrollment + payment.
-- **Admin** — academy back-office: users, courses, enrollment, billing, reporting.
+- **Admin** — back-office: students, courses, enrollment, invoices, payments,
+  incentives, reporting.
+- **Director** — an admin with owner-granted authority to add or remove admins and
+  trainers, and to change payment-gateway credentials, payment defaults and the
+  invoice letterhead. Hawary Academy has two.
 
 ## Feature scope (v1 direction)
 
@@ -27,14 +33,14 @@ and isolated from other academies (enforced via Supabase RLS on `academy_id`).
 | **Assignments** | create, grade + feedback | submit (text/docs) | oversee |
 | **Enrollment** | manage roster | view enrolled courses | manage roster |
 | **Invoicing & Payment** | — | view invoices (MYR) | issue invoices |
-| **Accounts** | — | — | invite/manage trainers & students |
+| **Accounts** | — | — | invite/manage students; trainers & admins: Director only |
 
 ## Malaysian specifics
 
 - Currency **MYR** (`RM`); store money as integer **sen**.
 - **SST** consideration on invoices.
 - Bilingual UI (Bahasa Melayu + English) — plan i18n from the start.
-- Payment gateway candidates: **Billplz**, **ToyyibPay**, **Stripe**.
+- Payment gateways: **ToyyibPay** (money in) and **Billplz** (money out) are live.
 
 ## Decisions (v1)
 
@@ -54,18 +60,18 @@ Confirmed at kickoff (2026-07-24). Keep v1 simple; revisit as needed.
 - **Assignments** — submission = **text and/or document upload** (files in Supabase
   Storage; `attachment_url` on the submission). No links or plagiarism checks yet.
 - **Billing** — **simple invoicing**: an **admin issues an invoice**; the student sees
-  it in their portal (read-only). No subscriptions, plans, or instalments yet. Online
-  payment gateway integration deferred (schema already supports recording payments).
-- **Provisioning** — the **academy provisions its own people**. Academies **self-register**
-  (public signup creates the academy + its first admin); the academy admin then creates/
-  invites **trainers** and **students**. Not Hawary-managed. → see
-  [academy-registration.md](academy-registration.md).
+  it in their portal (read-only). No subscriptions or plans. ToyyibPay FPX (money in,
+  with part payment) and Billplz (incentives out) are live →
+  [toyyibpay-payments.md](toyyibpay-payments.md),
+  [billplz-incentives.md](billplz-incentives.md).
+- **Provisioning** — **Hawary-managed**. Branches are opened by the owner in SQL; a
+  Director invites trainers and admins; admins add students by hand, by CSV, or through
+  the public `/enroll/:slug` link → see [single-owner.md](single-owner.md).
 - **Notifications** — **email only** for v1 (Supabase Auth emails + transactional email
-  for invites/invoices). No push or in-app yet.
+  for invites/invoices), plus the in-app bell ([notifications.md](notifications.md)).
+  No push yet.
 
 ## Deferred (post-v1)
 
 Cohorts/intakes with schedules · timed assessments & attempt limits (fields exist, UI
-later) · plagiarism checks · subscriptions/instalments · online payment gateways
-(Billplz/ToyyibPay/Stripe) · push & in-app notifications · bilingual (BM/EN) i18n ·
-bulk student import / self-service join codes.
+later) · plagiarism checks · subscriptions · push notifications.

@@ -40,26 +40,31 @@ link straight away instead of a **Create pay link** button.
 
 `academies` has carried `registration_no, email, phone, address, city, state,
 postcode, sst_registered, sst_number, logo_url` since the first tenancy
-migration, but the only writer was `pages/Onboarding.tsx` — set at sign-up,
-never afterwards.
+migration, but the only writer was the founder form in `pages/Onboarding.tsx`,
+which no longer exists. This card is now the only writer.
 
 `features/settings/AcademyProfileCard.tsx` (rendered above the ToyyibPay card on
 `/settings`) now edits the subset the documents print:
 
 | Field | Column | Required |
 |---|---|---|
-| Academy name | `name` | **yes** (`NOT NULL`, already collected at sign-up) |
+| Academy name | `name` | **yes** (`NOT NULL`, set when the owner opens the branch) |
 | Logo | `logo_url` | no |
 | Address | `address` | no |
 | Phone number | `phone` | no |
 | SST number | `sst_number` | no |
 
 Blank inputs are stored as `NULL`, so "unset" has one representation and the PDF
-can simply omit the line. Writes are admin-only through the existing
-`academies: admins can update` policy — no new grants.
+can simply omit the line. Writes are **Director-only**: the `academies:
+directors can update` policy plus a column grant limited to the letterhead
+columns (`20261004100000_director_grants_staff`), and `/settings` itself sits
+behind `DirectorRoute`. `slug`, `created_by`, `status`, `timezone` and
+`currency` are not writable through the API at all.
 
 The logo goes through `uploadPublicImage('avatars', …)`, i.e. the `upload-media`
-Edge Function, exactly like student avatars. The file picker accepts only
+Edge Function, exactly like student avatars. `upload-media` accepts an image
+from any staff member, so the Director gate on the card and on the `academies`
+UPDATE is what keeps the letterhead logo a Director's. The file picker accepts only
 PNG/JPEG/WebP: jsPDF cannot rasterise SVG, so an SVG logo would upload happily
 and then silently vanish from every document.
 
@@ -145,7 +150,7 @@ call `doc.save(fileName)`. The preview takes the same `doc` and calls
 `doc.output('blob')`. A mock-up would drift; this cannot.
 
 **The letterhead is the form's current state, not the saved row.** The question
-being answered is "how will *this* look" — an admin can see a wrapped address or
+being answered is "how will *this* look" — a Director can see a wrapped address or
 an over-tall logo before committing to it. Nothing is written and nothing is
 read, so this is safe on an unsaved form, and it works on an academy that has
 never issued an invoice. The effect depends on the five letterhead *fields*

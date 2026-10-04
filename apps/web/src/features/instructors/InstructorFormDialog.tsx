@@ -52,7 +52,11 @@ export function InstructorFormDialog({
   const { t } = useT()
   const { user } = useAuth()
   const { active } = useAcademy()
-  const isAdmin = active?.role === 'admin'
+  const isDirector = !!active?.isDirector
+  // An unlinked record's email is who may claim it, so changing it is a grant:
+  // Director-only (`guard_instructor_grant`). A linked record's email is just
+  // contact details.
+  const emailLocked = isEdit && !instructor?.user_id && !isDirector
   const createInstructor = useCreateInstructor(academyId)
   const updateInstructor = useUpdateInstructor(academyId)
 
@@ -105,20 +109,24 @@ export function InstructorFormDialog({
     }
     try {
       if (isEdit && instructor) {
-        await updateInstructor.mutateAsync({ id: instructor.id, patch: fields })
+        // Left out entirely when locked: normalising '' to null would otherwise
+        // count as a change and trip the trigger.
+        const { email: _email, ...rest } = fields
+        await updateInstructor.mutateAsync({
+          id: instructor.id,
+          patch: emailLocked ? rest : fields,
+        })
       } else {
         const created = await createInstructor.mutateAsync({
           ...fields,
           created_by: user?.id ?? null,
         })
-        // Adding an instructor invites them — when there is anybody to invite
-        // and the caller may do it. Email is optional on this form, and
-        // `create_instructor_invitation` is admin-only on purpose: a trainer
-        // who could mint one could invite an address they control and make
-        // themselves a second trainer. Skipping is the correct refusal, and it
-        // costs nothing, because an instructor record carrying a confirmed
-        // email is claimable without a token anyway.
-        if (isAdmin && fields.email) void sendRecordInvite('instructor', created.id)
+        // Adding an instructor invites them when there is anybody to invite —
+        // email is optional on this form. Only a Director can add one, and
+        // `create_instructor_invitation` is Director-only to match.
+        if (isDirector && fields.email) {
+          void sendRecordInvite('instructor', created.id)
+        }
       }
       onOpenChange(false)
     } catch (err) {
@@ -226,6 +234,7 @@ export function InstructorFormDialog({
               id="email"
               type="email"
               value={email}
+              disabled={emailLocked}
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>

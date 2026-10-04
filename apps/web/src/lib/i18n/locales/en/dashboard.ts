@@ -11,8 +11,8 @@ export const dashboard = {
   'dash.action.new_invoice': 'New invoice',
   'dash.view_all': 'View all',
 
-  // Setup checklist — the empty state for a brand-new academy
-  'dash.setup.title': 'Get your academy running',
+  // Setup checklist — the empty state for a brand-new branch
+  'dash.setup.title': 'Get this branch running',
   'dash.setup.subtitle': 'A few steps and students can start learning.',
   'dash.setup.hide': 'Hide',
   'dash.setup.step.course': 'Create your first course',

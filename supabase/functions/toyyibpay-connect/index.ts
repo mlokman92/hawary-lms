@@ -3,15 +3,17 @@
 // Saves an academy's ToyyibPay userSecretKey and (auto) provisions a category.
 // ----------------------------------------------------------------------------
 // Security model
-//   - verify_jwt = true: the caller must be a signed-in admin of the academy.
+//   - verify_jwt = true: the caller must be a signed-in Director of the academy
+//     (an active admin membership with academy_members.is_director).
 //   - Authorization is checked with a *caller-scoped* client (their JWT) against
-//     academy_members — a non-admin (or admin of another academy) is rejected.
-//   - The secret key is sent ONCE from the admin's browser over HTTPS, used
+//     academy_members before any ToyyibPay call — an ordinary admin, or a
+//     Director of another branch, is rejected.
+//   - The secret key is sent ONCE from the Director's browser over HTTPS, used
 //     server-side to call ToyyibPay, and stored via set_toyyibpay_credentials
 //     (SECURITY DEFINER → Supabase Vault). It is never written to a
 //     client-readable column and never returned to the browser.
-//   - The category is created on ToyyibPay with the same key so onboarding needs
-//     only the secret; an admin may instead pass a categoryCode made in the
+//   - The category is created on ToyyibPay with the same key so connecting needs
+//     only the secret; a Director may instead pass a categoryCode made in the
 //     ToyyibPay dashboard.
 // Auto-injected by the platform: SUPABASE_URL, SUPABASE_ANON_KEY.
 // ============================================================================
@@ -90,7 +92,7 @@ Deno.serve(async (req) => {
   if (!supabaseUrl || !anonKey)
     return json({ error: 'Server misconfigured: missing Supabase env' }, 500)
 
-  // Caller-scoped client → RLS + the RPC's is_admin guard enforce authorization.
+  // Caller-scoped client → RLS + the RPC's is_director guard enforce authorization.
   const supabase = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authHeader } },
   })
@@ -99,16 +101,17 @@ Deno.serve(async (req) => {
   const caller = userData?.user
   if (!caller) return json({ error: 'Not authenticated' }, 401)
 
-  // Confirm the caller is an active admin of this academy before doing any work.
+  // Confirm the caller is an active Director of this academy before doing any
+  // work: createCategory below changes the ToyyibPay account.
   const { data: membership } = await supabase
     .from('academy_members')
-    .select('role')
+    .select('role, is_director')
     .eq('academy_id', academyId)
     .eq('user_id', caller.id)
     .eq('status', 'active')
     .maybeSingle()
-  if (!membership || membership.role !== 'admin')
-    return json({ error: 'Only an academy admin can configure payments' }, 403)
+  if (!membership || membership.role !== 'admin' || !membership.is_director)
+    return json({ error: 'Only a Director can configure payments' }, 403)
 
   const base = host(isSandbox)
 
@@ -119,7 +122,7 @@ Deno.serve(async (req) => {
       .select('name')
       .eq('id', academyId)
       .maybeSingle()
-    const catName = clean(`Hawary ${academy?.name ?? 'Academy'}`, 40) || 'Hawary LMS'
+    const catName = clean(academy?.name ?? 'Hawary Academy', 40) || 'Hawary Academy'
     const created = await form(`${base}/index.php/api/createCategory`, {
       userSecretKey: secretKey,
       catname: catName,
@@ -137,7 +140,7 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Store the secret (Vault) + metadata; the RPC re-checks is_admin.
+  // Store the secret (Vault) + metadata; the RPC re-checks is_director.
   const { data: saved, error } = await supabase.rpc('set_toyyibpay_credentials', {
     _academy: academyId,
     _secret: secretKey,

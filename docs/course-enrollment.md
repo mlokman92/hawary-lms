@@ -80,7 +80,7 @@ signed-in person belongs:
 - `PendingInviteRedirect`, which recovers it on any `LANDING_PATHS` route —
   including `/onboarding`, which is where a dropped `?next=` deposits people.
 
-It is cleared on a successful join and on sign-out, with the other tenant keys.
+It is cleared on a successful join and on sign-out, with the other per-academy keys.
 
 ## Settings
 

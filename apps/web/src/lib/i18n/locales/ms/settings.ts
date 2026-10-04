@@ -5,7 +5,6 @@ export const settings: SettingsDict = {
   'settings.title': 'Tetapan',
   'settings.subtitle':
     'Konfigurasikan butiran dan integrasi akademi anda.',
-  'settings.admin_only': 'Hanya pentadbir akademi boleh mengurus tetapan.',
 
   // Profil akademi — maklumat yang dicetak pada invois dan resit
   'settings.academy.title': 'Butiran akademi',
@@ -139,7 +138,4 @@ export const settings: SettingsDict = {
     'Kunci tidak dapat disahkan dengan Billplz.',
   'settings.billplz.error.save_failed': 'Kunci tidak dapat disimpan.',
   'settings.billplz.error.no_response': 'Tiada respons daripada pelayan.',
-
-  // Halaman ahli kini mempunyai ruang namanya sendiri — lihat
-  // `locales/ms/members.ts`.
 }

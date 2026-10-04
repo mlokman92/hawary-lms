@@ -33,7 +33,7 @@ export const grading = {
   'grading.denied.not_assigned':
     'You aren’t assigned as an instructor on this course. An admin can assign you from the course’s instructor list.',
   'grading.denied.no_instructor_record':
-    'Your account isn’t linked to an instructor record in this academy yet, so no courses are assigned to you. An admin can link it from the Instructors page.',
+    'Your account isn’t linked to an instructor record in this academy yet, so no courses are assigned to you. A director can link it from the Instructors page.',
 
   // Marking a submission
   'grading.submission.unavailable': 'This submission isn’t available to you.',

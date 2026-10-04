@@ -12,10 +12,10 @@ export const invitations: InvitationsDict = {
   'invite.action.revoke': 'Batalkan',
   'invite.error.resend': 'Gagal menghantar semula.',
 
-  // Sebelah penerima: akademi yang menjemput mereka
-  'invite.waiting.title': 'Jemputan akademi',
+  // Sebelah penerima: cawangan yang menambah mereka
+  'invite.waiting.title': 'Jemputan anda',
   'invite.waiting.description':
-    'Akademi ini telah menambah anda. Sertai untuk mendapatkan akses.',
+    'Anda telah ditambah ke Hawary Academy. Sertai untuk mendapatkan akses.',
   'invite.waiting.added': 'Ditambah {date}',
   'invite.waiting.role_student': 'Pelajar',
   'invite.waiting.role_trainer': 'Jurulatih',
@@ -23,7 +23,7 @@ export const invitations: InvitationsDict = {
   'invite.waiting.joining': 'Menyertai…',
   'invite.waiting.error': 'Gagal menyertai akademi ini.',
 
-  // Pautkan akaun sedia ada (pentadbir sahaja)
+  // Pautkan akaun sedia ada (pelajar: kakitangan; pengajar: pengarah sahaja)
   'invite.link.title': 'Pautkan akaun sedia ada',
   'invite.link.description.student':
     'Individu ini mesti sudah mendaftar akaun. Memautkan akaun memberi akses pelajar kepada akademi ini.',

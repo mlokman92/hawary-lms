@@ -66,9 +66,9 @@ export function InstructorsPage() {
   const navigate = useNavigate()
   const { t } = useT()
   const { activeAcademyId, active } = useAcademy()
-  const isStaff = active?.role === 'admin' || active?.role === 'trainer'
-  // Minting an instructor token is admin-only, so a trainer gets no checkbox.
-  const isAdmin = active?.role === 'admin'
+  // Creating, importing and inviting an instructor each grant staff access,
+  // so all three are Director-only (`app.is_director`).
+  const isDirector = !!active?.isDirector
   const { data: instructors, isLoading, error } = useInstructors(activeAcademyId)
 
   const [search, setSearch] = useState('')
@@ -159,7 +159,7 @@ export function InstructorsPage() {
         title={t('common.instructors')}
         description={t('instructors.description')}
       >
-        {isStaff ? (
+        {isDirector ? (
           <>
             <Button variant="outline" onClick={() => setImportOpen(true)}>
               <FileUp /> {t('import.instructors')}
@@ -321,9 +321,11 @@ export function InstructorsPage() {
         )}
       </div>
 
-      <PendingInvitations academyId={activeAcademyId} kind="instructor" />
+      {isDirector ? (
+        <PendingInvitations academyId={activeAcademyId} kind="instructor" />
+      ) : null}
 
-      {activeAcademyId ? (
+      {isDirector && activeAcademyId ? (
         <>
           <InstructorFormDialog
             academyId={activeAcademyId}
@@ -338,7 +340,7 @@ export function InstructorsPage() {
             onImport={(rows, options) =>
               importInstructors.mutateAsync({ rows, ...options })
             }
-            inviteLabelKey={isAdmin ? 'import.invite_instructors' : undefined}
+            inviteLabelKey="import.invite_instructors"
             titleKey="import.instructors.title"
             descriptionKey="import.instructors.description"
           />

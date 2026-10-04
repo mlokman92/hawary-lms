@@ -20,20 +20,13 @@ export const members = {
   'members.no_record':
     'No record to open — give them an instructor record first.',
 
-  // Access levels. "Director" is the person who created the academy; it is a
-  // name for the founder, not a separate set of permissions.
+  // Access levels. A Director is an admin with academy_members.is_director, a
+  // flag the owner sets in SQL; there can be several. Directors alone grant and
+  // revoke staff access and change the payment and letterhead settings.
   'members.tier.director': 'Director',
   'members.tier.admin': 'Admin',
   'members.tier.trainer': 'Trainer',
   'members.tier.student': 'Student',
-  'members.tier.director_hint':
-    'Created this academy. Same powers as an admin.',
-  'members.tier.admin_hint':
-    'Full access to every course, student, invoice and setting.',
-  'members.tier.trainer_hint':
-    'Back-office access, but grades only the courses they are assigned to.',
-  'members.tier.student_hint':
-    'Learner access only — the back office is closed to them.',
 
   // academy_members.status
   'members.status.active': 'Active',
@@ -47,6 +40,8 @@ export const members = {
   'members.restore': 'Restore access',
   'members.last_admin':
     'This is the last active admin — demoting or suspending them would leave the academy with no one who can manage it.',
+  'members.last_director':
+    'This is the last active director — demoting or suspending them would leave no one who can grant staff access or change payment settings.',
   'members.footnote':
     'Suspending a member revokes their access immediately. Student access is managed on each student’s own page.',
   'members.access.failed': 'Could not change this member’s access.',

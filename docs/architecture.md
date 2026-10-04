@@ -28,12 +28,16 @@
 
 - **Monorepo (pnpm + Turborepo).** Web and mobile share types and domain logic;
   a monorepo makes that first-class and keeps them in lockstep.
-- **Supabase as backend.** Postgres with Row Level Security is the tenant-isolation
-  mechanism. Auth, Storage (assignment files, notes media), and Edge Functions
-  (privileged/server-only work: payment webhooks, invoice generation) included.
-- **RLS-enforced multi-tenancy.** Every tenant-scoped table carries `academy_id`;
-  policies restrict rows to the caller's academy. Client filtering is never the
-  security boundary.
+- **Supabase as backend.** Postgres with Row Level Security is the
+  branch-isolation mechanism. Auth, Storage (assignment files, notes media), and
+  Edge Functions (privileged/server-only work: payment webhooks, invoice
+  generation) included.
+- **One owner, RLS per branch.** The platform belongs to Hawary Academy
+  (academy `9c5fd727-65cd-4657-ab4d-fe52fa93d8b7`). `academy_id` stays because a
+  branch is an `academies` row, opened and closed by the owner in SQL, never
+  through the API ([single-owner.md](single-owner.md)). Every branch-scoped
+  table carries `academy_id`; policies restrict rows to the caller's branch.
+  Client filtering is never the security boundary.
 - **Generated DB types** live in `packages/shared` and are regenerated after schema
   changes — the apps consume typed queries, not stringly-typed access.
 - **Money as integer sen.** Avoids float rounding in invoicing/payment.
@@ -47,9 +51,13 @@
 - `profiles` — one per email, global. Readable by every co-member, so it must
   never carry an address (see `list_academy_staff` in
   [web-surface.md](web-surface.md)).
-- `academies` — the tenant root. `created_by` is the Director.
-- `academy_members` — account ↔ academy ↔ role (`admin` / `trainer` /
-  `student`). This is **access**.
+- `academies` — one row per Hawary branch. INSERT and DELETE are closed to
+  every JWT. UPDATE is Director-only and column-granted to the letterhead
+  (`name`, `registration_no`, `email`, `phone`, `address`, `city`, `state`,
+  `postcode`, `sst_registered`, `sst_number`, `logo_url`).
+- `academy_members` — account ↔ branch ↔ role (`admin` / `trainer` /
+  `student`), plus `is_director`, an owner-set flag on an admin membership.
+  This is **access**.
 - `students` — an academy **record**, not necessarily an auth user. Enrollment,
   invoices and payments all reference `students`, never an account.
 - `instructors` — the same shape, CRM-style. `course_instructors` assigns them
@@ -69,7 +77,7 @@ record is the invitation**. See [account-claiming.md](account-claiming.md).
 
 ## Tenancy and access helpers
 
-Every tenant-scoped table carries `academy_id` + RLS policies. Checks go
+Every branch-scoped table carries `academy_id` + RLS policies. Checks go
 through SECURITY DEFINER helpers in the `app` schema, never through client
 filtering:
 
@@ -78,6 +86,17 @@ filtering:
   individual policies instead, as
   [money-is-admin-only.md](money-is-admin-only.md) did.
 - `app.is_admin`, `app.owns_student`, `app.owns_instructor`
+- `app.is_director` — an active **admin** membership with `is_director`. It
+  gates who grants or revokes staff access (`academy_members` writes other than
+  student rows; `instructors` INSERT/DELETE; `guard_instructor_grant` on
+  `user_id`, an unlinked record's `email` and `archived_at`;
+  `create_instructor_invitation`, `link_instructor_account`,
+  `unlink_instructor_account`, and resending or revoking a trainer invitation)
+  and who changes gateway and billing settings (`academy_payment_settings`
+  writes, the four ToyyibPay/Billplz credential RPCs, `academies` UPDATE).
+  Suspending or demoting a Director removes the power. Only the owner sets the
+  flag, in SQL; `guard_member_director` refuses it from any JWT. See
+  [single-owner.md](single-owner.md#directors).
 - `app.is_enrolled` — requires an **active membership** plus an unarchived
   `active`/`trial` student record, so suspending a member revokes content
   immediately.
@@ -100,4 +119,7 @@ it.
 
 Columns clients must **never** write, because a trigger or generated column
 owns them: `invoices.amount_paid_sen`, `invoices.balance_sen`,
-`assessments.total_points`.
+`assessments.total_points`. Columns only the owner writes, in SQL:
+`academy_members.is_director` (trigger-guarded) and the non-letterhead columns
+of `academies` — `slug`, `created_by`, `status`, `timezone`, `currency` — which
+have no UPDATE grant.

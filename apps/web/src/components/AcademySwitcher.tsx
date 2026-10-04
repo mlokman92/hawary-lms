@@ -1,5 +1,4 @@
-import { Check, ChevronsUpDown, GraduationCap, Plus } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { Check, ChevronsUpDown, GraduationCap } from 'lucide-react'
 import { useAcademy } from '@/lib/academy'
 import { useT, type TKey } from '@/lib/i18n'
 import {
@@ -7,7 +6,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -17,39 +15,61 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 
+/**
+ * Switches between the Hawary Academy branches a staff member belongs to;
+ * renders as a plain label with one. Branches are opened by the owner, so
+ * there is nothing to add here.
+ */
 export function AcademySwitcher() {
-  const navigate = useNavigate()
   const { staffMemberships, active, setActiveAcademyId } = useAcademy()
   const { isMobile } = useSidebar()
   const { t } = useT()
 
-  // Was `capitalize` on the raw enum value, which only reads as a word in
-  // English. Translate it instead.
-  const roleLabel = active?.role ? t(`role.${active.role}` as TKey) : ''
+  // A Director shows as one here, where the role already is — the only place
+  // in the shell that says this account holds the extra powers.
+  const roleLabel = !active
+    ? ''
+    : active.isDirector
+      ? t('members.tier.director')
+      : t(`role.${active.role}` as TKey)
+  const name = active?.academy?.name ?? t('academy.fallback')
+
+  const trigger = (
+    <SidebarMenuButton
+      size="lg"
+      tooltip={name}
+      className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+    >
+      <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
+        <GraduationCap className="size-4" />
+      </div>
+      <div className="grid flex-1 text-left text-sm leading-tight">
+        <span className="truncate font-medium">
+          {name}
+        </span>
+        <span className="text-muted-foreground truncate text-xs">
+          {roleLabel}
+        </span>
+      </div>
+      {staffMemberships.length > 1 ? <ChevronsUpDown className="ml-auto" /> : null}
+    </SidebarMenuButton>
+  )
+
+  // One branch is the common case: keep the chrome, drop the affordance — a
+  // dropdown with a single option is a dead control.
+  if (staffMemberships.length <= 1) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>{trigger}</SidebarMenuItem>
+      </SidebarMenu>
+    )
+  }
 
   return (
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
-              <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                <GraduationCap className="size-4" />
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">
-                  {active?.academy?.name ?? t('academy.select')}
-                </span>
-                <span className="text-muted-foreground truncate text-xs">
-                  {roleLabel}
-                </span>
-              </div>
-              <ChevronsUpDown className="ml-auto" />
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
+          <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
           <DropdownMenuContent
             className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
             align="start"
@@ -76,21 +96,6 @@ export function AcademySwitcher() {
                 ) : null}
               </DropdownMenuItem>
             ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="gap-2 p-2"
-              // `?new=1` is the only deliberate way into the founder form:
-              // /onboarding now returns an existing member to where they
-              // belong, so a stray navigation cannot mint a second academy.
-              onClick={() => navigate('/onboarding?new=1')}
-            >
-              <div className="flex size-6 items-center justify-center rounded-md border">
-                <Plus className="size-4" />
-              </div>
-              <span className="text-muted-foreground font-medium">
-                {t('academy.add')}
-              </span>
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

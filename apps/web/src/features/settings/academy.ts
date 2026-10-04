@@ -5,14 +5,14 @@ import { supabase } from '@/lib/supabase'
  * The academy's letterhead — the subset of `academies` that an invoice or a
  * receipt prints.
  *
- * Only `name` is required, and it is already collected at sign-up (see
- * `pages/Onboarding.tsx`); the rest is optional and simply omitted from the
- * document when blank, so a PDF never shows an empty label.
+ * Only `name` is required (`academies.name` is NOT NULL; the row is created by
+ * the owner, never through the app); the rest is optional and simply omitted
+ * from the document when blank, so a PDF never shows an empty label.
  *
  * Readable by any member, not just staff: `academies: members can view` is
  * `app.is_member(id)`, so a learner generating their own invoice PDF from
- * `/learn/billing` resolves the same row under RLS. Writes stay admin-only
- * (`academies: admins can update`).
+ * `/learn/billing` resolves the same row under RLS. Writes are a Director's
+ * (`academies: directors can update`), and only to the letterhead columns.
  */
 export type AcademyProfile = {
   id: string

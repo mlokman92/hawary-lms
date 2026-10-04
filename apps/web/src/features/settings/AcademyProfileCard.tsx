@@ -19,12 +19,8 @@ import { InvoicePreviewDialog } from './InvoicePreviewDialog'
 import { errorMessage } from '@/lib/errors'
 
 /**
- * The academy's letterhead, editable by an admin.
- *
- * These columns have existed on `academies` since the first tenancy migration
- * but were only ever written at sign-up. They are here because invoice and
- * receipt PDFs print them — name is the one mandatory field, matching the DB
- * (`academies.name` is NOT NULL) and the sign-up form.
+ * The academy's letterhead, editable by a Director. Invoice and receipt PDFs
+ * print it; name is the one mandatory field, matching `academies.name` NOT NULL.
  */
 export function AcademyProfileCard({ academyId }: { academyId: string }) {
   const { t } = useT()

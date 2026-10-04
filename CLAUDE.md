@@ -4,27 +4,44 @@ Guidance for Claude Code in this repo.
 
 > **Keep this file under 200 lines.** It is loaded into every session, so it
 > holds only what an agent needs *before* reading anything else. Decisions and
-> their rationale go in `docs/` — do not record a fix here.
+> their rationale go in `docs/` — do not record a fix or its history here.
 
 ## Project
 
-**Hawary LMS** — Malaysian multi-tenant SaaS LMS. Each **academy** is an
-isolated tenant (trainers/students/data never cross academies). Roles: **admin**
-& **trainer** (web back-office), **student** (mobile, later). Features: courses,
-students/enrollment, notes, assessments, assignments, payments. Malaysian: MYR
-(store as **sen**), SST-aware invoices, **bilingual EN/BM** (web); payment
-gateways are live for ToyyibPay (money in) and Billplz (money out).
+**Hawary LMS** is **Hawary Academy's** learning management system — a
+Malaysian TVET academy running the **Diploma Kemahiran Malaysia (DKM) dalam
+bidang Pengasuhan dan Pendidikan Awal Kanak-Kanak**, a programme under
+**Jabatan Pembangunan Kemahiran (JPK)**. Students attend in intakes ("Siri"),
+each a course; the business rule is **one student, one course**. New work serves
+this programme first. Nothing JPK-specific (programme structure, assessment
+rules, reporting formats) is modelled yet — ask, or read the doc once one exists
+in `docs/`.
+
+- **Hawary Academy** is academy `9c5fd727-65cd-4657-ab4d-fe52fa93d8b7`, the only
+  one today. A future **branch** is another academy row, isolated by
+  `academy_id` + RLS exactly like this one. Academies are created and closed by
+  the owner in SQL, never through the app or the API.
+- **Roles** (per academy, on `academy_members`):
+  - **Director** — an admin with `is_director`. Grants and revokes staff access
+    (admin/trainer), and owns the gateway & billing settings. Set by the owner in
+    SQL only.
+  - **admin** — runs the academy: students, courses, invoices, payments,
+    incentives, appointments, reports.
+  - **trainer** — teaches and grades the courses they are assigned to.
+  - **student** — the learner surface (`/learn`), mobile later.
+- **Malaysian**: MYR stored as integer **sen**, SST-aware invoices, **bilingual
+  EN/BM** web UI. Money in through **ToyyibPay** (FPX), money out through
+  **Billplz** (incentive payouts) — both live.
 
 ## Tech stack
 
 Monorepo: **pnpm workspaces + Turborepo**.
 
-- `apps/web` — Vite + React + TS. Admin/trainer surface. **Built.**
-- `apps/mobile` — Expo (React Native) + TS. Student surface. **Scaffolded, not wired.**
+- `apps/web` — Vite + React + TS. Staff back-office and learner surface.
+- `apps/mobile` — Expo (React Native) + TS. Student app — **scaffolded, not wired**.
 - `packages/shared` — TS types, **generated** DB types, Supabase client, domain logic.
 - Backend — **Supabase** (Postgres + RLS, Auth, Storage, Edge Functions).
-  Project ref `vpklztxqkvqmmzsxfqgp`; use the Supabase MCP tools. Migrations in
-  `supabase/migrations/`.
+  Project ref `vpklztxqkvqmmzsxfqgp`. Migrations in `supabase/migrations/`.
 - **Web UI** — shadcn/ui (Radix + **Tailwind v4**), neutral theme in
   `apps/web/src/index.css`, `@` alias, `apps/web/src/components/ui` (add via
   `pnpm dlx shadcn@latest add <name>`). Data layer: **TanStack Query**; feature
@@ -32,21 +49,26 @@ Monorepo: **pnpm workspaces + Turborepo**.
   `apps/web/src/components/patterns/*`.
 - **Mobile UI** — React Native Reusables + NativeWind (pending).
 - **Email** — Resend, from `noreply@hawary.my`. `RESEND_API_KEY`,
-  `INVITE_FROM_EMAIL`, `APP_URL`, `ALLOWED_ORIGINS` are set and shared by every
-  mail function. Supabase Auth sends its own confirm/reset mail through Resend
-  SMTP, configured in the dashboard, not in this repo. Auth's per-hour rate
-  limit and Resend's plan cap are **separate and both real**.
+  `INVITE_FROM_EMAIL`, `APP_URL`, `ALLOWED_ORIGINS` are shared by every mail
+  function. Supabase Auth sends confirm/reset mail through Resend SMTP,
+  configured in the dashboard. Auth's per-hour rate limit and Resend's plan cap
+  are **separate and both real**.
 
-## What's built (web)
+## The web app
 
-Staff back-office and a learner surface, both on the same shell. Auth,
-onboarding and academy creation; Courses · Students · Instructors ·
-Appointments; course → module → content authoring with grading queues;
-enrollment; report checks; notifications; four money screens; members & roles;
-CSV import; EN/BM throughout.
+One shell, two trees:
 
-A trainer's nav is Dashboard + those four sections. Admins also get Payments
-(+ Log), Incentive, Members and Settings.
+- **Back-office** (`/`) — Dashboard · Courses · Students · Instructors ·
+  Appointments · Reports for every staff member; admins also get Payments
+  (+ Log, Report), Incentives, Members and Settings. Course → module → content
+  authoring, grading queues, enrollment, CSV import, notifications.
+- **Learner** (`/learn`) — courses, work, billing, appointments, reports,
+  profile.
+- People get in by **invitation or claiming**: staff create the student or
+  instructor record, and the account that signs in with that email claims it.
+  A signed-in account with no membership lands on `/onboarding` (its pending
+  invitations, or "no record of you at this address"). The public join link is
+  `/enroll/<academy slug>`.
 
 ## Where the decisions are written down
 
@@ -55,6 +77,7 @@ Read the doc before changing the area. Each one keeps the *why*.
 | area | doc |
 | --- | --- |
 | system shape, data model, RLS helpers, write guards | [architecture.md](docs/architecture.md) |
+| one owner, branches, Directors | [single-owner.md](docs/single-owner.md) |
 | shells, nav, staff screens, dashboards, members, CSV import, storage | [web-surface.md](docs/web-surface.md) |
 | course → module → content hierarchy | [course-modules.md](docs/course-modules.md) |
 | question types and scoring | [question-types.md](docs/question-types.md) |
@@ -75,21 +98,21 @@ Read the doc before changing the area. Each one keeps the *why*.
 | student vs instructor roles, write guards | [student-instructor-roles.md](docs/student-instructor-roles.md) |
 | i18n — **read the house-style list before writing Malay** | [i18n.md](docs/i18n.md) |
 | deployment, URLs, redirect allow list | [production-urls.md](docs/production-urls.md) |
+| CI/CD plan | [ci-cd.md](docs/ci-cd.md) |
 | product scope | [requirements.md](docs/requirements.md) |
 
-## Not built / next
+## Not built
 
-- Assignment **attachments** — the student branch in `upload-media` exists
-  (report checks needed it), so what is left is a private `submissions` bucket
-  and the wiring to `assignment_submissions`.
+- Assignment **attachments** — the student branch in `upload-media` exists;
+  missing are a private `submissions` bucket and the wiring to
+  `assignment_submissions`.
 - Assessment settings have **no UI**: `duration_minutes`, `max_attempts`,
-  `available_from/until` and `type` are enforced server-side but can only be set
-  in SQL. The editor writes `title`, `is_published` and `instructions` only.
-- Mobile app wiring (the i18n dictionary moves to `packages/shared` when it
-  lands).
-- BM for transactional email and Edge Function errors — both stay English.
+  `available_from/until` and `type` are enforced server-side but set only in
+  SQL. The editor writes `title`, `is_published` and `instructions`.
+- Opening a branch has no UI ([single-owner.md](docs/single-owner.md)).
+- Mobile app wiring (the i18n dictionary moves to `packages/shared` then).
+- BM for transactional email and Edge Function errors — both are English.
 - Scheduled expiry sweep for invitations; web code-splitting.
-- Plans in `docs/`: academy registration/reconciliation, CI/CD.
 
 ## Commands (use pnpm, not npm)
 
@@ -102,25 +125,25 @@ pnpm --filter web lint
 
 ## Conventions
 
-- **Functionality first. No UI cosmetics.** The owner of this repo does not want
-  decorative interface. Do not add a card, banner, tile, badge, status list or
-  explanatory paragraph whose only job is to narrate something the interface
-  already shows, or to reassure the user that a thing happened. If a control
-  does the work, ship the control and nothing else. Prefer **removing** UI to
-  adding it; put a new thing on an existing page before inventing a page for it;
-  and when a screen has one obvious action, that is a button — everything
-  occasional belongs behind a `⋯` menu. A section that exists to explain the
-  product back to the user is slop and will be deleted.
+- **Functionality first. No UI cosmetics.** The owner does not want decorative
+  interface. Do not add a card, banner, tile, badge, status list or explanatory
+  paragraph whose only job is to narrate something the interface already shows,
+  or to reassure the user that a thing happened. If a control does the work,
+  ship the control and nothing else. Prefer **removing** UI to adding it; put a
+  new thing on an existing page before inventing a page for it; when a screen
+  has one obvious action, that is a button — everything occasional belongs
+  behind a `⋯` menu. Hide a control the user's role cannot use rather than
+  explaining why it fails.
 - **TypeScript only.** Shared-first: cross-app types/logic go in
   `packages/shared`.
-- **DB types are generated** (Supabase MCP `generate_typescript_types`), not
+- **DB types are generated** (Supabase `generate_typescript_types`), never
   hand-written.
-- **Multi-tenancy is enforced in the DB** via RLS: every tenant table has
-  `academy_id` + policies. Tenancy checks use SECURITY DEFINER helpers in the
-  `app` schema (`app.is_staff` / `is_admin` / `owns_student` / `owns_instructor`
-  / `is_enrolled` / `can_grade_course`). **Never rely on client filtering** — a
-  staff JWT plus the publishable key reads PostgREST directly, so hiding a card
-  is not a boundary.
+- **Access is enforced in the DB** via RLS: every academy-scoped table has
+  `academy_id` + policies, and checks go through SECURITY DEFINER helpers in the
+  `app` schema (`app.is_staff` / `is_admin` / `is_director` / `owns_student` /
+  `owns_instructor` / `is_enrolled` / `can_grade_course`). **Never rely on
+  client filtering** — a staff JWT plus the publishable key reads PostgREST
+  directly, so hiding a card is not a boundary.
 - **Never narrow `app.is_staff` itself.** Dozens of policies rest on it and
   nearly all are teaching grants a trainer must keep. Narrow the individual
   policies.
@@ -130,10 +153,11 @@ pnpm --filter web lint
 - **Money in integer sen.** Never floats, never ringgit in the database.
 - **Columns a client must never write**, because a trigger or a generated column
   owns them: `invoices.amount_paid_sen`, `invoices.balance_sen`,
-  `assessments.total_points`.
+  `assessments.total_points`, `academy_members.is_director`.
 - **Clients have no DML** on `academy_invitations`, `notifications`,
-  `incentive_payouts`, `assessment_questions`, or `appointments` — those move
-  only through RPCs. Check before adding a policy.
+  `incentive_payouts`, `assessment_questions`, or `appointments`, and no INSERT
+  or DELETE on `academies` — those move only through RPCs or the owner. Check
+  before adding a policy.
 - **i18n**: keys are flat and self-prefixed, so `TKey = keyof typeof en` — a bad
   key **and** a missing Malay entry are both compile errors. Use `useT()` →
   `t`/`tn`; `translate()` is the non-reactive escape hatch for plain helpers
@@ -145,9 +169,17 @@ pnpm --filter web lint
 
 - Before schema work: `list_tables`; run `get_advisors` (security + perf) after
   any DDL.
-- After a migration: update `packages/shared` DB types, then wire the app.
+- Applying SQL: the Supabase MCP tools first. If they return
+  `{"status":"declined"}`, use
+  `npx -y supabase@latest db query --linked --project-ref vpklztxqkvqmmzsxfqgp -f <file>`
+  and insert the `supabase_migrations.schema_migrations` row yourself.
+  **Never `supabase db push`** — remote versions are MCP-stamped and never match
+  the local filenames, so it would re-run every migration.
+- Production data is live (real students, invoices and payments). Confirm with
+  the owner before deleting or rewriting rows.
+- After a migration: regenerate the `packages/shared` DB types, then wire the app.
 - Verify: `pnpm --filter web build` + `pnpm --filter web lint`.
 - **Record decisions in `docs/`, not in this file.** Add the doc to
   `docs/README.md` and, if it is a new area, one row to the table above.
-- Production is live at **app.hawary.my** and the owner deploys it himself —
-  push to `main` only when asked.
+- Production is **app.hawary.my** and the owner deploys it — push to `main`
+  only when asked.

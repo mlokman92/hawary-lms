@@ -1,8 +1,8 @@
 # ToyyibPay payments — design & implementation spec
 
-Per-academy ToyyibPay collection: each academy pastes **its own ToyyibPay
-`userSecretKey`**; its students pay via **FPX** directly into that academy's
-ToyyibPay account. Money stays in **sen** end-to-end (ToyyibPay `billAmount` is in
+Per-branch ToyyibPay collection: each branch's Director pastes **its own
+ToyyibPay `userSecretKey`**; its students pay via **FPX** directly into that
+branch's ToyyibPay account. Money stays in **sen** end-to-end (ToyyibPay `billAmount` is in
 cents — a 1:1 match, no conversion).
 
 Status: **implemented (all phases) — pending live sandbox verification.** This doc
@@ -31,9 +31,10 @@ the result page polling it every 4s, and a staff **"Check payment status"** butt
 the invoice detail. `toyyibpay-callback` (now also identifies the intent by
 `bill_code` when `order_id` is absent) is just a fast-path. Both settle through the
 same idempotent `record_gateway_payment` RPC.
-- **Frontend**: `/settings` (admin) with the ToyyibPay card; public `/pay/:token`
-  + `/pay/:token/result`; "Online payment" card on the invoice detail (share +
-  email the link); sidebar Settings entry (admin only).
+- **Frontend**: `/settings` (Director only, behind `DirectorRoute`) with the
+  ToyyibPay card; public `/pay/:token` + `/pay/:token/result`; "Online payment"
+  card on the invoice detail (share + email the link, any admin); sidebar
+  Settings entry (Directors only).
 - **Config**: no new secrets required — `SUPABASE_SERVICE_ROLE_KEY` is
   auto-injected; email reuses the existing `RESEND_API_KEY`. Optionally set
   `APP_URL` on the functions so pay/return links use your real domain instead of
@@ -49,13 +50,13 @@ Settings, and the two sandbox checks below (H2 secret-scoping, H3 amount unit).
 | Student reach | **Public tokenized pay link** `/pay/<token>` (no login) | No student portal exists yet; clones the `academy_invitations` token pattern. An authed branch can be added later without changing the edge functions. |
 | Payment channel v1 | **FPX only** | `billPaymentChannel='0'`, `method='fpx'`. |
 | Gateway fee | **Academy absorbs** (~RM1/FPX) | Student pays exactly the invoice total. Do **not** set `billChargeToCustomer`. |
-| Category onboarding | **Auto-provision** via `createCategory` | Admin pastes only the secret key; a `toyyibpay-connect` edge fn creates the category server-side and stores the returned `categoryCode`. |
+| Category onboarding | **Auto-provision** via `createCategory` | A Director pastes only the secret key; a `toyyibpay-connect` edge fn creates the category server-side and stores the returned `categoryCode`. |
 | Secret at rest | **Supabase Vault** (`supabase_vault` 0.3.1, installed) | Not a plaintext column. Root key lives outside the DB. |
 | Secret readback | Impossible for any client | Only `service_role` edge fns decrypt it via a getter RPC. |
 | Bill ↔ invoice bridge | Dedicated **`payment_intents`** table | `payments` stays the *settled-money* ledger. |
 | Idempotency anchor | `payments UNIQUE(academy_id, provider, provider_ref)` | `provider_ref = ToyyibPay transaction id` (**not** bill_code — see M1). |
 | Callback trust | Never trusted | Re-query `getBillTransactions` with the stored secret before settling. |
-| Who edits the key | **Admin only** (`app.is_admin`) | Trainers/students have no access. |
+| Who edits the key | **Directors only** (`app.is_director`, `20261004100000_director_grants_staff`) | Other admins read `toyyibpay_enabled` and the defaults through RLS, for the money screens; trainers and students see nothing. |
 | Sandbox | Per-academy `is_sandbox` flag | Pinned per intent so re-verification hits the same host. |
 
 ## Why this fits the existing schema
@@ -76,7 +77,7 @@ bridge, a public token, some RPCs, and edge functions.
 ## End-to-end flow
 
 ```
-Admin (Settings) ──paste userSecretKey──▶ toyyibpay-connect fn
+Director (Settings) ──paste userSecretKey──▶ toyyibpay-connect fn
                                              ├─ createCategory (server-side)
                                              └─ Vault.create_secret + settings(last4, category, enabled)
 Admin (Invoice)  ──"Share pay link"────▶ ensure_pay_token ─▶ /pay/<token>  (WhatsApp/email)
@@ -227,6 +228,8 @@ create policy "aps staff read"  on public.academy_payment_settings for select to
   using (app.is_staff(academy_id));
 create policy "aps admin write" on public.academy_payment_settings for all to authenticated
   using (app.is_admin(academy_id)) with check (app.is_admin(academy_id));
+-- Superseded: SELECT is `payment_settings: admin read` (money-is-admin-only.md);
+-- INSERT/UPDATE/DELETE are `payment_settings: director *` (app.is_director).
 
 -- (b) Bill / payment intent: callback<->invoice bridge, attempt history, dedupe.
 create table public.payment_intents (
@@ -269,7 +272,7 @@ alter table public.invoices
 
 | RPC (schema `public`) | Security | Grant | Does |
 |---|---|---|---|
-| `set_toyyibpay_credentials(academy, secret, category, is_sandbox, enabled)` | DEFINER, guards `app.is_admin` | `authenticated` | Vault upsert (create/update — L1) + metadata upsert; returns `has_secret/last4` only. *(Called by `toyyibpay-connect` after `createCategory`, or directly.)* |
+| `set_toyyibpay_credentials(academy, secret, category, is_sandbox, enabled)` / `remove_toyyibpay_credentials(academy)` | DEFINER, guards `app.is_director` | `authenticated` | Vault upsert (create/update — L1) + metadata upsert; returns `has_secret/last4` only. *(Called by `toyyibpay-connect` after `createCategory`, or directly.)* |
 | `get_toyyibpay_secret(academy) → text` | DEFINER, `search_path=''` | **`service_role` only** (H1) | Reads `vault.decrypted_secrets`. |
 | `ensure_pay_token(invoice) → text` | DEFINER, guards `app.is_admin` | `authenticated` | Mints/returns `invoices.pay_token`. |
 | `get_public_invoice(token)` | DEFINER, `search_path=''` | `anon` | Minimal display fields (M3); rejects draft/void/cancelled. |
@@ -288,8 +291,10 @@ All copy the `send-invitation` skeleton (CORS, `json()` helper, `Deno.serve`). U
 identity. Secrets: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_URL`.
 
 ### `toyyibpay-connect` — save key + auto-provision category (Phase 0)
-- **Auth:** `verify_jwt=true`, caller-scoped read to prove `app.is_admin` on the
-  academy (like `send-invitation`), then service-role for Vault write.
+- **Auth:** `verify_jwt=true`; a caller-scoped read of `academy_members` proves
+  an active admin membership with `is_director` **before** `createCategory`, and
+  `set_toyyibpay_credentials` re-checks `app.is_director`. No service-role key:
+  the DEFINER RPC does the Vault write.
 - **Input:** `{ academy_id, secret_key, is_sandbox }`.
 - **Logic:** `POST {host}/index.php/api/createCategory` with `userSecretKey`,
   `catname="Hawary LMS <academy>"`, `catdescription`. On success store the returned
@@ -336,7 +341,7 @@ Deploy via `deploy_edge_function`; `create-bill` + `toyyibpay-callback` with
 
 | File | Purpose |
 |---|---|
-| `apps/web/src/pages/SettingsPage.tsx` | Admin-only shell; hosts the Payments card (role gate `active?.role==='admin'`). |
+| `apps/web/src/pages/SettingsPage.tsx` | Hosts the Payments card; Director-only through `DirectorRoute` on the route. |
 | `apps/web/src/features/settings/ToyyibPaySettingsCard.tsx` | Secret key (password input; shows `••••<last4>` + *Replace key* when connected), sandbox toggle, enabled toggle. On save → `toyyibpay-connect` (auto-creates category). shadcn `Input/Label/Switch/Button/Card`. |
 | `apps/web/src/features/settings/api.ts` | `useGetPaymentSettings` (masked cols), `useSavePaymentSettings` → invoke `toyyibpay-connect`. |
 | `apps/web/src/pages/PublicPayPage.tsx` | Reads `:token`; `usePublicInvoice`; academy name/logo + amount due (`formatMYR`); *Pay with FPX* → `useCreateBill` then `window.location.href=url`. No-sidebar layout like `AcceptInvitePage`. Sets `Referrer-Policy: no-referrer` (M3). |
@@ -347,7 +352,7 @@ Deploy via `deploy_edge_function`; `create-bill` + `toyyibpay-callback` with
 | File | Change |
 |---|---|
 | `apps/web/src/App.tsx` | In `AppShell`: `<Route path="/settings" …/>`. **Outside `ProtectedRoute`** (next to `/accept-invite`): `/pay/:token` and `/pay/:token/result`. |
-| `apps/web/src/components/AppSidebar.tsx` | Add `{ title:'Settings', to:'/settings', icon: Settings }`; hide for non-admins. |
+| `apps/web/src/components/AppSidebar.tsx` | Add `{ title:'Settings', to:'/settings', icon: Settings }`; shown to Directors only. |
 | `apps/web/src/pages/InvoiceDetailPage.tsx` | Beside *Record payment*/*Void*: **Share pay link** → `useEnsurePayToken` then reuse `features/students/InviteLink.tsx` with `url=${origin}/pay/${pay_token}`; show *"Online payments not set up — go to Settings"* when `!enabled`. |
 | `apps/web/src/features/payments/api.ts` | Add `useEnsurePayToken`, `useCreateBill` (invoke `create-bill`), `usePublicInvoice`, `usePayStatus`. |
 | `packages/shared/src/db/database.types.ts` | Regenerated. |
@@ -435,7 +440,7 @@ invoices track the setting instead of being frozen off by the backfill.
 
 **The terms are pinned at bill time.** `payment_intents.charge_to_payor` and
 `.fee_sen` record what we actually sent ToyyibPay, and settlement is judged
-against the intent, not against a setting an admin may have flipped since. On a
+against the intent, not against a setting a Director may have flipped since. On a
 reused intent, `create-bill` restates both alongside `bill_code`.
 
 **The surcharge is never our money.** `record_gateway_payment` credits
@@ -463,12 +468,16 @@ invoices.allow_partial_payment  boolean null   -- NULL = follow the academy
 invoices.min_partial_sen        integer null   -- CHECK (>= 100)
 ```
 
-This **shipped without a default on purpose** — an academy that instalment-bills
-one cohort rarely wants every invoice part-payable — and that reasoning held
-until an academy turned up that instalment-bills *everyone*. There the
-per-invoice switch means setting the same two fields 726 times, and the one
-invoice somebody forgets is a phone call. So the default was added rather than
-the per-invoice control removed: both academies are real.
+This **shipped without a default on purpose** — instalment billing for one
+cohort rarely means every invoice should be part-payable — and that reasoning
+held until Hawary began instalment-billing *everyone*. There the per-invoice
+switch means setting the same two fields 726 times, and the one invoice somebody
+forgets is a phone call. So the default was added rather than the per-invoice
+control removed: both shapes are real.
+
+The academy defaults (`allow_partial_payment`, `min_partial_sen`,
+`toyyibpay_charge_to_payor`) are Director writes (`payment_settings: director
+update`).
 
 `invoices.allow_partial_payment` had to become **nullable** for this.
 `not null default false` cannot express "follow the default", because false and
@@ -539,7 +548,8 @@ because a surprise at the bank page is how a payment gets abandoned.
 **Where it is set.** `InvoiceFormDialog` at creation, and `PayLinkCard` on an
 already-issued invoice (`useUpdatePaymentTerms`) — the latter is the real case,
 since "can I pay this in two?" is a phone call. Both are `app.is_admin` writes
-under `invoices: admin update`.
+under `invoices: admin update`: the per-invoice override stays with every admin,
+so any admin can still say yes to that call.
 
 ## The payment date is `dd-mm-yyyy` in Malaysia time, and says so nowhere
 

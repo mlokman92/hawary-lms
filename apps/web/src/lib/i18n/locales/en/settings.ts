@@ -1,12 +1,11 @@
 /**
- * Academy settings: the academy profile (letterhead) card, the ToyyibPay
- * gateway card and the members (staff) page.
+ * Academy settings (Directors only): the academy profile (letterhead) card,
+ * the ToyyibPay gateway card and the Billplz transfers card.
  */
 export const settings = {
   // Settings page shell
   'settings.title': 'Settings',
   'settings.subtitle': 'Configure your academy’s details and integrations.',
-  'settings.admin_only': 'Only academy admins can manage settings.',
 
   // Academy profile — what invoices and receipts print
   'settings.academy.title': 'Academy details',
@@ -138,8 +137,6 @@ export const settings = {
     'Could not verify the keys with Billplz.',
   'settings.billplz.error.save_failed': 'Could not save the keys.',
   'settings.billplz.error.no_response': 'No response from server.',
-
-  // The members page has its own namespace now — see `locales/en/members.ts`.
 } as const
 
 export type SettingsDict = Record<keyof typeof settings, string>

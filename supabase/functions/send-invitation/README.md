@@ -1,19 +1,22 @@
 # send-invitation
 
-Edge Function that emails an academy's student-invitation accept link.
+Edge Function that emails an invitation's accept link, for a student or an
+instructor record.
 
-The web app already mints the invitation (the `create_invitation` RPC → a row in
-`academy_invitations` with a token). This function turns that token into a
-delivered email. The **Invite Student** dialog calls it automatically right after
-creating the invite; if delivery isn't configured or fails, the dialog falls back
-to a copyable link, so the flow never blocks.
+The web app already mints the invitation (`create_invitation` for a student, by
+any staff; `create_instructor_invitation` for an instructor, by a Director only)
+→ a row in `academy_invitations` with a token. This function turns that token
+into a delivered email. Adding a student or instructor calls it automatically
+(`features/invitations/autoInvite.ts`); a failure is silent, because the record
+is claimable without the email ([account-claiming.md](../../../docs/account-claiming.md)),
+and `PendingInvitations` offers a resend and a copyable link.
 
 ## How it stays safe
 
 - `verify_jwt = true` — the caller must be signed in.
 - The invitation is read with a **caller-scoped** Supabase client (the caller's
   JWT), so Row Level Security decides whether they may see it. A non-staff user,
-  or staff of another academy, gets no row — authorization comes for free from the
+  or staff of another branch, gets no row — authorization comes for free from the
   existing `academy_invitations` / `academies` policies.
 - The recipient is **always** the invitation's stored `email`, never a value from
   the request body — this can't be used as an open email relay.
@@ -29,9 +32,8 @@ Set these on the project (Dashboard → Edge Functions → Secrets, or the CLI):
 
 ```bash
 supabase secrets set RESEND_API_KEY=re_xxxxxxxx
-# Optional — until you verify a domain, Resend's shared sender only delivers to
-# your own Resend account email. After verifying yourdomain.com:
-supabase secrets set INVITE_FROM_EMAIL="Hawary LMS <invites@yourdomain.com>"
+# The verified sender, shared by every mail function:
+supabase secrets set INVITE_FROM_EMAIL="Hawary Academy <noreply@hawary.my>"
 # Recommended — canonical base URL used to build the accept link in the email.
 supabase secrets set APP_URL="https://app.hawary.my"
 # Optional — origins a client may request instead of APP_URL (e.g. local dev).

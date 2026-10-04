@@ -12,7 +12,8 @@ import { enrollPath, getEnrollIntent } from './enrollIntent'
  *   student membership only   -> the /learn tree
  *   no membership + a token   -> finish accepting the invitation
  *   no membership + an intent -> finish joining the academy they came for
- *   no membership at all      -> create an academy
+ *   no membership at all      -> /onboarding: pending invitations, or "no
+ *                                record of you at this address"
  */
 export function useLandingTarget(): string {
   const { staffMemberships, studentMemberships } = useAcademy()

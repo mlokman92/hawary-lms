@@ -16,14 +16,9 @@ import {
 } from '@/components/ui/sidebar'
 
 /**
- * The learner's academy switcher. Visually identical to AcademySwitcher, with
- * two deliberate differences:
- *
- *  - it reads useStudentAcademy(), not useAcademy() — the back-office `active`
- *    is derived from staff memberships only and is null for a student;
- *  - there is no "Add academy" item. Creating an academy makes the caller its
- *    admin, and StudentShell then evicts them from /learn permanently, so
- *    offering it here would be a one-way door out of the learner tree.
+ * The learner's branch switcher. Visually identical to AcademySwitcher, but it
+ * reads useStudentAcademy(), not useAcademy() — the back-office `active` is
+ * derived from staff memberships only and is null for a student.
  */
 export function LearnAcademySwitcher() {
   const { memberships, active, setAcademyId } = useStudentAcademy()

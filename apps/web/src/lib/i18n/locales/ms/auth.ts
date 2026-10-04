@@ -7,11 +7,10 @@ export const auth: AuthDict = {
   'auth.password_reset': 'Set semula kata laluan',
   'auth.session_expired': 'Sesi anda telah tamat — sila log masuk semula.',
   'auth.field.phone': 'Telefon',
-  'auth.field.phone_optional': 'Telefon (pilihan)',
 
   // Log masuk
   'auth.signin.title': 'Log masuk',
-  'auth.signin.subtitle': 'Selamat kembali ke Hawary LMS',
+  'auth.signin.subtitle': 'Selamat kembali ke Hawary Academy',
   'auth.signin.busy': 'Sedang log masuk…',
   'auth.signin.forgot': 'Lupa kata laluan?',
   'auth.signin.new_here': 'Baharu di sini?',
@@ -19,7 +18,7 @@ export const auth: AuthDict = {
 
   // Daftar akaun
   'auth.signup.title': 'Cipta akaun anda',
-  'auth.signup.subtitle': 'Mulakan dengan Hawary LMS',
+  'auth.signup.subtitle': 'Untuk pelajar dan kakitangan Hawary Academy',
   'auth.signup.submit': 'Cipta akaun',
   'auth.signup.have_account': 'Sudah mempunyai akaun?',
   'auth.signup.email_exists':
@@ -62,28 +61,11 @@ export const auth: AuthDict = {
   // Panggilan balik pengesahan e-mel
   'auth.callback.working': 'Sedang log masuk anda…',
 
-  // Penyediaan akademi
-  'auth.onboarding.title': 'Cipta akademi anda',
-  'auth.onboarding.subtitle':
-    'Anda akan menjadi pentadbir. Jemput jurulatih dan pelajar selepas ini.',
-  'auth.onboarding.name': 'Nama akademi',
-  'auth.onboarding.name_placeholder': 'cth. Akademi Kemahiran Cemerlang',
-  'auth.onboarding.slug': 'URL (slug)',
-  'auth.onboarding.slug_placeholder': 'akademi-anda',
-  'auth.onboarding.state': 'Negeri (pilihan)',
-  'auth.onboarding.state_placeholder': 'Pilih negeri',
-  'auth.onboarding.invalid_slug': 'Sila masukkan nama akademi / URL yang sah.',
-  'auth.onboarding.slug_taken': 'URL itu telah digunakan — sila cuba yang lain.',
-  'auth.onboarding.submit': 'Cipta akademi',
-  'auth.onboarding.founder_prompt': 'Menguruskan akademi anda sendiri?',
-  'auth.onboarding.talk_to_us': 'Hubungi kami di WhatsApp',
-  'auth.onboarding.create_request':
-    'Hai, saya ingin membuka akademi saya sendiri di Hawary LMS. E-mel akaun saya ialah {email}.',
-
-  'auth.onboarding.none.title': 'Tiada akademi menunggu anda',
+  // Akaun tanpa keahlian
+  'auth.onboarding.none.title': 'Hawary Academy tiada rekod bagi alamat ini',
   'auth.onboarding.none.body_before': 'Anda log masuk sebagai',
   'auth.onboarding.none.body_after':
-    '. Jika akademi anda menjemput alamat e-mel yang berbeza, log keluar dan log masuk dengan alamat tersebut — atau minta mereka menambah alamat ini.',
+    '. Jika anda dijemput dengan alamat e-mel yang berbeza, log keluar dan log masuk dengan alamat tersebut — atau minta Hawary Academy menambah alamat ini.',
   'auth.onboarding.none.other_email': 'Log keluar dan guna e-mel lain',
 
   // Menerima jemputan
@@ -91,10 +73,10 @@ export const auth: AuthDict = {
   'auth.invite.invalid.title': 'Pautan tidak sah',
   'auth.invite.missing_token': 'Pautan jemputan ini tiada tokennya.',
   'auth.invite.title': 'Terima jemputan anda',
-  'auth.invite.join_subtitle': 'Sertai akademi anda',
+  'auth.invite.join_subtitle': 'Sertai Hawary Academy',
   'auth.invite.have_account': 'Saya sudah mempunyai akaun',
   'auth.invite.hint':
-    'Gunakan alamat e-mel yang dijemput oleh akademi anda. Jika anda sudah mempunyai akaun Hawary dengan e-mel tersebut, pilih “Saya sudah mempunyai akaun”.',
+    'Gunakan alamat e-mel yang dijemput oleh Hawary Academy. Jika anda sudah mempunyai akaun Hawary dengan e-mel tersebut, pilih “Saya sudah mempunyai akaun”.',
   'auth.invite.joining': 'Sedang menyertai…',
   'auth.invite.error.title': 'Tidak dapat menerima',
   'auth.invite.error.subtitle': 'Jemputan',

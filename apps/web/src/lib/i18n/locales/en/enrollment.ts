@@ -37,7 +37,6 @@ export const enrollment = {
 
   // --- Learner --------------------------------------------------------------
   'enroll.learn.pending': 'Awaiting approval',
-  'enroll.learn.pending_hint': 'Opens once staff approve your place.',
 
   // --- Staff: the page ------------------------------------------------------
   'enroll.staff.subtitle':
@@ -76,7 +75,6 @@ export const enrollment = {
   'enroll.limits.access_email_hint':
     'Sent when you approve a request for this course. Blank sends nothing. You can use {{student_name}}, {{course}} and {{academy}}; the link to the course is added for you.',
 
-  'enroll.requests.title': 'Requests',
   'enroll.requests.pending': 'Awaiting approval',
   'enroll.requests.enrolled': 'Enrolled',
   'enroll.requests.search_placeholder': 'Search name, email, phone or course',
@@ -86,7 +84,6 @@ export const enrollment = {
   'enroll.requests.no_match': 'Nothing matches this filter.',
   'enroll.requests.approve': 'Approve',
   'enroll.requests.reject': 'Reject',
-  'enroll.requests.full': 'Full',
   'enroll.requests.failed': 'Could not update this request.',
   'enroll.requests.stale': 'Someone else already handled this request.',
   'enroll.email.failed': 'Enrolled, but the email could not be sent.',

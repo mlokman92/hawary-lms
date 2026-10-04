@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { GraduationCap, MoreHorizontal } from 'lucide-react'
 import { useAcademy } from '@/lib/academy'
 import { useAuth } from '@/lib/auth'
@@ -39,7 +39,9 @@ import {
 } from '@/features/members/api'
 
 /**
- * Admin-only membership management.
+ * The staff roster. Every admin sees it; only a Director changes a role,
+ * suspends or restores staff, or attaches or detaches an instructor record
+ * (`app.is_director`), so the ⋯ menu renders for Directors alone.
  *
  * Two things this page is not:
  *   - it is not the student roster. A student is an academy record with its own
@@ -56,7 +58,7 @@ import {
  * is a trainer forever. This is also the only way to suspend staff access.
  */
 export function MembersPage() {
-  const { activeAcademyId, active } = useAcademy()
+  const { activeAcademyId, active, refresh } = useAcademy()
   const { user } = useAuth()
   const { t, tn } = useT()
   const navigate = useNavigate()
@@ -67,17 +69,35 @@ export function MembersPage() {
     null,
   )
 
-  if (active && active.role !== 'admin') return <Navigate to="/" replace />
-
+  const isDirector = !!active?.isDirector
   const rows = members ?? []
   const admins = rows.filter(
     (m) => m.role === 'admin' && m.status === 'active',
   ).length
+  const isActiveDirector = (m: StaffMember) =>
+    m.is_director && m.role === 'admin' && m.status === 'active'
+  const directors = rows.filter(isActiveDirector).length
 
-  // Never let the last active admin demote or suspend themselves out of the
-  // academy — that state needs database access to undo.
-  const isLastAdmin = (m: StaffMember) =>
-    m.role === 'admin' && m.status === 'active' && admins <= 1
+  // Never let the last active admin, or the last active Director, be demoted
+  // or suspended — only the owner in SQL can undo either.
+  const isLastKeyholder = (m: StaffMember) =>
+    (m.role === 'admin' && m.status === 'active' && admins <= 1) ||
+    (isActiveDirector(m) && directors <= 1)
+
+  // A Director changing their own row changes what this session may do, so
+  // the academy context has to re-read it.
+  const change = (
+    m: StaffMember,
+    patch: Partial<Pick<StaffMember, 'role' | 'status'>>,
+  ) =>
+    update.mutate(
+      { userId: m.user_id, patch },
+      {
+        onSuccess: () => {
+          if (m.user_id === user?.id) void refresh()
+        },
+      },
+    )
 
   return (
     <div className="mx-auto w-full max-w-5xl">
@@ -102,14 +122,14 @@ export function MembersPage() {
                   <TableHead>{t('members.col.access')}</TableHead>
                   <TableHead>{t('members.col.contact')}</TableHead>
                   <TableHead>{t('common.status')}</TableHead>
-                  <TableHead className="w-10" />
+                  {isDirector ? <TableHead className="w-10" /> : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.map((m) => {
                   const isSelf = m.user_id === user?.id
                   const tier = memberTier(m)
-                  const lastAdmin = isLastAdmin(m)
+                  const lastKeyholder = isLastKeyholder(m)
                   // The row opens the person's own record — their instructor or
                   // student profile. A member with neither has nothing to open;
                   // "Make instructor" in the menu is what gives them one.
@@ -193,86 +213,70 @@ export function MembersPage() {
                       </TableCell>
                       {/* The menu lives inside a clickable row, so every stray
                           click here has to stop before it navigates. */}
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon-sm">
-                              <MoreHorizontal />
-                              <span className="sr-only">
-                                {t('members.actions')}
-                              </span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              disabled={m.role === 'admin'}
-                              onClick={() =>
-                                update.mutate({
-                                  userId: m.user_id,
-                                  patch: { role: 'admin' },
-                                })
-                              }
-                            >
-                              {t('members.make_admin')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              disabled={m.role === 'trainer' || lastAdmin}
-                              onClick={() =>
-                                update.mutate({
-                                  userId: m.user_id,
-                                  patch: { role: 'trainer' },
-                                })
-                              }
-                            >
-                              {t('members.make_trainer')}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            {/* The teaching axis. Detaching keeps the record —
-                                it only stops being this account's. */}
-                            {m.instructor_id ? (
+                      {isDirector ? (
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon-sm">
+                                <MoreHorizontal />
+                                <span className="sr-only">
+                                  {t('members.actions')}
+                                </span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() =>
-                                  unlinkInstructor.mutate(m.instructor_id!)
-                                }
+                                disabled={m.role === 'admin'}
+                                onClick={() => change(m, { role: 'admin' })}
                               >
-                                {t('members.instructor.detach')}
+                                {t('members.make_admin')}
                               </DropdownMenuItem>
-                            ) : (
                               <DropdownMenuItem
-                                onClick={() => setMakeInstructorFor(m)}
+                                disabled={m.role === 'trainer' || lastKeyholder}
+                                onClick={() => change(m, { role: 'trainer' })}
                               >
-                                {t('members.instructor.make')}
+                                {t('members.make_trainer')}
                               </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
-                            {m.status === 'active' ? (
-                              <DropdownMenuItem
-                                variant="destructive"
-                                disabled={lastAdmin}
-                                onClick={() =>
-                                  update.mutate({
-                                    userId: m.user_id,
-                                    patch: { status: 'suspended' },
-                                  })
-                                }
-                              >
-                                {t('members.suspend')}
-                              </DropdownMenuItem>
-                            ) : (
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  update.mutate({
-                                    userId: m.user_id,
-                                    patch: { status: 'active' },
-                                  })
-                                }
-                              >
-                                {t('members.restore')}
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+                              <DropdownMenuSeparator />
+                              {/* The teaching axis. Detaching keeps the record —
+                                  it only stops being this account's. */}
+                              {m.instructor_id ? (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    unlinkInstructor.mutate(m.instructor_id!)
+                                  }
+                                >
+                                  {t('members.instructor.detach')}
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem
+                                  onClick={() => setMakeInstructorFor(m)}
+                                >
+                                  {t('members.instructor.make')}
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
+                              {m.status === 'active' ? (
+                                <DropdownMenuItem
+                                  variant="destructive"
+                                  disabled={lastKeyholder}
+                                  onClick={() =>
+                                    change(m, { status: 'suspended' })
+                                  }
+                                >
+                                  {t('members.suspend')}
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem
+                                  onClick={() => change(m, { status: 'active' })}
+                                >
+                                  {t('members.restore')}
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      ) : null}
                     </TableRow>
                   )
                 })}
@@ -290,18 +294,22 @@ export function MembersPage() {
         </p>
       ) : null}
 
-      <MakeInstructorDialog
-        academyId={activeAcademyId}
-        member={makeInstructorFor}
-        open={!!makeInstructorFor}
-        onOpenChange={(open) => {
-          if (!open) setMakeInstructorFor(null)
-        }}
-      />
+      {isDirector ? (
+        <>
+          <MakeInstructorDialog
+            academyId={activeAcademyId}
+            member={makeInstructorFor}
+            open={!!makeInstructorFor}
+            onOpenChange={(open) => {
+              if (!open) setMakeInstructorFor(null)
+            }}
+          />
 
-      <p className="text-muted-foreground mt-3 text-xs">
-        {t('members.footnote')}
-      </p>
+          <p className="text-muted-foreground mt-3 text-xs">
+            {t('members.footnote')}
+          </p>
+        </>
+      ) : null}
     </div>
   )
 }

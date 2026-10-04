@@ -3,21 +3,20 @@ import { useAcademy } from '@/lib/academy'
 import { RouteLoading } from '@/components/patterns/QueryState'
 
 /**
- * Admin-only routes. The first role gate in the app that lives on the route
- * rather than inside the page — `MembersPage` had been carrying its own copy.
+ * Admin-only routes. A role gate on the route rather than inside the page;
+ * `DirectorRoute` is its sibling for the Director-only ones.
  *
  * It fails CLOSED and it never hangs, which are two different bugs:
- *   - `active && active.role !== 'admin'` (MembersPage's shape) renders the
- *     page when `active` is null and not loading;
+ *   - `active && active.role !== 'admin'` renders the page when `active` is
+ *     null and not loading;
  *   - `loading || !active` spins forever in that same state.
  * Waiting only on `loading`, then demanding `admin`, does neither.
  *
  * A redirect rather than an in-place "admins only" panel: with the money
- * policies now keyed on `app.is_admin`, these pages would render an empty
- * ledger with a live Export button — a closed door that looks like data loss.
- * `/settings` and `/appointments/settings` keep their explanatory panels; they
- * are pages somebody might legitimately land on, and they show nothing
- * confidential when they do.
+ * policies keyed on `app.is_admin`, these pages would render an empty ledger
+ * with a live Export button — a closed door that looks like data loss.
+ * `/appointments/settings` keeps its explanatory panel; it is a page somebody
+ * might legitimately land on, and it shows nothing confidential when they do.
  */
 export function AdminRoute() {
   const { active, loading } = useAcademy()

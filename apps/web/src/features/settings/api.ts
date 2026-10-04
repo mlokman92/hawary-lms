@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { Tables } from '@hawary/shared'
+import type { Tables, TablesUpdate } from '@hawary/shared'
 import { translate } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
 import { errorMessage } from '@/lib/errors'
@@ -96,16 +96,30 @@ export function useRemoveToyyibpay(academyId: string) {
   })
 }
 
-/** Toggle whether students can pay online (direct table update; admin-gated by RLS). */
+/**
+ * A direct `academy_payment_settings` update, Director-gated by RLS. A refused
+ * UPDATE is not an error to PostgREST — it matches no rows — so the returned
+ * rows are what tells a save from a silent no-op.
+ */
+async function updatePaymentSettings(
+  academyId: string,
+  patch: TablesUpdate<'academy_payment_settings'>,
+) {
+  const { data, error } = await supabase
+    .from('academy_payment_settings')
+    .update(patch)
+    .eq('academy_id', academyId)
+    .select('academy_id')
+  if (error) throw error
+  if (!data?.length) throw new Error(translate('common.error'))
+}
+
+/** Toggle whether students can pay online. */
 export function useSetGatewayEnabled(academyId: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (enabled: boolean) => {
-      const { error } = await supabase
-        .from('academy_payment_settings')
-        .update({ toyyibpay_enabled: enabled })
-        .eq('academy_id', academyId)
-      if (error) throw error
+      await updatePaymentSettings(academyId, { toyyibpay_enabled: enabled })
       return enabled
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: settingsKey(academyId) }),
@@ -124,11 +138,9 @@ export function useSetChargeToPayor(academyId: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (chargeToPayor: boolean) => {
-      const { error } = await supabase
-        .from('academy_payment_settings')
-        .update({ toyyibpay_charge_to_payor: chargeToPayor })
-        .eq('academy_id', academyId)
-      if (error) throw error
+      await updatePaymentSettings(academyId, {
+        toyyibpay_charge_to_payor: chargeToPayor,
+      })
       return chargeToPayor
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: settingsKey(academyId) }),
@@ -154,14 +166,10 @@ export function useSetPartialDefault(academyId: string) {
       allowPartial: boolean
       minPartialSen: number | null
     }) => {
-      const { error } = await supabase
-        .from('academy_payment_settings')
-        .update({
-          allow_partial_payment: input.allowPartial,
-          min_partial_sen: input.allowPartial ? input.minPartialSen : null,
-        })
-        .eq('academy_id', academyId)
-      if (error) throw error
+      await updatePaymentSettings(academyId, {
+        allow_partial_payment: input.allowPartial,
+        min_partial_sen: input.allowPartial ? input.minPartialSen : null,
+      })
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: settingsKey(academyId) }),
   })

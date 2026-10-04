@@ -16,20 +16,14 @@ export const members: MembersDict = {
   'members.no_record':
     'Tiada rekod untuk dibuka — berikan rekod pengajar kepadanya dahulu.',
 
-  // Tahap akses. "Pengarah" ialah individu yang mencipta akademi ini — nama
-  // bagi pengasas, bukan set kebenaran yang berasingan.
+  // Tahap akses. "Pengarah" ialah pentadbir yang ditanda oleh pemilik
+  // (academy_members.is_director); boleh ada lebih daripada seorang. Hanya
+  // pengarah memberi dan menarik balik akses kakitangan serta menukar tetapan
+  // bayaran dan kepala surat.
   'members.tier.director': 'Pengarah',
   'members.tier.admin': 'Pentadbir',
   'members.tier.trainer': 'Jurulatih',
   'members.tier.student': 'Pelajar',
-  'members.tier.director_hint':
-    'Mencipta akademi ini. Kuasanya sama seperti pentadbir.',
-  'members.tier.admin_hint':
-    'Akses penuh kepada setiap kursus, pelajar, invois dan tetapan.',
-  'members.tier.trainer_hint':
-    'Akses pejabat belakang, tetapi hanya boleh memberi markah bagi kursus yang ditugaskan kepadanya.',
-  'members.tier.student_hint':
-    'Akses pelajar sahaja — pejabat belakang tertutup kepadanya.',
 
   // academy_members.status
   'members.status.active': 'Aktif',
@@ -43,6 +37,8 @@ export const members: MembersDict = {
   'members.restore': 'Pulihkan akses',
   'members.last_admin':
     'Ini pentadbir aktif yang terakhir — menurunkan pangkat atau menggantungnya akan meninggalkan akademi ini tanpa sesiapa yang boleh mengurusnya.',
+  'members.last_director':
+    'Ini pengarah aktif yang terakhir — menurunkan pangkat atau menggantungnya akan menyebabkan tiada sesiapa yang boleh memberi akses kakitangan atau menukar tetapan bayaran.',
   'members.footnote':
     'Menggantung seseorang ahli akan menarik balik aksesnya serta-merta. Akses pelajar diurus di halaman pelajar masing-masing.',
   'members.access.failed': 'Akses ahli ini tidak dapat ditukar.',

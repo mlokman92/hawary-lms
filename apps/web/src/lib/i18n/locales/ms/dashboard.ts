@@ -13,7 +13,7 @@ export const dashboard: DashboardDict = {
   'dash.view_all': 'Lihat semua',
 
   // Senarai semak persediaan
-  'dash.setup.title': 'Siapkan akademi anda',
+  'dash.setup.title': 'Siapkan cawangan ini',
   'dash.setup.subtitle':
     'Beberapa langkah lagi sebelum pelajar boleh mula belajar.',
   'dash.setup.hide': 'Sembunyikan',

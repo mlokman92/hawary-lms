@@ -75,7 +75,7 @@ export const incentives = {
   'incentives.error.insufficient_funds':
     'Your Billplz payment order limit is too low for this batch. Top it up, then resume.',
   'incentives.error.not_configured':
-    'Billplz is not connected. Add your keys in Settings first.',
+    'Billplz is not connected. A director can add the keys in Settings.',
   'incentives.error.no_recipients':
     'This batch has no recipients with bank details.',
   'incentives.error.send_failed': 'The transfers could not be sent.',

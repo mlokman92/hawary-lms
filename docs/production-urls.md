@@ -135,5 +135,5 @@ locally, not on a preview URL.
 
 - `docs/ci-cd.md` — how each target deploys.
 - `supabase/functions/*/README.md` — per-function security model and secrets.
-- Transactional email is still on Supabase's low-rate test mailer; see
-  `CLAUDE.md` → *Deferred / next*.
+- Transactional mail goes out through Resend from `noreply@hawary.my`; Supabase
+  Auth mail uses Resend SMTP, configured in the dashboard.

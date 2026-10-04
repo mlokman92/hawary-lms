@@ -39,6 +39,12 @@ fall through.
 Policies were **renamed**, not `ALTER`ed: one still called "staff view all" that
 admits only admins is a trap for the next reader.
 
+Writes to `academy_payment_settings`, the four ToyyibPay/Billplz credential RPCs
+and the `academies` letterhead are narrower still: `app.is_director`
+(`20261004100000_director_grants_staff`, see
+[single-owner.md](single-owner.md#directors)). Every admin reads them; only a
+Director changes them.
+
 Every `app.owns_student` arm is preserved verbatim. That arm is the whole of
 `/learn/billing` and the learner's own invoice + receipt PDFs, and it is the one
 thing a more aggressive version of this migration would have broken.
@@ -47,7 +53,7 @@ state, not a document addressed to anybody.
 
 `academy_payment_settings` had to be `drop`-then-`create` **in one migration**:
 its other three policies are per-command, so a bare drop would have left no
-SELECT policy at all and blinded the admins who own `/settings`.
+SELECT policy at all and blinded the admins whose money screens read it.
 
 ### What was deliberately not done
 
@@ -78,9 +84,10 @@ changes ship with it.
   on the route instead of inside a page, now wraps `/payments`, `/payments/log`,
   `/payments/:id`, `/incentives` and `/incentives/:id`. It **redirects** rather
   than explaining, because those pages would otherwise render an empty ledger
-  with a live Export button. `/settings`, `/appointments/settings` and `/members`
-  keep their in-place "admins only" panels: those are pages somebody might
-  legitimately land on, and they show nothing confidential when they do.
+  with a live Export button. `/settings` sits behind `DirectorRoute`, the same
+  shape one rung higher. `/appointments/settings` and `/members` keep their
+  in-place "admins only" panels: those are pages somebody might legitimately
+  land on, and they show nothing confidential when they do.
   It waits on `loading` and then demands `admin`, which avoids both of the
   neighbouring bugs — `active && active.role !== 'admin'` renders the page when
   `active` is null, and `loading || !active` spins forever in that same state.
@@ -92,16 +99,19 @@ changes ship with it.
 - **`send-pay-link`** now checks `role = 'admin'` explicitly on top of RLS. RLS
   alone would do it today, but this function **mails a customer**, and "whoever
   can read the row may bill the student" is too implicit a rule to leave to a
-  policy a later migration might widen. Same shape as `toyyibpay-connect`.
+  policy a later migration might widen. Same shape as `toyyibpay-connect`,
+  which checks `is_director` rather than `role = 'admin'`.
 
 ## Promotion and demotion
 
-`app.is_admin` re-evaluates per statement, so promoting a trainer on `/members`
-restores the whole money surface with no migration; the client needs a reload
+`app.is_admin` re-evaluates per statement, so a Director promoting a trainer on
+`/members` restores the whole money surface with no migration; the client needs a reload
 (or an academy switch) for `useAcademy`'s cached `active.role`. An admin who is
 **also** a linked instructor keeps everything — `app.is_admin` reads
 `academy_members` and is orthogonal to the `instructors` record. A **suspended**
 admin loses money access, because `app.is_admin` requires `status = 'active'`.
+Demoting or suspending a Director also ends their Director powers, because
+`app.is_director` requires an active admin membership.
 
 ## The trainer's dashboard
 

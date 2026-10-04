@@ -31,7 +31,7 @@ export const grading: GradingDict = {
   'grading.denied.not_assigned':
     'Anda tidak ditugaskan sebagai pengajar bagi kursus ini. Pentadbir boleh menugaskan anda melalui senarai pengajar kursus tersebut.',
   'grading.denied.no_instructor_record':
-    'Akaun anda belum dipautkan kepada rekod pengajar di akademi ini, jadi tiada kursus ditugaskan kepada anda. Pentadbir boleh memautkannya melalui halaman Pengajar.',
+    'Akaun anda belum dipautkan kepada rekod pengajar di akademi ini, jadi tiada kursus ditugaskan kepada anda. Pengarah boleh memautkannya melalui halaman Pengajar.',
 
   // Marking a submission
   'grading.submission.unavailable': 'Hantaran ini tidak tersedia untuk anda.',

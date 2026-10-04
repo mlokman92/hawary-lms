@@ -15,12 +15,13 @@ import type { SendInvitationResult } from '@/features/students/api'
  * somebody's confirmed email is an invitation in itself
  * (`docs/account-claiming.md`). So a failure here is a missed *notification*,
  * not a missed grant, and it must not roll back or block the thing the person
- * actually did. Three failures are ordinary rather than exceptional:
+ * actually did. Two failures are ordinary rather than exceptional:
  *
  *   - no email on the record — nothing to send to;
- *   - a trainer adding an instructor — `create_instructor_invitation` is
- *     admin-only by deliberate hardening, and refusing is correct;
  *   - the provider being down or rate-limited.
+ *
+ * `create_instructor_invitation` is Director-only, like the instructor insert
+ * that precedes it, so only a Director reaches the instructor branch.
  *
  * Returns true only when the provider accepted the message, which is what the
  * CSV import counts.

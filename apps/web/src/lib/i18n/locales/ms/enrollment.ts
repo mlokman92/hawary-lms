@@ -36,8 +36,6 @@ export const enrollment: EnrollmentDict = {
 
   // --- Pelajar --------------------------------------------------------------
   'enroll.learn.pending': 'Menunggu kelulusan',
-  'enroll.learn.pending_hint':
-    'Akan dibuka setelah kakitangan meluluskan tempat anda.',
 
   // --- Kakitangan: halaman --------------------------------------------------
   'enroll.staff.subtitle':
@@ -77,7 +75,6 @@ export const enrollment: EnrollmentDict = {
   'enroll.limits.access_email_hint':
     'Dihantar apabila anda meluluskan permohonan untuk kursus ini. Kosongkan untuk tidak menghantar apa-apa. Anda boleh guna {{student_name}}, {{course}} dan {{academy}}; pautan ke kursus ditambah untuk anda.',
 
-  'enroll.requests.title': 'Permohonan',
   'enroll.requests.pending': 'Menunggu kelulusan',
   'enroll.requests.enrolled': 'Telah didaftarkan',
   'enroll.requests.search_placeholder': 'Cari nama, e-mel, telefon atau kursus',
@@ -87,7 +84,6 @@ export const enrollment: EnrollmentDict = {
   'enroll.requests.no_match': 'Tiada yang sepadan dengan penapis ini.',
   'enroll.requests.approve': 'Luluskan',
   'enroll.requests.reject': 'Tolak',
-  'enroll.requests.full': 'Penuh',
   'enroll.requests.failed': 'Permohonan ini tidak dapat dikemas kini.',
   'enroll.requests.stale': 'Permohonan ini telah diuruskan oleh orang lain.',
   'enroll.email.failed':

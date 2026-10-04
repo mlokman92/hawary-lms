@@ -27,8 +27,11 @@ export type StaffMember = {
   email: string | null
   phone: string | null
   avatar_url: string | null
-  /** Created the academy — rendered as "Director". */
-  is_creator: boolean
+  /**
+   * Director (`academy_members.is_director` on an admin row): grants and
+   * revokes staff access, and owns the gateway and billing settings.
+   */
+  is_director: boolean
   instructor_id: string | null
   instructor_no: string | null
   instructor_status: Enums<'instructor_status'> | null
@@ -64,37 +67,18 @@ export function memberRecordPath(m: StaffMember): string | null {
  */
 export type MemberTier = 'director' | 'admin' | 'trainer' | 'student'
 
-export function memberTier(m: Pick<StaffMember, 'role' | 'is_creator'>): MemberTier {
-  // A demoted founder is not still the Director: the badge has to track the
-  // access the database would actually grant.
-  if (m.is_creator && m.role === 'admin') return 'director'
+export function memberTier(m: Pick<StaffMember, 'role' | 'is_director'>): MemberTier {
+  // `app.is_director` needs an admin row too, so a demoted Director is not
+  // still badged as one: the badge tracks the access the database grants.
+  if (m.is_director && m.role === 'admin') return 'director'
   return m.role
 }
 
-export const TIER_META: Record<
-  MemberTier,
-  { labelKey: TKey; hintKey: TKey; variant: Variant }
-> = {
-  director: {
-    labelKey: 'members.tier.director',
-    hintKey: 'members.tier.director_hint',
-    variant: 'default',
-  },
-  admin: {
-    labelKey: 'members.tier.admin',
-    hintKey: 'members.tier.admin_hint',
-    variant: 'secondary',
-  },
-  trainer: {
-    labelKey: 'members.tier.trainer',
-    hintKey: 'members.tier.trainer_hint',
-    variant: 'outline',
-  },
-  student: {
-    labelKey: 'members.tier.student',
-    hintKey: 'members.tier.student_hint',
-    variant: 'outline',
-  },
+export const TIER_META: Record<MemberTier, { labelKey: TKey; variant: Variant }> = {
+  director: { labelKey: 'members.tier.director', variant: 'default' },
+  admin: { labelKey: 'members.tier.admin', variant: 'secondary' },
+  trainer: { labelKey: 'members.tier.trainer', variant: 'outline' },
+  student: { labelKey: 'members.tier.student', variant: 'outline' },
 }
 
 export const MEMBER_STATUS_META: Record<
@@ -131,25 +115,15 @@ export function useStaffMembers(academyId: string | null) {
   })
 }
 
-/** One member, read out of the roster the list already fetched. */
-export function useStaffMember(academyId: string | null, userId?: string) {
-  const query = useStaffMembers(academyId)
-  return {
-    ...query,
-    data: userId
-      ? (query.data ?? []).find((m) => m.user_id === userId)
-      : undefined,
-  }
-}
-
 /**
  * One person's membership, for surfaces that are not admin-only and so cannot
  * call the roster RPC — the student page, where a student's app access is now
  * managed (they are no longer listed under /members).
  *
  * Readable by any staff member: the `academy_members` SELECT policy is
- * `user_id = auth.uid() OR app.is_staff(academy_id)`. Writing it still needs an
- * admin, which the caller gates on.
+ * `user_id = auth.uid() OR app.is_staff(academy_id)`. Writing it needs an admin
+ * for a student row and a Director for an admin or trainer row; the caller
+ * gates on both.
  */
 export function useMemberAccess(
   academyId: string | null,
@@ -211,9 +185,10 @@ function invalidateMemberAndInstructors(
  * Give an existing member an instructor record, so they can be assigned courses
  * and graded against them while keeping the access level they already have.
  *
- * Two steps because there is no single privileged entry point: the insert is
- * ordinary staff DML, and `link_instructor_account` is the only writer of
- * `instructors.user_id`. It preserves an `admin` role on purpose — that is what
+ * Two steps because there is no single privileged entry point: the insert
+ * (`instructors: director insert`) and `link_instructor_account`, the only
+ * writer of `instructors.user_id`, are both Director-only and run as the
+ * caller, so only a Director reaches this. It preserves an `admin` role on purpose — that is what
  * makes "admin *and* instructor" reachable at all.
  */
 export function useMakeInstructor(academyId: string | null) {

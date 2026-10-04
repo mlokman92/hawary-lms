@@ -66,7 +66,7 @@ export const incentives: IncentivesDict = {
   'incentives.error.insufficient_funds':
     'Had Payment Order Billplz anda terlalu rendah untuk kelompok ini. Tambah nilainya, kemudian sambung semula.',
   'incentives.error.not_configured':
-    'Billplz belum disambungkan. Tambah kunci anda dalam Tetapan terlebih dahulu.',
+    'Billplz belum disambungkan. Pengarah boleh menambah kunci dalam Tetapan.',
   'incentives.error.no_recipients':
     'Kelompok ini tiada penerima yang mempunyai butiran bank.',
   'incentives.error.send_failed': 'Pindahan tidak dapat dihantar.',

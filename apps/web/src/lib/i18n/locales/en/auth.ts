@@ -1,4 +1,4 @@
-/** Signed-out surfaces: sign in/up, password reset, academy onboarding, invites. */
+/** Signed-out surfaces: sign in/up, password reset, the no-membership page, invites. */
 export const auth = {
   // Shared across the signed-out pages
   'auth.back_to_sign_in': 'Back to sign in',
@@ -8,15 +8,13 @@ export const auth = {
   // had stopped verifying. Without it the return is unexplained — see
   // `isAuthError`.
   'auth.session_expired': 'Your session expired — please sign in again.',
-  // Two keys, because the two fields mean different things: this one is the
-  // person signing up (mandatory — an academy has to be able to reach them),
-  // while phone_optional is the *academy's* own number on the founder form.
+  // The person signing up — mandatory, because the academy has to be able to
+  // reach them.
   'auth.field.phone': 'Phone',
-  'auth.field.phone_optional': 'Phone (optional)',
 
   // Sign in
   'auth.signin.title': 'Sign in',
-  'auth.signin.subtitle': 'Welcome back to Hawary LMS',
+  'auth.signin.subtitle': 'Welcome back to Hawary Academy',
   'auth.signin.busy': 'Signing in…',
   'auth.signin.forgot': 'Forgot password?',
   'auth.signin.new_here': 'New here?',
@@ -24,7 +22,7 @@ export const auth = {
 
   // Sign up
   'auth.signup.title': 'Create your account',
-  'auth.signup.subtitle': 'Start with Hawary LMS',
+  'auth.signup.subtitle': 'For Hawary Academy students and staff',
   'auth.signup.submit': 'Create account',
   'auth.signup.have_account': 'Already have an account?',
   'auth.signup.email_exists':
@@ -69,36 +67,14 @@ export const auth = {
   // Email-confirmation callback
   'auth.callback.working': 'Signing you in…',
 
-  // Academy onboarding
-  'auth.onboarding.title': 'Create your academy',
-  'auth.onboarding.subtitle':
-    'You’ll be the admin. Invite trainers and students next.',
-  'auth.onboarding.name': 'Academy name',
-  'auth.onboarding.name_placeholder': 'e.g. Cemerlang Skills Academy',
-  'auth.onboarding.slug': 'URL (slug)',
-  'auth.onboarding.slug_placeholder': 'your-academy',
-  'auth.onboarding.state': 'State (optional)',
-  'auth.onboarding.state_placeholder': 'Select state',
-  'auth.onboarding.invalid_slug': 'Please enter a valid academy name / URL.',
-  'auth.onboarding.slug_taken': 'That URL is already taken — try a different one.',
-  'auth.onboarding.submit': 'Create academy',
-  'auth.onboarding.founder_prompt': 'Running your own academy?',
-  // Opening an academy is not self-serve: too many people who came to *join*
-  // Hawary pressed "create" and made an empty copy of it. `create_request` is
-  // prefilled into WhatsApp, so whoever answers can look the person up and
-  // tell a founder from a student in one message.
-  'auth.onboarding.talk_to_us': 'Talk to us on WhatsApp',
-  'auth.onboarding.create_request':
-    'Hi, I would like to open my own academy on Hawary LMS. My account email is {email}.',
-
-  // Nothing is waiting. The common case here is not a founder but an invitee
-  // who signed up with a different address than the one their academy holds —
-  // for whom the founder form was a trap. The address is split around a
-  // <strong> like auth.signup.confirm.*, because it is the thing to check.
-  'auth.onboarding.none.title': 'No academy is waiting for you',
+  // /onboarding — a signed-in account with no membership. Almost always an
+  // invitee who signed up with a different address than the one Hawary
+  // Academy holds. The address is split around a <strong> like auth.signup.confirm.*,
+  // because it is the thing to check.
+  'auth.onboarding.none.title': 'Hawary Academy has no record of this address',
   'auth.onboarding.none.body_before': 'You’re signed in as',
   'auth.onboarding.none.body_after':
-    '. If your academy invited a different address, sign out and sign in with that one — or ask them to add this address.',
+    '. If you were invited with a different address, sign out and sign in with that one — or ask Hawary Academy to add this address.',
   'auth.onboarding.none.other_email': 'Sign out and use a different email',
 
   // Invitation acceptance
@@ -106,10 +82,10 @@ export const auth = {
   'auth.invite.invalid.title': 'Invalid link',
   'auth.invite.missing_token': 'This invitation link is missing its token.',
   'auth.invite.title': 'Accept your invitation',
-  'auth.invite.join_subtitle': 'Join your academy',
+  'auth.invite.join_subtitle': 'Join Hawary Academy',
   'auth.invite.have_account': 'I already have an account',
   'auth.invite.hint':
-    'Use the email address your academy invited. If you already have a Hawary account with that email, choose “I already have an account”.',
+    'Use the email address Hawary Academy invited. If you already have a Hawary account with that email, choose “I already have an account”.',
   'auth.invite.joining': 'Joining…',
   'auth.invite.error.title': 'Couldn’t accept',
   'auth.invite.error.subtitle': 'Invitation',

@@ -2,7 +2,7 @@ import type { NavDict } from '../en/nav'
 
 export const nav: NavDict = {
   // Kumpulan bar sisi
-  'nav.group.platform': 'Platform',
+  'nav.group.platform': 'Akademi',
   'nav.group.learning': 'Pembelajaran',
   'nav.group.account': 'Akaun',
 
@@ -15,6 +15,7 @@ export const nav: NavDict = {
   'nav.enrollments': 'Pendaftaran',
   'nav.students': 'Pelajar',
   'nav.appointments': 'Temu janji',
+  'nav.appointment_list': 'Semua sesi',
   'nav.reports': 'Semakan laporan',
   'nav.instructors': 'Pengajar',
   'nav.payments': 'Pembayaran',
@@ -48,10 +49,8 @@ export const nav: NavDict = {
   'nav.sidebar': 'Bar sisi',
   'nav.sidebar_description': 'Memaparkan bar sisi mudah alih.',
 
-  // Penukar akademi
-  'academy.select': 'Pilih akademi',
-  'academy.heading': 'Akademi',
-  'academy.add': 'Tambah akademi',
+  // Penukar cawangan
+  'academy.heading': 'Cawangan',
   'academy.fallback': 'Akademi',
   'academy.this_academy': 'akademi ini',
 
@@ -63,7 +62,6 @@ export const nav: NavDict = {
   // Menu pengguna
   'user.account': 'Akaun',
   'user.profile': 'Profil saya',
-  'nav.profile': 'Profil saya',
   'user.theme': 'Tema',
   'user.theme.light': 'Cerah',
   'user.theme.dark': 'Gelap',
@@ -77,6 +75,5 @@ export const nav: NavDict = {
   'shell.no_student_record.body':
     'Anda telah log masuk ke {academy}, tetapi tiada rekod pelajar dipautkan dengan akaun anda. {detail}',
   'shell.no_student_record.detail':
-    'Sila hubungi akademi anda untuk melengkapkan pendaftaran.',  'nav.appointment_list': 'Semua sesi',
-
+    'Sila hubungi akademi anda untuk melengkapkan pendaftaran.',
 }

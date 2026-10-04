@@ -13,7 +13,7 @@ export const courses = {
   // Duplicate for a new intake
   'courses.duplicate': 'Duplicate',
   'courses.duplicate.description':
-    'Copy this course for a new intake. Name the copy so the two can be told apart — most academies put the intake in the title.',
+    'Copy this course for a new intake. Put the intake in the copy’s name so the two can be told apart.',
   'courses.duplicate.title_default': '{title} (copy)',
   'courses.duplicate.code_hint':
     'Course codes must be unique, so the copy starts without one. The original is “{code}”.',
@@ -43,7 +43,6 @@ export const courses = {
   // Detail page
   'courses.not_found': 'Course not found.',
   'courses.back_to_courses': 'Back to courses',
-  'courses.grading': 'Grading',
   'courses.module_count_one': '{count} module',
   'courses.module_count_other': '{count} modules',
 

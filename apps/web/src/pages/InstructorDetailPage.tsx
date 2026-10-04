@@ -2,6 +2,8 @@ import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Pencil, Plus, X } from 'lucide-react'
 import { useAcademy } from '@/lib/academy'
+import { useAuth } from '@/lib/auth'
+import { errorMessage } from '@/lib/errors'
 import { fmtDate, localeFor } from '@/lib/format'
 import { getLang, useT, type TKey } from '@/lib/i18n'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -102,15 +104,17 @@ export function InstructorDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { t } = useT()
-  const { activeAcademyId, active } = useAcademy()
+  const { activeAcademyId, active, refresh } = useAcademy()
+  const { user } = useAuth()
   const academyId = activeAcademyId ?? ''
   const isStaff = active?.role === 'admin' || active?.role === 'trainer'
-  const isAdmin = active?.role === 'admin'
+  // Make admin, Link account and Archive each grant or revoke staff access.
+  const isDirector = !!active?.isDirector
 
   const { data: instructor, isLoading, error } = useInstructor(id)
-  // Admin-only RPC, so it is only ever requested for an admin — passing null
-  // leaves the query disabled for a trainer rather than failing it.
-  const { data: staff } = useStaffMembers(isAdmin ? activeAcademyId : null)
+  // The roster only feeds the Make admin checkbox, so it is requested for a
+  // Director alone — passing null leaves the query disabled for everyone else.
+  const { data: staff } = useStaffMembers(isDirector ? activeAcademyId : null)
   const updateMember = useUpdateMember(activeAcademyId)
   const { data: assignments } = useInstructorCourses(id)
   const updateInstructor = useUpdateInstructor(academyId)
@@ -145,14 +149,21 @@ export function InstructorDetailPage() {
   const member = instructor.user_id
     ? (staff ?? []).find((m) => m.user_id === instructor.user_id)
     : undefined
-  // Never let the last active admin demote or suspend themselves out of the
-  // academy — that state needs database access to undo.
+  // Never let the last active admin, or the last active Director, be demoted
+  // — only the owner in SQL can undo either.
+  const activeAdmins = (staff ?? []).filter(
+    (m) => m.role === 'admin' && m.status === 'active',
+  )
   const lastAdmin =
     !!member &&
     member.role === 'admin' &&
     member.status === 'active' &&
-    (staff ?? []).filter((m) => m.role === 'admin' && m.status === 'active')
-      .length <= 1
+    activeAdmins.length <= 1
+  const lastDirector =
+    !!member?.is_director &&
+    member.role === 'admin' &&
+    member.status === 'active' &&
+    activeAdmins.filter((m) => m.is_director).length <= 1
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6">
@@ -191,16 +202,26 @@ export function InstructorDetailPage() {
                     {/* The one access control worth having here: everything
                         else about a membership (suspending, detaching the
                         record) lives on /members. */}
-                    {isAdmin && member ? (
+                    {isDirector && member ? (
                       <Label className="flex items-center gap-2 font-normal">
                         <Checkbox
                           checked={member.role === 'admin'}
-                          disabled={lastAdmin || updateMember.isPending}
+                          disabled={
+                            lastAdmin || lastDirector || updateMember.isPending
+                          }
                           onCheckedChange={(v) =>
-                            updateMember.mutate({
-                              userId: member.user_id,
-                              patch: { role: v === true ? 'admin' : 'trainer' },
-                            })
+                            updateMember.mutate(
+                              {
+                                userId: member.user_id,
+                                patch: { role: v === true ? 'admin' : 'trainer' },
+                              },
+                              {
+                                // Their own role is what this session may do.
+                                onSuccess: () => {
+                                  if (member.user_id === user?.id) void refresh()
+                                },
+                              },
+                            )
                           }
                         />
                         {t('members.make_admin')}
@@ -208,7 +229,7 @@ export function InstructorDetailPage() {
                     ) : null}
                   </>
                 ) : null}
-                {isStaff && !instructor.user_id ? (
+                {isDirector && !instructor.user_id ? (
                   <Button size="sm" variant="ghost" onClick={() => setLinkOpen(true)}>
                     {t('instructors.link_account')}
                   </Button>
@@ -257,16 +278,16 @@ export function InstructorDetailPage() {
               {updateMember.error.message ?? t('members.access.failed')}
             </p>
           ) : null}
-      {activeAcademyId ? (
-        <LinkAccountDialog
-          academyId={activeAcademyId}
-          recordId={instructor.id}
-          kind="instructor"
-          defaultEmail={instructor.email}
-          open={linkOpen}
-          onOpenChange={setLinkOpen}
-        />
-      ) : null}
+          {isDirector && activeAcademyId ? (
+            <LinkAccountDialog
+              academyId={activeAcademyId}
+              recordId={instructor.id}
+              kind="instructor"
+              defaultEmail={instructor.email}
+              open={linkOpen}
+              onOpenChange={setLinkOpen}
+            />
+          ) : null}
         </CardContent>
       </Card>
 
@@ -384,7 +405,7 @@ export function InstructorDetailPage() {
       </Card>
 
       {/* 4. Danger zone */}
-      {isStaff ? (
+      {isDirector ? (
         <Card className="border-destructive/40">
           <CardHeader>
             <CardTitle className="text-destructive">
@@ -416,16 +437,22 @@ export function InstructorDetailPage() {
                 <AlertDialogFooter>
                   <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                   <AlertDialogAction
-                    onClick={async () => {
-                      await archiveInstructor.mutateAsync(instructor.id)
-                      navigate('/instructors')
-                    }}
+                    onClick={() =>
+                      archiveInstructor.mutate(instructor.id, {
+                        onSuccess: () => navigate('/instructors'),
+                      })
+                    }
                   >
                     {t('instructors.danger.confirm_action')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+            {archiveInstructor.error ? (
+              <p className="text-destructive mt-3 text-sm">
+                {errorMessage(archiveInstructor.error, t('common.error'))}
+              </p>
+            ) : null}
           </CardContent>
         </Card>
       ) : null}

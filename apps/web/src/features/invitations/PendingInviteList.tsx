@@ -5,7 +5,7 @@ import { useAcademy } from '@/lib/academy'
 import { useAuth } from '@/lib/auth'
 import { fmtDate } from '@/lib/format'
 import { useT } from '@/lib/i18n'
-import { supportWhatsApp } from '@/lib/support'
+import { SUPPORT_WHATSAPP_URL } from '@/lib/support'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -23,12 +23,13 @@ import {
 import { isAuthError } from '@/lib/errors'
 
 /**
- * Academies waiting for the signed-in person.
+ * Branches waiting for the signed-in person.
  *
- * This is the invitee's half of the invitation story, and the reason a student
- * no longer lands on "Create your academy" with nowhere to go: a record
- * carrying their confirmed email IS the invitation, so there is something to
- * show the moment staff typed (or imported) them, with no link to chase.
+ * This is the invitee's half of the invitation story, and why a student with no
+ * membership is shown something to join rather than the no-membership page: a
+ * record carrying their confirmed email IS the invitation, so there is
+ * something to show the moment staff typed (or imported) them, with no link to
+ * chase.
  *
  * Renders nothing when there is nothing pending, so it can sit unconditionally
  * on a page that usually has no invitations to show.
@@ -138,7 +139,7 @@ export function PendingInviteList({
         <p className="text-destructive px-6 pb-1 text-sm">
           {t('invite.waiting.error')}{' '}
           <a
-            href={supportWhatsApp()}
+            href={SUPPORT_WHATSAPP_URL}
             target="_blank"
             rel="noreferrer"
             className="underline underline-offset-4"

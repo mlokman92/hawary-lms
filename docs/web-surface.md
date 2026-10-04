@@ -7,9 +7,9 @@ decisions that are not visible in the code.
 
 `components/shell/{SidebarShell,ShellSidebar}` is shared by `AppLayout` (staff,
 `/*`) and `LearnLayout` (learner, `/learn/*`). The learner gets the same shadcn
-sidebar, `UserMenu` (identity + theme + language) and academy switcher — with
-**no** "Add academy", because creating one makes the caller staff, which evicts
-them from `/learn`.
+sidebar, `UserMenu` (identity + theme + language) and academy switcher: a plain
+label with one membership, a **Branches** menu with more. No shell can create an
+academy; branches are opened by the owner ([single-owner.md](single-owner.md)).
 
 **A component under `components/shell/` may not call `useAcademy()`.** It is
 mounted in both trees, so there is no ambient answer for it to read. Which
@@ -27,22 +27,24 @@ address to the word "Unnamed".
 
 Email/password sign in/up; forgot → `/reset-password`, which is the recovery
 link's own landing page (`lib/recoveryLink.ts` snapshots the URL params before
-the Supabase client consumes them). Self-serve academy creation makes the
-creator an admin. Academy switcher, light/dark theme.
+the Supabase client consumes them). Academy switcher, light/dark theme.
 
-**`/onboarding` is not a landing page.** An existing member who reaches it is
-returned to `useLandingTarget()`; only `?new=1` — sent by the switcher's "Add
-academy" — still opens the founder form. Without that guard an accepted invitee
-who pressed Back got "Create your academy", and one student founded a second
-academy named after her own school, which then outranked her student membership
-on every sign-in.
+**`/onboarding` is for a signed-in account with no membership.** It lists
+pending invitations (`PendingInviteList`), or says there is no record at this
+address and offers to sign out and switch account. An existing member who
+reaches it is returned to `useLandingTarget()`. There is no founder form —
+see [single-owner.md](single-owner.md).
 
 ## Staff sections
 
 Courses · Students · Instructors · Appointments — each a list + add/edit,
 staff-gated, academy-scoped by RLS. A trainer's nav is those four plus
-Dashboard; admins also get **Payments** (+ its Log child), Incentive, Members
-and Settings — see [money-is-admin-only.md](money-is-admin-only.md).
+Dashboard; admins also get **Payments** (+ its Log child), Incentive and
+Members — see [money-is-admin-only.md](money-is-admin-only.md). **Settings** is
+Director-only: `components/DirectorRoute.tsx` (the same shape as `AdminRoute`)
+guards `/settings`, and its nav entry shows only to a Director. Other admins
+still read the payment-settings row through RLS, because the money screens need
+`toyyibpay_enabled` and the part-payment defaults.
 
 The **header search** (`HeaderSearch` + `features/search`) finds students and
 instructors across the active academy by name, email, phone, IC or record
@@ -148,15 +150,20 @@ list so `assessment_questions.correct_answer` never reaches a client.
 
 ## Members and roles
 
-`/members`, admin-only: the staff roster. Students are excluded — they are an
-academy record, managed on their own page, where their app access can also be
-suspended.
+`/members`: the staff roster, which every admin sees. Its `⋯` actions — change
+a staff role, suspend, restore or remove an admin or trainer, link or unlink an
+instructor account — are Director-only, and RLS and the RPCs enforce the same
+(`20261004100000_director_grants_staff`). Students are excluded — they are an
+academy record, managed on their own page, where any admin can suspend their app
+access.
 
 Two independent axes, **never merged into one ladder**: **access** is
 `academy_members.role` (admin/trainer) and **teaching** is a linked
 `instructors` record, so one account can be an admin *and* an instructor.
-**Director** is the academy creator (`academies.created_by`) — a name for the
-founder, not a fourth role; `Membership.isCreator` carries it to the client.
+**Director** is `academy_members.is_director` on an active admin membership —
+set by the owner in SQL, more than one allowed, not a fourth role.
+`Membership.isDirector` carries it to the client, and `list_academy_staff`
+returns it per row.
 
 Contact details come from the admin-only `list_academy_staff` RPC, which joins
 `auth.users` for the email: `profiles` is readable by every co-member, so an
@@ -166,9 +173,10 @@ There is **no `/members/:id`** — a row opens the person's own record
 (`memberRecordPath`: instructor, else student). `/members` is where a
 membership is managed (role, suspend/restore, attach/detach the instructor
 record); the instructor page carries only a **"Make admin" checkbox**, the one
-control worth having next to the person. `unlink_instructor_account` is the
-inverse of `link_instructor_account`, which preserves an `admin` role on
-purpose.
+control worth having next to the person. That checkbox, and the instructor
+page's link-account and archive controls, render only for a Director.
+`unlink_instructor_account` is the inverse of `link_instructor_account`, which
+preserves an `admin` role on purpose.
 
 ## CSV import
 
@@ -183,7 +191,8 @@ list *and* earlier rows) all happen in the browser, and a row with a problem is
 listed with its line number and excluded rather than dropped silently.
 
 Inserts are chunked 100 at a time and report how many landed if a later chunk
-fails. Importing also **invites** the batch — see
+fails. Instructor import is a Director's, because `instructors` INSERT is
+`app.is_director`. Importing also **invites** the batch — see
 [account-claiming.md](account-claiming.md).
 
 ## Own profile

@@ -16,8 +16,9 @@ RPC signatures here are the spec it will implement.
 
 `students` and `instructors` are per-academy CRM records with a **nullable**
 `user_id`. A record becomes a login when `user_id` is set, which happens either
-through `accept_invitation` or — new — through the admin-only
-`link_student_account(_student_id, _email)` / `link_instructor_account(...)`.
+through `accept_invitation` or through `link_student_account(_student_id,
+_email)` (admin) / `link_instructor_account(...)` (Director only — linking an
+instructor grants trainer access, see [single-owner.md](single-owner.md#directors)).
 
 Those RPCs exist because `accept_invitation` was the *only* writer of `user_id`,
 which made every downstream feature untestable until transactional email was
@@ -34,7 +35,7 @@ configured, and left no repair path for a wrong link.
 | `due_at` / `allow_late` / `max_attempts` / availability windows were stored but enforced nowhere | Enforced in the guards and in `start_attempt` |
 | A student could revert a `returned` submission to draft and delete it | Student UPDATE/DELETE now require `status = 'draft'` |
 | Read gate used `module_visible(module_id)` but the write gate used `is_enrolled(course_id)` — an unpublished module was a read boundary only | One predicate: `app.assessment_open` / `app.assignment_open` |
-| Archiving an instructor left `academy_members.role = 'trainer'` forever | `app.sync_instructor_membership` demotes on unlink/archive/delete |
+| Archiving an instructor left `academy_members.role = 'trainer'` forever | `app.sync_instructor_membership` demotes on unlink/archive/delete. Unlink, archive and delete are themselves Director-only, so only a Director can trigger that demotion |
 
 ## The answer key never leaves the server
 
@@ -81,10 +82,6 @@ Both suites ran as transactions that roll back, against real data:
 
 ## Known gaps
 
-- **Transactional email is not configured.** Sign-up confirmation still goes
-  through Supabase's low-rate test mailer, and `send-invitation` needs `APP_URL`
-  / `ALLOWED_ORIGINS` set or it builds links against a hard-coded default. The
-  admin linking RPCs are the workaround, not the fix.
 - **Assignment attachments** are not implemented — `attachment_url` is unused.
   It needs a **private** `submissions` bucket and a student branch in
   `upload-media` that resolves `student_id` server-side rather than trusting the

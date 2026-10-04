@@ -73,7 +73,7 @@ from a pool of 2 is worse than no number at all.
 
 `_from`/`_to` are **calendar days in the academy's timezone**
 (`academies.timezone`, default `Asia/Kuala_Lumpur`). The generator converts each
-day's wall clock separately — `(day + start_time) at time zone tz` — so a tenant
+day's wall clock separately — `(day + start_time) at time zone tz` — so a branch
 elsewhere, or a DST transition, needs no special case.
 
 Days are walked as integer offsets, not
@@ -298,8 +298,8 @@ They are set up once and revisited rarely, so they are a destination rather than
 three cards trailing under the calendar on every visit. The way in is a gear
 button beside `Book a session`, drawn only for an admin — it has to live on the
 diary page because booking is *off* until it is switched on there, and an empty
-calendar with no way forward is the state a new academy starts in. A trainer
-reaching the URL gets the same admin-only notice `/settings` gives.
+calendar with no way forward is the state a new branch starts in. A trainer
+reaching the URL gets an admin-only notice.
 
 The week grid draws only `booked` / `completed` / `no_show`. A cancelled session
 has released its slot and is not something happening on Tuesday; drawing it would
@@ -620,7 +620,7 @@ another time* when nothing is left on.
 **Hourly, and the SQL decides whose evening it is.** pg_cron job
 `appointment-reminders` posts to the function at minute 0 of every hour;
 `appointment_reminders_due(_at)` returns rows only for academies where it is
-21:00–23:59. So a tenant in another timezone needs nothing extra, and anything
+21:00–23:59. So a branch in another timezone needs nothing extra, and anything
 the 21:00 run failed to send is retried at 22:00 and 23:00 — one provider hiccup
 must not cost the whole night, which is the exact failure being answered.
 
@@ -694,8 +694,8 @@ same question whatever became of it.
   regardless of `horizon_days`. A client asking for ten years of slots is a
   client asking the database to generate a million rows.
 - The staff calendar's initial week is computed from the default timezone before
-  `useAcademyTimezone` resolves. Every tenant is currently `Asia/Kuala_Lumpur`,
-  which *is* the default, so this is invisible; a tenant several zones away and a
+  `useAcademyTimezone` resolves. Every branch is currently `Asia/Kuala_Lumpur`,
+  which *is* the default, so this is invisible; a branch several zones away and a
   page load near midnight on a Sunday would open on the wrong week until
   navigated.
 - The composite-FK "unindexed foreign key" advisor notices on `appointments` and

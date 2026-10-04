@@ -28,7 +28,10 @@ the end is the list of things only a real Billplz sandbox account can settle.
   admin nav beside Members and Settings), `features/incentives/*`,
   `features/bank/BankAccountCard.tsx` on both `/students/:id` and
   `/learn/profile`, `features/settings/BillplzSettingsCard.tsx`, a **Payouts**
-  section on `/learn/billing`, and `packages/shared/src/domain/banks.ts`.
+  section on `/learn/billing`, and `packages/shared/src/domain/banks.ts`. The
+  settings card lives on `/settings`, which is a Director's: only a Director
+  connects, replaces or removes keys (`billplz-connect` and the credential RPCs
+  check `is_director`). Disbursing stays with every admin.
 - **Config** — no new secrets. `SUPABASE_SERVICE_ROLE_KEY` is auto-injected; the
   callback URL is built from `SUPABASE_URL`, not from `APP_URL`, because it
   points at a function and not at the app.
@@ -42,7 +45,7 @@ Base URL is `https://www.billplz.com/api/v5`, sandbox
 an *empty* password, so the header is `Basic base64("<secret>:")`. The **X
 Signature Key** signs every payment-order request. Both have to be right for any
 call to work, which is why `billplz-connect` verifies them together rather than
-storing what the admin pasted.
+storing what the Director pasted.
 
 **Every payment-order request carries `epoch` and `checksum`.** `epoch` is UNIX
 seconds; `checksum` is HMAC-**SHA512**, keyed by the X Signature Key, over the
@@ -417,7 +420,7 @@ interface nobody asked for.
 coalesces a missing settings row to true as well: a batch created before any keys
 are connected must not default to moving real money. The settings card is the
 opposite — its form opens on **Live**, behind the same "Advanced" disclosure the
-ToyyibPay card uses, because an admin pasting keys is normally pasting real ones.
+ToyyibPay card uses, because a Director pasting keys is normally pasting real ones.
 
 ## Screens
 
@@ -470,9 +473,9 @@ date that matters is when the money moved, which only exists once it has.
 - **`billplz_enabled` is stored but not read.** `set_billplz_credentials` writes
   it and `remove_billplz_credentials` clears it, but disbursement gates on
   `billplz_has_secret` alone. ToyyibPay's `enabled` gates a student-facing Pay
-  button; the incentive equivalent would gate an admin-only screen against the
-  same admin who set the flag, which is a switch for nobody. It stays as the hook
-  for a future "connected but paused".
+  button. The flag belongs to a Director and disbursing to any admin, so wiring
+  it would give Directors a real "pause payouts" switch over the other admins.
+  It is not wired yet; it is the hook for that.
 - **No scheduled reconciliation.** `billplz-payout-status` is driven by the button
   and by the client's own loop. A cron sweep is the obvious next step and belongs
   with the invitation-expiry sweep already listed in `CLAUDE.md`.

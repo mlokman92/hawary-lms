@@ -4,10 +4,12 @@
 // both of them work against the account.
 // ----------------------------------------------------------------------------
 // Security model
-//   - verify_jwt = true: the caller must be a signed-in admin of the academy.
+//   - verify_jwt = true: the caller must be a signed-in Director of the academy
+//     (an active admin membership with academy_members.is_director).
 //   - Authorization is checked with a *caller-scoped* client (their JWT) against
-//     academy_members — a non-admin (or admin of another academy) is rejected.
-//   - Both keys are sent ONCE from the admin's browser over HTTPS, used
+//     academy_members before any Billplz call — an ordinary admin, or a Director
+//     of another branch, is rejected.
+//   - Both keys are sent ONCE from the Director's browser over HTTPS, used
 //     server-side to call Billplz, and stored via set_billplz_credentials
 //     (SECURITY DEFINER → Supabase Vault). They are never written to a
 //     client-readable column and never returned to the browser.
@@ -91,7 +93,7 @@ Deno.serve(async (req) => {
   if (!supabaseUrl || !anonKey)
     return json({ error: 'Server misconfigured: missing Supabase env' }, 500)
 
-  // Caller-scoped client → RLS + the RPC's is_admin guard enforce authorization.
+  // Caller-scoped client → RLS + the RPC's is_director guard enforce authorization.
   const supabase = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authHeader } },
   })
@@ -100,16 +102,17 @@ Deno.serve(async (req) => {
   const caller = userData?.user
   if (!caller) return json({ error: 'Not authenticated' }, 401)
 
-  // Confirm the caller is an active admin of this academy before doing any work.
+  // Confirm the caller is an active Director of this academy before doing any
+  // work, so a refused caller never reaches Billplz with the keys they pasted.
   const { data: membership } = await supabase
     .from('academy_members')
-    .select('role')
+    .select('role, is_director')
     .eq('academy_id', academyId)
     .eq('user_id', caller.id)
     .eq('status', 'active')
     .maybeSingle()
-  if (!membership || membership.role !== 'admin')
-    return json({ error: 'Only an academy admin can configure payments' }, 403)
+  if (!membership || membership.role !== 'admin' || !membership.is_director)
+    return json({ error: 'Only a Director can configure payments' }, 403)
 
   // Every payment-order call carries `epoch` (UNIX seconds) and a checksum over
   // its listed values; for /payment_order_limit that list is [epoch] alone. The
@@ -159,7 +162,7 @@ Deno.serve(async (req) => {
       ? null
       : Math.trunc(Number(total))
 
-  // Store both keys (Vault) + metadata; the RPC re-checks is_admin.
+  // Store both keys (Vault) + metadata; the RPC re-checks is_director.
   const { data: saved, error } = await supabase.rpc('set_billplz_credentials', {
     _academy: academyId,
     _secret: secretKey,

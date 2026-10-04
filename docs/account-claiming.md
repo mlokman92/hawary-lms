@@ -35,9 +35,10 @@ self-claim off the admin ladder.
 
 ## The token flow — same machinery, no button
 
-`create_invitation` (staff) / `create_instructor_invitation` (admin) still mint a
-14-day token, `send-invitation` still emails it, `resend_invitation` /
-`revoke_invitation` still manage it, and `/accept-invite?token=…` still works.
+`create_invitation` (staff) / `create_instructor_invitation` (Director) still
+mint a 14-day token, `send-invitation` still emails it, `resend_invitation` /
+`revoke_invitation` still manage it (a trainer invitation only by a Director),
+and `/accept-invite?token=…` still works.
 It survives for what it is good at: an email that lands the person directly on
 the accept screen, plus revocation and audit.
 
@@ -52,21 +53,18 @@ and each invitation costs two.
 
 `sendRecordInvite` **never throws**, and that is the whole design: the record
 already exists and is claimable without a token, so a failure is a missed
-notification, not a missed grant. Three failures are ordinary rather than
-exceptional — no email on the record, a trainer adding an instructor (below),
-and the provider being down. None of them is reported on the single-add path;
+notification, not a missed grant. Two failures are ordinary rather than
+exceptional — no email on the record, and the provider being down. Neither is
+reported on the single-add path;
 `PendingInvitations` on `/students` and `/instructors` is now the only place
 staff act on an invitation, which makes it more load-bearing, not less.
 
-**A trainer adding an instructor sends nothing.** `create_instructor_invitation`
-is admin-only by deliberate hardening — a trainer who could mint one could
-invite an address they control and make themselves a second trainer — while
-`instructors: staff insert` lets a trainer create the record. So the form skips
-the call for a non-admin rather than making it and showing a raw Postgres error,
-which is what the old button did. The person is still reachable: their record
-carrying their confirmed email is an invitation in itself. Making "always
-invites" literally true would mean tightening `instructors: staff insert` to
-`app.is_admin` — the fix this document already names — not relaxing the RPC.
+**Adding an instructor always invites.** Only a Director creates an instructor
+record (`instructors: director insert`) or mints its invitation
+(`create_instructor_invitation`), because a record carrying an email is itself a
+grant of trainer access — see
+[single-owner.md](single-owner.md#directors). Whoever can add the record can
+send its invitation.
 
 What the token never was is the authorisation: `accept_invitation` has always
 required `lower(auth email) = lower(invitation email)`. Claiming a record
@@ -142,70 +140,38 @@ Three rules came out of it, and they are the load-bearing part:
 `features/invitations/PendingInviteList.tsx` renders the list and joins; it
 renders nothing when there is nothing pending, so it sits unconditionally on:
 
-- **`/onboarding`** — the important one. This page used to be the founder form
-  and nothing else, which trapped an invited student: the only way forward was
-  creating an academy, which makes them staff and evicts them from `/learn`. The
-  old escape hatch (a token in `localStorage`) only fired if the link had been
-  clicked *on that device*. Now invitations lead and "create one instead" is a
-  secondary action.
+- **`/onboarding`** — the important one. It shows invitations, or says there is
+  no record at this address. There is no founding option.
 - **`/profile` and `/learn/profile`** — the only place an existing member would
-  ever find out that a second academy has added them.
+  ever find out that another branch has added them.
 
-## Accepted risk: instructor self-claim
+## Closed: instructor self-claim
 
-`instructors` INSERT is `app.is_staff` but `create_instructor_invitation` is
-`app.is_admin` — an asymmetry migration 0024 introduced on purpose. Self-claim
-bypasses it: a trainer can create an instructor record with an email they
-control and claim it, minting a second trainer account. This is a deliberate
-product decision (auto-claim for both kinds, no per-record opt-out). It is
-lateral, not escalation — `trainer` cannot reach `admin` this way, because the
-role comes from the record kind.
+A trainer used to be able to create an instructor record with an email they
+controlled and claim it, minting a second trainer account, because `instructors`
+INSERT was `app.is_staff`. Migration `20261004100000_director_grants_staff`
+closed it on the table that mints the subject, not in the claim function:
+`instructors` INSERT and DELETE are `app.is_director`, and
+`guard_instructor_grant` refuses a non-Director's change to `user_id`, an
+unlinked record's `email` or `archived_at`. The claim itself — an unlinked
+record becoming the caller's own, through `link_claimed_record` — still works.
 
-If it ever needs closing, tighten the `instructors: staff insert` policy to
-`app.is_admin`. Do not special-case the claim function: the invariant belongs on
-the table that mints the subject.
+## An archived record releases its login
 
-## The founder form is not a landing page
+One login backs at most one student and one instructor record per branch.
+`link_claimed_record` frees the caller's **archived** records in that branch
+before linking the new one, so a replacement record can be claimed; a live
+record still blocks a second claim. See
+[single-owner.md](single-owner.md#an-archived-record-releases-its-login).
 
-`/onboarding` answers one question — "you belong nowhere; what now?" — and for a
-long time it never checked whether that was still true. `ProtectedRoute` asks
-only whether you are signed in.
+## Membership is the gate
 
-Invitations-first fixed the *first* visit and nothing after it, because
-`hasInvites` empties the instant one is accepted. Press Back, reopen the
-confirmation email, or hit a bookmark, and the same URL now renders "Create your
-academy" to somebody who became a student thirty seconds ago. Submitting it is
-self-serve academy creation working exactly as designed: creator becomes admin.
-
-That is not hypothetical. On 24 Aug 2026 a student of Hawary Academy claimed her
-CSV-imported record at 05:22:43 and founded an empty academy — which she also
-named "Hawary Academy" — at 05:24:48. Two minutes and five seconds. Afterwards
-every sign-in put her in the back office, because `useLandingTarget` ranks staff
-above student and she was now staff *of her own shell*. The switcher showed two
-rows with identical names. She reported that she had been made an admin of her
-school, and from her side of the screen that is precisely what it looked like.
-
-Four of the seven academies in the database were empty single-member shells;
-three were created that same morning by people trying to reach Hawary Academy.
-
-Two rules came out of it:
-
-- **Membership is the gate.** An existing member who reaches `/onboarding` is
-  returned to `useLandingTarget()`. The page is for people with nowhere to be.
-- **Arriving has to be deliberate.** `?new=1` — sent only by the switcher's
-  "Add academy" — is what still opens the founder form for a member. A query
-  param and not router state, because the accidents were reloads and Back.
-
-A learner therefore has no button that founds an academy. That is not a new
-restriction: `ShellSidebar` already leaves "Add academy" out of the learner
-switcher, for the same reason it was always wrong here — founding one makes you
-staff and evicts you from `/learn`.
-
-What this does **not** fix: somebody with no record waiting and no invitation
-still meets the founder form and nothing else. Two of the three shells that
-morning were exactly that — people who came to join a school and were offered
-only the option to start one. `/enroll/:slug` is the door they needed and never
-saw. That is a separate piece of work.
+The founder form is gone ([single-owner.md](single-owner.md)): self-serve
+founding produced only empty shells, including a student who founded a second
+"Hawary Academy" two minutes after claiming their record in the real one. The
+rule that survives is **membership is the gate**: `ProtectedRoute` asks only
+whether you are signed in, so an existing member who reaches `/onboarding` is
+returned to `useLandingTarget()`. The page is for people with nowhere to be.
 
 ## Nobody stays "Unnamed"
 
@@ -218,9 +184,11 @@ crossed the gap.
 **The fill hangs off the column, not off the RPCs.** Seven things attach an
 account to a record: `accept_invitation`, `accept_pending_invitation` and
 `join_academy` (all via `app.link_claimed_record`), `link_student_account` and
-`link_instructor_account` (which run their own UPDATE and never call it), and —
-because `students: staff update` / `instructors: staff update` put no column
-restriction on `user_id` — a plain PostgREST write, on either table. Putting the
+`link_instructor_account` (which run their own UPDATE and never call it), and a
+plain PostgREST write: `students: staff update` puts no column restriction on
+`user_id`, and on `instructors` a Director may set it (`guard_instructor_grant`
+refuses anyone else, bar a claim or the release of their own archived record).
+Putting the
 backfill inside `link_claimed_record` would have covered three of the seven.
 `app.fill_record_identity`, a `BEFORE INSERT OR UPDATE OF user_id` trigger on
 both tables, covers all seven and whatever is written next.

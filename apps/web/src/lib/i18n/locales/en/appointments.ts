@@ -86,7 +86,7 @@ export const appointments = {
   'appt.hours.range_invalid': 'The end time must be after the start time.',
   'appt.setup.subtitle_own': 'Days you are not available to be booked.',
   'appt.setup.no_instructor_record':
-    'You do not have an instructor record in this academy, so there is nothing to block dates against. An admin can create one for you.',
+    'You do not have an instructor record in this academy, so there is nothing to block dates against. A director can create one for you.',
   'appt.timeoff.title': 'Closed dates',
   'appt.timeoff.mine_title': 'Your blocked dates',
   'appt.timeoff.mine_description':
@@ -121,11 +121,10 @@ export const appointments = {
   'appt.book_for.student_search': 'Search by name, email or number',
   'appt.book_for.no_students': 'No student matches.',
   'appt.book_for.change': 'Change',
-  'appt.book_for.day': 'Day',
   'appt.book_for.time': 'Time',
   'appt.book_for.no_slots': 'Nothing free on this day.',
   'appt.book_for.no_record':
-    'You have no instructor record in this academy, so there is nobody to book the session with. An admin can attach one on Members.',
+    'You have no instructor record in this academy, so there is nobody to book the session with. A director can attach one on Members.',
   'appt.book_for.instructor': 'Instructor',
   'appt.book_for.auto_round_robin': 'Assign automatically',
   'appt.book_for.auto_any': 'Anyone free',

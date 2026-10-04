@@ -14,7 +14,7 @@ export const courses: CoursesDict = {
   // Salin untuk kemasukan baharu
   'courses.duplicate': 'Salin',
   'courses.duplicate.description':
-    'Salin kursus ini untuk kemasukan baharu. Namakan salinan supaya kedua-duanya boleh dibezakan — kebanyakan akademi meletakkan kemasukan pada tajuk.',
+    'Salin kursus ini untuk kemasukan baharu. Letakkan kemasukan pada nama salinan supaya kedua-duanya boleh dibezakan.',
   'courses.duplicate.title_default': '{title} (salinan)',
   'courses.duplicate.code_hint':
     'Kod kursus mesti unik, jadi salinan bermula tanpa kod. Kod asal ialah “{code}”.',
@@ -44,7 +44,6 @@ export const courses: CoursesDict = {
   // Halaman kursus
   'courses.not_found': 'Kursus tidak dijumpai.',
   'courses.back_to_courses': 'Kembali ke senarai kursus',
-  'courses.grading': 'Pemarkahan',
   'courses.module_count_one': '{count} modul',
   'courses.module_count_other': '{count} modul',
 

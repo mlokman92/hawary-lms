@@ -15,7 +15,9 @@ import { useLinkInstructorAccount, useLinkStudentAccount } from './api'
 import { errorMessage } from '@/lib/errors'
 
 /**
- * Link an existing Hawary account to this record, admin-only.
+ * Link an existing Hawary account to this record: a student record by an
+ * admin, an instructor record by a Director only (`link_instructor_account`),
+ * since that link makes the account a trainer.
  *
  * The repair path for the invitation flow: accepting an invite is otherwise the
  * only way a students/instructors row ever gets a user_id, so a wrong link, a

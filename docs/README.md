@@ -1,6 +1,6 @@
 # Docs
 
-Living documentation for Hawary LMS. This is where decisions live — `CLAUDE.md`
+Living documentation for Hawary LMS, Hawary Academy's own system. This is where decisions live — `CLAUDE.md`
 is only an index, and is kept under 200 lines.
 
 Keep decisions with their rationale so future work (and Claude) understands
@@ -9,6 +9,10 @@ row to the table in `CLAUDE.md` if it is a new area.
 
 ## Product and shape
 
+- [single-owner.md](single-owner.md) — the LMS belongs to Hawary Academy;
+  `academy_id` stays for branches, and nobody founds or deletes an academy
+  through the app or the API. Also Directors: the admins who grant staff access
+  and own the payment and letterhead settings.
 - [requirements.md](requirements.md) — product scope, users, features, v1 decisions.
 - [architecture.md](architecture.md) — system design, the data model, the `app.*`
   RLS helpers, server-side write guards, and the columns clients must never write.
@@ -36,8 +40,9 @@ row to the table in `CLAUDE.md` if it is a new area.
   the token flow that survives beside it, and how names cross the gap.
 - [student-instructor-roles.md](student-instructor-roles.md) — the two role
   axes and the attempt/submission write guards.
-- [academy-registration.md](academy-registration.md) — plan for academy
-  self-registration and account setup.
+- [academy-registration.md](academy-registration.md) — the original plan for
+  account setup and identity reconciliation. Its self-registration half is
+  superseded by [single-owner.md](single-owner.md).
 
 ## Sessions and coursework
 
@@ -53,6 +58,7 @@ row to the table in `CLAUDE.md` if it is a new area.
 
 - [money-is-admin-only.md](money-is-admin-only.md) — why the five money SELECT
   policies moved from `app.is_staff` to `app.is_admin`, and what that closed.
+  Settings writes are narrower still, Directors only.
 - [payment-screens.md](payment-screens.md) — `/payments` and `/payments/log`:
   the ledger, why `amount_paid_sen` is derived from it, back-dated payments,
   server-side pagination, and the clickable tiles.

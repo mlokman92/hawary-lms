@@ -10,6 +10,7 @@ import { ProtectedRoute } from './components/ProtectedRoute'
 import { PendingInviteRedirect } from './components/PendingInviteRedirect'
 import { AppShell } from './components/AppShell'
 import { AdminRoute } from './components/AdminRoute'
+import { DirectorRoute } from './components/DirectorRoute'
 import { StudentShell } from './components/StudentShell'
 import { LearnDashboardPage } from './pages/learn/LearnDashboardPage'
 import { LearnHomePage } from './pages/learn/LearnHomePage'
@@ -254,15 +255,19 @@ export default function App() {
                       <Route path="/payments/:id" element={<InvoiceDetailPage />} />
                       <Route path="/incentives" element={<IncentivesPage />} />
                       <Route path="/incentives/:id" element={<IncentiveBatchPage />} />
+                      {/* The roster RPC is admin-only too. No /members/:id: a
+                          member's page *is* their instructor or student record,
+                          so the roster links straight there rather than
+                          mirroring those pages badly. */}
+                      <Route path="/members" element={<MembersPage />} />
                     </Route>
-                    {/* No /members/:id: a member's page *is* their instructor
-                        or student record, so the roster links straight there
-                        rather than mirroring those pages badly. */}
-                    <Route path="/members" element={<MembersPage />} />
+                    {/* Every control on /settings is a Director write. */}
+                    <Route element={<DirectorRoute />}>
+                      <Route path="/settings" element={<SettingsPage />} />
+                    </Route>
                     {/* The staff counterpart of /learn/profile — reached by
                         clicking your own name in the sidebar footer. */}
                     <Route path="/profile" element={<ProfilePage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
                   </Route>
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

@@ -4,10 +4,10 @@ import { AcademyProfileCard } from '@/features/settings/AcademyProfileCard'
 import { BillplzSettingsCard } from '@/features/settings/BillplzSettingsCard'
 import { ToyyibPaySettingsCard } from '@/features/settings/ToyyibPaySettingsCard'
 
+/** Director-only, gated on the route (`DirectorRoute`). */
 export function SettingsPage() {
-  const { activeAcademyId, active } = useAcademy()
+  const { activeAcademyId } = useAcademy()
   const { t } = useT()
-  const isAdmin = active?.role === 'admin'
 
   return (
     <div className="mx-auto w-full max-w-3xl">
@@ -21,11 +21,7 @@ export function SettingsPage() {
       </div>
 
       <div className="mt-6 space-y-6">
-        {!isAdmin ? (
-          <div className="text-muted-foreground rounded-xl border border-dashed p-8 text-center text-sm">
-            {t('settings.admin_only')}
-          </div>
-        ) : activeAcademyId ? (
+        {activeAcademyId ? (
           <>
             <AcademyProfileCard academyId={activeAcademyId} />
             <ToyyibPaySettingsCard academyId={activeAcademyId} />

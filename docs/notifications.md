@@ -25,8 +25,8 @@ record. A record nobody has claimed has no inbox to open and no way to sign in
 and read this, so `app.notify` treats a null recipient as a no-op rather than an
 error — an unclaimed record is the ordinary case, not a failure.
 
-Rows are scoped by `academy_id` like every other tenant table, and the bell
-follows the academy switcher. A trainer in two academies is two different people
+Rows are scoped by `academy_id` like every other branch-scoped table, and the bell
+follows the academy switcher. A trainer in two branches is two different people
 as far as their work goes.
 
 ## Who may do what

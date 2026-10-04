@@ -216,6 +216,8 @@ export function Dashboard() {
   const { activeAcademyId, active, loading: academyLoading } = useAcademy()
   const isStaff = active?.role === 'admin' || active?.role === 'trainer'
   const isAdmin = active?.role === 'admin'
+  // Connecting a gateway is a Director write, so only a Director is told to.
+  const isDirector = !!active?.isDirector
 
   const [addStudentOpen, setAddStudentOpen] = useState(false)
   const [invoiceOpen, setInvoiceOpen] = useState(false)
@@ -230,8 +232,9 @@ export function Dashboard() {
   const readiness = useModuleReadiness(activeAcademyId)
   const invitations = usePendingInvitations(activeAcademyId)
   const activity = usePaymentActivity(activeAcademyId)
-  // Admin-only: passing null disables the query, so a trainer never fires it.
-  const settings = usePaymentSettings(isAdmin ? activeAcademyId : null)
+  // Passing null disables the query: it only feeds the gateway prompts, which
+  // are a Director's. Reconciliation is every admin's.
+  const settings = usePaymentSettings(isDirector ? activeAcademyId : null)
   const reconciliation = useReconciliationCount(isAdmin ? activeAcademyId : null)
 
   const stats = useMemo(
@@ -303,8 +306,9 @@ export function Dashboard() {
   const draftCount = courseRows.filter((c) => c.status === 'draft').length
   const liveCourses = courseRows.filter((c) => c.status !== 'archived').length
   // isSuccess, not just a falsy read: "we haven't asked yet" and "the query
-  // failed" are not the same as "the gateway is off", and an admin who has
-  // connected ToyyibPay should never see the alarm flash on a cold load.
+  // failed" are not the same as "the gateway is off", and a Director who has
+  // connected ToyyibPay should never see the alarm flash on a cold load. The
+  // query never runs for anyone else, so this stays false for them.
   const gatewayOff =
     settings.isSuccess && settings.data?.toyyibpay_enabled !== true
   const reconCount = reconciliation.data ?? 0
@@ -348,9 +352,10 @@ export function Dashboard() {
       cta: t('nav.courses'),
       to: '/courses',
     },
-    // Trainers cannot complete this one — set_toyyibpay_credentials rejects
-    // them — so it leaves both the list and the denominator.
-    ...(isAdmin
+    // Only a Director can complete this one — set_toyyibpay_credentials
+    // rejects everyone else — so for them it leaves both the list and the
+    // denominator.
+    ...(isDirector
       ? [
           {
             label: t('dash.setup.step.gateway'),
@@ -369,7 +374,8 @@ export function Dashboard() {
   // Two steps read secondary queries. Until those land every established
   // academy briefly looks unfinished, so hold the whole card back rather than
   // flashing a checklist at someone who finished setting up months ago.
-  const setupReady = !readiness.isLoading && (!isAdmin || !settings.isLoading)
+  const setupReady =
+    !readiness.isLoading && (!isDirector || !settings.isLoading)
   const checklistVisible =
     setupReady && !setupDismissed && stepsDone < steps.length
 
