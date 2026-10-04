@@ -45,7 +45,8 @@ changed. What changed is who can create and destroy an academy.
 - revoked `insert, delete` on `academies` from `anon, authenticated`.
 
 `app.handle_new_academy` stays. When the owner inserts a branch with
-`created_by` set, that account still becomes its first admin.
+`created_by` set, that account becomes its first admin and its first Director
+(`20261004110000_director_flag_follows_role`).
 
 **Data, one-off (2026-10-04)** — deleted the three academies that were not
 Hawary: *Cemerlang Academy v2* (test data: 5 students, 7 invoices, 5 payments),
@@ -70,9 +71,12 @@ Migration `20261004100000_director_grants_staff.sql`.
 A **Director** is an admin whose `academy_members.is_director` is true. Hawary
 Academy has two: Madam Linda (academyhawary@gmail.com, who created the academy
 row) and Lokman (muhamadlokman92@gmail.com). Only the owner sets the flag, in
-SQL; `app.guard_member_director` refuses any change to it from a JWT, Directors
+SQL; `app.guard_member_director` refuses to grant it from a JWT, Directors
 included. `app.is_director(academy_id)` also requires an **active admin**
-membership, so suspending or demoting a Director suspends the power with it.
+membership. Suspending a Director pauses the power, and restoring them brings
+it back. **Demoting** a Director (their role leaving admin) clears the flag for
+good, so making them an admin again from the app does not make them a Director
+again; re-appointing one is the owner's SQL (`20261004110000`).
 
 Only a Director can:
 
@@ -126,8 +130,12 @@ all of them? consolidated money screens?). Until then:
 ```sql
 insert into public.academies (name, slug, created_by, phone, state)
 values ('Hawary Academy <Branch>', 'hawary-<branch>', '<owner user id>', …);
--- handle_new_academy makes created_by its admin.
+-- handle_new_academy makes created_by its admin and Director.
+
+-- A further Director for the branch (an existing admin member):
+update public.academy_members set is_director = true
+where academy_id = '<branch id>' and user_id = '<user id>' and role = 'admin';
 ```
 
 Then configure its payment settings and invoice details from `/settings` as
-that admin. Each branch has its own public join link, `/enroll/<slug>`.
+that Director. Each branch has its own public join link, `/enroll/<slug>`.

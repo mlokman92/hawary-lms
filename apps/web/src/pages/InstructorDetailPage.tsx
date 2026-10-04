@@ -272,6 +272,10 @@ export function InstructorDetailPage() {
             <p className="text-muted-foreground text-xs">
               {t('members.last_admin')}
             </p>
+          ) : lastDirector ? (
+            <p className="text-muted-foreground text-xs">
+              {t('members.last_director')}
+            </p>
           ) : null}
           {updateMember.error ? (
             <p className="text-destructive text-sm">

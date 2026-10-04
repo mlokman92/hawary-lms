@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
 
   const base = host(isSandbox)
 
-  // Auto-provision a category if the admin didn't supply one.
+  // Auto-provision a category if the Director didn't supply one.
   if (!categoryCode) {
     const { data: academy } = await supabase
       .from('academies')

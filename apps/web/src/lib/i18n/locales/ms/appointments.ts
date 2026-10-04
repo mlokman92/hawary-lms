@@ -80,7 +80,7 @@ export const appointments: AppointmentsDict = {
   'appt.hours.range_invalid': 'Waktu tamat mesti selepas waktu mula.',
   'appt.setup.subtitle_own': 'Hari anda tidak boleh ditempah.',
   'appt.setup.no_instructor_record':
-    'Anda tiada rekod pengajar dalam akademi ini, jadi tiada apa-apa untuk disekat tarikhnya. Pengarah boleh menciptakannya untuk anda.',
+    'Anda tiada rekod pengajar dalam akademi ini, jadi tiada apa-apa untuk disekat tarikhnya. Pengarah boleh menciptanya untuk anda.',
   'appt.timeoff.title': 'Tarikh tutup',
   'appt.timeoff.mine_title': 'Tarikh sekatan anda',
   'appt.timeoff.mine_description':

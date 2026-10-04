@@ -22,7 +22,7 @@ export const invitations = {
   'invite.waiting.joining': 'Joining…',
   'invite.waiting.error': 'Could not join this academy.',
 
-  // Link an existing account (student: staff; instructor: Director only)
+  // Link an existing account (student: admin; instructor: Director only)
   'invite.link.title': 'Link an existing account',
   'invite.link.description.student':
     'The person must already have signed up. Linking grants student access to this academy.',

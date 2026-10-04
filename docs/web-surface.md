@@ -151,8 +151,8 @@ list so `assessment_questions.correct_answer` never reaches a client.
 ## Members and roles
 
 `/members`: the staff roster, which every admin sees. Its `⋯` actions — change
-a staff role, suspend, restore or remove an admin or trainer, link or unlink an
-instructor account — are Director-only, and RLS and the RPCs enforce the same
+a staff role, suspend or restore an admin or trainer, attach or detach an
+instructor record — are Director-only, and RLS and the RPCs enforce the same
 (`20261004100000_director_grants_staff`). Students are excluded — they are an
 academy record, managed on their own page, where any admin can suspend their app
 access.

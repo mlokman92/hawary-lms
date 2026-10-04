@@ -60,12 +60,14 @@ One shell, two trees:
 
 - **Back-office** (`/`) — Dashboard · Courses · Students · Instructors ·
   Appointments · Reports for every staff member; admins also get Payments
-  (+ Log, Report), Incentives, Members and Settings. Course → module → content
+  (+ Log, Report), Incentives and Members (a read-only roster unless Director);
+  Directors also get Settings. Course → module → content
   authoring, grading queues, enrollment, CSV import, notifications.
 - **Learner** (`/learn`) — courses, work, billing, appointments, reports,
   profile.
-- People get in by **invitation or claiming**: staff create the student or
-  instructor record, and the account that signs in with that email claims it.
+- People get in by **invitation or claiming**: staff create the student record
+  (a Director the instructor record), and the account that signs in with that
+  email claims it.
   A signed-in account with no membership lands on `/onboarding` (its pending
   invitations, or "no record of you at this address"). The public join link is
   `/enroll/<academy slug>`.

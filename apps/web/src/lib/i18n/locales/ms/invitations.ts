@@ -23,7 +23,7 @@ export const invitations: InvitationsDict = {
   'invite.waiting.joining': 'Menyertai…',
   'invite.waiting.error': 'Gagal menyertai akademi ini.',
 
-  // Pautkan akaun sedia ada (pelajar: kakitangan; pengajar: pengarah sahaja)
+  // Pautkan akaun sedia ada (pelajar: pentadbir; pengajar: pengarah sahaja)
   'invite.link.title': 'Pautkan akaun sedia ada',
   'invite.link.description.student':
     'Individu ini mesti sudah mendaftar akaun. Memautkan akaun memberi akses pelajar kepada akademi ini.',

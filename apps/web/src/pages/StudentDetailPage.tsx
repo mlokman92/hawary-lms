@@ -235,17 +235,16 @@ export function StudentDetailPage() {
                     {/* App access lives here now: students are no longer listed
                         on /members, and suspending a membership is what
                         actually revokes course access (app.is_enrolled requires
-                        an active member row). An admin may suspend a learner;
-                        the same account holding a staff role is a Director's
-                        call. */}
+                        an active member row). Only a learner's membership is
+                        suspended here; an account that also holds a staff
+                        role is suspended on /members, where the last-admin and
+                        last-Director guards live. */}
                     {access ? (
                       <Badge variant={MEMBER_STATUS_META[access.status].variant}>
                         {t(MEMBER_STATUS_META[access.status].labelKey)}
                       </Badge>
                     ) : null}
-                    {isAdmin &&
-                    access &&
-                    (access.role === 'student' || active?.isDirector) ? (
+                    {isAdmin && access?.role === 'student' ? (
                       <Button
                         size="sm"
                         variant="ghost"
@@ -269,7 +268,8 @@ export function StudentDetailPage() {
                     ) : null}
                   </>
                 ) : null}
-                {isStaff && !student.user_id ? (
+                {/* link_student_account is app.is_admin. */}
+                {isAdmin && !student.user_id ? (
                   <Button size="sm" variant="ghost" onClick={() => setLinkOpen(true)}>
                     {t('students.account.link_existing')}
                   </Button>

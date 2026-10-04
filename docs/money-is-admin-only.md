@@ -82,12 +82,12 @@ changes ship with it.
   to `adminNav()` in `AppSidebar`.
 - **Routes** — `components/AdminRoute.tsx`, the app's first role gate that lives
   on the route instead of inside a page, now wraps `/payments`, `/payments/log`,
-  `/payments/:id`, `/incentives` and `/incentives/:id`. It **redirects** rather
-  than explaining, because those pages would otherwise render an empty ledger
-  with a live Export button. `/settings` sits behind `DirectorRoute`, the same
-  shape one rung higher. `/appointments/settings` and `/members` keep their
-  in-place "admins only" panels: those are pages somebody might legitimately
-  land on, and they show nothing confidential when they do.
+  `/payments/:id`, `/incentives`, `/incentives/:id` and `/members`. It
+  **redirects** rather than explaining, because those pages would otherwise
+  render an empty ledger with a live Export button. `/settings` sits behind
+  `DirectorRoute`, the same shape one rung higher. `/appointments/settings`
+  keeps its in-place "admins only" panel: it is a page somebody might
+  legitimately land on, and it shows nothing confidential when they do.
   It waits on `loading` and then demands `admin`, which avoids both of the
   neighbouring bugs — `active && active.role !== 'admin'` renders the page when
   `active` is null, and `loading || !active` spins forever in that same state.
@@ -100,7 +100,7 @@ changes ship with it.
   alone would do it today, but this function **mails a customer**, and "whoever
   can read the row may bill the student" is too implicit a rule to leave to a
   policy a later migration might widen. Same shape as `toyyibpay-connect`,
-  which checks `is_director` rather than `role = 'admin'`.
+  which checks for an active admin membership with `is_director`.
 
 ## Promotion and demotion
 

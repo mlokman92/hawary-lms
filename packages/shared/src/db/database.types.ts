@@ -254,6 +254,7 @@ export type Database = {
           academy_id: string
           created_at: string
           id: string
+          is_director: boolean
           joined_at: string
           role: "admin" | "trainer" | "student"
           status: Database["public"]["Enums"]["member_status"]
@@ -265,6 +266,7 @@ export type Database = {
           academy_id: string
           created_at?: string
           id?: string
+          is_director?: boolean
           joined_at?: string
           role: "admin" | "trainer" | "student"
           status?: Database["public"]["Enums"]["member_status"]
@@ -276,6 +278,7 @@ export type Database = {
           academy_id?: string
           created_at?: string
           id?: string
+          is_director?: boolean
           joined_at?: string
           role?: "admin" | "trainer" | "student"
           status?: Database["public"]["Enums"]["member_status"]
@@ -2641,7 +2644,7 @@ export type Database = {
           instructor_id: string
           instructor_no: string
           instructor_status: Database["public"]["Enums"]["instructor_status"]
-          is_creator: boolean
+          is_director: boolean
           joined_at: string
           phone: string
           role: "admin" | "trainer" | "student"
