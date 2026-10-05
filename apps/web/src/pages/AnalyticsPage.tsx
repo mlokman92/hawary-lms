@@ -27,6 +27,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useLoginAnalytics, useUserLogins } from '@/features/analytics/api'
+import { useCourses } from '@/features/courses/api'
 
 // Recharts stays out of the main bundle, as it does on the dashboard.
 const LoginChart = lazy(() =>
@@ -42,6 +43,13 @@ function readMonth(raw: string | null): string | null {
   return raw && /^\d{4}-(0[1-9]|1[0-2])$/.test(raw) ? raw : null
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** An id, or nothing — a malformed one would fail the RPC's uuid cast. */
+function readCourse(raw: string | null): string | null {
+  return raw && UUID.test(raw) ? raw : null
+}
+
 /**
  * Whether students are using the LMS: their logins per day, how many different
  * students that was across the month, and when each one was last seen. Staff
@@ -50,9 +58,12 @@ function readMonth(raw: string | null): string | null {
  * The bars are a total and the tile is a head count, on purpose — somebody who
  * logs in on ten days is ten logins and one active student.
  *
- * Gated on the route (`AnalyticsRoute`) and again in both RPCs. The month is in
- * the URL, like the payment report's: a figure gets quoted to somebody, and
- * "September" has to survive being pasted.
+ * The course filter narrows all three together, in the database: a course is
+ * an intake, so it turns the page into "how is Siri 2 doing".
+ *
+ * Gated on the route (`AnalyticsRoute`) and again in both RPCs. The month and
+ * the course are in the URL, like the payment report's: a figure gets quoted to
+ * somebody, and "September, Siri 2" has to survive being pasted.
  */
 export function AnalyticsPage() {
   const { t, tn } = useT()
@@ -60,11 +71,30 @@ export function AnalyticsPage() {
   const { activeAcademyId } = useAcademy()
   const [params, setParams] = useSearchParams()
   const month = readMonth(params.get('m'))
+  const course = readCourse(params.get('c'))
 
-  const stats = useLoginAnalytics(activeAcademyId, month)
-  const users = useUserLogins(activeAcademyId)
+  const stats = useLoginAnalytics(activeAcademyId, month, course)
+  const users = useUserLogins(activeAcademyId, course)
+  const { data: courses } = useCourses(activeAcademyId)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
+
+  // Written from the pair: setParams takes the whole query string, so writing
+  // one filter alone would drop the other.
+  const writeParams = (next: { m?: string | null; c?: string | null }) => {
+    const m = next.m === undefined ? month : next.m
+    const c = next.c === undefined ? course : next.c
+    setParams({ ...(m ? { m } : {}), ...(c ? { c } : {}) }, { replace: true })
+  }
+
+  const courseOptions = useMemo(
+    () =>
+      (courses ?? [])
+        // The one in the URL stays listed even if it has since been archived.
+        .filter((c) => c.status !== 'archived' || c.id === course)
+        .sort((a, b) => a.title.localeCompare(b.title)),
+    [courses, course],
+  )
 
   // The database's own list, plus the month in the URL if it lies outside it —
   // otherwise the selector would sit blank over a chart that is showing one.
@@ -93,14 +123,31 @@ export function AnalyticsPage() {
         description={t('analytics.subtitle')}
       >
         <Select
+          value={course ?? 'all'}
+          onValueChange={(c) => {
+            writeParams({ c: c === 'all' ? null : c })
+            setPage(1)
+          }}
+        >
+          <SelectTrigger className="w-56" aria-label={t('common.course')}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('common.all_courses')}</SelectItem>
+            {courseOptions.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
           value={stats.data?.month ?? ''}
           disabled={!stats.data}
           onValueChange={(m) =>
             // The current month is the default, so it is not written down: a
             // bookmarked page should roll over with the calendar.
-            setParams(m === stats.data?.months[0] ? {} : { m }, {
-              replace: true,
-            })
+            writeParams({ m: m === stats.data?.months[0] ? null : m })
           }
         >
           <SelectTrigger className="w-44" aria-label={t('analytics.month')}>

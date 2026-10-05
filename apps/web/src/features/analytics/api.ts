@@ -75,13 +75,17 @@ export function useAnalyticsAccess() {
   }
 }
 
-/** `month` is 'YYYY-MM'; null asks for the current month. */
+/**
+ * `month` is 'YYYY-MM'; null asks for the current month. `courseId` narrows to
+ * the students enrolled on one course; null is every course.
+ */
 export function useLoginAnalytics(
   academyId: string | null,
   month: string | null,
+  courseId: string | null,
 ) {
   return useQuery({
-    queryKey: ['login-analytics', academyId, month] as const,
+    queryKey: ['login-analytics', academyId, month, courseId] as const,
     enabled: !!academyId,
     // Hold the month on screen while the next one loads, but never another
     // branch's figures under this branch's name.
@@ -91,6 +95,7 @@ export function useLoginAnalytics(
       const { data, error } = await supabase.rpc('login_analytics', {
         _academy_id: academyId!,
         ...(month ? { _month: month } : {}),
+        ...(courseId ? { _course_id: courseId } : {}),
       })
       if (error) throw error
       return data as unknown as LoginAnalytics
@@ -99,13 +104,17 @@ export function useLoginAnalytics(
 }
 
 /** Every student account in the academy, most recently seen first. */
-export function useUserLogins(academyId: string | null) {
+export function useUserLogins(
+  academyId: string | null,
+  courseId: string | null,
+) {
   return useQuery({
-    queryKey: ['user-logins', academyId] as const,
+    queryKey: ['user-logins', academyId, courseId] as const,
     enabled: !!academyId,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('list_user_logins', {
         _academy_id: academyId!,
+        ...(courseId ? { _course_id: courseId } : {}),
       })
       if (error) throw error
       return (data ?? []) as unknown as UserLogin[]

@@ -108,6 +108,11 @@ client.
   account**, so widening the page again loses no history. Someone who is an
   admin or trainer here and also has a student record is staff, and is not
   counted.
+- **One course, optionally** (`?c=<course id>`, `_course_id` on both readers,
+  migration `20261005120000`): the chart, the head count and the list narrow
+  together to students with an enrolment on that course that is not cancelled
+  (`app.analytics_in_course`). Null is every course. A course from another
+  academy matches nobody.
 - An account that is a student in two branches counts in both.
 - **Accounts left out by address**: `app.is_analytics_excluded(user_id)` holds a
   short list (today: broadcastimedia@gmail.com, a student membership that is not
@@ -138,5 +143,5 @@ client.
 
 ## Not built
 
-- Staff logins on the page, any split by course, and any measure of time spent.
+- Staff logins on the page, and any measure of time spent.
 - A return within the hour of the last visit is not a separate login.

@@ -2680,7 +2680,7 @@ export type Database = {
         }[]
       }
       list_user_logins: {
-        Args: { _academy_id: string }
+        Args: { _academy_id: string; _course_id?: string }
         Returns: {
           email: string
           full_name: string
@@ -2690,7 +2690,7 @@ export type Database = {
         }[]
       }
       login_analytics: {
-        Args: { _academy_id: string; _month?: string }
+        Args: { _academy_id: string; _course_id?: string; _month?: string }
         Returns: Json
       }
       mark_all_notifications_read: {
