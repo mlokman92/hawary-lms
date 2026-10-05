@@ -11,6 +11,7 @@ import { PendingInviteRedirect } from './components/PendingInviteRedirect'
 import { AppShell } from './components/AppShell'
 import { AdminRoute } from './components/AdminRoute'
 import { DirectorRoute } from './components/DirectorRoute'
+import { AnalyticsRoute } from './components/AnalyticsRoute'
 import { StudentShell } from './components/StudentShell'
 import { LearnDashboardPage } from './pages/learn/LearnDashboardPage'
 import { LearnHomePage } from './pages/learn/LearnHomePage'
@@ -53,6 +54,7 @@ import { InvoiceDetailPage } from './pages/InvoiceDetailPage'
 import { PaymentLogPage } from './pages/PaymentLogPage'
 import { PaymentReportPage } from './pages/PaymentReportPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { AnalyticsPage } from './pages/AnalyticsPage'
 import { MembersPage } from './pages/MembersPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { PublicPayPage } from './pages/PublicPayPage'
@@ -264,6 +266,11 @@ export default function App() {
                     {/* Every control on /settings is a Director write. */}
                     <Route element={<DirectorRoute />}>
                       <Route path="/settings" element={<SettingsPage />} />
+                    </Route>
+                    {/* Directors, plus the one account the database names —
+                        which is why this is not under DirectorRoute. */}
+                    <Route element={<AnalyticsRoute />}>
+                      <Route path="/analytics" element={<AnalyticsPage />} />
                     </Route>
                     {/* The staff counterpart of /learn/profile — reached by
                         clicking your own name in the sidebar footer. */}

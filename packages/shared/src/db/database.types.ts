@@ -1708,6 +1708,30 @@ export type Database = {
           },
         ]
       }
+      login_events: {
+        Row: {
+          created_at: string
+          id: number
+          is_sign_in: boolean
+          session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          is_sign_in: boolean
+          session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          is_sign_in?: boolean
+          session_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       notes: {
         Row: {
           academy_id: string
@@ -2400,6 +2424,7 @@ export type Database = {
         }
         Returns: Json
       }
+      can_view_analytics: { Args: { _academy_id: string }; Returns: boolean }
       cancel_appointment: {
         Args: { _id: string; _reason?: string }
         Returns: Json
@@ -2653,6 +2678,20 @@ export type Database = {
           student_no: string
           user_id: string
         }[]
+      }
+      list_user_logins: {
+        Args: { _academy_id: string }
+        Returns: {
+          email: string
+          full_name: string
+          last_login_at: string
+          student_id: string
+          user_id: string
+        }[]
+      }
+      login_analytics: {
+        Args: { _academy_id: string; _month?: string }
+        Returns: Json
       }
       mark_all_notifications_read: {
         Args: { _academy_id: string }

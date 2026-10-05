@@ -23,6 +23,7 @@ export const nav = {
   'nav.incentives': 'Incentive',
   'nav.members': 'Members',
   'nav.settings': 'Settings',
+  'nav.analytics': 'Analytics',
 
   // Learner destinations
   'nav.learn.dashboard': 'Dashboard',

@@ -61,7 +61,7 @@ One shell, two trees:
 - **Back-office** (`/`) — Dashboard · Courses · Students · Instructors ·
   Appointments · Reports for every staff member; admins also get Payments
   (+ Log, Report), Incentives and Members (a read-only roster unless Director);
-  Directors also get Settings. Course → module → content
+  Directors also get Settings and Analytics. Course → module → content
   authoring, grading queues, enrollment, CSV import, notifications.
 - **Learner** (`/learn`) — courses, work, billing, appointments, reports,
   profile.
@@ -101,6 +101,7 @@ Read the doc before changing the area. Each one keeps the *why*.
 | i18n — **read the house-style list before writing Malay** | [i18n.md](docs/i18n.md) |
 | deployment, URLs, redirect allow list | [production-urls.md](docs/production-urls.md) |
 | CI/CD plan | [ci-cd.md](docs/ci-cd.md) |
+| `/analytics` — what counts as a login, the `login_events` log | [analytics.md](docs/analytics.md) |
 | product scope | [requirements.md](docs/requirements.md) |
 
 ## Not built
@@ -159,7 +160,7 @@ pnpm --filter web lint
 - **Clients have no DML** on `academy_invitations`, `notifications`,
   `incentive_payouts`, `assessment_questions`, or `appointments`, and no INSERT
   or DELETE on `academies` — those move only through RPCs or the owner. Check
-  before adding a policy.
+  before adding a policy. `login_events` has no client access at all.
 - **i18n**: keys are flat and self-prefixed, so `TKey = keyof typeof en` — a bad
   key **and** a missing Malay entry are both compile errors. Use `useT()` →
   `t`/`tn`; `translate()` is the non-reactive escape hatch for plain helpers

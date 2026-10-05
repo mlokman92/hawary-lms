@@ -3,6 +3,7 @@ import {
   CalendarClock,
   ClipboardCheck,
   ChartColumn,
+  ChartLine,
   ClipboardList,
   FileCheck2,
   HandCoins,
@@ -21,6 +22,7 @@ import { useT, type TFn } from '@/lib/i18n'
 import { usePendingEnrollmentCount } from '@/features/enrollment/api'
 import { useUpcomingAppointmentCount } from '@/features/appointments/api'
 import { useReportCounts } from '@/features/reports/api'
+import { useAnalyticsAccess } from '@/features/analytics/api'
 import { AcademySwitcher } from './AcademySwitcher'
 import { ShellSidebar } from './shell/ShellSidebar'
 import type { NavGroup, NavItem } from './shell/nav'
@@ -135,6 +137,9 @@ export function AppSidebar() {
   // "waiting on you" for a trainer and "waiting on the academy" for an admin —
   // which is the right answer for each of them.
   const { data: reportCounts } = useReportCounts(activeAcademyId)
+  // Not folded into adminNav: the page is let in by `app.can_view_analytics`,
+  // which names one account by address whatever its role here.
+  const { allowed: canViewAnalytics } = useAnalyticsAccess()
 
   const items = nav(
     t,
@@ -145,10 +150,14 @@ export function AppSidebar() {
   const groups: NavGroup[] = [
     {
       label: t('nav.group.platform'),
-      items:
-        active?.role === 'admin'
+      items: [
+        ...(active?.role === 'admin'
           ? [...items, ...adminNav(t, active.isDirector)]
-          : items,
+          : items),
+        ...(canViewAnalytics
+          ? [{ title: t('nav.analytics'), to: '/analytics', icon: ChartLine }]
+          : []),
+      ],
     },
   ]
 

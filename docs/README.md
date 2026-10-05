@@ -82,3 +82,6 @@ row to the table in `CLAUDE.md` if it is a new area.
   allow list, and how the mail functions resolve a base URL.
 - [ci-cd.md](ci-cd.md) — Netlify (web), Expo EAS (mobile), Supabase migrations,
   GitHub Actions.
+- [analytics.md](analytics.md) — `/analytics` for Directors, students only: what
+  counts as a login (a sign-in *or* a return on a saved session), the `login_events` log and
+  the trigger that must never block a sign-in.

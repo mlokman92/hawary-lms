@@ -24,6 +24,7 @@ export const nav: NavDict = {
   'nav.incentives': 'Insentif',
   'nav.members': 'Ahli',
   'nav.settings': 'Tetapan',
+  'nav.analytics': 'Analitik',
 
   // Destinasi pelajar
   'nav.learn.dashboard': 'Papan Pemuka',

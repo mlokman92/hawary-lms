@@ -67,6 +67,18 @@ export function fmtYearMonth(ym: string): string {
 }
 
 /**
+ * A 'YYYY-MM-DD' calendar day — "5 Oct 2026". Sibling of `fmtYearMonth`, and
+ * pinned to UTC for the same reason: the day is a bucket the database already
+ * decided, not an instant for this browser to convert.
+ */
+export function fmtDay(day: string | null | undefined): string {
+  if (!day) return '—'
+  const d = new Date(`${day}T00:00:00Z`)
+  if (Number.isNaN(d.getTime())) return day
+  return d.toLocaleDateString(locale(), { ...DATE_OPTS, timeZone: 'UTC' })
+}
+
+/**
  * Avatar fallback initials. Language-neutral, but it belongs with the other
  * display helpers: several surfaces render the same person and should not each
  * decide what a two-word name collapses to.

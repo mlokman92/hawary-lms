@@ -46,6 +46,11 @@ guards `/settings`, and its nav entry shows only to a Director. Other admins
 still read the payment-settings row through RLS, because the money screens need
 `toyyibpay_enabled` and the part-payment defaults.
 
+**Analytics** (`/analytics`) is for Directors too, behind its own
+`components/AnalyticsRoute.tsx` rather than `DirectorRoute`: the database also
+lets one named account in, and only the database knows which — see
+[analytics.md](analytics.md).
+
 The **header search** (`HeaderSearch` + `features/search`) finds students and
 instructors across the active academy by name, email, phone, IC or record
 number, and jumps straight to the record.
