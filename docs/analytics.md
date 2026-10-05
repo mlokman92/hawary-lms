@@ -135,7 +135,9 @@ client.
 - The month is in the URL (`?m=YYYY-MM`), like the payment report's. The current
   month is the default and is not written, so a bookmark rolls over.
 - The list is every student account, most recently seen first, searched and
-  paged in the browser; a row opens the student's record. "Last logged in" is the later of the log and
+  paged in the browser; a row opens the student's record. Its **Course** column
+  is the title of every enrolment that is not cancelled — the same test the
+  course filter applies (migration `20261005130000`). "Last logged in" is the later of the log and
   `last_sign_in_at` — the log knows about returns, and `last_sign_in_at` reaches
   back before the log began.
 - The chart is lazy-loaded, as the dashboard's is: Recharts stays out of the

@@ -40,6 +40,8 @@ export type UserLogin = {
   email: string | null
   last_login_at: string | null
   student_id: string | null
+  /** The course title; null when the student has no live enrolment. */
+  course: string | null
 }
 
 /**

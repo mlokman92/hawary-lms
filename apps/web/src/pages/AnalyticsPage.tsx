@@ -243,6 +243,7 @@ export function AnalyticsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t('common.student')}</TableHead>
+                  <TableHead>{t('common.course')}</TableHead>
                   <TableHead>{t('analytics.users.col.last_login')}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -272,6 +273,11 @@ export function AnalyticsPage() {
                             {u.email}
                           </div>
                         ) : null}
+                      </TableCell>
+                      <TableCell>
+                        {u.course ?? (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap tabular-nums">
                         {u.last_login_at ? (

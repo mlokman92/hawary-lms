@@ -2682,6 +2682,7 @@ export type Database = {
       list_user_logins: {
         Args: { _academy_id: string; _course_id?: string }
         Returns: {
+          course: string
           email: string
           full_name: string
           last_login_at: string
