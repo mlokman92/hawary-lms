@@ -95,7 +95,7 @@ export function ReportsPage() {
   return (
     <div className="mx-auto w-full max-w-6xl">
       <PageHeader
-        title={t('nav.reports')}
+        title={t('report.title')}
         description={t('report.queue.desc')}
       >
         {/* Setting up the rota is an occasional act, so it is behind the menu.
@@ -175,7 +175,7 @@ export function ReportsPage() {
                 return (
                   <li key={r.id}>
                     <Link
-                      to={`/reports/${r.id}`}
+                      to={`/lpkc/${r.id}`}
                       className="hover:bg-muted/50 flex items-center gap-3 px-4 py-3 transition-colors"
                     >
                       <span className="min-w-0 flex-1">

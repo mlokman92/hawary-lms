@@ -21,7 +21,7 @@ export function ReportDetailPage() {
 
   return (
     <div className="mx-auto w-full max-w-4xl">
-      <BackLink to="/reports">{t('nav.reports')}</BackLink>
+      <BackLink to="/lpkc">{t('report.title')}</BackLink>
       <ReportThreadView academyId={activeAcademyId} reportId={id} />
     </div>
   )

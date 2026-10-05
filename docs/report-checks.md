@@ -55,7 +55,7 @@ separate on purpose: only 4 of this academy's 11 active instructors take diary
 bookings, and requiring somebody's diary to be open before they may read a PDF
 would be a rule about the wrong thing.
 
-The rota is edited from a dialog behind the `⋯` menu on `/reports`, admin-only.
+The rota is edited from a dialog behind the `⋯` menu on `/lpkc`, admin-only.
 Not a settings page: `/appointments/settings` earned one by having three cards
 on it, and this has one switch per instructor.
 
@@ -238,7 +238,18 @@ appointment function reached for its two newer events.
 
 ## Screens
 
-**`/reports`** (staff) — the queue, oldest first, paged 50 server-side with `id`
+The sidebar item is labelled **LPKC** in both shells and both languages — the
+academy's own word for what is being checked. Only the sidebar: the page
+headings and Back links say "LPKC checks" (staff) / "My reports" (learner)
+through their own keys (`report.title`, `report.learn.title`), so do not point
+them back at `nav.reports`.
+
+The staff queue lives at **`/lpkc`**. `/reports` and `/reports/:id` redirect
+there and must stay: emails already sent link to the old address, and
+`send-report-notice` still writes it. The learner side is unchanged at
+`/learn/reports`.
+
+**`/lpkc`** (staff) — the queue, oldest first, paged 50 server-side with `id`
 as the final tie-break. Four `FilterStatCard`s, because a tile is a sum over a
 set and pressing it should show that set.
 
@@ -251,7 +262,7 @@ Paged from the start rather than when it hurts. One report per (student, course)
 means the ceiling is the enrolment count — already 677 here — and PostgREST
 silently caps a request at the project maximum.
 
-**`/reports/:id`** and **`/learn/reports/:id`** mount the same
+**`/lpkc/:id`** and **`/learn/reports/:id`** mount the same
 `ReportThreadView`. It works out for itself what the reader may do, from the
 server's `my_role`. The two pages differ in their shell and in where Back goes.
 

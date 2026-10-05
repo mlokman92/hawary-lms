@@ -16,6 +16,11 @@ export const reports = {
   'report.status.changes_requested': 'Changes needed',
   'report.status.approved': 'Approved',
 
+  // --- page titles ----------------------------------------------------------
+  // Their own keys, not the nav's: the sidebar item is labelled "LPKC".
+  'report.title': 'LPKC checks',
+  'report.learn.title': 'My reports',
+
   // --- the staff queue ------------------------------------------------------
   'report.queue.desc': 'Reports sent in for checking, longest wait first.',
   'report.queue.search': 'Search by student name',

@@ -69,7 +69,7 @@ const nav = (
   },
   {
     title: t('nav.reports'),
-    to: '/reports',
+    to: '/lpkc',
     icon: ClipboardCheck,
     // Work waiting on somebody, so urgent (the default tone) rather than the
     // diary's neutral count: a report nobody has looked at is a student

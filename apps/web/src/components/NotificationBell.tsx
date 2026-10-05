@@ -256,7 +256,7 @@ function linkOf(row: Notification): string | null {
     const d = reportData(row)
     if (!d) return null
     return d.role === 'instructor'
-      ? `/reports/${d.report_id}`
+      ? `/lpkc/${d.report_id}`
       : `/learn/reports/${d.report_id}`
   }
   const d = apptData(row)

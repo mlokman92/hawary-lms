@@ -7,6 +7,10 @@ export const reports: ReportsDict = {
   'report.status.changes_requested': 'Perlu pembetulan',
   'report.status.approved': 'Diluluskan',
 
+  // --- page titles ----------------------------------------------------------
+  'report.title': 'Semakan LPKC',
+  'report.learn.title': 'Laporan saya',
+
   // --- the staff queue ------------------------------------------------------
   'report.queue.desc':
     'Laporan yang dihantar untuk semakan, yang paling lama menunggu di atas.',

@@ -16,7 +16,9 @@ export const nav = {
   'nav.instructors': 'Instructors',
   'nav.appointments': 'Appointments',
   'nav.appointment_list': 'All sessions',
-  'nav.reports': 'Report checks',
+  // The sidebar uses the academy's own word for it. The pages behind it keep
+  // their titles (`report.title`, `report.learn.title`).
+  'nav.reports': 'LPKC',
   'nav.payments': 'Payments',
   'nav.payment_log': 'Payment log',
   'nav.payment_report': 'Payment report',
@@ -30,7 +32,7 @@ export const nav = {
   'nav.learn.courses': 'My courses',
   'nav.learn.work': 'My work',
   'nav.learn.appointments': 'Appointments',
-  'nav.learn.reports': 'My reports',
+  'nav.learn.reports': 'LPKC',
   'nav.learn.billing': 'Billing',
   'nav.learn.profile': 'My profile',
 

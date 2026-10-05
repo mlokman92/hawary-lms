@@ -32,7 +32,7 @@ export function LearnReportPage() {
 
   return (
     <div className="mx-auto w-full max-w-4xl">
-      <BackLink to="/learn/reports">{t('nav.learn.reports')}</BackLink>
+      <BackLink to="/learn/reports">{t('report.learn.title')}</BackLink>
       <ReportThreadView
         academyId={academyId}
         reportId={id}

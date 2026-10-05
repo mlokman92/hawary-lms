@@ -45,7 +45,7 @@ export type AppointmentMovedData = AppointmentBookedData & {
  *
  * All four share it, so only the title line branches — the same economy the
  * three appointment kinds have. `role` decides the wording *and* where the row
- * leads: a student goes to /learn/reports/:id, a checker to /reports/:id, and
+ * leads: a student goes to /learn/reports/:id, a checker to /lpkc/:id, and
  * the thread is the same thread either way.
  */
 export type ReportEventData = {

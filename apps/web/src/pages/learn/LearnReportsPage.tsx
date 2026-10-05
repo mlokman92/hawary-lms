@@ -41,7 +41,7 @@ export function LearnReportsPage() {
 
   const header = (
     <PageHeader
-      title={t('nav.learn.reports')}
+      title={t('report.learn.title')}
       description={t('report.learn.desc')}
     />
   )

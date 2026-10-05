@@ -1,4 +1,10 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useParams,
+} from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './lib/query'
 import { ThemeProvider } from './lib/theme'
@@ -68,6 +74,11 @@ import { ReportsPage } from './pages/ReportsPage'
 import { ReportDetailPage } from './pages/ReportDetailPage'
 import { IncentivesPage } from './pages/IncentivesPage'
 import { IncentiveBatchPage } from './pages/IncentiveBatchPage'
+
+function LegacyReportRedirect() {
+  const { id } = useParams<{ id: string }>()
+  return <Navigate to={`/lpkc/${id}`} replace />
+}
 
 export default function App() {
   return (
@@ -202,8 +213,12 @@ export default function App() {
                         narrows a trainer to the reports assigned to them, so
                         the page is correct for both roles rather than empty
                         for one — the opposite of the money screens. */}
-                    <Route path="/reports" element={<ReportsPage />} />
-                    <Route path="/reports/:id" element={<ReportDetailPage />} />
+                    <Route path="/lpkc" element={<ReportsPage />} />
+                    <Route path="/lpkc/:id" element={<ReportDetailPage />} />
+                    {/* The old address. Emails already sent link to
+                        /reports/:id, and send-report-notice still writes it. */}
+                    <Route path="/reports" element={<Navigate to="/lpkc" replace />} />
+                    <Route path="/reports/:id" element={<LegacyReportRedirect />} />
                     <Route
                       path="/instructors/:id"
                       element={<InstructorDetailPage />}

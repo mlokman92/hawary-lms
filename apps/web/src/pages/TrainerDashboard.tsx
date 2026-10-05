@@ -155,7 +155,7 @@ function ReportRowItem({ row }: { row: ReportRow }) {
   return (
     <li>
       <Link
-        to={`/reports/${row.id}`}
+        to={`/lpkc/${row.id}`}
         className="hover:bg-muted/50 flex items-center gap-3 px-4 py-2.5 transition-colors"
       >
         <span className="min-w-0 flex-1">
@@ -459,7 +459,7 @@ export function TrainerDashboard() {
         <ListCard
           title={t('report.dash.staff.title')}
           action={{
-            to: '/reports',
+            to: '/lpkc',
             label: (
               <>
                 {t('dash.view_all')} <ChevronRight />
