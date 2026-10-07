@@ -5,11 +5,13 @@
 //   note-media / avatars   public  · images  · <academy_id>/<uuid>.<ext>
 //   course-materials       PRIVATE · docs    · <academy_id>/<course_id>/<uuid>.<ext>
 //   student-reports        PRIVATE · docs    · <academy_id>/<user_id>/<uuid>.<ext>
+//   submissions            PRIVATE · docs    · <academy_id>/<user_id>/<uuid>.<ext>
 //
-// The private buckets get no URL back — reading one goes through material-url
-// or report-url instead.
+// The private buckets get no URL back — reading one goes through material-url,
+// report-url or submission-url instead.
 //
-// student-reports is the one bucket a NON-STAFF caller may write to, and it is
+// student-reports and submissions are the two buckets a NON-STAFF caller may
+// write to (a report for checking, a file on an assignment hand-in), and are
 // the reason the authorisation below is a membership test with a role branch
 // rather than a flat staff check. A student uploading their own report is the
 // whole point of the bucket; the key is keyed on their own user id, and
@@ -65,10 +67,11 @@ const BUCKETS = new Set([
   'avatars',
   'course-materials',
   'student-reports',
+  'submissions',
 ])
 
 /** Buckets any active member may write to; everything else is staff-only. */
-const MEMBER_BUCKETS = new Set(['student-reports'])
+const MEMBER_BUCKETS = new Set(['student-reports', 'submissions'])
 
 const MAX_BYTES = 10 * 1024 * 1024 // 10 MB
 /** Slide decks are not images. Bigger cap, but only for the private buckets. */
@@ -139,8 +142,10 @@ Deno.serve(async (req) => {
   const file = form.get('file')
 
   const isMaterial = bucket === 'course-materials'
-  const isReport = bucket === 'student-reports'
-  // Both private buckets take the same document list and the same 50 MB cap.
+  // A student's own upload: a report for checking, or a file on a hand-in.
+  // Same key shape, same rules — only the bucket differs.
+  const isReport = MEMBER_BUCKETS.has(bucket)
+  // Every private bucket takes the same document list and the same 50 MB cap.
   const isDoc = isMaterial || isReport
 
   if (!BUCKETS.has(bucket)) return json({ error: 'Unknown bucket' }, 400)

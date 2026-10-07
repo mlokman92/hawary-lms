@@ -17,6 +17,13 @@
   NODE_VERSION = "20"
   # pnpm is auto-detected from the root package.json "packageManager" field.
 
+# Universal links for the two mobile apps. iOS fetches this file with no
+# extension and refuses it unless it is served as JSON; see docs/mobile-apps.md.
+[[headers]]
+  for = "/.well-known/apple-app-site-association"
+  [headers.values]
+    Content-Type = "application/json"
+
 # Single-page app: serve index.html for any client-side route (200, not redirect).
 [[redirects]]
   from = "/*"

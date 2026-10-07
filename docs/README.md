@@ -21,6 +21,12 @@ row to the table in `CLAUDE.md` if it is a new area.
   queues, both dashboards, the learner surface, members & roles, CSV import,
   storage.
 
+## Mobile
+
+- [mobile-apps.md](mobile-apps.md) — the two Expo apps built from one project,
+  what each contains and what stays on the web, the synced data layer, push,
+  deep links, assignment attachments, announcements, the forced-update floor.
+
 ## Courses and content
 
 - [course-modules.md](course-modules.md) — one hierarchy, course → module →

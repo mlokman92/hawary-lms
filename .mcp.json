@@ -7,6 +7,10 @@
     "resend": {
       "type": "http",
       "url": "https://mcp.resend.com/mcp"
+    },
+    "Expo": {
+      "type": "http",
+      "url": "https://mcp.expo.dev/mcp"
     }
   }
 }

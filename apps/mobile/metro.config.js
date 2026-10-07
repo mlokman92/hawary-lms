@@ -19,4 +19,22 @@ config.resolver.nodeModulesPaths = [
   path.resolve(monorepoRoot, 'node_modules'),
 ];
 
+// 3. One React. The web app and this one pin different patch versions, so the
+//    workspace holds two copies: the root one (web's) and apps/mobile's own.
+//    Hoisted packages — react-native itself, expo-router, TanStack Query —
+//    would otherwise resolve the root copy while the app's own code resolves
+//    the local one, and two Reacts in a bundle means hooks throw. Every `react`
+//    import is therefore resolved as if it came from this folder.
+const reactOrigin = path.resolve(projectRoot, 'package.json');
+const SINGLETONS = /^(react|react-dom)(\/.*)?$/;
+
+const upstreamResolveRequest = config.resolver.resolveRequest;
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  const resolve = upstreamResolveRequest ?? context.resolveRequest;
+  if (SINGLETONS.test(moduleName)) {
+    return resolve({ ...context, originModulePath: reactOrigin }, moduleName, platform);
+  }
+  return resolve(context, moduleName, platform);
+};
+
 module.exports = config;

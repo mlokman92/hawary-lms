@@ -1,0 +1,68 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "student-development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "student",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://vpklztxqkvqmmzsxfqgp.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_mQsoJuI2HFU1CfUSZl3ncw_76S3_Nvf"
+      }
+    },
+    "student-preview": {
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "student",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://vpklztxqkvqmmzsxfqgp.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_mQsoJuI2HFU1CfUSZl3ncw_76S3_Nvf"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "student-production": {
+      "autoIncrement": true,
+      "env": {
+        "APP_VARIANT": "student",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://vpklztxqkvqmmzsxfqgp.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_mQsoJuI2HFU1CfUSZl3ncw_76S3_Nvf"
+      }
+    },
+    "academy-development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "academy",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://vpklztxqkvqmmzsxfqgp.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_mQsoJuI2HFU1CfUSZl3ncw_76S3_Nvf"
+      }
+    },
+    "academy-preview": {
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "academy",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://vpklztxqkvqmmzsxfqgp.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_mQsoJuI2HFU1CfUSZl3ncw_76S3_Nvf"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "academy-production": {
+      "autoIncrement": true,
+      "env": {
+        "APP_VARIANT": "academy",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://vpklztxqkvqmmzsxfqgp.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_mQsoJuI2HFU1CfUSZl3ncw_76S3_Nvf"
+      }
+    }
+  },
+  "submit": {
+    "student-production": {},
+    "academy-production": {}
+  }
+}

@@ -28,7 +28,7 @@ in `docs/`.
   - **admin** — runs the academy: students, courses, invoices, payments,
     incentives, appointments, reports.
   - **trainer** — teaches and grades the courses they are assigned to.
-  - **student** — the learner surface (`/learn`), mobile later.
+  - **student** — the learner surface (`/learn`) and the Student mobile app.
 - **Malaysian**: MYR stored as integer **sen**, SST-aware invoices, **bilingual
   EN/BM** web UI. Money in through **ToyyibPay** (FPX), money out through
   **Billplz** (incentive payouts) — both live.
@@ -38,8 +38,12 @@ in `docs/`.
 Monorepo: **pnpm workspaces + Turborepo**.
 
 - `apps/web` — Vite + React + TS. Staff back-office and learner surface.
-- `apps/mobile` — Expo (React Native) + TS. Student app — **scaffolded, not wired**.
-- `packages/shared` — TS types, **generated** DB types, Supabase client, domain logic.
+- `apps/mobile` — Expo (React Native) + TS, EAS. **One project, two apps**:
+  Hawary Student LMS and Hawary Academy LMS, picked by `APP_VARIANT`, each with
+  its own route tree. Its data hooks are **synced copies** of the web's
+  (`pnpm --filter mobile sync:data`) — edit the web file, never the copy.
+- `packages/shared` — TS types, **generated** DB types, Supabase client, domain
+  logic, and the EN/BM dictionary both surfaces render.
 - Backend — **Supabase** (Postgres + RLS, Auth, Storage, Edge Functions).
   Project ref `vpklztxqkvqmmzsxfqgp`. Migrations in `supabase/migrations/`.
 - **Web UI** — shadcn/ui (Radix + **Tailwind v4**), neutral theme in
@@ -47,7 +51,8 @@ Monorepo: **pnpm workspaces + Turborepo**.
   `pnpm dlx shadcn@latest add <name>`). Data layer: **TanStack Query**; feature
   code in `apps/web/src/features/*`; shared page vocabulary in
   `apps/web/src/components/patterns/*`.
-- **Mobile UI** — React Native Reusables + NativeWind (pending).
+- **Mobile UI** — a small StyleSheet kit in `apps/mobile/src/ui` carrying the
+  web's neutral theme. No NativeWind.
 - **Email** — Resend, from `noreply@hawary.my`. `RESEND_API_KEY`,
   `INVITE_FROM_EMAIL`, `APP_URL`, `ALLOWED_ORIGINS` are shared by every mail
   function. Supabase Auth sends confirm/reset mail through Resend SMTP,
@@ -101,19 +106,18 @@ Read the doc before changing the area. Each one keeps the *why*.
 | i18n — **read the house-style list before writing Malay** | [i18n.md](docs/i18n.md) |
 | deployment, URLs, redirect allow list | [production-urls.md](docs/production-urls.md) |
 | CI/CD plan | [ci-cd.md](docs/ci-cd.md) |
+| the two mobile apps, push, deep links, attachments, announcements | [mobile-apps.md](docs/mobile-apps.md) |
 | `/analytics` — what counts as a login, the `login_events` log | [analytics.md](docs/analytics.md) |
 | product scope | [requirements.md](docs/requirements.md) |
 
 ## Not built
 
-- Assignment **attachments** — the student branch in `upload-media` exists;
-  missing are a private `submissions` bucket and the wiring to
-  `assignment_submissions`.
+- Assignment attachments are **attached in the Student mobile app only**; the
+  web shows them. Announcements are **mobile only**.
 - Assessment settings have **no UI**: `duration_minutes`, `max_attempts`,
   `available_from/until` and `type` are enforced server-side but set only in
   SQL. The editor writes `title`, `is_published` and `instructions`.
 - Opening a branch has no UI ([single-owner.md](docs/single-owner.md)).
-- Mobile app wiring (the i18n dictionary moves to `packages/shared` then).
 - BM for transactional email and Edge Function errors — both are English.
 - Scheduled expiry sweep for invitations; web code-splitting.
 
@@ -124,6 +128,9 @@ pnpm install
 pnpm --filter web dev      # web dev server (http://localhost:5173)
 pnpm --filter web build    # tsc -b && vite build
 pnpm --filter web lint
+pnpm --filter mobile dev:student   # or dev:academy
+pnpm --filter mobile typecheck
+pnpm --filter mobile sync:data     # after editing a web data hook
 ```
 
 ## Conventions
@@ -158,9 +165,10 @@ pnpm --filter web lint
   owns them: `invoices.amount_paid_sen`, `invoices.balance_sen`,
   `assessments.total_points`, `academy_members.is_director`.
 - **Clients have no DML** on `academy_invitations`, `notifications`,
-  `incentive_payouts`, `assessment_questions`, or `appointments`, and no INSERT
+  `incentive_payouts`, `assessment_questions`, `appointments`,
+  `announcements` or `assignment_submission_files`, and no INSERT
   or DELETE on `academies` — those move only through RPCs or the owner. Check
-  before adding a policy. `login_events` has no client access at all.
+  before adding a policy. `login_events` and `push_devices` have no client access at all.
 - **i18n**: keys are flat and self-prefixed, so `TKey = keyof typeof en` — a bad
   key **and** a missing Malay entry are both compile errors. Use `useT()` →
   `t`/`tn`; `translate()` is the non-reactive escape hatch for plain helpers

@@ -380,6 +380,78 @@ export type Database = {
           },
         ]
       }
+      announcements: {
+        Row: {
+          academy_id: string
+          author_name: string | null
+          body: string
+          course_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          title: string
+        }
+        Insert: {
+          academy_id: string
+          author_name?: string | null
+          body: string
+          course_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          title: string
+        }
+        Update: {
+          academy_id?: string
+          author_name?: string | null
+          body?: string
+          course_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcements_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "announcements_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_min_versions: {
+        Row: {
+          app: string
+          min_version: string
+          platform: string
+          store_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          app: string
+          min_version?: string
+          platform: string
+          store_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          app?: string
+          min_version?: string
+          platform?: string
+          store_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
           academy_id: string
@@ -702,6 +774,54 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignment_submission_files: {
+        Row: {
+          academy_id: string
+          created_at: string
+          file_name: string
+          file_path: string
+          id: string
+          mime_type: string | null
+          size_bytes: number | null
+          submission_id: string
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          file_name: string
+          file_path: string
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          submission_id: string
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_submission_files_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_submission_files_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_submissions"
             referencedColumns: ["id"]
           },
         ]
@@ -2026,6 +2146,39 @@ export type Database = {
         }
         Relationships: []
       }
+      push_devices: {
+        Row: {
+          app: string
+          created_at: string
+          id: string
+          lang: string
+          platform: string
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          app: string
+          created_at?: string
+          id?: string
+          lang?: string
+          platform: string
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          app?: string
+          created_at?: string
+          id?: string
+          lang?: string
+          platform?: string
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       report_events: {
         Row: {
           academy_id: string
@@ -2414,6 +2567,10 @@ export type Database = {
       }
       appointment_reminders_secret: { Args: never; Returns: string }
       approve_enrollment: { Args: { _enrollment_id: string }; Returns: Json }
+      attach_submission_file: {
+        Args: { _file: Json; _submission_id: string }
+        Returns: string
+      }
       book_appointment: {
         Args: {
           _academy_id: string
@@ -2790,6 +2947,16 @@ export type Database = {
           sublabel: string
         }[]
       }
+      post_announcement: {
+        Args: {
+          _academy_id: string
+          _body: string
+          _course_id: string
+          _title: string
+        }
+        Returns: string
+      }
+      push_dispatch_secret: { Args: never; Returns: string }
       reassign_report: {
         Args: { _instructor_id?: string; _report_id: string }
         Returns: Json
@@ -2802,6 +2969,15 @@ export type Database = {
           _provider_ref: string
         }
         Returns: string
+      }
+      register_push_device: {
+        Args: {
+          _app: string
+          _lang?: string
+          _platform: string
+          _token: string
+        }
+        Returns: undefined
       }
       remove_billplz_credentials: {
         Args: { _academy: string }
@@ -2868,6 +3044,14 @@ export type Database = {
         Returns: Json
       }
       start_attempt: { Args: { _assessment_id: string }; Returns: Json }
+      submission_download: {
+        Args: { _file_id: string }
+        Returns: {
+          file_name: string
+          file_path: string
+          mime_type: string
+        }[]
+      }
       submit_attempt: { Args: { _attempt_id: string }; Returns: Json }
       submit_report: {
         Args: {
@@ -2924,6 +3108,12 @@ export type Database = {
         | "report_comment"
         | "report_status"
         | "report_assigned"
+        | "work_marked"
+        | "work_due"
+        | "invoice_issued"
+        | "payment_received"
+        | "appointment_reminder"
+        | "announcement"
       payment_method:
         | "cash"
         | "bank_transfer"
@@ -3124,6 +3314,12 @@ export const Constants = {
         "report_comment",
         "report_status",
         "report_assigned",
+        "work_marked",
+        "work_due",
+        "invoice_issued",
+        "payment_received",
+        "appointment_reminder",
+        "announcement",
       ],
       payment_method: [
         "cash",

@@ -1,8 +1,12 @@
 # Notifications
 
-The bell in the header. One table, one bell, three event kinds so far — all
-three about an appointment. What follows is the shape everything else plugs
-into.
+The bell in the header. One table, one bell, thirteen event kinds in four
+families — appointments, report checks, a student's work and money, and
+announcements. What follows is the shape everything else plugs into.
+
+The two mobile apps show the same rows on a screen of their own and are
+**pushed** a copy of each — see [mobile-apps.md](mobile-apps.md) → "Push",
+which also lists the six kinds that arrived with them.
 
 ## The row is an event, not a sentence
 
@@ -125,8 +129,15 @@ control.
 - Opening a row marks it read and navigates. There is no "mark unread", no
   filter, and no page of older notifications — twenty is what the panel holds.
 
-Adding a kind costs three cases in that one file (`titleOf`, `detailOf`,
-`linkOf`), one enum value, and two dictionary lines. It is not a schema change.
+The words are not in the bell. `features/notifications/render.ts` holds
+`titleOf` and `detailOf` as pure functions, because three surfaces render the
+same row — this bell and the notification screen in each mobile app — and they
+must not each decide what a booking is called. Where a row **leads** is a
+route, so each surface keeps its own `linkOf`.
+
+Adding a kind costs a case in `titleOf` and `detailOf`, a `linkOf` case per
+surface, a sentence in the `send-push` function, one enum value, and two
+dictionary lines. It is not a schema change.
 
 ### Which academy it is scoped to is a prop
 
@@ -165,7 +176,9 @@ answer for it to read.
   table takes years to become interesting; when it does, the sweep is a `delete
   … where read_at < now() - interval '90 days'`, and this is the note that says
   so.
-- **No email/push fan-out from here.** The appointment emails are sent by
+- **No email fan-out from here.** Push is the opposite: every row is offered
+  to `send-push` by a trigger on this table, so nothing that writes a
+  notification has to remember to. The appointment emails are sent by
   `send-appointment-notice`, and the report ones by `send-report-notice`, each
   on its own path — a second call from the browser, which is exactly why the
   notification is the more reliable of the two. Each mail function mirrors its

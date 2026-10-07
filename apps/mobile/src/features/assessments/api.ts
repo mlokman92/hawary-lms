@@ -1,0 +1,204 @@
+// SYNCED from apps/web/src/features/assessments/api.ts — do not edit here.
+// Change the web file, then run `pnpm --filter mobile sync:data`.
+
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { Json, Tables, TablesUpdate } from '@hawary/shared'
+import { supabase } from '@/lib/supabase'
+import type { QuestionType } from '@/lib/questions'
+
+export type Assessment = Tables<'assessments'>
+export type AssessmentPatch = TablesUpdate<'assessments'>
+export type Question = Tables<'assessment_questions'>
+export type AssessmentRow = Assessment & { questions: { count: number }[] }
+
+/**
+ * A question being edited: id is null until first saved.
+ *
+ * `options` and `correct_answer` are carried as jsonb exactly as the column
+ * stores them — see lib/questions.ts for the per-type shapes. Keeping them
+ * opaque here means adding a seventh question type never touches this file.
+ */
+export type QuestionDraft = {
+  key: string
+  id: string | null
+  question_type: QuestionType
+  prompt: string
+  points: number
+  options: Json | null
+  correct_answer: Json | null
+}
+
+const listKey = (a: string | null, c: string | null) =>
+  ['assessments', a, c] as const
+const oneKey = (id: string) => ['assessment', id] as const
+const qsKey = (id: string) => ['assessment-questions', id] as const
+
+export function useAssessments(academyId: string | null, courseId: string | null) {
+  return useQuery({
+    queryKey: listKey(academyId, courseId),
+    enabled: !!academyId && !!courseId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('assessments')
+        .select('*, questions:assessment_questions(count)')
+        .eq('academy_id', academyId!)
+        .eq('course_id', courseId!)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as unknown as AssessmentRow[]
+    },
+  })
+}
+
+export function useAssessment(id: string | undefined) {
+  return useQuery({
+    queryKey: oneKey(id ?? ''),
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('assessments')
+        .select('*')
+        .eq('id', id!)
+        .single()
+      if (error) throw error
+      return data
+    },
+  })
+}
+
+export function useQuestions(assessmentId: string | undefined) {
+  return useQuery({
+    queryKey: qsKey(assessmentId ?? ''),
+    enabled: !!assessmentId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('assessment_questions')
+        .select('*')
+        .eq('assessment_id', assessmentId!)
+        .order('sort_order', { ascending: true })
+      if (error) throw error
+      return data
+    },
+  })
+}
+
+export function useCreateAssessment(academyId: string, courseId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      title: string
+      module_id: string
+      created_by?: string | null
+      sort_order?: number
+    }) => {
+      const { data, error } = await supabase
+        .from('assessments')
+        .insert({
+          academy_id: academyId,
+          course_id: courseId,
+          module_id: input.module_id,
+          title: input.title,
+          created_by: input.created_by ?? null,
+          sort_order: input.sort_order ?? 0,
+        })
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: listKey(academyId, courseId) })
+      qc.invalidateQueries({ queryKey: ['courses', academyId] })
+    },
+  })
+}
+
+export function useDeleteAssessment(academyId: string, courseId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('assessments').delete().eq('id', id)
+      if (error) throw error
+      return id
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: listKey(academyId, courseId) })
+      qc.invalidateQueries({ queryKey: ['courses', academyId] })
+    },
+  })
+}
+
+/** Save assessment metadata + reconcile its questions (insert/update/delete). */
+export function useSaveAssessment(
+  academyId: string,
+  courseId: string,
+  assessmentId: string,
+) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      patch,
+      questions,
+      deletedIds,
+    }: {
+      patch: AssessmentPatch
+      questions: QuestionDraft[]
+      deletedIds: string[]
+    }) => {
+      if (deletedIds.length) {
+        const { error } = await supabase
+          .from('assessment_questions')
+          .delete()
+          .in('id', deletedIds)
+        if (error) throw error
+      }
+      const ordered = questions.map((q, i) => ({ ...q, sort_order: i }))
+      const inserted: { key: string; id: string }[] = []
+      for (const q of ordered) {
+        if (q.id) {
+          const { error } = await supabase
+            .from('assessment_questions')
+            .update({
+              question_type: q.question_type,
+              prompt: q.prompt,
+              points: q.points,
+              sort_order: q.sort_order,
+              options: q.options,
+              correct_answer: q.correct_answer,
+            })
+            .eq('id', q.id)
+          if (error) throw error
+        } else {
+          const { data, error } = await supabase
+            .from('assessment_questions')
+            .insert({
+              academy_id: academyId,
+              assessment_id: assessmentId,
+              question_type: q.question_type,
+              prompt: q.prompt,
+              points: q.points,
+              sort_order: q.sort_order,
+              options: q.options,
+              correct_answer: q.correct_answer,
+            })
+            .select('id')
+            .single()
+          if (error) throw error
+          inserted.push({ key: q.key, id: data.id })
+        }
+      }
+      const { error } = await supabase
+        .from('assessments')
+        .update(patch)
+        .eq('id', assessmentId)
+      if (error) throw error
+      return { inserted }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: oneKey(assessmentId) })
+      qc.invalidateQueries({ queryKey: qsKey(assessmentId) })
+      qc.invalidateQueries({ queryKey: listKey(academyId, courseId) })
+    },
+  })
+}

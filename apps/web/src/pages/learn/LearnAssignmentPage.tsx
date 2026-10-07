@@ -12,6 +12,7 @@ import {
   useSaveSubmission,
 } from '@/features/learn/api'
 import { SUBMISSION_STATUS_META } from '@/features/learn/status'
+import { SubmissionFiles } from '@/features/assignments/SubmissionFiles'
 import { BackLink } from '@/components/patterns/BackLink'
 import { NotFoundBlock, RouteLoading } from '@/components/patterns/QueryState'
 import { BlocksView } from '@/components/BlocksView'
@@ -186,6 +187,10 @@ export function LearnAssignmentPage() {
               onChange={(e) => setContent(e.target.value)}
               placeholder={t('lwork.assignment.answer_placeholder')}
             />
+
+            {/* Files are attached in the Student mobile app; here they are
+                shown, so what was handed in reads the same on both. */}
+            <SubmissionFiles submissionId={submission?.id} />
 
             {submission?.submitted_at ? (
               <p className="text-muted-foreground text-xs">

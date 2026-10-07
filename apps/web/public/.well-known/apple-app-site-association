@@ -1,0 +1,35 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["REPLACE_WITH_APPLE_TEAM_ID.my.hawary.student"],
+        "components": [{ "/": "/learn" }, { "/": "/learn/*" }]
+      },
+      {
+        "appIDs": ["REPLACE_WITH_APPLE_TEAM_ID.my.hawary.academy"],
+        "components": [
+          { "/": "/lpkc" },
+          { "/": "/lpkc/*" },
+          { "/": "/reports" },
+          { "/": "/reports/*" },
+          { "/": "/appointments" },
+          { "/": "/appointments/*" },
+          { "/": "/students" },
+          { "/": "/students/*" },
+          { "/": "/instructors" },
+          { "/": "/instructors/*" },
+          { "/": "/courses" },
+          { "/": "/courses/*" },
+          { "/": "/assessments" },
+          { "/": "/assignments" },
+          { "/": "/grading/*" },
+          { "/": "/enrollments" },
+          { "/": "/payments" },
+          { "/": "/payments/*" },
+          { "/": "/incentives" },
+          { "/": "/incentives/*" }
+        ]
+      }
+    ]
+  }
+}

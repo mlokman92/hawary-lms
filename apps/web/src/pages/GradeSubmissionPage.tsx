@@ -5,6 +5,7 @@ import { fmtDateTime } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { useGradeSubmission, useGradingSubmission } from '@/features/grading/api'
 import { SUBMISSION_STATUS_META } from '@/features/learn/status'
+import { SubmissionFiles } from '@/features/assignments/SubmissionFiles'
 import { BlocksView } from '@/components/BlocksView'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -113,6 +114,7 @@ export function GradeSubmissionPage() {
           <p className="text-sm leading-7 whitespace-pre-line">
             {data.content?.trim() || t('grading.submission.no_text')}
           </p>
+          <SubmissionFiles submissionId={data.id} />
         </CardContent>
       </Card>
 
