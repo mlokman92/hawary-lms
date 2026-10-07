@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Building2 } from 'lucide-react'
 import { LanguageToggle } from '@/components/LanguageToggle'
+import { Logo } from '@/components/Logo'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import type { PublicAcademy } from './api'
 
@@ -41,9 +42,7 @@ export function PublicShell({
               </span>
             </>
           ) : (
-            <span className="text-xl font-bold tracking-tight">
-              Hawary <span className="text-primary">LMS</span>
-            </span>
+            <Logo name="LMS" />
           )}
         </div>
         <div className="grid gap-4">{children}</div>

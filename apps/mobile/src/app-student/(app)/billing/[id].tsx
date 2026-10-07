@@ -1,4 +1,4 @@
-import { View } from 'react-native'
+import { ActivityIndicator, View } from 'react-native'
 import { Stack, useLocalSearchParams } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
 import { WEB_ORIGIN } from '@/lib/env'
@@ -9,7 +9,19 @@ import { INVOICE_STATUS_VARIANT } from '@/features/payments/api'
 import { hasReceipt, useInvoiceDocuments } from '@/features/payments/documents'
 import { InvoiceBody } from '@/features/payments/InvoiceBody'
 import { useScope } from '@/shell/scope'
-import { Badge, Button, ErrorBlock, FormError, Loading, Screen, T, space } from '@/ui'
+import {
+  Badge,
+  Button,
+  Card,
+  ErrorBlock,
+  FormError,
+  Icon,
+  Loading,
+  Row,
+  Screen,
+  T,
+  useTheme,
+} from '@/ui'
 
 /**
  * One of the student's own invoices. Read-only, plus the two things a student
@@ -83,27 +95,38 @@ export default function InvoiceScreen() {
 
       <InvoiceBody invoice={invoice} />
 
-      <View style={{ flexDirection: 'row', gap: space.sm }}>
-        <Button
-          style={{ flex: 1 }}
-          variant="outline"
+      {/* Rows, not a pair of buttons: "Download receipt" does not fit half a
+          phone's width in either language. */}
+      <Card flush>
+        <Row
+          first
           icon="file-text"
           title={t('doc.download.invoice')}
-          loading={docs.busy === `invoice:${invoice.id}`}
+          chevron={false}
+          right={<Fetching busy={docs.busy === `invoice:${invoice.id}`} />}
           onPress={() => void docs.share('invoice', invoice)}
         />
         {hasReceipt(invoice) ? (
-          <Button
-            style={{ flex: 1 }}
-            variant="outline"
+          <Row
             icon="check-circle"
             title={t('doc.download.receipt')}
-            loading={docs.busy === `receipt:${invoice.id}`}
+            chevron={false}
+            right={<Fetching busy={docs.busy === `receipt:${invoice.id}`} />}
             onPress={() => void docs.share('receipt', invoice)}
           />
         ) : null}
-      </View>
+      </Card>
       <FormError error={docs.error} />
     </Screen>
+  )
+}
+
+/** The trailing mark of a download row: the arrow, or a spinner while it builds. */
+function Fetching({ busy }: { busy: boolean }) {
+  const { c } = useTheme()
+  return busy ? (
+    <ActivityIndicator size="small" color={c.brand} />
+  ) : (
+    <Icon name="download" size={18} />
   )
 }

@@ -16,6 +16,13 @@ cp .env.example .env.local      # then fill in the two Supabase values
 pnpm dev:student                # or: pnpm dev:academy
 ```
 
+To look at either app in a browser instead (real backend, phone-width column):
+
+```bash
+pnpm web:student                # http://localhost:8191
+pnpm web:academy                # http://localhost:8192
+```
+
 Push notifications, the camera, the calendar and PDF sharing need a development
 build on a device (`eas build --profile student-development`); Expo Go will not
 do.

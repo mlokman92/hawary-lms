@@ -29,7 +29,6 @@ import { useScope } from '@/shell/scope'
 import {
   Button,
   Card,
-  Icon,
   IconButton,
   Row,
   Screen,
@@ -279,32 +278,54 @@ function TodaySession({
 
   return (
     <Card style={{ gap: space.md }}>
-      <Pressable
-        onPress={onOpen}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}
-      >
-        <View
-          style={{
-            borderRadius: 8,
-            backgroundColor: c.muted,
-            paddingHorizontal: space.md,
-            paddingVertical: space.sm,
-          }}
+      {/* Reaching the student sits beside their name, so the two verdicts
+          below share the whole width and neither label is cut short. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs }}>
+        <Pressable
+          onPress={onOpen}
+          style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md }}
         >
-          <T bold>{fmtTime(a.starts_at, tz)}</T>
-        </View>
-        <View style={{ flex: 1 }}>
-          <T style={{ fontWeight: '600' }} numberOfLines={1}>
-            {a.students?.full_name ?? t('common.unnamed')}
-          </T>
-          {a.note ? (
-            <T v="small" muted numberOfLines={2}>
-              {a.note}
+          <View
+            style={{
+              borderRadius: 14,
+              backgroundColor: c.brandSoft,
+              paddingHorizontal: space.md,
+              height: 48,
+              minWidth: 64,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <T style={{ color: c.brand, fontWeight: '800', fontSize: 16 }}>
+              {fmtTime(a.starts_at, tz)}
             </T>
-          ) : null}
-        </View>
-        <Icon name="chevron-right" size={16} />
-      </Pressable>
+          </View>
+          <View style={{ flex: 1 }}>
+            <T style={{ fontWeight: '700', fontSize: 16 }} numberOfLines={1}>
+              {a.students?.full_name ?? t('common.unnamed')}
+            </T>
+            {a.note ? (
+              <T v="small" muted numberOfLines={2}>
+                {a.note}
+              </T>
+            ) : null}
+          </View>
+        </Pressable>
+        {number ? (
+          <IconButton
+            name="phone"
+            label={t('m.today.call')}
+            onPress={() => void Linking.openURL(`tel:+${number}`)}
+          />
+        ) : null}
+        {wa ? (
+          <IconButton
+            name="message-circle"
+            label={t('appt.whatsapp')}
+            onPress={() => void Linking.openURL(wa)}
+          />
+        ) : null}
+      </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
         <Button
           small
@@ -322,20 +343,6 @@ function TodaySession({
           disabled={!started || setStatus.isPending}
           onPress={() => setStatus.mutate({ id: a.id, status: 'no_show' })}
         />
-        {number ? (
-          <IconButton
-            name="phone"
-            label={t('m.today.call')}
-            onPress={() => void Linking.openURL(`tel:+${number}`)}
-          />
-        ) : null}
-        {wa ? (
-          <IconButton
-            name="message-circle"
-            label={t('appt.whatsapp')}
-            onPress={() => void Linking.openURL(wa)}
-          />
-        ) : null}
       </View>
     </Card>
   )

@@ -1,4 +1,5 @@
-import { Linking, View } from 'react-native'
+import { createElement } from 'react'
+import { Linking, Platform, View } from 'react-native'
 import { Stack, useLocalSearchParams } from 'expo-router'
 import { WebView } from 'react-native-webview'
 import { useT } from '@/lib/i18n'
@@ -62,6 +63,21 @@ export default function NoteScreen() {
 </style></head><body><h1>${title
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')}</h1>${note.content}</body></html>`
+
+  // react-native-webview has no web implementation; in the browser preview
+  // the same document goes into a sandboxed iframe.
+  if (Platform.OS === 'web') {
+    return (
+      <View style={{ flex: 1, backgroundColor: c.background }}>
+        <Stack.Screen options={{ title }} />
+        {createElement('iframe', {
+          srcDoc: html,
+          sandbox: 'allow-scripts allow-popups allow-presentation',
+          style: { flex: 1, border: 0, width: '100%', height: '100%' },
+        })}
+      </View>
+    )
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Pressable, View } from 'react-native'
+import { Image, Pressable, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { WEB_ORIGIN } from '@/lib/env'
@@ -19,6 +19,7 @@ import { Button, Card, Field, FormError, Input, Screen, T, space, useTheme } fro
  * one simply comes back here and signs in. Nothing in the app depends on a
  * redirect that the dashboard could silently drop.
  */
+const LOGO_TILE = require('../../assets/images/logo-tile.png')
 
 function AuthFrame({
   title,
@@ -34,27 +35,58 @@ function AuthFrame({
   const { c } = useTheme()
   return (
     <Screen>
-      <View style={{ paddingTop: insets.top + space.xl, gap: space.lg }}>
-        <View style={{ gap: 4 }}>
-          <T v="title">{title}</T>
-          <T muted>{subtitle}</T>
+      <View style={{ paddingTop: insets.top + 28, gap: space.xl }}>
+        {/* The academy's symbol in its tile (docs/brand.md). It is the one
+            thing on these screens that says whose app this is. */}
+        <Image
+          source={LOGO_TILE}
+          accessibilityIgnoresInvertColors
+          style={{ width: 56, height: 56, borderRadius: 18 }}
+        />
+        <View style={{ gap: 6 }}>
+          <T v="display">{title}</T>
+          <T muted style={{ fontSize: 16 }}>
+            {subtitle}
+          </T>
         </View>
         <Card style={{ gap: space.lg }}>{children}</Card>
         {/* The language has to be reachable before sign-in. */}
-        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: space.lg }}>
-          {LANGS.map((l) => (
-            <Pressable key={l.value} onPress={() => setLang(l.value)} hitSlop={8}>
-              <T
-                v="small"
+        <View
+          style={{
+            flexDirection: 'row',
+            alignSelf: 'center',
+            backgroundColor: c.card,
+            borderRadius: 999,
+            borderWidth: 1,
+            borderColor: c.border,
+            padding: 4,
+          }}
+        >
+          {LANGS.map((l) => {
+            const on = l.value === lang
+            return (
+              <Pressable
+                key={l.value}
+                onPress={() => setLang(l.value)}
                 style={{
-                  color: l.value === lang ? c.foreground : c.mutedForeground,
-                  fontWeight: l.value === lang ? '600' : '400',
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: 999,
+                  backgroundColor: on ? c.brandSoft : 'transparent',
                 }}
               >
-                {l.label}
-              </T>
-            </Pressable>
-          ))}
+                <T
+                  v="small"
+                  style={{
+                    color: on ? c.brand : c.mutedForeground,
+                    fontWeight: on ? '700' : '500',
+                  }}
+                >
+                  {l.label}
+                </T>
+              </Pressable>
+            )
+          })}
         </View>
       </View>
     </Screen>
@@ -62,9 +94,10 @@ function AuthFrame({
 }
 
 function TextLink({ label, onPress }: { label: string; onPress: () => void }) {
+  const { c } = useTheme()
   return (
-    <Pressable onPress={onPress} hitSlop={8}>
-      <T v="small" style={{ textDecorationLine: 'underline' }}>
+    <Pressable onPress={onPress} hitSlop={10}>
+      <T v="small" style={{ color: c.brand, fontWeight: '600' }}>
         {label}
       </T>
     </Pressable>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Stack, useRouter } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { errorMessage } from '@/lib/errors'
 import { fmtDateTime } from '@/lib/format'
 import { useT } from '@/lib/i18n'
@@ -33,7 +33,7 @@ import {
  * not on reports, so a course with nothing sent is a row with a Send button
  * rather than an absence to interpret (docs/report-checks.md).
  */
-export default function ReportsScreen() {
+export default function ReportsTab() {
   const { t } = useT()
   const router = useRouter()
   const { academyId } = useScope()
@@ -67,7 +67,6 @@ export default function ReportsScreen() {
 
   return (
     <Screen onRefresh={() => void refetch()} refreshing={isRefetching}>
-      <Stack.Screen options={{ title: t('report.learn.title') }} />
       {isLoading ? (
         <Loading />
       ) : error ? (

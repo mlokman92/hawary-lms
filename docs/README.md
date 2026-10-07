@@ -23,6 +23,8 @@ row to the table in `CLAUDE.md` if it is a new area.
 
 ## Mobile
 
+- [brand.md](brand.md) — the logo (an arch sheltering a dot), its colours, the
+  files in `brand/`, and where each surface draws it from.
 - [mobile-apps.md](mobile-apps.md) — the two Expo apps built from one project,
   what each contains and what stays on the web, the synced data layer, push,
   deep links, assignment attachments, announcements, the forced-update floor.

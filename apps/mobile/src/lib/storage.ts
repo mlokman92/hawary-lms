@@ -19,6 +19,17 @@ export type UploadFile = {
   name: string
   type: string
   size: number
+  /** The browser's own File, on the web preview only. */
+  file?: Blob
+}
+
+/**
+ * What goes into FormData for a picked file. React Native's FormData takes the
+ * `{ uri, name, type }` descriptor itself where a browser takes a File — so on
+ * the web preview the picker's File is passed through instead.
+ */
+export function formFile(file: UploadFile): Blob {
+  return file.file ?? (file as unknown as Blob)
 }
 
 type UploadResponse = {
@@ -59,9 +70,7 @@ export async function uploadPrivateFile(
   file: UploadFile,
 ): Promise<UploadedFile> {
   const body = new FormData()
-  // React Native's FormData takes a { uri, name, type } descriptor where the
-  // browser takes a File; the multipart request it produces is the same.
-  body.append('file', file as unknown as Blob)
+  body.append('file', formFile(file), file.name)
   body.append('bucket', bucket)
   body.append('academy_id', academyId)
 
@@ -141,6 +150,7 @@ export async function pickDocuments(): Promise<UploadFile[]> {
     name: a.name,
     type: a.mimeType ?? 'application/octet-stream',
     size: a.size ?? 0,
+    file: a.file,
   }))
 }
 
@@ -152,6 +162,7 @@ function imageAsset(a: ImagePicker.ImagePickerAsset, i: number): UploadFile {
     name: a.fileName ?? `photo-${Date.now()}-${i + 1}.${ext}`,
     type,
     size: a.fileSize ?? 0,
+    file: a.file,
   }
 }
 

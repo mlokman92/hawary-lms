@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Same geometry as mark.svg, for the dark surface (zinc-900): the product's teal ink, the same amber. -->
+  <path fill="#2dd4bf" d="M40 440V272A216 216 0 0 1 472 272V440H376V272A120 124 0 0 0 136 272V440Z"/>
+  <circle fill="#f59e0b" cx="256" cy="371" r="72"/>
+</svg>

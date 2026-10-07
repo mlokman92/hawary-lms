@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, Linking, View } from 'react-native'
+import { Linking, View } from 'react-native'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { formatMYR } from '@hawary/shared'
 import { errorMessage } from '@/lib/errors'
@@ -38,13 +38,14 @@ import {
   Input,
   Loading,
   Menu,
+  notify,
   Row,
   Screen,
   Section,
   Select,
   Sheet,
-  T,
   space,
+  T,
 } from '@/ui'
 
 const ENROLLMENT_LABEL: Record<string, TKey> = {
@@ -96,7 +97,7 @@ export default function StudentScreen() {
 
   async function resend() {
     const ok = await sendRecordInvite('student', student!.id)
-    Alert.alert(ok ? t('payments.pay_link.sent') : t('students.invite.send_failed'))
+    notify(ok ? t('payments.pay_link.sent') : t('students.invite.send_failed'))
   }
 
   return (

@@ -1,9 +1,10 @@
 import { View } from 'react-native'
 import { Stack, Tabs, useRouter } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Feather from '@expo/vector-icons/Feather'
 import { useT, type TKey } from '@/lib/i18n'
 import { useUnreadCount } from '@/features/notifications/api'
-import { IconButton, useTheme, type IconName } from '@/ui'
+import { IconButton, T, font, useTheme, type IconName } from '@/ui'
 import { AppFrame, AppProviders, useGate } from './AppRoot'
 import { useScope } from './scope'
 
@@ -19,12 +20,13 @@ import { useScope } from './scope'
  *   (app)/(tabs)/_layout.tsx AppTabs      the bottom bar
  */
 
+/** A pushed screen's header: the canvas colour, no rule under it, a bold title. */
 function useHeaderOptions() {
   const { c } = useTheme()
   return {
-    headerStyle: { backgroundColor: c.card },
+    headerStyle: { backgroundColor: c.background },
     headerTintColor: c.foreground,
-    headerTitleStyle: { color: c.foreground, fontWeight: '600' as const },
+    headerTitleStyle: { color: c.foreground, fontFamily: font(700), fontSize: 17 },
     headerShadowVisible: false,
     headerBackButtonDisplayMode: 'minimal' as const,
     contentStyle: { backgroundColor: c.background },
@@ -98,13 +100,40 @@ export function HeaderBell() {
   const { academyId } = useScope()
   const { data: unread = 0 } = useUnreadCount(academyId)
   return (
-    <View style={{ marginRight: 8 }}>
-      <IconButton
-        name="bell"
-        label={t('notif.open')}
-        badge={unread}
-        onPress={() => router.push('/notifications' as never)}
-      />
+    <IconButton
+      surface
+      name="bell"
+      label={t('notif.open')}
+      badge={unread}
+      onPress={() => router.push('/notifications' as never)}
+    />
+  )
+}
+
+/**
+ * The header of a tab: the section's name, large, with the bell beside it.
+ * A tab is a place rather than a step, so it gets a title the size of a
+ * heading instead of a navigation bar.
+ */
+function TabHeader({ title }: { title: string }) {
+  const { c } = useTheme()
+  const insets = useSafeAreaInsets()
+  return (
+    <View
+      style={{
+        backgroundColor: c.background,
+        paddingTop: insets.top + 14,
+        paddingHorizontal: 20,
+        paddingBottom: 6,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+      }}
+    >
+      <T v="display" style={{ flex: 1 }} numberOfLines={1}>
+        {title}
+      </T>
+      <HeaderBell />
     </View>
   )
 }
@@ -118,21 +147,38 @@ export type TabSpec = {
 }
 
 export function AppTabs({ tabs }: { tabs: TabSpec[] }) {
-  const { c } = useTheme()
+  const { c, dark } = useTheme()
   const { t } = useT()
-  const header = useHeaderOptions()
+  const insets = useSafeAreaInsets()
   return (
     <Tabs
       screenOptions={{
-        headerStyle: header.headerStyle,
-        headerTintColor: header.headerTintColor,
-        headerTitleStyle: header.headerTitleStyle,
-        headerShadowVisible: false,
-        headerRight: () => <HeaderBell />,
+        header: ({ options }) => <TabHeader title={options.title ?? ''} />,
         sceneStyle: { backgroundColor: c.background },
-        tabBarStyle: { backgroundColor: c.card, borderTopColor: c.border },
-        tabBarActiveTintColor: c.foreground,
+        tabBarStyle: {
+          backgroundColor: c.card,
+          borderTopWidth: dark ? 1 : 0,
+          borderTopColor: c.border,
+          // The tab item pads itself by 5 all round, so the pill (30) and the
+          // label (16) need 56 between the bar's own padding or the label's
+          // descenders are cut off.
+          height: 72 + insets.bottom,
+          paddingTop: 6,
+          paddingBottom: insets.bottom + 6,
+          ...(dark ? null : { boxShadow: '0 -4px 18px rgba(24,24,27,0.06)' }),
+        },
+        tabBarActiveTintColor: c.brand,
         tabBarInactiveTintColor: c.mutedForeground,
+        // Five tabs on a 360-wide phone leave 72 each: the longest label
+        // ("Appointments", "Papan pemuka") fits at this size and no larger.
+        tabBarItemStyle: { paddingHorizontal: 0 },
+        tabBarLabelStyle: { fontFamily: font(600), fontSize: 10.5, marginTop: 2 },
+        tabBarBadgeStyle: {
+          backgroundColor: c.destructive,
+          color: '#ffffff',
+          fontFamily: font(700),
+          fontSize: 10,
+        },
       }}
     >
       {tabs.map((tab) => (
@@ -141,8 +187,21 @@ export function AppTabs({ tabs }: { tabs: TabSpec[] }) {
           name={tab.name}
           options={{
             title: t(tab.titleKey),
-            tabBarIcon: ({ color, size }) => (
-              <Feather name={tab.icon} size={size - 2} color={color} />
+            // The active tab is a tinted pill behind its icon as well as a
+            // colour: a second cue, for anyone to whom teal and grey look alike.
+            tabBarIcon: ({ color, focused }) => (
+              <View
+                style={{
+                  width: 54,
+                  height: 30,
+                  borderRadius: 15,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: focused ? c.brandSoft : 'transparent',
+                }}
+              >
+                <Feather name={tab.icon} size={20} color={color} />
+              </View>
             ),
             tabBarBadge: tab.badge && tab.badge > 0 ? tab.badge : undefined,
           }}

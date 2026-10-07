@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Platform } from 'react-native'
 import * as Print from 'expo-print'
 import * as Sharing from 'expo-sharing'
 import { formatMYR } from '@hawary/shared'
@@ -210,6 +211,12 @@ export async function shareInvoiceDocument(
   academyId: string,
 ): Promise<void> {
   const academy = await fetchAcademyProfile(academyId)
+  // The web preview cannot write a file to share; the browser's print dialog
+  // ("Save as PDF") is the same document by another route.
+  if (Platform.OS === 'web') {
+    await Print.printAsync({ html: documentHtml(kind, invoice, academy) })
+    return
+  }
   const { uri } = await Print.printToFileAsync({
     html: documentHtml(kind, invoice, academy),
     // A4 at 72 PPI.

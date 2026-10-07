@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase'
 import { translate, type TKey } from '@/lib/i18n'
 import type { Tone } from '@/lib/tone'
 import { APP_ORIGIN } from '@/lib/origin'
+import { formFile } from '@/lib/storage'
 import type { UploadFile } from '@/lib/storage'
 
 /**
@@ -379,7 +380,7 @@ export async function uploadReportFile(
   file: UploadFile,
 ): Promise<PendingFile> {
   const body = new FormData()
-  body.append('file', file as unknown as Blob)
+  body.append('file', formFile(file), file.name)
   body.append('bucket', 'student-reports')
   body.append('academy_id', academyId)
 

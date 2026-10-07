@@ -1,12 +1,13 @@
 import { useState } from 'react'
-import { Alert, Share, View } from 'react-native'
+import { Platform, Share, View } from 'react-native'
+import * as Clipboard from 'expo-clipboard'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { formatMYR, ringgitToSen, senToRinggit } from '@hawary/shared'
 import { useAuth } from '@/lib/auth'
 import { WEB_ORIGIN } from '@/lib/env'
 import { errorMessage } from '@/lib/errors'
 import { fmtDate } from '@/lib/format'
-import { useT } from '@/lib/i18n'
+import { translate, useT } from '@/lib/i18n'
 import { DEFAULT_TZ, useAcademyTimezone } from '@/features/appointments/api'
 import { today, zonedInstant } from '@/features/appointments/calendar'
 import {
@@ -36,12 +37,23 @@ import {
   Input,
   Loading,
   Menu,
+  notify,
   Screen,
   Select,
   Sheet,
-  T,
   space,
+  T,
 } from '@/ui'
+
+/** The share sheet on a phone; the clipboard in the web preview, which has none. */
+async function shareLink(message: string) {
+  if (Platform.OS === 'web') {
+    await Clipboard.setStringAsync(message)
+    notify(translate('common.copied'))
+    return
+  }
+  await Share.share({ message })
+}
 
 export default function InvoiceScreen() {
   const { t } = useT()
@@ -86,20 +98,20 @@ function Invoice({ academyId }: { academyId: string }) {
   async function onCheck() {
     try {
       const result = await check.mutateAsync(invoice!.pay_token!)
-      Alert.alert(
+      notify(
         result.invoice_status === 'paid' || result.intent_status === 'succeeded'
           ? t('payments.pay_link.confirmed')
           : t('payments.pay_link.not_found_yet'),
       )
     } catch (e) {
-      Alert.alert(errorMessage(e, t('payments.pay_link.error_check')))
+      notify(errorMessage(e, t('payments.pay_link.error_check')))
     }
   }
 
   async function onEmail() {
     try {
       const result = await sendLink.mutateAsync(invoice!.id)
-      Alert.alert(
+      notify(
         result.ok
           ? result.to
             ? t('payments.pay_link.sent_to', { email: result.to })
@@ -107,7 +119,7 @@ function Invoice({ academyId }: { academyId: string }) {
           : (result.message ?? t('payments.pay_link.send_failed')),
       )
     } catch (e) {
-      Alert.alert(errorMessage(e, t('payments.pay_link.send_failed')))
+      notify(errorMessage(e, t('payments.pay_link.send_failed')))
     }
   }
 
@@ -197,9 +209,7 @@ function Invoice({ academyId }: { academyId: string }) {
                   small
                   icon="share-2"
                   title={t('m.staff.share_link')}
-                  onPress={() =>
-                    void Share.share({ message: `${invoice.invoice_no} — ${link}` })
-                  }
+                  onPress={() => void shareLink(`${invoice.invoice_no} — ${link}`)}
                 />
                 <Button
                   small

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, View } from 'react-native'
+import { View } from 'react-native'
 import { addSessionToCalendar } from '@/lib/deviceCalendar'
 import { errorMessage } from '@/lib/errors'
 import { localeFor } from '@/lib/format'
@@ -14,7 +14,14 @@ import {
   useMyAppointments,
   type MyAppointment,
 } from '@/features/appointments/api'
-import { addDays, fmtWhen, today } from '@/features/appointments/calendar'
+import {
+  addDays,
+  fmtRange,
+  fmtTime,
+  fmtWhen,
+  today,
+} from '@/features/appointments/calendar'
+import { DateTile } from '@/features/appointments/DateTile'
 import { SlotPicker } from '@/features/appointments/SlotPicker'
 import { useScope } from '@/shell/scope'
 import {
@@ -28,11 +35,13 @@ import {
   FormError,
   Input,
   Loading,
+  notify,
+  Row,
   Screen,
   Section,
   Select,
-  T,
   space,
+  T,
 } from '@/ui'
 
 /** How far ahead one call reaches. The server clamps to the academy horizon. */
@@ -107,7 +116,7 @@ export default function AppointmentsTab() {
     } catch (e) {
       // The notice period is enforced by the server; its sentence is the
       // explanation.
-      Alert.alert(t('appt.action.cancel'), errorMessage(e, t('common.error')))
+      notify(t('appt.action.cancel'), errorMessage(e, t('common.error')))
     }
   }
 
@@ -121,7 +130,7 @@ export default function AppointmentsTab() {
       notes: [active?.academy?.name, a.note].filter(Boolean).join('\n'),
       timeZone: tz,
     })
-    Alert.alert(
+    notify(
       t(
         outcome === 'added'
           ? 'm.calendar.added'
@@ -148,25 +157,29 @@ export default function AppointmentsTab() {
         />
       ) : (
         <Section title={t('appt.learn.book_title')}>
-          <Card style={{ gap: space.lg }}>
-            {atCap ? (
+          {atCap ? (
+            <Card>
               <T muted>{t('appt.learn.at_cap')}</T>
-            ) : openSlots.length === 0 ? (
+            </Card>
+          ) : openSlots.length === 0 ? (
+            <Card>
               <T muted>{t('appt.learn.nothing_free')}</T>
-            ) : (
-              <>
-                <SlotPicker
-                  slots={openSlots}
-                  tz={tz}
-                  locale={locale}
-                  value={startsAt}
-                  onChange={(v) => {
-                    setStartsAt(v)
-                    setInstructorId(null)
-                  }}
-                />
-                {slot ? (
-                  <>
+            </Card>
+          ) : (
+            // Day, then time, then confirm — all in the open day's card, so
+            // the whole act reads straight down the screen.
+            <SlotPicker
+              slots={openSlots}
+              tz={tz}
+              locale={locale}
+              value={startsAt}
+              onChange={(v) => {
+                setStartsAt(v)
+                setInstructorId(null)
+              }}
+              footer={
+                slot ? (
+                  <View style={{ gap: space.lg }}>
                     {choose ? (
                       <Field label={t('appt.learn.instructor')}>
                         <Select
@@ -193,17 +206,17 @@ export default function AppointmentsTab() {
                       title={
                         book.isPending
                           ? t('appt.booking')
-                          : `${t('appt.book')} · ${fmtWhen(slot.starts_at, tz, locale)}`
+                          : `${t('appt.book')} · ${fmtTime(slot.starts_at, tz)}`
                       }
                       loading={book.isPending}
                       disabled={choose && !instructorId}
                       onPress={() => void submit()}
                     />
-                  </>
-                ) : null}
-              </>
-            )}
-          </Card>
+                  </View>
+                ) : null
+              }
+            />
+          )}
         </Section>
       )}
 
@@ -217,15 +230,23 @@ export default function AppointmentsTab() {
         ) : (
           <>
             {upcoming.map((a) => (
-              <Card key={a.id} style={{ gap: space.sm }}>
-                <T style={{ fontWeight: '600' }}>{fmtWhen(a.starts_at, tz, locale)}</T>
-                <T v="small" muted>
-                  {a.instructor.full_name ?? t('common.unnamed')}
-                  {a.note ? ` · ${a.note}` : ''}
-                </T>
+              <Card key={a.id} style={{ gap: space.lg }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+                  <DateTile iso={a.starts_at} tz={tz} locale={locale} />
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <T style={{ fontWeight: '700', fontSize: 16 }}>
+                      {fmtRange(a.starts_at, a.ends_at, tz)}
+                    </T>
+                    <T v="small" muted numberOfLines={2}>
+                      {a.instructor.full_name ?? t('common.unnamed')}
+                      {a.note ? ` · ${a.note}` : ''}
+                    </T>
+                  </View>
+                </View>
                 <View style={{ flexDirection: 'row', gap: space.sm }}>
                   <Button
                     small
+                    style={{ flex: 1 }}
                     variant="outline"
                     icon="calendar"
                     title={t('m.calendar.add')}
@@ -246,25 +267,14 @@ export default function AppointmentsTab() {
                 {past.map((a, i) => {
                   const meta = APPOINTMENT_STATUS[a.status]
                   return (
-                    <View
+                    <Row
                       key={a.id}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: space.md,
-                        padding: space.lg,
-                        borderTopWidth: i === 0 ? 0 : 0.5,
-                        borderTopColor: '#8884',
-                      }}
-                    >
-                      <View style={{ flex: 1 }}>
-                        <T>{fmtWhen(a.starts_at, tz, locale)}</T>
-                        <T v="small" muted>
-                          {a.instructor.full_name ?? t('common.unnamed')}
-                        </T>
-                      </View>
-                      <Badge label={t(meta.labelKey)} tone={meta.tone} />
-                    </View>
+                      first={i === 0}
+                      left={<DateTile iso={a.starts_at} tz={tz} locale={locale} quiet />}
+                      title={fmtRange(a.starts_at, a.ends_at, tz)}
+                      subtitle={a.instructor.full_name ?? t('common.unnamed')}
+                      right={<Badge label={t(meta.labelKey)} tone={meta.tone} />}
+                    />
                   )
                 })}
               </Card>

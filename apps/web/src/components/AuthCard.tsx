@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { LanguageToggle } from '@/components/LanguageToggle'
+import { Logo } from '@/components/Logo'
 import {
   Card,
   CardContent,
@@ -23,9 +24,7 @@ export function AuthCard({
           out of reach — the choice has to be reachable before sign-in. */}
       <LanguageToggle className="absolute top-4 right-4" />
       <div className="w-full max-w-sm">
-        <div className="mb-6 text-center text-xl font-bold tracking-tight">
-          Hawary <span className="text-primary">Academy</span>
-        </div>
+        <Logo className="mb-6" />
         <Card>
           <CardHeader>
             <CardTitle className="text-xl">{title}</CardTitle>

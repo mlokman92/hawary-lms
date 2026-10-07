@@ -288,11 +288,43 @@ problem into a total one.
 
 ## UI
 
-A small StyleSheet kit in `apps/mobile/src/ui` carrying the web's neutral theme
-(light, dark, follow the phone), rather than NativeWind + React Native Reusables
-as first planned. The kit is about a dozen components; NativeWind adds a
-Babel/Metro CSS transform that could not be exercised on a device from here,
-and the owner's rule is functionality first.
+A small StyleSheet kit in `apps/mobile/src/ui` (light, dark, follow the phone),
+rather than NativeWind + React Native Reusables as first planned: NativeWind
+adds a Babel/Metro CSS transform that could not be exercised on a device from
+here.
+
+**It is the web's theme carried to a phone** (`apps/web/src/index.css`): the
+same zinc neutrals, the same **teal** as the one brand colour, the same
+typeface, **Figtree**. `ui/theme.tsx` holds the hex equivalents of the web's
+oklch tokens — change the two together. What the phone adds is shape: a tinted
+canvas with white cards on it, large radii, a soft shadow in light mode and a
+hairline in dark (`elevation()`), and tinted fills where the web draws
+outlines. The first version was plain black-on-white with system type; the
+owner called it dated (2026-10-07) and this replaced it.
+
+Three rules that are easy to break:
+
+- **A weight is a font family, never `fontWeight`.** Figtree is one file per
+  weight in `apps/mobile/assets/fonts` — local files under the OFL, not a
+  package, so there is nothing native to link and nothing fetched at launch —
+  loaded in `AppRoot` before the first screen. Android cannot find the bold cut
+  of a custom font from a weight number and smears a fake one. Use `<T>`
+  (which turns an inline `fontWeight` into the right family) or `font(700)`.
+- **Two things sit side by side only if both are short in both languages.**
+  Malay runs about a third longer. The kit absorbs some of it — a button's
+  label shrinks a little before it is cut, a stat tile's figure steps down for
+  a sum of money, the tab labels are sized for five tabs on a 360-wide phone —
+  but two long buttons in a row will truncate. Stack them, or make them rows.
+- **A list you pick from flows down.** The slot picker
+  (`features/appointments/SlotPicker`) is day cards stacked, the times inside
+  the open day, and the caller's form (`footer`) directly under the chosen
+  time: one column, one direction of travel. It began as a sideways strip of
+  days; the owner asked for it to flow down. Both apps use the one picker.
+
+**Student tabs:** Dashboard · My courses · **LPKC** · Appointments · More. LPKC
+took the middle tab from My work at the owner's request (2026-10-07); My work
+is the first row under More, and is still where the dashboard's "All work"
+leads.
 
 The conventions are the web's: prefer removing UI; one obvious action is a
 button (pinned to the bottom of the screen); everything occasional is behind
@@ -324,14 +356,73 @@ pnpm export:student         # JS-only bundle; catches resolution errors
    writing it: paste them into `APPS.student.projectId` and
    `APPS.academy.projectId` in `app.config.ts`. Push tokens cannot be minted
    without one.
-2. `eas build --profile student-preview --platform android` (an installable
-   APK). `…-production` for the stores.
-3. Android push needs an FCM key uploaded to EAS (`eas credentials`); iOS needs
-   an Apple Developer account. EAS manages both.
-4. Replace the placeholder icons in `apps/mobile/assets/images` — both apps
-   currently share Expo's default artwork.
+2. `eas build --profile student-production --platform android` (an `.aab`;
+   `…-preview` gives an installable APK). **Android builds start without a
+   prompt** — EAS makes the keystore itself. **The first iOS build of each app
+   has to be run by a person in a terminal**: it signs in to Apple (with 2FA)
+   to make the certificate and profile, and `--non-interactive` refuses.
+3. Push credentials — see **Push credentials**, below.
+4. Icons are in place — see **Icons**, below.
 5. Fill in the two `.well-known` files (see **Deep links**).
 6. Set each `app_min_versions.store_url` once the listings exist.
+
+## Icons
+
+Both icons are the academy's symbol, the arch and dot ([brand.md](brand.md)).
+**Student is the symbol on white; Academy is the same symbol on teal.** Files:
+`apps/mobile/assets/images/<variant>/` (`icon.png`, `adaptive-foreground.png`,
+`adaptive-background.png`), chosen by `APP_VARIANT` in `app.config.ts`, all
+rendered from `brand/icon-student.svg` and `brand/icon-academy.svg`.
+
+Why light against dark: it is a difference of lightness, not hue, so it survives
+greyscale and red-green colour-blindness. A marker (a band, a glyph) under an
+identical emblem was tried and lost: it is a few pixels at home-screen size.
+
+- **No monochrome layer** on Android: the apps differ only in their ground, so a
+  themed single-colour icon would make them identical.
+- `notification-icon.png` is the symbol's small-size cut in white on nothing.
+  Android draws the status-bar icon from alpha alone; the app icon there shows
+  as a grey square.
+- On Android the art is drawn at 72% of its iOS size, so the arch's feet stay
+  inside the circle a launcher crops to.
+
+## Push credentials
+
+The server side (`send-push` → Expo's push service) needs nothing per app. What
+each *app* needs is the platform's permission to be pushed to:
+
+- **iOS** — an APNs key. It belongs to the Apple team, not to an app, so the
+  one already on the owner's Expo account is reused: answer yes to "set up push
+  notifications" and "reuse this key" during the first interactive iOS build.
+- **Android** — Firebase, in two halves, and both are needed:
+  1. `apps/mobile/google-services.json`, listing a client for
+     `my.hawary.student` and one for `my.hawary.academy` (one file, both
+     apps). It is **baked into the build**: `app.config.ts` picks it up when the
+     file exists, and an `.aab` built without it installs and runs but never
+     gets a push token. It is not a secret and is committed.
+  2. The Firebase project's **service-account key**, uploaded to *each* EAS
+     project (`eas credentials` → Android → Google Service Account → FCM V1).
+     This is what lets Expo's push service send. It is a secret and stays out
+     of the repo.
+
+  Both apps can live in a Firebase project that already serves another app:
+  add two Android apps to it and the same service-account key covers them.
+
+## The web preview
+
+`pnpm web:student` (http://localhost:8191) and `pnpm web:academy`
+(http://localhost:8192) run either app in a browser against the real backend,
+in a phone-width column. Sign in with a real account.
+
+It is a preview, not a product. The pieces that only exist on a phone have
+browser stand-ins so the flows can still be walked through: alerts and
+confirmations use the browser's own, the date picker is `<input type="date">`,
+a note renders in an iframe, a PDF opens the print dialog, "share" copies to the
+clipboard, and uploads send the browser's File. Push, the camera and the
+calendar do nothing there.
+
+Not the default Expo port: 8081 belongs to another project on the owner's
+machine.
 
 ## Looking at a screen without a phone
 
@@ -342,6 +433,11 @@ That is how both apps were checked before any device build — and it found two
 real bugs (calls that exist on a phone and not on the web target, now guarded).
 It does not exercise native modules: camera, files, calendar, push and PDF
 sharing need a device.
+
+Look at every screen in **Malay and in dark mode** as well: that is where the
+cut-off labels and the invisible borders are. And give the export its own Metro
+cache (`TEMP`/`TMP` pointed at a scratch folder) when a preview server is
+running — `--clear` otherwise empties the cache that server is using.
 
 ## Not done
 

@@ -1,4 +1,4 @@
-import { Switch, View } from 'react-native'
+import { View } from 'react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { Stack, useLocalSearchParams } from 'expo-router'
 import { useT, type TKey } from '@/lib/i18n'
@@ -16,12 +16,12 @@ import {
   Empty,
   ErrorBlock,
   FormError,
-  Icon,
   Loading,
+  Row,
   Screen,
   T,
+  Toggle,
   space,
-  useTheme,
   type IconName,
 } from '@/ui'
 
@@ -44,7 +44,6 @@ const ORDER: ItemKind[] = ['note', 'material', 'assessment', 'assignment']
 export default function CourseScreen() {
   const { id = '' } = useLocalSearchParams<{ id: string }>()
   const { t } = useT()
-  const { c } = useTheme()
   const qc = useQueryClient()
   const { academyId } = useScope()
   const { data: course } = useCourse(id)
@@ -102,7 +101,16 @@ export default function CourseScreen() {
             )
           return (
             <View key={m.id} style={{ gap: space.sm }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+              {/* Inset by the card's own padding, so the module's switch sits
+                  in a column with the switches of what it holds. */}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: space.md,
+                  paddingRight: space.lg,
+                }}
+              >
                 <View style={{ flex: 1 }}>
                   <T v="heading">{m.title}</T>
                   {m.is_published ? null : (
@@ -111,12 +119,12 @@ export default function CourseScreen() {
                     </T>
                   )}
                 </View>
-                <Switch
+                <Toggle
                   value={m.is_published}
                   onValueChange={(next) =>
                     updateModule.mutate({ id: m.id, patch: { is_published: next } })
                   }
-                  accessibilityLabel={t('common.publish_aria', { title: m.title })}
+                  label={t('common.publish_aria', { title: m.title })}
                 />
               </View>
               <Card flush>
@@ -126,34 +134,21 @@ export default function CourseScreen() {
                   </T>
                 ) : (
                   inside.map((item, i) => (
-                    <View
+                    <Row
                       key={`${item.kind}-${item.id}`}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: space.md,
-                        paddingHorizontal: space.lg,
-                        paddingVertical: space.sm,
-                        minHeight: 52,
-                        borderTopWidth: i === 0 ? 0 : 0.5,
-                        borderTopColor: c.border,
-                      }}
-                    >
-                      <Icon name={KIND[item.kind].icon} />
-                      <View style={{ flex: 1 }}>
-                        <T numberOfLines={2}>{item.title || t('common.untitled')}</T>
-                        <T v="small" muted>
-                          {t(KIND[item.kind].labelKey)}
-                        </T>
-                      </View>
-                      <Switch
-                        value={item.is_published}
-                        onValueChange={(next) => flip(item, next)}
-                        accessibilityLabel={t('common.publish_aria', {
-                          title: item.title,
-                        })}
-                      />
-                    </View>
+                      first={i === 0}
+                      icon={KIND[item.kind].icon}
+                      title={item.title || t('common.untitled')}
+                      subtitle={t(KIND[item.kind].labelKey)}
+                      chevron={false}
+                      right={
+                        <Toggle
+                          value={item.is_published}
+                          onValueChange={(next) => flip(item, next)}
+                          label={t('common.publish_aria', { title: item.title })}
+                        />
+                      }
+                    />
                   ))
                 )}
               </Card>

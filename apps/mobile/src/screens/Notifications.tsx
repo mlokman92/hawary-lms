@@ -1,4 +1,4 @@
-import { Pressable, View } from 'react-native'
+import { Platform, Pressable, View } from 'react-native'
 import { Stack, useRouter } from 'expo-router'
 import { localeFor } from '@/lib/format'
 import { useT } from '@/lib/i18n'
@@ -9,10 +9,25 @@ import {
   useUnreadCount,
   type Notification,
 } from '@/features/notifications/api'
-import { detailOf, titleOf } from '@/features/notifications/render'
+import {
+  detailOf,
+  isAppointmentKind,
+  isReportKind,
+  titleOf,
+} from '@/features/notifications/render'
 import { linkOf } from '@/shell/links'
 import { useScope } from '@/shell/scope'
-import { Card, Empty, ErrorBlock, Loading, Screen, T, space, useTheme } from '@/ui'
+import {
+  Card,
+  Empty,
+  ErrorBlock,
+  Loading,
+  Row,
+  Screen,
+  T,
+  useTheme,
+  type IconName,
+} from '@/ui'
 
 /**
  * The notification centre — the web app's bell, as a screen.
@@ -22,6 +37,15 @@ import { Card, Empty, ErrorBlock, Loading, Screen, T, space, useTheme } from '@/
  * There is no "mark unread", no filter and no page of older ones — twenty is
  * what the list holds (docs/notifications.md).
  */
+/** One glyph per family of event, so the list can be scanned by what happened. */
+function iconOf(row: Notification): IconName {
+  if (isReportKind(row)) return 'clipboard'
+  if (isAppointmentKind(row)) return 'calendar'
+  if (row.kind === 'work_marked' || row.kind === 'work_due') return 'check-square'
+  if (row.kind === 'invoice_issued' || row.kind === 'payment_received') return 'credit-card'
+  return 'volume-2'
+}
+
 export function NotificationsScreen() {
   const { t, lang } = useT()
   const { c } = useTheme()
@@ -47,8 +71,15 @@ export function NotificationsScreen() {
           title: t('notif.title'),
           headerRight: () =>
             unread > 0 ? (
-              <Pressable onPress={() => markAll.mutate()} hitSlop={10}>
-                <T v="small">{t('notif.mark_all')}</T>
+              <Pressable
+                onPress={() => markAll.mutate()}
+                hitSlop={10}
+                // The web preview's header has no gutter of its own.
+                style={Platform.OS === 'web' ? { marginRight: 16 } : null}
+              >
+                <T v="small" style={{ color: c.brand, fontWeight: '600' }}>
+                  {t('notif.mark_all')}
+                </T>
               </Pressable>
             ) : null,
         }}
@@ -61,44 +92,30 @@ export function NotificationsScreen() {
         <Empty icon="bell" title={t('notif.empty')} />
       ) : (
         <Card flush>
-          {rows.map((row, i) => {
-            const detail = detailOf(row, locale)
-            return (
-              <Pressable
-                key={row.id}
-                onPress={() => open(row)}
-                style={({ pressed }) => [
-                  {
-                    flexDirection: 'row',
-                    gap: space.md,
-                    paddingHorizontal: space.lg,
-                    paddingVertical: space.md,
-                    borderTopWidth: i === 0 ? 0 : 0.5,
-                    borderTopColor: c.border,
-                  },
-                  pressed || !row.read_at ? { backgroundColor: c.muted } : null,
-                ]}
-              >
-                <View
-                  style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: 4,
-                    marginTop: 7,
-                    backgroundColor: row.read_at ? 'transparent' : c.destructive,
-                  }}
-                />
-                <View style={{ flex: 1 }}>
-                  <T>{titleOf(row, t)}</T>
-                  {detail ? (
-                    <T v="small" muted>
-                      {detail}
-                    </T>
-                  ) : null}
-                </View>
-              </Pressable>
-            )
-          })}
+          {rows.map((row, i) => (
+            <Row
+              key={row.id}
+              first={i === 0}
+              icon={iconOf(row)}
+              title={titleOf(row, t)}
+              subtitle={detailOf(row, locale) || null}
+              chevron={false}
+              // Unread is a dot, drawn only when there is something to draw.
+              right={
+                row.read_at ? null : (
+                  <View
+                    style={{
+                      width: 9,
+                      height: 9,
+                      borderRadius: 5,
+                      backgroundColor: c.brand,
+                    }}
+                  />
+                )
+              }
+              onPress={() => open(row)}
+            />
+          ))}
         </Card>
       )}
     </Screen>

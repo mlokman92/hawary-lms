@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, View } from 'react-native'
+import { View } from 'react-native'
 import { Stack } from 'expo-router'
 import { errorMessage } from '@/lib/errors'
 import { fmtDate } from '@/lib/format'
@@ -19,9 +19,10 @@ import {
   Empty,
   ErrorBlock,
   Loading,
+  notify,
   Screen,
-  T,
   space,
+  T,
 } from '@/ui'
 
 type Filter = 'pending' | 'active'
@@ -55,12 +56,12 @@ export default function EnrollmentsScreen() {
       const outcome = await approve.mutateAsync(r.id)
       if (!outcome.result.approved) {
         // Two people pressing Approve on one row is the normal case.
-        Alert.alert(t('enroll.requests.stale'))
+        notify(t('enroll.requests.stale'))
       } else if (outcome.email && !outcome.email.ok) {
-        Alert.alert(t('enroll.email.failed'))
+        notify(t('enroll.email.failed'))
       }
     } catch (e) {
-      Alert.alert(errorMessage(e, t('enroll.requests.failed')))
+      notify(errorMessage(e, t('enroll.requests.failed')))
     } finally {
       setBusyId(null)
     }
@@ -79,7 +80,7 @@ export default function EnrollmentsScreen() {
     try {
       await reject.mutateAsync(r.id)
     } catch (e) {
-      Alert.alert(errorMessage(e, t('enroll.requests.failed')))
+      notify(errorMessage(e, t('enroll.requests.failed')))
     } finally {
       setBusyId(null)
     }

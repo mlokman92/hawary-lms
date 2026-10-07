@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- The shelter. Module u = 48. Across the foot: leg 2u, gap 1u, dot 3u, gap 1u, leg 2u = 9u (432).
+       Arch 9u x 8u (432 x 384): outer semicircle radius 216 on the centre (256, 272), legs 168, flat feet on y = 440.
+       Stroke 96 down both legs; 92 at the crown (the inner head is an ellipse, 120 x 124) - an optical correction,
+       because a horizontal stroke reads heavier than a vertical one of the same measure.
+       Dot radius 72, 48 clear of each leg, standing on the same ground and dropping 3 below it (overshoot).
+       Its centre is 99 below the arch's centre and there is one dot of headroom above it: nothing is concentric.
+       Ink box x 40-472, y 56-443. Box centre y = 249.5, area centroid y = 260.1: the canvas centre (256) sits between. -->
+  <path fill="#0f766e" d="M40 440V272A216 216 0 0 1 472 272V440H376V272A120 124 0 0 0 136 272V440Z"/>
+  <circle fill="#f59e0b" cx="256" cy="371" r="72"/>
+</svg>

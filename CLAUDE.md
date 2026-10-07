@@ -52,7 +52,8 @@ Monorepo: **pnpm workspaces + Turborepo**.
   code in `apps/web/src/features/*`; shared page vocabulary in
   `apps/web/src/components/patterns/*`.
 - **Mobile UI** — a small StyleSheet kit in `apps/mobile/src/ui` carrying the
-  web's neutral theme. No NativeWind.
+  web's theme (zinc + teal, Figtree). No NativeWind. A text weight is a font
+  family (`font(700)` or `<T>`), never `fontWeight`.
 - **Email** — Resend, from `noreply@hawary.my`. `RESEND_API_KEY`,
   `INVITE_FROM_EMAIL`, `APP_URL`, `ALLOWED_ORIGINS` are shared by every mail
   function. Supabase Auth sends confirm/reset mail through Resend SMTP,
@@ -107,6 +108,7 @@ Read the doc before changing the area. Each one keeps the *why*.
 | deployment, URLs, redirect allow list | [production-urls.md](docs/production-urls.md) |
 | CI/CD plan | [ci-cd.md](docs/ci-cd.md) |
 | the two mobile apps, push, deep links, attachments, announcements | [mobile-apps.md](docs/mobile-apps.md) |
+| the logo, its colours and files (`brand/`) | [brand.md](docs/brand.md) |
 | `/analytics` — what counts as a login, the `login_events` log | [analytics.md](docs/analytics.md) |
 | product scope | [requirements.md](docs/requirements.md) |
 

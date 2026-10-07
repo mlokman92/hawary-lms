@@ -102,11 +102,13 @@ function transform(file, source) {
   }
   if (/\bfile: File\b/.test(out)) {
     out = out.replace(/\bfile: File\b/g, 'file: UploadFile')
-    // React Native's FormData takes the descriptor itself; its type says Blob.
+    // React Native's FormData takes the descriptor itself; the web preview
+    // needs the browser's File. `formFile` picks the right one.
     out = out.replaceAll(
       "body.append('file', file)",
-      "body.append('file', file as unknown as Blob)",
+      "body.append('file', formFile(file), file.name)",
     )
+    out = addImport(out, "import { formFile } from '@/lib/storage'")
     out = addImport(out, "import type { UploadFile } from '@/lib/storage'")
   }
   if (/\bwindow\.|\bdocument\.|\blocalStorage\b|import\.meta/.test(out)) {

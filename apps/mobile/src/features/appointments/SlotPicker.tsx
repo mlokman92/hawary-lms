@@ -1,23 +1,31 @@
-import { useMemo, useState } from 'react'
-import { Pressable, ScrollView, Text, View } from 'react-native'
+import { useMemo, useState, type ReactNode } from 'react'
+import { Pressable, Text, View } from 'react-native'
+import Feather from '@expo/vector-icons/Feather'
 import { useT } from '@/lib/i18n'
-import { T, space, useTheme } from '@/ui'
+import { Button, T, elevation, font, space, useTheme } from '@/ui'
 import type { OpenSlot } from './api'
-import { fmtDayShort, fmtTime, ymdOf, type Ymd } from './calendar'
+import { fmtDayLong, fmtTime, ymdOf, type Ymd } from './calendar'
+
+/** How many days are listed before "View all". Most bookings are for this week. */
+const FIRST_DAYS = 7
 
 /**
- * Picking when — the phone version of the web app's `SlotPicker`, shared by the
- * student's booking screen and the staff "book for a student" screen because
- * they are the same question asked by different people.
+ * Picking when — shared by the student's booking screen and the staff "book
+ * for a student" screen, because they are the same question asked by different
+ * people.
  *
- * The same three decisions (docs/appointments.md → "Picking when is one
- * component"): the day strip lists only days that have something free, each
- * carrying how many, and scrolls rather than pages; every chip is therefore
- * actionable, with no disabled state to explain; and the times are a grid of
- * thumb-sized cells.
+ * **It flows down the screen.** Each day that has something free is a card;
+ * the open one shows its times, and — once a time is chosen — whatever the
+ * caller puts in `footer` (the note, the Book button), so the whole act reads
+ * top to bottom: day, time, confirm. The web lays the same days out as a strip
+ * that scrolls sideways; on a phone a sideways strip hides most of the days
+ * behind a gesture nobody knows to make.
  *
- * The free-instructor count hides itself when no slot in the window exceeds
- * one — in a single-instructor academy every chip would read "1".
+ * Two rules carried over from the web's picker (docs/appointments.md → "Picking
+ * when is one component"): only days with something free are listed, so every
+ * row is actionable; and the free-instructor count hides itself when no slot
+ * in the window exceeds one — in a single-instructor academy every time would
+ * read "1".
  */
 export function SlotPicker({
   slots,
@@ -25,6 +33,7 @@ export function SlotPicker({
   locale,
   value,
   onChange,
+  footer,
 }: {
   slots: OpenSlot[]
   tz: string
@@ -32,9 +41,11 @@ export function SlotPicker({
   /** The chosen `starts_at`, or '' for none. */
   value: string
   onChange: (startsAt: string) => void
+  /** Drawn under the times of the day the chosen slot is in. */
+  footer?: ReactNode
 }) {
   const { t, tn } = useT()
-  const { c } = useTheme()
+  const { c, dark } = useTheme()
 
   const days = useMemo(() => {
     const map = new Map<Ymd, OpenSlot[]>()
@@ -48,108 +59,118 @@ export function SlotPicker({
   }, [slots, tz])
 
   const chosenDay = value ? ymdOf(value, tz) : null
-  const [day, setDay] = useState<Ymd | null>(chosenDay)
-  const active = day ?? chosenDay
-  const times = days.find(([d]) => d === active)?.[1] ?? []
+  // The soonest day opens by itself: it is the likeliest answer, and a list of
+  // closed rows would cost everybody a tap before they saw a single time.
+  const [open, setOpen] = useState<Ymd | null>(chosenDay ?? days[0]?.[0] ?? null)
+  const [all, setAll] = useState(false)
   const showCapacity = slots.some((s) => s.capacity > 1)
+  const listed = all ? days : days.slice(0, FIRST_DAYS)
 
   return (
     <View style={{ gap: space.md }}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: space.sm }}
-      >
-        {days.map(([d, list]) => {
-          const on = d === active
-          return (
+      {listed.map(([day, list]) => {
+        const isOpen = day === open
+        return (
+          <View
+            key={day}
+            style={[
+              { backgroundColor: c.card, borderRadius: 18 },
+              elevation(c, dark),
+              isOpen ? { borderWidth: 1.5, borderColor: c.brand } : null,
+            ]}
+          >
             <Pressable
-              key={d}
               onPress={() => {
-                setDay(d)
-                // A time belongs to its day; changing the day drops it.
-                if (chosenDay !== d) onChange('')
+                setOpen(isOpen ? null : day)
+                // A time belongs to its day; opening another day drops it.
+                if (chosenDay && chosenDay !== day) onChange('')
               }}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: isOpen }}
               style={{
-                minWidth: 76,
-                borderRadius: 10,
-                borderWidth: 1,
-                borderColor: on ? c.primary : c.border,
-                backgroundColor: on ? c.primary : c.card,
-                paddingHorizontal: space.md,
-                paddingVertical: space.sm,
+                flexDirection: 'row',
                 alignItems: 'center',
+                gap: space.md,
+                paddingHorizontal: space.lg,
+                minHeight: 60,
               }}
             >
-              <Text
-                style={{
-                  color: on ? c.primaryForeground : c.foreground,
-                  fontSize: 13,
-                  fontWeight: '600',
-                }}
-              >
-                {fmtDayShort(d, locale)}
-              </Text>
-              <Text
-                style={{
-                  color: on ? c.primaryForeground : c.mutedForeground,
-                  fontSize: 11,
-                }}
-              >
+              <T style={{ flex: 1, fontWeight: '700', fontSize: 16 }}>
+                {fmtDayLong(day, locale)}
+              </T>
+              <T v="small" muted>
                 {tn('appt.slots.day_count', list.length)}
-              </Text>
+              </T>
+              <Feather
+                name={isOpen ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={isOpen ? c.brand : c.mutedForeground}
+              />
             </Pressable>
-          )
-        })}
-      </ScrollView>
 
-      {!active ? (
-        <T v="small" muted>
-          {t('appt.learn.pick_day')}
-        </T>
-      ) : (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
-          {times.map((s) => {
-            const on = s.starts_at === value
-            return (
-              <Pressable
-                key={s.starts_at}
-                onPress={() => onChange(on ? '' : s.starts_at)}
-                style={{
-                  width: '31%',
-                  minHeight: 46,
-                  borderRadius: 10,
-                  borderWidth: 1,
-                  borderColor: on ? c.primary : c.border,
-                  backgroundColor: on ? c.primary : c.card,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Text
-                  style={{
-                    color: on ? c.primaryForeground : c.foreground,
-                    fontSize: 14,
-                    fontWeight: '500',
-                  }}
-                >
-                  {fmtTime(s.starts_at, tz)}
-                </Text>
-                {showCapacity ? (
-                  <Text
-                    style={{
-                      color: on ? c.primaryForeground : c.mutedForeground,
-                      fontSize: 10,
-                    }}
-                  >
-                    {tn('appt.slots.free', s.capacity)}
-                  </Text>
-                ) : null}
-              </Pressable>
-            )
-          })}
-        </View>
-      )}
+            {isOpen ? (
+              <View style={{ paddingHorizontal: space.lg, paddingBottom: space.lg, gap: space.lg }}>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
+                  {list.map((s) => {
+                    const on = s.starts_at === value
+                    return (
+                      <Pressable
+                        key={s.starts_at}
+                        onPress={() => onChange(on ? '' : s.starts_at)}
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: on }}
+                        style={{
+                          // Three to a row, each a thumb's height.
+                          flexBasis: '31%',
+                          flexGrow: 1,
+                          maxWidth: '32%',
+                          minHeight: 50,
+                          borderRadius: 14,
+                          backgroundColor: on ? c.primary : c.muted,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: on ? c.primaryForeground : c.foreground,
+                            fontFamily: font(700),
+                            fontSize: 15,
+                          }}
+                        >
+                          {fmtTime(s.starts_at, tz)}
+                        </Text>
+                        {showCapacity ? (
+                          <Text
+                            style={{
+                              color: on ? c.primaryForeground : c.mutedForeground,
+                              fontFamily: font(500),
+                              fontSize: 10.5,
+                              opacity: on ? 0.85 : 1,
+                            }}
+                          >
+                            {tn('appt.slots.free', s.capacity)}
+                          </Text>
+                        ) : null}
+                      </Pressable>
+                    )
+                  })}
+                </View>
+                {chosenDay === day ? footer : null}
+              </View>
+            ) : null}
+          </View>
+        )
+      })}
+
+      {!all && days.length > FIRST_DAYS ? (
+        <Button
+          variant="ghost"
+          small
+          title={t('learn.view_all')}
+          onPress={() => setAll(true)}
+        />
+      ) : null}
     </View>
   )
 }

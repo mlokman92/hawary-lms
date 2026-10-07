@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Linking, Platform, View } from 'react-native'
 import { QueryClientProvider } from '@tanstack/react-query'
+import { useFonts } from 'expo-font'
 import * as Notifications from 'expo-notifications'
 import { router } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
@@ -16,7 +17,7 @@ import { StudentAcademyProvider } from '@/lib/studentAcademy'
 import { supabase } from '@/lib/supabase'
 import { useUpdateRequired } from '@/features/version/api'
 import { Button, T, space, useTheme } from '@/ui'
-import { ThemeProvider } from '@/ui/theme'
+import { FONT_FILES, ThemeProvider } from '@/ui/theme'
 import { linkOf } from './links'
 import { useScope } from './scope'
 
@@ -27,16 +28,20 @@ void SplashScreen.preventAutoHideAsync()
  * data, session, memberships — in the web app's order, for the web app's
  * reasons (`apps/web/src/App.tsx`).
  *
- * Renders nothing until the key-value cache is hydrated, because the providers
- * below read the stored language, theme and academy during their first render.
- * The splash screen covers the gap.
+ * Renders nothing until the key-value cache is hydrated and the typeface is
+ * loaded, because the providers below read the stored language, theme and
+ * academy during their first render. The splash screen covers the gap.
  */
 export function AppProviders({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)
   useEffect(() => {
     void hydrateKv().finally(() => setReady(true))
   }, [])
-  if (!ready) return null
+  // The typeface, too: drawing a first frame in the system font and then
+  // swapping would make every screen jump. A font that fails to load is not a
+  // reason to show nothing — the app falls back to the system face.
+  const [fontsLoaded, fontError] = useFonts(FONT_FILES)
+  if (!ready || !(fontsLoaded || fontError)) return null
 
   return (
     <ThemeProvider>
@@ -197,7 +202,7 @@ export function AppFrame({
   gate: Gate
   children: ReactNode
 }) {
-  const { dark } = useTheme()
+  const { c, dark } = useTheme()
   const { data: update } = useUpdateRequired()
 
   useEffect(() => {
@@ -207,10 +212,34 @@ export function AppFrame({
   usePushRegistration(gate === 'ready')
   usePushNavigation(gate === 'ready')
 
+  const body = update?.required ? (
+    <UpdateWall storeUrl={update.storeUrl} />
+  ) : (
+    children
+  )
+
   return (
     <>
       <StatusBar style={dark ? 'light' : 'dark'} />
-      {update?.required ? <UpdateWall storeUrl={update.storeUrl} /> : children}
+      {Platform.OS === 'web' ? (
+        // The web preview: a phone-width column, so a desktop browser shows
+        // the screen as a phone would rather than stretched across a monitor.
+        <View style={{ flex: 1, alignItems: 'center', backgroundColor: c.border }}>
+          <View
+            style={{
+              flex: 1,
+              width: '100%',
+              maxWidth: 480,
+              backgroundColor: c.background,
+              overflow: 'hidden',
+            }}
+          >
+            {body}
+          </View>
+        </View>
+      ) : (
+        body
+      )}
     </>
   )
 }

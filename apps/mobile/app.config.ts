@@ -16,6 +16,19 @@ type Variant = 'student' | 'academy'
 const variant: Variant =
   process.env.APP_VARIANT === 'academy' ? 'academy' : 'student'
 
+/**
+ * Firebase's Android client file. Push on Android goes through FCM, and FCM
+ * will not hand a phone a token without it. One file serves both apps — it
+ * lists a client per package name. Optional on purpose: without it the app
+ * still builds and runs, it just cannot be pushed to (docs/mobile-apps.md →
+ * "Push credentials").
+ */
+const GOOGLE_SERVICES = './google-services.json'
+// `require`, not an import: the app's tsconfig has no Node types, and this file
+// is the one place that runs in Node. Expo evaluates it from the project root.
+const { existsSync } = require('fs') as { existsSync: (path: string) => boolean }
+const hasGoogleServices = existsSync(GOOGLE_SERVICES)
+
 /** The web app. Emails link here, so these are the hosts the apps claim. */
 const WEB_HOST = 'app.hawary.my'
 
@@ -73,13 +86,16 @@ const APPS: Record<
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const app = APPS[variant]
+  // Each app has its own icon: the academy's shield on warm white for Student,
+  // on deep green for Academy (docs/mobile-apps.md → "Icons").
+  const art = `./assets/images/${variant}`
   return {
     ...config,
     name: app.name,
     slug: app.slug,
     version: '1.0.0',
     orientation: 'portrait',
-    icon: './assets/images/icon.png',
+    icon: `${art}/icon.png`,
     scheme: app.scheme,
     userInterfaceStyle: 'automatic',
     ios: {
@@ -94,11 +110,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     android: {
       package: app.id,
+      ...(hasGoogleServices ? { googleServicesFile: GOOGLE_SERVICES } : null),
+      // No monochrome layer: the two apps differ only in their ground, so a
+      // themed (single-colour) icon would make them identical.
       adaptiveIcon: {
-        backgroundColor: '#E6F4FE',
-        foregroundImage: './assets/images/android-icon-foreground.png',
-        backgroundImage: './assets/images/android-icon-background.png',
-        monochromeImage: './assets/images/android-icon-monochrome.png',
+        foregroundImage: `${art}/adaptive-foreground.png`,
+        backgroundImage: `${art}/adaptive-background.png`,
       },
       intentFilters: [
         {
@@ -113,6 +130,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         },
       ],
     },
+    // The web target is a preview, not a product: it is how a screen is looked
+    // at in a browser without a device build (`pnpm web:student`). Camera,
+    // calendar and push do nothing there. See docs/mobile-apps.md.
+    web: {
+      bundler: 'metro',
+      output: 'single',
+      favicon: './assets/images/favicon.png',
+    },
     plugins: [
       ['expo-router', { root: app.root }],
       [
@@ -120,13 +145,18 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         {
           backgroundColor: '#ffffff',
           image: './assets/images/splash-icon.png',
-          imageWidth: 76,
+          imageWidth: 132,
         },
       ],
       'expo-localization',
       'expo-sharing',
       '@react-native-community/datetimepicker',
-      ['expo-notifications', { color: '#171717' }],
+      [
+        'expo-notifications',
+        // Android draws the status-bar icon from alpha alone: it must be a
+        // white glyph on nothing, or it shows as a grey square.
+        { icon: './assets/images/notification-icon.png', color: '#0f766e' },
+      ],
       [
         'expo-image-picker',
         {

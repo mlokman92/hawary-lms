@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "559681961032",
+    "project_id": "kinders-989a6",
+    "storage_bucket": "kinders-989a6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:559681961032:android:58fe2b13808a68c0fcec7d",
+        "android_client_info": {
+          "package_name": "my.hawary.academy"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDhT9xAs2R3hsdUtOcND__TGhj0AuwMk4Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:559681961032:android:7f268d2fa059137dfcec7d",
+        "android_client_info": {
+          "package_name": "my.hawary.student"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDhT9xAs2R3hsdUtOcND__TGhj0AuwMk4Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:559681961032:android:1eadb852248c65affcec7d",
+        "android_client_info": {
+          "package_name": "my.kinders.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDhT9xAs2R3hsdUtOcND__TGhj0AuwMk4Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { useT } from '@/lib/i18n'
 import { LearnerGate } from '@/features/learn/context'
 import {
@@ -42,13 +42,17 @@ function apply(filter: Filter, tasks: LearnTask[]): LearnTask[] {
   }
 }
 
-export default function WorkTab() {
+export default function WorkScreen() {
+  const { t } = useT()
   return (
-    <LearnerGate>
-      {({ academyId, studentId }) => (
-        <Work academyId={academyId} studentId={studentId} />
-      )}
-    </LearnerGate>
+    <>
+      <Stack.Screen options={{ title: t('nav.learn.work') }} />
+      <LearnerGate>
+        {({ academyId, studentId }) => (
+          <Work academyId={academyId} studentId={studentId} />
+        )}
+      </LearnerGate>
+    </>
   )
 }
 
@@ -64,8 +68,7 @@ function Work({ academyId, studentId }: { academyId: string; studentId: string }
     ? (params.state as Filter)
     : null
   const [filter, setFilter] = useState<Filter>(fromLink ?? 'todo')
-  // A tab keeps its state between visits, so a new link has to be followed
-  // explicitly rather than only read on first mount.
+  // Followed explicitly, so a second tile pressed on the dashboard is obeyed.
   useEffect(() => {
     if (fromLink) setFilter(fromLink)
   }, [fromLink])

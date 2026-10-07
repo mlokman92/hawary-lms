@@ -1,4 +1,4 @@
-import { useState, type ComponentProps, type ReactNode } from 'react'
+import { createElement, useState, type ComponentProps, type ReactNode } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -26,9 +26,18 @@ import { errorMessage } from '@/lib/errors'
 import { initialsOf } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import type { Tone } from '@/lib/tone'
-import { radius, space, useTheme } from './theme'
+import {
+  elevation,
+  font,
+  radius,
+  soft,
+  space,
+  toWeight,
+  useTheme,
+  type Weight,
+} from './theme'
 
-export { radius, space, useTheme } from './theme'
+export { elevation, font, radius, soft, space, useTheme } from './theme'
 
 export type IconName = ComponentProps<typeof Feather>['name']
 
@@ -36,20 +45,29 @@ export type IconName = ComponentProps<typeof Feather>['name']
  * The page vocabulary for both apps — the phone counterpart of the web app's
  * `components/patterns`. Deliberately small: a screen, a card, a row, a button,
  * a field. A screen that needs something else should ask whether it needs it.
+ *
+ * The look is defined here and in `theme.tsx` and nowhere else. A screen says
+ * WHAT it shows (`<Row icon=… title=… />`); how that looks — the tinted icon
+ * tile, the radius, the weight of the type — is this file's business, which is
+ * what lets the whole of both apps be restyled from one place.
  */
 
 // ---------------------------------------------------------------------------
 // Text
 // ---------------------------------------------------------------------------
 
-type TextVariant = 'title' | 'heading' | 'body' | 'small' | 'tiny'
+type TextVariant = 'display' | 'title' | 'heading' | 'body' | 'small' | 'tiny'
 
-const TEXT: Record<TextVariant, TextStyle> = {
-  title: { fontSize: 22, fontWeight: '600', letterSpacing: -0.3 },
-  heading: { fontSize: 16, fontWeight: '600' },
-  body: { fontSize: 15, lineHeight: 21 },
-  small: { fontSize: 13, lineHeight: 18 },
-  tiny: { fontSize: 11, lineHeight: 15 },
+const TEXT: Record<
+  TextVariant,
+  { size: number; line: number; weight: Weight; tracking?: number }
+> = {
+  display: { size: 30, line: 36, weight: 800, tracking: -0.7 },
+  title: { size: 24, line: 30, weight: 700, tracking: -0.4 },
+  heading: { size: 17, line: 23, weight: 700, tracking: -0.1 },
+  body: { size: 15, line: 22, weight: 400 },
+  small: { size: 13, line: 18, weight: 400 },
+  tiny: { size: 11.5, line: 15, weight: 500 },
 }
 
 export function T({
@@ -68,15 +86,25 @@ export function T({
   center?: boolean
 }) {
   const { c } = useTheme()
+  const spec = TEXT[v]
+  // A weight is a font FILE here, not a number the platform interprets (see
+  // `font()`), so a `fontWeight` passed in a style is translated and dropped.
+  const { fontWeight, ...flat } = (StyleSheet.flatten(style) ?? {}) as TextStyle
+  const weight =
+    fontWeight !== undefined ? toWeight(fontWeight) : bold ? 600 : spec.weight
   return (
     <Text
       {...rest}
       style={[
-        TEXT[v],
-        { color: tone ? c.tone[tone] : muted ? c.mutedForeground : c.foreground },
-        bold ? { fontWeight: '600' } : null,
+        {
+          fontFamily: font(weight),
+          fontSize: spec.size,
+          lineHeight: spec.line,
+          letterSpacing: spec.tracking,
+          color: tone ? c.tone[tone] : muted ? c.mutedForeground : c.foreground,
+        },
         center ? { textAlign: 'center' } : null,
-        style,
+        flat,
       ]}
     />
   )
@@ -103,6 +131,34 @@ export function Icon({
   )
 }
 
+/** An icon on a tinted, rounded tile — how a row or an empty state leads. */
+export function IconTile({
+  name,
+  size = 38,
+  tone,
+}: {
+  name: IconName
+  size?: number
+  tone?: Tone
+}) {
+  const { c, dark } = useTheme()
+  const ink = tone ? c.tone[tone] : c.brand
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size * 0.32,
+        backgroundColor: tone ? soft(ink, dark) : c.brandSoft,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Feather name={name} size={Math.round(size * 0.47)} color={ink} />
+    </View>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Layout
 // ---------------------------------------------------------------------------
@@ -123,22 +179,24 @@ export function Screen({
   footer?: ReactNode
   padded?: boolean
 }) {
-  const { c } = useTheme()
+  const { c, dark } = useTheme()
   const insets = useSafeAreaInsets()
   const body = scroll ? (
     <ScrollView
       style={{ flex: 1 }}
       contentContainerStyle={[
         padded ? styles.content : null,
-        { paddingBottom: (padded ? space.lg : 0) + (footer ? 0 : insets.bottom) },
+        { paddingBottom: (padded ? space.xl : 0) + (footer ? 0 : insets.bottom) },
       ]}
       keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
       refreshControl={
         onRefresh ? (
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={c.mutedForeground}
+            tintColor={c.brand}
+            colors={[c.brand]}
           />
         ) : undefined
       }
@@ -161,9 +219,11 @@ export function Screen({
             styles.footer,
             {
               backgroundColor: c.card,
-              borderTopColor: c.border,
-              paddingBottom: Math.max(insets.bottom, space.md),
+              paddingBottom: Math.max(insets.bottom, space.lg),
             },
+            dark
+              ? { borderTopWidth: 1, borderTopColor: c.border }
+              : { boxShadow: '0 -6px 20px rgba(24,24,27,0.06)' },
           ]}
         >
           {footer}
@@ -183,13 +243,14 @@ export function Card({
   /** No inner padding — for a card that is a list of rows. */
   flush?: boolean
 }) {
-  const { c } = useTheme()
+  const { c, dark } = useTheme()
   return (
     <View
       style={[
         styles.card,
-        { backgroundColor: c.card, borderColor: c.border },
-        flush ? { padding: 0 } : null,
+        { backgroundColor: c.card },
+        elevation(c, dark),
+        flush ? { padding: 0, overflow: 'hidden' } : null,
         style,
       ]}
     >
@@ -208,13 +269,16 @@ export function Section({
   action?: { label: string; onPress: () => void }
   children: ReactNode
 }) {
+  const { c } = useTheme()
   return (
-    <View style={{ gap: space.sm }}>
+    <View style={{ gap: space.md }}>
       <View style={styles.sectionHead}>
-        <T v="heading">{title}</T>
+        <T v="heading" style={{ fontSize: 18 }}>
+          {title}
+        </T>
         {action ? (
-          <Pressable onPress={action.onPress} hitSlop={8}>
-            <T v="small" muted>
+          <Pressable onPress={action.onPress} hitSlop={10}>
+            <T v="small" style={{ color: c.brand, fontWeight: '600' }}>
               {action.label}
             </T>
           </Pressable>
@@ -256,7 +320,8 @@ export function Stack({
 
 /**
  * One line in a list card. Rows separate themselves, so a list is just rows
- * inside `<Card flush>`.
+ * inside `<Card flush>`. An `icon` is drawn on a tinted tile; the separator
+ * starts after it, so the eye runs down the titles.
  */
 export function Row({
   title,
@@ -279,28 +344,35 @@ export function Row({
   chevron?: boolean
 }) {
   const { c } = useTheme()
+  const lead = left ?? (icon ? <IconTile name={icon} /> : null)
   const inner = (
-    <View
-      style={[
-        styles.row,
-        first
-          ? null
-          : { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
-      ]}
-    >
-      {left ?? (icon ? <Icon name={icon} /> : null)}
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <T numberOfLines={2} bold={false} style={{ fontWeight: '500' }}>
-          {title}
-        </T>
-        {subtitle ? (
-          <T v="small" muted numberOfLines={2}>
-            {subtitle}
+    <View>
+      {first ? null : (
+        <View
+          style={{
+            height: StyleSheet.hairlineWidth,
+            backgroundColor: c.border,
+            marginLeft: lead ? space.lg + 38 + space.md : space.lg,
+          }}
+        />
+      )}
+      <View style={styles.row}>
+        {lead}
+        <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+          <T numberOfLines={2} style={{ fontWeight: '600' }}>
+            {title}
           </T>
+          {subtitle ? (
+            <T v="small" muted numberOfLines={2}>
+              {subtitle}
+            </T>
+          ) : null}
+        </View>
+        {right}
+        {(chevron ?? !!onPress) ? (
+          <Feather name="chevron-right" size={18} color={c.mutedForeground} />
         ) : null}
       </View>
-      {right}
-      {(chevron ?? !!onPress) ? <Icon name="chevron-right" size={16} /> : null}
     </View>
   )
   if (!onPress) return inner
@@ -320,6 +392,11 @@ export function Row({
 
 type ButtonVariant = 'primary' | 'outline' | 'ghost' | 'destructive'
 
+/**
+ * `primary` is the brand, filled — one per screen, the obvious action.
+ * `outline` is the same colour as a tint: a real button, but not the answer.
+ * `ghost` is text. `destructive` is for the thing that cannot be undone.
+ */
 export function Button({
   title,
   onPress,
@@ -346,13 +423,13 @@ export function Button({
       ? c.primary
       : variant === 'destructive'
         ? c.destructive
-        : 'transparent'
+        : variant === 'outline'
+          ? c.brandSoft
+          : 'transparent'
   const fg =
-    variant === 'primary'
+    variant === 'primary' || variant === 'destructive'
       ? c.primaryForeground
-      : variant === 'destructive'
-        ? '#ffffff'
-        : c.foreground
+      : c.brand
   return (
     <Pressable
       onPress={off ? undefined : onPress}
@@ -363,8 +440,8 @@ export function Button({
         small ? styles.buttonSmall : null,
         {
           backgroundColor: bg,
-          borderColor: variant === 'outline' ? c.border : 'transparent',
-          opacity: off ? 0.5 : pressed ? 0.8 : 1,
+          opacity: off ? 0.45 : pressed ? 0.85 : 1,
+          transform: [{ scale: pressed && !off ? 0.985 : 1 }],
         },
         style,
       ]}
@@ -372,11 +449,21 @@ export function Button({
       {loading ? (
         <ActivityIndicator size="small" color={fg} />
       ) : icon ? (
-        <Feather name={icon} size={small ? 14 : 16} color={fg} />
+        <Feather name={icon} size={small ? 15 : 18} color={fg} />
       ) : null}
       <Text
-        style={{ color: fg, fontSize: small ? 13 : 15, fontWeight: '600' }}
+        style={{
+          color: fg,
+          fontFamily: font(700),
+          fontSize: small ? 13.5 : 16,
+          letterSpacing: -0.1,
+          flexShrink: 1,
+        }}
         numberOfLines={1}
+        // A label that is a few points too wide for its button shrinks a
+        // little before it is ever cut short.
+        adjustsFontSizeToFit
+        minimumFontScale={0.85}
       >
         {title}
       </Text>
@@ -389,25 +476,39 @@ export function IconButton({
   onPress,
   label,
   badge,
+  surface,
 }: {
   name: IconName
   onPress: () => void
   label: string
   badge?: number
+  /** Draw it as a raised round button — for a control that sits on the canvas. */
+  surface?: boolean
 }) {
-  const { c } = useTheme()
+  const { c, dark } = useTheme()
   return (
     <Pressable
       onPress={onPress}
-      hitSlop={10}
+      hitSlop={8}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={{ padding: 6 }}
+      style={({ pressed }) => [
+        styles.iconButton,
+        surface ? [{ backgroundColor: c.card }, elevation(c, dark)] : null,
+        pressed ? { backgroundColor: c.muted } : null,
+      ]}
     >
-      <Feather name={name} size={21} color={c.foreground} />
+      <Feather name={name} size={20} color={c.foreground} />
       {badge && badge > 0 ? (
-        <View style={[styles.dot, { backgroundColor: c.destructive }]}>
-          <Text style={styles.dotText}>{badge > 99 ? '99+' : badge}</Text>
+        <View
+          style={[
+            styles.dot,
+            { backgroundColor: c.destructive, borderColor: surface ? c.card : c.background },
+          ]}
+        >
+          <Text style={[styles.dotText, { fontFamily: font(700) }]}>
+            {badge > 99 ? '99+' : badge}
+          </Text>
         </View>
       ) : null}
     </Pressable>
@@ -424,8 +525,8 @@ export function Field({
   children: ReactNode
 }) {
   return (
-    <View style={{ gap: 6 }}>
-      <T v="small" style={{ fontWeight: '500' }}>
+    <View style={{ gap: 7 }}>
+      <T v="small" style={{ fontWeight: '600' }}>
         {label}
       </T>
       {children}
@@ -438,21 +539,33 @@ export function Field({
   )
 }
 
-export function Input({ style, multiline, ...rest }: TextInputProps) {
+export function Input({ style, multiline, onFocus, onBlur, ...rest }: TextInputProps) {
   const { c } = useTheme()
+  const [focused, setFocused] = useState(false)
   return (
     <TextInput
       placeholderTextColor={c.mutedForeground}
       multiline={multiline}
       {...rest}
+      onFocus={(e) => {
+        setFocused(true)
+        onFocus?.(e)
+      }}
+      onBlur={(e) => {
+        setFocused(false)
+        onBlur?.(e)
+      }}
       style={[
         styles.input,
         {
-          borderColor: c.border,
+          borderColor: focused ? c.brand : c.border,
           backgroundColor: c.card,
           color: c.foreground,
+          fontFamily: font(400),
         },
-        multiline ? { minHeight: 110, textAlignVertical: 'top', paddingTop: 10 } : null,
+        multiline ? { minHeight: 120, textAlignVertical: 'top', paddingTop: 14 } : null,
+        // The browser draws its own focus ring; the border already shows one.
+        Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : null,
         style,
       ]}
     />
@@ -470,31 +583,69 @@ export function SearchInput({
 }) {
   const { c } = useTheme()
   const { t } = useT()
+  const [focused, setFocused] = useState(false)
   return (
     <View
       style={[
         styles.input,
-        styles.search,
-        { borderColor: c.border, backgroundColor: c.card },
+        styles.inline,
+        { borderColor: focused ? c.brand : c.border, backgroundColor: c.card },
       ]}
     >
-      <Icon name="search" size={16} />
+      <Feather name="search" size={18} color={c.mutedForeground} />
       <TextInput
         value={value}
         onChangeText={onChangeText}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         placeholder={placeholder ?? t('common.search')}
         placeholderTextColor={c.mutedForeground}
         autoCapitalize="none"
         autoCorrect={false}
         returnKeyType="search"
-        style={{ flex: 1, color: c.foreground, fontSize: 15, paddingVertical: 0 }}
+        style={[
+          { flex: 1, color: c.foreground, fontSize: 15, paddingVertical: 0 },
+          { fontFamily: font(400) },
+          // The browser draws its own focus ring; the field already shows one.
+          Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : null,
+        ]}
       />
       {value ? (
         <Pressable onPress={() => onChangeText('')} hitSlop={10}>
-          <Icon name="x" size={16} />
+          <Feather name="x" size={18} color={c.mutedForeground} />
         </Pressable>
       ) : null}
     </View>
+  )
+}
+
+/** A switch in the brand colour. */
+export function Toggle({
+  value,
+  onValueChange,
+  disabled,
+  label,
+}: {
+  value: boolean
+  onValueChange: (v: boolean) => void
+  disabled?: boolean
+  /** Read out by a screen reader; the switch has no visible text of its own. */
+  label?: string
+}) {
+  const { c } = useTheme()
+  return (
+    <RNSwitch
+      value={value}
+      onValueChange={onValueChange}
+      disabled={disabled}
+      accessibilityLabel={label}
+      trackColor={{ false: c.border, true: c.primary }}
+      thumbColor="#ffffff"
+      ios_backgroundColor={c.border}
+      {...(Platform.OS === 'web'
+        ? ({ activeThumbColor: '#ffffff', activeTrackColor: c.primary } as object)
+        : null)}
+    />
   )
 }
 
@@ -512,13 +663,18 @@ export function SwitchRow({
   return (
     <View style={styles.switchRow}>
       <T style={{ flex: 1 }}>{label}</T>
-      <RNSwitch value={value} onValueChange={onValueChange} disabled={disabled} />
+      <Toggle value={value} onValueChange={onValueChange} disabled={disabled} label={label} />
     </View>
   )
 }
 
 export type BadgeVariant = 'default' | 'secondary' | 'outline' | 'destructive'
 
+/**
+ * A status, as a soft pill: the colour is a tint behind its own ink, never a
+ * hard outline. `tone` carries meaning (good, late, waiting); without one the
+ * `variant` only says how loud it is.
+ */
 export function Badge({
   label,
   variant = 'secondary',
@@ -528,31 +684,39 @@ export function Badge({
   variant?: BadgeVariant
   tone?: Tone
 }) {
-  const { c } = useTheme()
-  const color = tone
+  const { c, dark } = useTheme()
+  const ink = tone
     ? c.tone[tone]
     : variant === 'default'
-      ? c.primaryForeground
+      ? c.brand
       : variant === 'destructive'
         ? c.destructive
-        : c.foreground
+        : variant === 'outline'
+          ? c.mutedForeground
+          : c.foreground
   const bg = tone
-    ? 'transparent'
+    ? soft(ink, dark)
     : variant === 'default'
-      ? c.primary
-      : variant === 'secondary'
-        ? c.muted
-        : 'transparent'
-  const border = tone
-    ? c.tone[tone]
-    : variant === 'outline'
-      ? c.border
+      ? c.brandSoft
       : variant === 'destructive'
-        ? c.destructive
-        : 'transparent'
+        ? soft(c.destructive, dark)
+        : variant === 'outline'
+          ? 'transparent'
+          : c.muted
   return (
-    <View style={[styles.badge, { backgroundColor: bg, borderColor: border }]}>
-      <Text style={{ color, fontSize: 11, fontWeight: '600' }} numberOfLines={1}>
+    <View
+      style={[
+        styles.badge,
+        {
+          backgroundColor: bg,
+          borderColor: variant === 'outline' && !tone ? c.border : 'transparent',
+        },
+      ]}
+    >
+      <Text
+        style={{ color: ink, fontFamily: font(600), fontSize: 12, letterSpacing: 0.1 }}
+        numberOfLines={1}
+      >
         {label}
       </Text>
     </View>
@@ -574,8 +738,10 @@ export function Chips<V extends string>({
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ gap: space.sm }}
-      style={{ flexGrow: 0 }}
+      // Bleeds to the screen's edges, so a long strip scrolls off the side of
+      // the phone rather than being cut off at the page margin.
+      style={{ flexGrow: 0, marginHorizontal: -20 }}
+      contentContainerStyle={{ gap: space.sm, paddingHorizontal: 20 }}
     >
       {options.map((o) => {
         const on = o.value === value
@@ -583,6 +749,8 @@ export function Chips<V extends string>({
           <Pressable
             key={o.value}
             onPress={() => onChange(o.value)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: on }}
             style={[
               styles.chip,
               {
@@ -594,13 +762,24 @@ export function Chips<V extends string>({
             <Text
               style={{
                 color: on ? c.primaryForeground : c.foreground,
-                fontSize: 13,
-                fontWeight: '500',
+                fontFamily: font(600),
+                fontSize: 13.5,
               }}
             >
               {o.label}
-              {o.count !== undefined ? ` · ${o.count}` : ''}
             </Text>
+            {o.count !== undefined ? (
+              <Text
+                style={{
+                  color: on ? c.primaryForeground : c.mutedForeground,
+                  fontFamily: font(600),
+                  fontSize: 12.5,
+                  opacity: on ? 0.85 : 1,
+                }}
+              >
+                {o.count}
+              </Text>
+            ) : null}
           </Pressable>
         )
       })}
@@ -622,22 +801,41 @@ export function StatTile({
   tone?: Tone
   onPress?: () => void
 }) {
-  const { c } = useTheme()
+  const { c, dark } = useTheme()
+  // A dormant figure — nothing overdue, nothing waiting — stays quiet.
+  const ink = tone && tone !== 'muted' ? c.tone[tone] : c.foreground
+  // A count is two digits; a sum of money is eleven characters and has to
+  // fit half a phone's width. `adjustsFontSizeToFit` covers the rest on a
+  // device, and does nothing on the web preview.
+  const size = value.length <= 6 ? 28 : value.length <= 9 ? 22 : 18
   return (
     <Pressable
       onPress={onPress}
       disabled={!onPress}
-      style={[
-        styles.card,
-        { flex: 1, minWidth: 0, backgroundColor: c.card, borderColor: c.border, gap: 2 },
+      style={({ pressed }) => [
+        styles.tile,
+        { backgroundColor: c.card, opacity: pressed ? 0.9 : 1 },
+        elevation(c, dark),
       ]}
     >
-      <T v="small" muted numberOfLines={1}>
+      {/* Two lines: the Malay labels are longer than half a phone is wide. */}
+      <T v="small" muted numberOfLines={2} style={{ fontWeight: '500' }}>
         {label}
       </T>
-      <T v="title" tone={tone} numberOfLines={1}>
+      <Text
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+        style={{
+          color: tone === 'muted' ? c.mutedForeground : ink,
+          fontFamily: font(800),
+          fontSize: size,
+          letterSpacing: size > 22 ? -0.8 : -0.4,
+          lineHeight: 34,
+        }}
+      >
         {value}
-      </T>
+      </Text>
       {hint ? (
         <T v="tiny" muted numberOfLines={2}>
           {hint}
@@ -651,8 +849,12 @@ export function ProgressBar({ value }: { value: number }) {
   const { c } = useTheme()
   const pct = Math.max(0, Math.min(100, value))
   return (
-    <View style={{ height: 5, borderRadius: 3, backgroundColor: c.muted, overflow: 'hidden' }}>
-      <View style={{ width: `${pct}%`, height: 5, backgroundColor: c.primary }} />
+    <View
+      style={{ height: 8, borderRadius: 4, backgroundColor: c.muted, overflow: 'hidden' }}
+    >
+      <View
+        style={{ width: `${pct}%`, height: 8, borderRadius: 4, backgroundColor: c.brand }}
+      />
     </View>
   )
 }
@@ -683,12 +885,12 @@ export function Avatar({
         width: size,
         height: size,
         borderRadius: size / 2,
-        backgroundColor: c.muted,
+        backgroundColor: c.brandSoft,
         alignItems: 'center',
         justifyContent: 'center',
       }}
     >
-      <Text style={{ color: c.foreground, fontSize: size * 0.36, fontWeight: '600' }}>
+      <Text style={{ color: c.brand, fontSize: size * 0.36, fontFamily: font(700) }}>
         {initialsOf(name, email)}
       </Text>
     </View>
@@ -703,7 +905,7 @@ export function Loading() {
   const { c } = useTheme()
   return (
     <View style={styles.center}>
-      <ActivityIndicator color={c.mutedForeground} />
+      <ActivityIndicator color={c.brand} />
     </View>
   )
 }
@@ -718,9 +920,9 @@ export function Empty({
   icon?: IconName
 }) {
   return (
-    <View style={[styles.center, { gap: 6 }]}>
-      {icon ? <Icon name={icon} size={26} /> : null}
-      <T center style={{ fontWeight: '500' }}>
+    <View style={[styles.center, { gap: space.sm }]}>
+      {icon ? <IconTile name={icon} size={56} /> : null}
+      <T center style={{ fontWeight: '700', fontSize: 16, marginTop: icon ? 6 : 0 }}>
         {title}
       </T>
       {body ? (
@@ -736,7 +938,8 @@ export function ErrorBlock({ error, onRetry }: { error: unknown; onRetry?: () =>
   const { t } = useT()
   return (
     <View style={[styles.center, { gap: space.md }]}>
-      <T center tone="danger">
+      <IconTile name="alert-circle" size={56} tone="danger" />
+      <T center style={{ fontWeight: '600' }}>
         {errorMessage(error, t('common.error'))}
       </T>
       {onRetry ? (
@@ -750,7 +953,7 @@ export function ErrorBlock({ error, onRetry }: { error: unknown; onRetry?: () =>
 export function FormError({ error }: { error: string | null | undefined }) {
   if (!error) return null
   return (
-    <T v="small" tone="danger">
+    <T v="small" tone="danger" style={{ fontWeight: '500' }}>
       {error}
     </T>
   )
@@ -772,31 +975,35 @@ export function Sheet({
   children: ReactNode
 }) {
   const { c } = useTheme()
+  const { t } = useT()
   const insets = useSafeAreaInsets()
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView
-        style={{ flex: 1, justifyContent: 'flex-end' }}
+        style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center' }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <Pressable style={styles.backdrop} onPress={onClose} />
         <View
           style={[
             styles.sheet,
-            { backgroundColor: c.card, paddingBottom: Math.max(insets.bottom, space.lg) },
+            { backgroundColor: c.card, paddingBottom: Math.max(insets.bottom, space.xl) },
           ]}
         >
+          <View style={[styles.grabber, { backgroundColor: c.border }]} />
           {title ? (
             <View style={styles.sheetHead}>
-              <T v="heading" style={{ flex: 1 }}>
+              <T v="heading" style={{ flex: 1, fontSize: 19 }}>
                 {title}
               </T>
-              <Pressable onPress={onClose} hitSlop={10}>
-                <Icon name="x" size={20} />
-              </Pressable>
+              <IconButton name="x" label={t('common.close')} onPress={onClose} />
             </View>
           ) : null}
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: space.md }}>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ gap: space.lg }}
+          >
             {children}
           </ScrollView>
         </View>
@@ -822,29 +1029,25 @@ export function Menu({ items, label }: { items: MenuItem[]; label: string }) {
       <IconButton name="more-horizontal" label={label} onPress={() => setOpen(true)} />
       <Sheet visible={open} onClose={() => setOpen(false)}>
         <View>
-          {items.map((item, i) => (
+          {items.map((item) => (
             <Pressable
               key={item.label}
               onPress={() => {
                 setOpen(false)
                 item.onPress()
               }}
-              style={[
+              style={({ pressed }) => [
                 styles.menuItem,
-                i === 0
-                  ? null
-                  : { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
+                pressed ? { backgroundColor: c.muted } : null,
               ]}
             >
               {item.icon ? (
-                <Icon
-                  name={item.icon}
-                  color={item.destructive ? c.destructive : c.foreground}
-                />
+                <IconTile name={item.icon} tone={item.destructive ? 'danger' : undefined} />
               ) : null}
               <Text
                 style={{
                   color: item.destructive ? c.destructive : c.foreground,
+                  fontFamily: font(600),
                   fontSize: 16,
                 }}
               >
@@ -880,7 +1083,7 @@ export function Select<V extends string>({
         onPress={() => setOpen(true)}
         style={[
           styles.input,
-          styles.search,
+          styles.inline,
           { borderColor: c.border, backgroundColor: c.card },
         ]}
       >
@@ -888,41 +1091,46 @@ export function Select<V extends string>({
           style={{
             flex: 1,
             fontSize: 15,
+            fontFamily: font(selected ? 500 : 400),
             color: selected ? c.foreground : c.mutedForeground,
           }}
           numberOfLines={1}
         >
           {selected?.label ?? placeholder ?? ''}
         </Text>
-        <Icon name="chevron-down" size={16} />
+        <Feather name="chevron-down" size={18} color={c.mutedForeground} />
       </Pressable>
       <Sheet visible={open} onClose={() => setOpen(false)} title={title}>
         <View>
-          {options.map((o, i) => (
-            <Pressable
-              key={o.value}
-              onPress={() => {
-                setOpen(false)
-                onChange(o.value)
-              }}
-              style={[
-                styles.menuItem,
-                i === 0
-                  ? null
-                  : { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
-              ]}
-            >
-              <View style={{ flex: 1 }}>
-                <T>{o.label}</T>
-                {o.hint ? (
-                  <T v="small" muted>
-                    {o.hint}
+          {options.map((o) => {
+            const on = o.value === value
+            return (
+              <Pressable
+                key={o.value}
+                onPress={() => {
+                  setOpen(false)
+                  onChange(o.value)
+                }}
+                style={({ pressed }) => [
+                  styles.menuItem,
+                  on ? { backgroundColor: c.brandSoft } : null,
+                  pressed ? { backgroundColor: c.muted } : null,
+                ]}
+              >
+                <View style={{ flex: 1 }}>
+                  <T style={{ fontWeight: on ? '700' : '500', color: on ? c.brand : c.foreground }}>
+                    {o.label}
                   </T>
-                ) : null}
-              </View>
-              {o.value === value ? <Icon name="check" color={c.foreground} /> : null}
-            </Pressable>
-          ))}
+                  {o.hint ? (
+                    <T v="small" muted>
+                      {o.hint}
+                    </T>
+                  ) : null}
+                </View>
+                {on ? <Feather name="check" size={18} color={c.brand} /> : null}
+              </Pressable>
+            )
+          })}
         </View>
       </Sheet>
     </>
@@ -949,27 +1157,56 @@ export function DateField({
   const date = value ? new Date(`${value}T00:00:00`) : new Date()
   const toYmd = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+  // The web preview has no native picker; the browser's own date input is the
+  // same control by another name.
+  if (Platform.OS === 'web') {
+    return createElement('input', {
+      type: 'date',
+      value: value ?? '',
+      min: minimumDate ? toYmd(minimumDate) : undefined,
+      max: maximumDate ? toYmd(maximumDate) : undefined,
+      onChange: (e: { target: { value: string } }) => onChange(e.target.value || null),
+      style: {
+        minHeight: 52,
+        borderRadius: radius.md,
+        border: `1px solid ${c.border}`,
+        backgroundColor: c.card,
+        color: c.foreground,
+        padding: '0 14px',
+        fontSize: 15,
+        fontFamily: font(500),
+        colorScheme: 'light dark',
+      },
+    })
+  }
+
   return (
     <>
       <Pressable
         onPress={() => setOpen(true)}
         style={[
           styles.input,
-          styles.search,
+          styles.inline,
           { borderColor: c.border, backgroundColor: c.card },
         ]}
       >
         <Text
-          style={{ flex: 1, fontSize: 15, color: value ? c.foreground : c.mutedForeground }}
+          style={{
+            flex: 1,
+            fontSize: 15,
+            fontFamily: font(value ? 500 : 400),
+            color: value ? c.foreground : c.mutedForeground,
+          }}
         >
           {value ?? placeholder ?? ''}
         </Text>
         {value ? (
           <Pressable onPress={() => onChange(null)} hitSlop={10}>
-            <Icon name="x" size={16} />
+            <Feather name="x" size={18} color={c.mutedForeground} />
           </Pressable>
         ) : (
-          <Icon name="calendar" size={16} />
+          <Feather name="calendar" size={18} color={c.mutedForeground} />
         )}
       </Pressable>
       {open && Platform.OS === 'android' ? (
@@ -990,6 +1227,7 @@ export function DateField({
             value={date}
             mode="date"
             display="inline"
+            accentColor={c.primary}
             minimumDate={minimumDate}
             maximumDate={maximumDate}
             onChange={(_event, picked) => {
@@ -1003,6 +1241,18 @@ export function DateField({
   )
 }
 
+/**
+ * Tell the person something happened. The platform's own alert on a phone; the
+ * browser's on the web preview, where React Native's `Alert` does nothing.
+ */
+export function notify(title: string, message?: string): void {
+  if (Platform.OS === 'web') {
+    globalThis.alert?.(message ? `${title}\n\n${message}` : title)
+    return
+  }
+  Alert.alert(title, message)
+}
+
 /** A yes/no question that changes something. Resolves true on confirm. */
 export function confirm(opts: {
   title: string
@@ -1011,6 +1261,10 @@ export function confirm(opts: {
   cancelLabel: string
   destructive?: boolean
 }): Promise<boolean> {
+  if (Platform.OS === 'web') {
+    const text = opts.message ? `${opts.title}\n\n${opts.message}` : opts.title
+    return Promise.resolve(globalThis.confirm?.(text) ?? false)
+  }
   return new Promise((resolve) => {
     Alert.alert(opts.title, opts.message, [
       { text: opts.cancelLabel, style: 'cancel', onPress: () => resolve(false) },
@@ -1024,18 +1278,15 @@ export function confirm(opts: {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: space.lg, gap: space.lg },
+  content: { padding: 20, gap: 22 },
   footer: {
-    paddingHorizontal: space.lg,
-    paddingTop: space.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    gap: space.sm,
+    paddingHorizontal: 20,
+    paddingTop: space.lg,
+    gap: space.md,
   },
   card: {
     borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: space.lg,
-    overflow: 'hidden',
+    padding: 18,
   },
   sectionHead: {
     flexDirection: 'row',
@@ -1047,75 +1298,112 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space.md,
     paddingHorizontal: space.lg,
-    paddingVertical: space.md,
-    minHeight: 52,
+    paddingVertical: 13,
+    minHeight: 64,
   },
   button: {
-    minHeight: 46,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    paddingHorizontal: space.lg,
+    minHeight: 52,
+    borderRadius: 16,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: space.sm,
   },
-  buttonSmall: { minHeight: 34, paddingHorizontal: space.md },
+  buttonSmall: { minHeight: 40, borderRadius: 12, paddingHorizontal: 14, gap: 6 },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   input: {
-    minHeight: 46,
+    minHeight: 52,
     borderRadius: radius.md,
-    borderWidth: 1,
-    paddingHorizontal: space.md,
+    borderWidth: 1.5,
+    paddingHorizontal: 14,
     fontSize: 15,
   },
-  search: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  inline: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 44 },
   badge: {
-    borderRadius: 999,
+    borderRadius: radius.pill,
     borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
     alignSelf: 'flex-start',
   },
   chip: {
-    borderRadius: 999,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: radius.pill,
     borderWidth: 1,
-    paddingHorizontal: space.md,
-    paddingVertical: 7,
+    paddingHorizontal: 16,
+    height: 40,
+  },
+  tile: {
+    flex: 1,
+    minWidth: 0,
+    borderRadius: radius.lg,
+    padding: 16,
+    gap: 2,
+    // Tiles in a row share a height; the figures line up along the bottom
+    // whether a label took one line or two.
+    justifyContent: 'space-between',
   },
   center: { alignItems: 'center', justifyContent: 'center', padding: space.xl },
   dot: {
     position: 'absolute',
-    top: 0,
-    right: 0,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
+    top: 2,
+    right: 2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
     paddingHorizontal: 3,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dotText: { color: '#ffffff', fontSize: 9, fontWeight: '700' },
+  dotText: { color: '#ffffff', fontSize: 9.5 },
   backdrop: {
     position: 'absolute',
     top: 0,
     right: 0,
     bottom: 0,
     left: 0,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(9,9,11,0.5)',
   },
   sheet: {
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    padding: space.lg,
-    maxHeight: '88%',
+    width: '100%',
+    maxWidth: 480,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    maxHeight: '90%',
   },
-  sheetHead: { flexDirection: 'row', alignItems: 'center', marginBottom: space.md },
+  grabber: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    marginBottom: space.lg,
+  },
+  sheetHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: space.md,
+    marginTop: -4,
+  },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
-    minHeight: 52,
+    minHeight: 56,
     paddingVertical: space.sm,
+    paddingHorizontal: space.sm,
+    borderRadius: radius.md,
   },
 })

@@ -1,12 +1,20 @@
 import { useState } from 'react'
-import { Alert, Linking, View } from 'react-native'
+import { Linking, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { addSessionToCalendar } from '@/lib/deviceCalendar'
 import { errorMessage } from '@/lib/errors'
 import { localeFor } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { waLink, waNumber } from '@/lib/phone'
-import { Badge, Button, FormError, Sheet, T, space } from '@/ui'
+import {
+  Badge,
+  Button,
+  FormError,
+  notify,
+  Sheet,
+  space,
+  T,
+} from '@/ui'
 import {
   APPOINTMENT_STATUS,
   useCancelAppointment,
@@ -73,7 +81,7 @@ export function SessionSheet({
     try {
       const result = await cancel.mutateAsync({ id: a.id })
       onClose()
-      Alert.alert(
+      notify(
         result.reassigned
           ? t('appt.handover.done', {
               name: result.instructor?.full_name ?? t('common.unnamed'),
@@ -93,7 +101,7 @@ export function SessionSheet({
       notes: a.note,
       timeZone: tz,
     })
-    Alert.alert(
+    notify(
       t(
         outcome === 'added'
           ? 'm.calendar.added'
