@@ -42,7 +42,7 @@ const APPS: Record<
     scheme: 'hawarystudent',
     id: 'my.hawary.student',
     root: './src/app-student',
-    projectId: process.env.EAS_PROJECT_ID_STUDENT || undefined,
+    projectId: '78ef3b72-fe35-4fb8-821a-6f45099b1aa1',
     linkPrefixes: ['/learn'],
   },
   academy: {
@@ -51,7 +51,7 @@ const APPS: Record<
     scheme: 'hawaryacademy',
     id: 'my.hawary.academy',
     root: './src/app-academy',
-    projectId: process.env.EAS_PROJECT_ID_ACADEMY || undefined,
+    projectId: 'cd2ef49c-2de1-4fd0-9af4-a1782fc906f2',
     // Not `/`: the dashboard root would swallow every link on the host,
     // including /pay/<token>, which has to stay a web page.
     linkPrefixes: [
