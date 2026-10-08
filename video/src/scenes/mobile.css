@@ -1,0 +1,68 @@
+/* Scene "mobile": film graphics only (the app-icon tiles, their labels, the
+   veil over a phone that has stepped back, the screen going to sleep, the ring
+   a landing notification throws). Nothing here restyles the product or the OS
+   chrome in ../os.css. */
+
+/* An app icon as its home-screen tile. Centre-anchored: its x / y is its centre. */
+.mobile-tile {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 128px;
+  height: 128px;
+  margin: -64px 0 0 -64px;
+  border-radius: 29px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(17, 17, 19, 0.07), 0 2px 4px rgba(17, 17, 19, 0.06), 0 18px 34px -10px rgba(15, 118, 110, 0.38);
+  transform-origin: 50% 50%;
+  z-index: 20;
+}
+.mobile-tile img {
+  width: 128px;
+  height: 128px;
+}
+
+/* The app's name under its tile, as a home screen writes it. */
+.mobile-name {
+  font-weight: 650;
+  font-size: 25px;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+/* A phone that has stepped back: its screen washes toward the paper. */
+.mobile-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  background: var(--paper);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The display switching off / idling dim before a notification wakes it. */
+.mobile-sleep {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: #020606;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The outline a landing notification throws off the phone. */
+.mobile-pulse {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 414px;
+  height: 868px;
+  border-radius: 62px;
+  border: 3px solid var(--teal);
+  opacity: 0;
+  transform-origin: 50% 50%;
+  pointer-events: none;
+}

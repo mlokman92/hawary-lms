@@ -1,0 +1,243 @@
+/* Scene "lpkc": the film's only dark passage. Type is white, accents teal-400, the amber dot glows. */
+
+.scene .lpkc-type {
+  color: #fff;
+}
+.scene .lpkc-type .t-teal {
+  color: var(--teal-400);
+}
+
+.lpkc-cam,
+.lpkc-world {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+}
+.lpkc-world {
+  perspective: 2400px;
+}
+
+/* the dot's light: only shows once the room is dark */
+.lpkc-halo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 300px;
+  height: 300px;
+  margin: -150px 0 0 -150px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.5) 0%, rgba(245, 158, 11, 0.5) 12%, rgba(245, 158, 11, 0.14) 24%, rgba(245, 158, 11, 0.045) 42%, rgba(245, 158, 11, 0) 64%);
+  opacity: 0;
+  pointer-events: none;
+}
+.lpkc-pulse {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  border-radius: 50%;
+  border: 2.5px solid var(--amber);
+  opacity: 0;
+}
+
+/* the old way: a ghost of a meeting, drawn as a film graphic (glass, not app UI) */
+.lpkc-card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 20px 38px 20px 22px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.24);
+  color: #fff;
+  white-space: nowrap;
+  transform-origin: 50% 50%;
+}
+.lpkc-card-ico {
+  width: 68px;
+  height: 68px;
+  border-radius: 20px;
+  background: rgba(45, 212, 191, 0.16);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.lpkc-card-ico svg {
+  width: 36px;
+  height: 36px;
+  color: var(--teal-400);
+  display: block;
+}
+.lpkc-card b {
+  display: block;
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  line-height: 1.1;
+}
+.lpkc-card span {
+  display: block;
+  margin-top: 6px;
+  font-size: 23px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  line-height: 1.1;
+  color: rgba(255, 255, 255, 0.62);
+}
+.lpkc-strike {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 5px;
+  margin-top: -2.5px;
+  border-radius: 3px;
+  background: #fff;
+  transform-origin: 0 50%;
+}
+
+/* the phone dims as it steps back */
+.lpkc-shade {
+  position: absolute;
+  inset: 0;
+  border-radius: 62px;
+  background: #051514;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* the report itself: a page, not a screen */
+.lpkc-doc {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 520px;
+  height: 700px;
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+  transform-origin: 50% 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28), 0 44px 90px -26px rgba(0, 0, 0, 0.66), 0 0 150px -24px rgba(45, 212, 191, 0.5);
+}
+.lpkc-doc-head {
+  position: absolute;
+  left: 38px;
+  top: 36px;
+  right: 30px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.lpkc-doc-ico {
+  width: 62px;
+  height: 62px;
+  border-radius: 15px;
+  background: var(--teal-50);
+  box-shadow: inset 0 0 0 1.5px rgba(15, 118, 110, 0.14);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.lpkc-doc-ico svg {
+  width: 32px;
+  height: 32px;
+  color: var(--teal);
+  display: block;
+}
+.lpkc-doc-name {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  line-height: 1.12;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.lpkc-doc-meta {
+  margin-top: 5px;
+  font-size: 21px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--ink-3);
+}
+.lpkc-doc-rule {
+  position: absolute;
+  left: 38px;
+  right: 38px;
+  top: 124px;
+  height: 2px;
+  background: var(--line);
+}
+.lpkc-bar {
+  position: absolute;
+  left: 38px;
+  height: 11px;
+  border-radius: 6px;
+  background: #e4e4e7;
+}
+.lpkc-bar.hd {
+  height: 16px;
+  border-radius: 8px;
+  background: #a1a1aa;
+}
+.lpkc-fig {
+  position: absolute;
+  border-radius: 10px;
+  background: #f4f4f5;
+  display: grid;
+  place-items: center;
+}
+.lpkc-fig svg {
+  width: 34px;
+  height: 34px;
+  color: #d4d4d8;
+  display: block;
+}
+.lpkc-band {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 520px;
+  height: 170px;
+  margin-top: -85px;
+  background: linear-gradient(to bottom, rgba(45, 212, 191, 0), rgba(45, 212, 191, 0.24) 50%, rgba(45, 212, 191, 0));
+  opacity: 0;
+}
+.lpkc-scan {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 3px;
+  margin-top: -1.5px;
+  border-radius: 2px;
+  background: var(--teal-400);
+  box-shadow: 0 0 16px 3px rgba(45, 212, 191, 0.75);
+  transform-origin: 0 50%;
+  opacity: 0;
+}
+.lpkc-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--teal-400);
+  white-space: nowrap;
+  transform-origin: 50% 50%;
+}
+.lpkc-label svg {
+  width: 28px;
+  height: 28px;
+  display: block;
+}

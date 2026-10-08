@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Hawary Academy LMS (staff): the same art, reversed out of the brand teal.
+       On teal the dot is the lighter amber-400 (3.3:1 against the ground; the standard amber-500 is 2.6:1).
+       This tile is the only place the lighter amber is used.
+       Symbol module 64: arch 576 x 512 (56% x 50% of the canvas), x 224-800, crown y 248, feet y 760, dot radius 96.
+       Ink box centre y = 506, area centroid y = 520: the canvas centre (512) sits between the two.
+       At Android's 72% the foot corners are 273 from the centre: 80% of the 341 circle radius. -->
+  <rect id="bg" width="1024" height="1024" fill="#0f766e"/>
+  <g id="art">
+    <path fill="#ffffff" d="M224 760V536A288 288 0 0 1 800 536V760H672V536A160 165.33 0 0 0 352 536V760Z"/>
+    <circle fill="#fbbf24" cx="512" cy="668" r="96"/>
+  </g>
+</svg>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Optical cut for 16-24px, drawn on the 16px pixel grid (1px = 32 units): 16 x 15 px, the full canvas width,
+       crown on the top edge and feet one pixel above the bottom. Across the foot 3 - 2 - 6 - 2 - 3 px.
+       Against the master at this size (3 - 1.5 - 4.5 - 1.5 - 3 px) the gaps open from 1.5px to 2px and the dot grows
+       from 4.5px to 6px; the stroke stays a whole 3px. Outer radius 8px, inner 5px, legs 7px; the opening is still
+       two dots tall. No crown thinning, no overshoot: every straight edge lands on a pixel at 16, 32 and 48.
+       It carries no margin of its own - a favicon uses every pixel; add padding where a slot needs it. -->
+  <path fill="#0f766e" d="M0 480V256A256 256 0 0 1 512 256V480H416V256A160 160 0 0 0 96 256V480Z"/>
+  <circle fill="#f59e0b" cx="256" cy="384" r="96"/>
+</svg>

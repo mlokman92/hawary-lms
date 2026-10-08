@@ -1,0 +1,120 @@
+/* Scene "payments": film graphics only. Every class is prefixed with the scene id. */
+
+/* the scene's own window onto the wall: nothing of it shows outside the 1920x1080 frame */
+.payments-frame {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+}
+/* the travelling wall the camera pans along: three stations side by side */
+.payments-world {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  will-change: transform;
+}
+.payments-station {
+  position: absolute;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+}
+
+/* a free-standing piece of a real screenshot (a card that has stepped out of its page) */
+.payments-piece {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+.payments-clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  background: #fff;
+}
+.payments-clip > img {
+  position: absolute;
+  max-width: none;
+}
+
+/* the running figure inside a stat tile: the product's own type (text-lg, semibold, tabular) */
+.payments-count {
+  position: absolute;
+  background: #fff;
+  font-family: var(--font);
+  font-feature-settings: normal;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 28px;
+  letter-spacing: 0;
+  color: #09090b;
+  white-space: nowrap;
+}
+
+/* the scene's one amber thing: the amount */
+.payments-amount {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 76px;
+  border-radius: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--amber);
+  box-shadow: 0 12px 30px -10px rgba(245, 158, 11, 0.7);
+  color: #1c1300;
+  font-weight: 800;
+  font-size: 40px;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transform-origin: 50% 50%;
+}
+.payments-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+/* the batch total */
+.payments-total {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-weight: 800;
+  font-size: 62px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  white-space: nowrap;
+  transform-origin: 0 60%;
+}
+.payments-cap {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-weight: 550;
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: -0.012em;
+  color: var(--ink-2);
+  white-space: nowrap;
+}

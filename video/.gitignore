@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.stills/
+.cache/
+out/*.tmp.*
+audio/music/*.wav

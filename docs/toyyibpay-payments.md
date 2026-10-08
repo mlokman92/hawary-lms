@@ -253,9 +253,10 @@ create table public.payment_intents (
 );
 alter table public.payment_intents enable row level security;
 create index on public.payment_intents (academy_id, invoice_id);
--- atomic reuse guard (M4): at most one live intent per invoice
+-- atomic reuse guard (M4): at most one live intent per invoice AND amount
+-- (per invoice alone until part payment — see "Intent reuse is now amount-scoped")
 create unique index payment_intents_live_uidx
-  on public.payment_intents (invoice_id) where status in ('created','pending');
+  on public.payment_intents (invoice_id, amount_sen) where status in ('created','pending');
 create trigger set_updated_at before update on public.payment_intents
   for each row execute function app.set_updated_at();
 create policy "pi staff read" on public.payment_intents for select to authenticated
@@ -532,6 +533,19 @@ the invoice, which with part payment hands a payer who opened an RM500 bill and
 then chose RM1,000 the RM500 bill again. `liveIntent()` matches on
 `amount_sen` as well, and uses `limit(1)` rather than `.maybeSingle()` because
 an invoice may legitimately carry several live intents at once.
+
+**The unique index has to say the same thing.** `payment_intents_live_uidx` was
+written for the one-bill-per-invoice world — unique on `(invoice_id)` among live
+rows — and part payment shipped without widening it. The function looked for a
+live intent at the new amount, found none, inserted, and the index refused:
+the payer saw `duplicate key value violates unique constraint
+"payment_intents_live_uidx"` on the pay page and was locked to whichever amount
+they had opened first. It surfaced on 8 Oct 2026, the first day a whole intake
+was paying in instalments — 19 failed `create-bill` calls in two hours. The
+index is now unique on `(invoice_id, amount_sen)`
+(`20261008090000_payment_intents_live_per_amount.sql`), which is exactly the
+key `liveIntent()` reads by, and still stops two concurrent calls for the same
+amount minting two bills.
 
 Intents at other amounts are **left live, not expired**. `verify-payment` sweeps
 every `created`/`pending` intent that has a bill code, so a bill abandoned

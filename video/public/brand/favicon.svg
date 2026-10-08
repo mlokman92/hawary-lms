@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Browser-tab icon: mark-small.svg, the arch turning to the teal ink when the browser theme is dark. -->
+  <style>.arch{fill:#0f766e}@media (prefers-color-scheme:dark){.arch{fill:#2dd4bf}}</style>
+  <path class="arch" d="M0 480V256A256 256 0 0 1 512 256V480H416V256A160 160 0 0 0 96 256V480Z"/>
+  <circle fill="#f59e0b" cx="256" cy="384" r="96"/>
+</svg>

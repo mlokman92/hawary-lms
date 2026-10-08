@@ -1,0 +1,356 @@
+{
+  "_note": "The fictional world shown in the showreel. Course titles, module titles, the academy name and its slug are REAL (owner's rule: real UI, real course name). Every person, amount, message and document below is invented. Never use a production person's name.",
+  "academy": {
+    "id": "9c5fd727-65cd-4657-ab4d-fe52fa93d8b7",
+    "name": "Hawary Academy",
+    "slug": "hawary-academy"
+  },
+  "today": "2026-10-07",
+  "courses": [
+    {
+      "key": "siri3",
+      "title": "DKM Prasekolah Siri 3/2026",
+      "status": "published",
+      "enrolled": 178,
+      "hero": true
+    },
+    {
+      "key": "siri2",
+      "title": "DKM Prasekolah Siri 2/2026",
+      "status": "published",
+      "enrolled": 334
+    },
+    {
+      "key": "siri1",
+      "title": "DKM Prasekolah Siri 1/2026",
+      "status": "published",
+      "enrolled": 284
+    }
+  ],
+  "modules": [
+    {
+      "title": "Week 1",
+      "content": [
+        {
+          "type": "note",
+          "title": "Perkembangan Kanak-Kanak 0–4 Tahun",
+          "published": true
+        },
+        {
+          "type": "note",
+          "title": "Keselamatan & Kesihatan di TASKA",
+          "published": true
+        },
+        {
+          "type": "assessment",
+          "title": "Kuiz 1: Perkembangan Fizikal",
+          "published": true,
+          "questions": 10,
+          "points": 20
+        },
+        {
+          "type": "assignment",
+          "title": "Tugasan 1: Rancangan Aktiviti Harian",
+          "published": true,
+          "due": "2026-10-14"
+        }
+      ]
+    },
+    {
+      "title": "Week 2",
+      "content": [
+        {
+          "type": "note",
+          "title": "Pemakanan Seimbang untuk Kanak-Kanak",
+          "published": true
+        },
+        {
+          "type": "note",
+          "title": "Bermain Sambil Belajar",
+          "published": true
+        },
+        {
+          "type": "assessment",
+          "title": "Kuiz 2: Pemakanan & Kesihatan",
+          "published": true,
+          "questions": 10,
+          "points": 20
+        },
+        {
+          "type": "assignment",
+          "title": "Tugasan 2: Pemerhatian Kanak-Kanak",
+          "published": false,
+          "due": "2026-10-21"
+        }
+      ]
+    }
+  ],
+  "people": {
+    "director": {
+      "name": "Hakim Zulkifli",
+      "email": "hakim@hawary.example",
+      "role": "admin",
+      "is_director": true
+    },
+    "trainers": [
+      {
+        "name": "Siti Hajar Ismail",
+        "email": "hajar@hawary.example",
+        "hero": true
+      },
+      {
+        "name": "Farah Nadia Othman",
+        "email": "farah@hawary.example"
+      },
+      {
+        "name": "Amirul Hafiz Rahman",
+        "email": "amirul@hawary.example"
+      },
+      {
+        "name": "Nurul Izzah Kamal",
+        "email": "izzah@hawary.example"
+      }
+    ],
+    "heroStudent": {
+      "name": "Nur Aisyah Razak",
+      "student_no": "HA-2026-0318",
+      "email": "aisyah.razak@mail.example",
+      "course": "siri3"
+    },
+    "students": [
+      {
+        "name": "Nur Aisyah Razak",
+        "student_no": "HA-2026-0318"
+      },
+      {
+        "name": "Aina Sofea Rosli",
+        "student_no": "HA-2026-0319"
+      },
+      {
+        "name": "Nurul Huda Mansor",
+        "student_no": "HA-2026-0320"
+      },
+      {
+        "name": "Farhana Yusof",
+        "student_no": "HA-2026-0321"
+      },
+      {
+        "name": "Intan Syazwani Halim",
+        "student_no": "HA-2026-0322"
+      },
+      {
+        "name": "Puteri Balqis Azman",
+        "student_no": "HA-2026-0323"
+      },
+      {
+        "name": "Zulaikha Hamdan",
+        "student_no": "HA-2026-0324"
+      },
+      {
+        "name": "Wan Nur Iman Wan Azmi",
+        "student_no": "HA-2026-0325"
+      },
+      {
+        "name": "Hannah Maisarah Jalil",
+        "student_no": "HA-2026-0326"
+      },
+      {
+        "name": "Syafiqah Ridzuan",
+        "student_no": "HA-2026-0327"
+      },
+      {
+        "name": "Khairunnisa Abd Latif",
+        "student_no": "HA-2026-0328"
+      },
+      {
+        "name": "Alya Batrisya Fauzi",
+        "student_no": "HA-2026-0329"
+      },
+      {
+        "name": "Liyana Amirah Shukri",
+        "student_no": "HA-2026-0330"
+      },
+      {
+        "name": "Damia Qistina Roslan",
+        "student_no": "HA-2026-0331"
+      },
+      {
+        "name": "Nabilah Huda Sulaiman",
+        "student_no": "HA-2026-0332"
+      },
+      {
+        "name": "Mohd Irfan Hakim Salleh",
+        "student_no": "HA-2026-0333"
+      }
+    ]
+  },
+  "lpkc": {
+    "_note": "THE CHANGED FEATURE. The student uploads the LPKC report; an AI check reads it and posts the feedback on the thread at once; the trainer only monitors and gives the final approval. Seed it through the real report thread: the AI is an actor on the timeline named 'Hawary AI'.",
+    "title": "LPKC, slide dan portfolio",
+    "aiActorName": "Hawary AI",
+    "timeline": [
+      {
+        "at": "2026-10-07T09:12:00+08:00",
+        "kind": "submitted",
+        "actor": "Nur Aisyah Razak",
+        "actor_role": "student",
+        "version": 1,
+        "files": [
+          {
+            "name": "LPKC_Nur_Aisyah_v1.pdf",
+            "size": 2516582
+          },
+          {
+            "name": "Slide_Pembentangan.pptx",
+            "size": 5872025
+          }
+        ]
+      },
+      {
+        "at": "2026-10-07T09:12:40+08:00",
+        "kind": "comment",
+        "actor": "Hawary AI",
+        "to_status": "changes_requested",
+        "body": "AI check complete. 3 points to fix before approval:\n\n1. Section 3.2, Rancangan Aktiviti: the learning objectives for Day 4 are missing.\n2. Rujukan: 2 sources are not in APA format (items 4 and 7).\n3. Portfolio, Unit 5: the photo evidence has no captions.\n\nEverything else meets the LPKC checklist (9 of 12 items). Upload a new version when you are ready."
+      },
+      {
+        "at": "2026-10-07T11:47:00+08:00",
+        "kind": "submitted",
+        "actor": "Nur Aisyah Razak",
+        "actor_role": "student",
+        "version": 2,
+        "files": [
+          {
+            "name": "LPKC_Nur_Aisyah_v2.pdf",
+            "size": 2684354
+          }
+        ]
+      },
+      {
+        "at": "2026-10-07T11:47:35+08:00",
+        "kind": "comment",
+        "actor": "Hawary AI",
+        "to_status": "in_review",
+        "body": "AI check complete. All 12 checklist items are met.\n\nThe 3 points from version 1 are fixed. Ready for the trainer's approval."
+      },
+      {
+        "at": "2026-10-07T12:05:00+08:00",
+        "kind": "status",
+        "actor": "Siti Hajar Ismail",
+        "actor_role": "instructor",
+        "to_status": "approved",
+        "body": "Approved. Well done, Aisyah."
+      }
+    ],
+    "queue": [
+      {
+        "student": "Nur Aisyah Razak",
+        "status": "in_review",
+        "version": 2,
+        "ai": "12 of 12 met",
+        "holder": "Siti Hajar Ismail"
+      },
+      {
+        "student": "Aina Sofea Rosli",
+        "status": "changes_requested",
+        "version": 1,
+        "ai": "3 points to fix",
+        "holder": "Siti Hajar Ismail"
+      },
+      {
+        "student": "Nurul Huda Mansor",
+        "status": "in_review",
+        "version": 3,
+        "ai": "12 of 12 met",
+        "holder": "Farah Nadia Othman"
+      },
+      {
+        "student": "Farhana Yusof",
+        "status": "changes_requested",
+        "version": 2,
+        "ai": "1 point to fix",
+        "holder": "Farah Nadia Othman"
+      },
+      {
+        "student": "Intan Syazwani Halim",
+        "status": "approved",
+        "version": 2,
+        "ai": "12 of 12 met",
+        "holder": "Amirul Hafiz Rahman"
+      },
+      {
+        "student": "Puteri Balqis Azman",
+        "status": "submitted",
+        "version": 1,
+        "ai": "checking",
+        "holder": "Amirul Hafiz Rahman"
+      },
+      {
+        "student": "Zulaikha Hamdan",
+        "status": "approved",
+        "version": 1,
+        "ai": "12 of 12 met",
+        "holder": "Nurul Izzah Kamal"
+      },
+      {
+        "student": "Hannah Maisarah Jalil",
+        "status": "in_review",
+        "version": 2,
+        "ai": "12 of 12 met",
+        "holder": "Siti Hajar Ismail"
+      }
+    ]
+  },
+  "money": {
+    "_note": "MYR, stored as integer sen. Invented amounts.",
+    "heroInvoice": {
+      "number": "INV-2026-0412",
+      "student": "Nur Aisyah Razak",
+      "description": "Yuran DKM Prasekolah Siri 3/2026",
+      "total_sen": 180000,
+      "paid_sen": 90000,
+      "balance_sen": 90000,
+      "status": "partial",
+      "payments": [
+        {
+          "method": "FPX (ToyyibPay)",
+          "amount_sen": 90000,
+          "at": "2026-09-18T10:22:00+08:00",
+          "bank": "Maybank2u"
+        }
+      ]
+    },
+    "tiles": {
+      "invoiced_sen": 143280000,
+      "collected_sen": 118450000,
+      "outstanding_sen": 24830000
+    },
+    "incentiveBatch": {
+      "_note": "Incentives are a government grant the academy passes on TO STUDENTS (a flat sum per student, e.g. RM 500.00), paid to each student's own bank account in one batch through Billplz. They are not paid to trainers. Use the names and amounts shown in the captured /incentives screens.",
+      "title": "September 2026",
+      "per_student_sen": 50000,
+      "via": "Billplz"
+    }
+  },
+  "appointments": {
+    "_note": "Sessions for the week of 12 Oct 2026, 45-60 minutes, 4 bookable trainers.",
+    "heroBooking": {
+      "student": "Nur Aisyah Razak",
+      "trainer": "Siti Hajar Ismail",
+      "at": "2026-10-13T10:00:00+08:00",
+      "note": "Bincang pembentangan akhir"
+    }
+  },
+  "announcements": [
+    {
+      "title": "Kelas ganti Sabtu ini",
+      "body": "Kelas Week 2 diganti pada Sabtu, 10 Oktober, 9.00 pagi di Dewan A.",
+      "by": "Siti Hajar Ismail"
+    },
+    {
+      "title": "Tarikh akhir LPKC",
+      "body": "Sila muat naik LPKC anda sebelum 31 Oktober.",
+      "by": "Hakim Zulkifli"
+    }
+  ]
+}

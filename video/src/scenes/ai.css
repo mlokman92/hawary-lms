@@ -1,0 +1,67 @@
+/* Scene "ai": real pieces of the product, cut out of their 4x close-ups and
+   floated on the paper as panels. Everything here is prefixed ai-. */
+
+/* a full-stage layer that keeps the scene's perspective for the things inside it */
+.ai-group {
+  position: absolute;
+  inset: 0;
+  perspective: 2400px;
+  perspective-origin: 50% 46%;
+}
+.ai-wrap {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+}
+
+/* a floating crop of a captured screen */
+.ai-panel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+.ai-panel-clip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(17, 17, 19, 0.07), var(--shadow-device);
+}
+.ai-panel-clip > img,
+.ai-piece > img {
+  position: absolute;
+  max-width: none;
+}
+.ai-piece {
+  position: absolute;
+  left: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+/* a highlighter stroke over one line of real text */
+.ai-hl {
+  position: absolute;
+  border-radius: 5px;
+  background: rgba(45, 212, 191, 0.36);
+  mix-blend-mode: multiply;
+  transform-origin: 0 50%;
+}
+.ai-hl.amber {
+  background: rgba(245, 158, 11, 0.4);
+}
+
+/* the outline thrown off by the first hit */
+.ai-shock {
+  position: absolute;
+  border: 4px solid var(--teal-400);
+  pointer-events: none;
+  transform-origin: 50% 50%;
+}

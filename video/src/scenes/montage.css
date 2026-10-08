@@ -1,0 +1,53 @@
+/* montage (bars 43-45): film graphics only. Every class is prefixed with the scene id. */
+
+/* the leading edge of the English -> Malay wipe; it lives in the window's own pixel space */
+.montage-edge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 900px;
+  margin-left: -2px;
+  background: var(--teal);
+  box-shadow: 0 0 22px 5px rgba(45, 212, 191, 0.5);
+  pointer-events: none;
+}
+.montage-edge::before {
+  content: '';
+  position: absolute;
+  right: 4px;
+  top: 0;
+  width: 150px;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(45, 212, 191, 0), rgba(45, 212, 191, 0.26));
+}
+
+/* a kit chip with no icon: even padding */
+.montage-role.chip {
+  padding: 0 24px;
+}
+
+/* the four stamps of the last idea: a size up from a chip, set in caps */
+.montage-badge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 66px;
+  padding: 0 28px;
+  border-radius: 33px;
+  background: #fff;
+  box-shadow: var(--shadow-chip), inset 0 0 0 1px rgba(17, 17, 19, 0.06);
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--ink);
+  white-space: nowrap;
+  transform-origin: 50% 50%;
+}
+.montage-badge.teal {
+  background: var(--teal);
+  color: #fff;
+  box-shadow: 0 12px 28px -8px rgba(15, 118, 110, 0.6);
+}

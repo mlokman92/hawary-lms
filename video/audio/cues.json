@@ -1,0 +1,1209 @@
+{
+ "duration": 93,
+ "vo": [
+  {
+   "file": "01",
+   "at": 4.55,
+   "text": "This is Hawary LMS. | One platform that runs the whole academy | on the web, | and in your pocket.",
+   "words": [
+    0,
+    2.17,
+    4.81,
+    5.84
+   ],
+   "end": 6.71
+  },
+  {
+   "file": "02",
+   "at": 16.45,
+   "text": "Every intake is a course. | Build it in modules | notes, quizzes, assignments | and publish with a switch.",
+   "words": [
+    0,
+    1.77,
+    3.11,
+    5.24
+   ],
+   "end": 6.55
+  },
+  {
+   "file": "03",
+   "at": 24.45,
+   "text": "Students join through a single link. | Approve the request, and they're enrolled.",
+   "words": [
+    0,
+    1.98
+   ],
+   "end": 3.84
+  },
+  {
+   "file": "04",
+   "at": 32.45,
+   "text": "Quizzes mark themselves. | Assignments land in one grading queue.",
+   "words": [
+    0,
+    1.76
+   ],
+   "end": 3.97
+  },
+  {
+   "file": "05",
+   "at": 40.4,
+   "text": "Fees are invoiced, | paid online by FPX, and receipted automatically. | Student incentives go out in one batch.",
+   "words": [
+    0,
+    1.39,
+    4.95
+   ],
+   "end": 6.98
+  },
+  {
+   "file": "06",
+   "at": 48.45,
+   "text": "Need time with a trainer? | Book it in a few taps.",
+   "words": [
+    0,
+    1.43
+   ],
+   "end": 2.54
+  },
+  {
+   "file": "07",
+   "at": 52.6,
+   "text": "And the LPKC report? | No more waiting for a meeting. | Students simply upload it.",
+   "words": [
+    0,
+    2.1,
+    3.65
+   ],
+   "end": 4.96
+  },
+  {
+   "file": "08",
+   "at": 64.5,
+   "text": "AI checks it at once, and sends feedback in seconds. | Trainers just monitor, and approve.",
+   "words": [
+    0,
+    3.41
+   ],
+   "end": 5.36
+  },
+  {
+   "file": "09",
+   "at": 72.4,
+   "text": "It all lives in two mobile apps | one for students, | one for the academy | with instant notifications.",
+   "words": [
+    0,
+    2.27,
+    3.36,
+    4.84
+   ],
+   "end": 6.38
+  },
+  {
+   "file": "10",
+   "at": 84.35,
+   "text": "Bilingual. Secure. | Built for Malaysian skills training.",
+   "words": [
+    0,
+    1.79
+   ],
+   "end": 3.42
+  },
+  {
+   "file": "11",
+   "at": 88.6,
+   "text": "Hawary LMS. Your whole academy, in one place.",
+   "words": [
+    0
+   ],
+   "end": 2.96
+  }
+ ],
+ "sfx": [
+  {
+   "name": "pop",
+   "t": 1.662,
+   "gain": 0.35,
+   "pan": 0,
+   "scene": "open"
+  },
+  {
+   "name": "whooshLong",
+   "t": 3.438,
+   "gain": 0.8,
+   "pan": 0,
+   "scene": "open"
+  },
+  {
+   "name": "pop",
+   "t": 4.278,
+   "gain": 0.6,
+   "pan": 0,
+   "scene": "open"
+  },
+  {
+   "name": "whoosh",
+   "t": 9.263,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "open"
+  },
+  {
+   "name": "tick",
+   "t": 11.564,
+   "gain": 0.8,
+   "pan": 0,
+   "scene": "open"
+  },
+  {
+   "name": "tick",
+   "t": 11.814,
+   "gain": 0.8,
+   "pan": 0,
+   "scene": "open"
+  },
+  {
+   "name": "tick",
+   "t": 12.064,
+   "gain": 0.8,
+   "pan": 0,
+   "scene": "open"
+  },
+  {
+   "name": "tick",
+   "t": 12.314,
+   "gain": 0.8,
+   "pan": 0,
+   "scene": "open"
+  },
+  {
+   "name": "whoosh",
+   "t": 10.363,
+   "gain": 0.35,
+   "pan": -0.5,
+   "scene": "open"
+  },
+  {
+   "name": "whoosh",
+   "t": 10.663,
+   "gain": 0.35,
+   "pan": 0.5,
+   "scene": "open"
+  },
+  {
+   "name": "pop",
+   "t": 9.863,
+   "gain": 0.45,
+   "pan": 0,
+   "scene": "open"
+  },
+  {
+   "name": "pop",
+   "t": 10.813,
+   "gain": 0.45,
+   "pan": 0,
+   "scene": "open"
+  },
+  {
+   "name": "pop",
+   "t": 11.113,
+   "gain": 0.45,
+   "pan": 0,
+   "scene": "open"
+  },
+  {
+   "name": "rise",
+   "t": 16.064,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "open"
+  },
+  {
+   "name": "click",
+   "t": 15.714,
+   "gain": 1,
+   "pan": 0,
+   "scene": "open"
+  },
+  {
+   "name": "pop",
+   "t": 17.064,
+   "gain": 0.45,
+   "pan": 0,
+   "scene": "courses"
+  },
+  {
+   "name": "pop",
+   "t": 17.314,
+   "gain": 0.4,
+   "pan": 0,
+   "scene": "courses"
+  },
+  {
+   "name": "pop",
+   "t": 17.564,
+   "gain": 0.35,
+   "pan": 0,
+   "scene": "courses"
+  },
+  {
+   "name": "click",
+   "t": 18.564,
+   "gain": 1,
+   "pan": 0,
+   "scene": "courses"
+  },
+  {
+   "name": "whoosh",
+   "t": 18.564,
+   "gain": 0.6,
+   "pan": 0,
+   "scene": "courses"
+  },
+  {
+   "name": "pop",
+   "t": 19.564,
+   "gain": 0.6,
+   "pan": 0,
+   "scene": "courses"
+  },
+  {
+   "name": "pop",
+   "t": 20.065,
+   "gain": 0.6,
+   "pan": 0,
+   "scene": "courses"
+  },
+  {
+   "name": "pop",
+   "t": 20.815,
+   "gain": 0.6,
+   "pan": 0,
+   "scene": "courses"
+  },
+  {
+   "name": "whoosh",
+   "t": 21.365,
+   "gain": 0.35,
+   "pan": 0,
+   "scene": "courses"
+  },
+  {
+   "name": "click",
+   "t": 22.365,
+   "gain": 1,
+   "pan": 0,
+   "scene": "courses"
+  },
+  {
+   "name": "success",
+   "t": 22.415,
+   "gain": 0.8,
+   "pan": 0,
+   "scene": "courses"
+  },
+  {
+   "name": "pop",
+   "t": 24.44,
+   "gain": 0.4,
+   "pan": 0,
+   "scene": "students"
+  },
+  {
+   "name": "tick",
+   "t": 24.69,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "students"
+  },
+  {
+   "name": "tick",
+   "t": 24.94,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "students"
+  },
+  {
+   "name": "tick",
+   "t": 25.19,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "students"
+  },
+  {
+   "name": "tap",
+   "t": 25.565,
+   "gain": 1,
+   "pan": 0,
+   "scene": "students"
+  },
+  {
+   "name": "whoosh",
+   "t": 26.19,
+   "gain": 0.6,
+   "pan": 0,
+   "scene": "students"
+  },
+  {
+   "name": "click",
+   "t": 27.065,
+   "gain": 1,
+   "pan": 0,
+   "scene": "students"
+  },
+  {
+   "name": "success",
+   "t": 27.115,
+   "gain": 0.8,
+   "pan": 0,
+   "scene": "students"
+  },
+  {
+   "name": "click",
+   "t": 27.565,
+   "gain": 1,
+   "pan": 0,
+   "scene": "students"
+  },
+  {
+   "name": "pop",
+   "t": 27.615,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "students"
+  },
+  {
+   "name": "click",
+   "t": 28.066,
+   "gain": 1,
+   "pan": 0,
+   "scene": "students"
+  },
+  {
+   "name": "pop",
+   "t": 28.116,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "students"
+  },
+  {
+   "name": "whoosh",
+   "t": 28.491,
+   "gain": 0.55,
+   "pan": 0,
+   "scene": "students"
+  },
+  {
+   "name": "tick",
+   "t": 29.066,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "students"
+  },
+  {
+   "name": "tick",
+   "t": 29.316,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "students"
+  },
+  {
+   "name": "tick",
+   "t": 29.566,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "students"
+  },
+  {
+   "name": "tick",
+   "t": 29.816,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "students"
+  },
+  {
+   "name": "pop",
+   "t": 30.066,
+   "gain": 0.8,
+   "pan": 0,
+   "scene": "students"
+  },
+  {
+   "name": "pop",
+   "t": 30.566,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "students"
+  },
+  {
+   "name": "pop",
+   "t": 31.066,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "students"
+  },
+  {
+   "name": "tap",
+   "t": 32.566,
+   "gain": 0.9,
+   "pan": 0,
+   "scene": "learn"
+  },
+  {
+   "name": "tap",
+   "t": 33.066,
+   "gain": 1,
+   "pan": 0,
+   "scene": "learn"
+  },
+  {
+   "name": "success",
+   "t": 33.566,
+   "gain": 0.85,
+   "pan": 0,
+   "scene": "learn"
+  },
+  {
+   "name": "whoosh",
+   "t": 34.066,
+   "gain": 0.6,
+   "pan": 0,
+   "scene": "learn"
+  },
+  {
+   "name": "pop",
+   "t": 34.566,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "learn"
+  },
+  {
+   "name": "tick",
+   "t": 34.816,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "learn"
+  },
+  {
+   "name": "tick",
+   "t": 35.066,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "learn"
+  },
+  {
+   "name": "click",
+   "t": 35.566,
+   "gain": 1,
+   "pan": 0,
+   "scene": "learn"
+  },
+  {
+   "name": "whoosh",
+   "t": 35.616,
+   "gain": 0.4,
+   "pan": 0,
+   "scene": "learn"
+  },
+  {
+   "name": "tick",
+   "t": 36.317,
+   "gain": 0.7,
+   "pan": 0,
+   "scene": "learn"
+  },
+  {
+   "name": "click",
+   "t": 36.567,
+   "gain": 1,
+   "pan": 0,
+   "scene": "learn"
+  },
+  {
+   "name": "success",
+   "t": 36.607,
+   "gain": 0.7,
+   "pan": 0,
+   "scene": "learn"
+  },
+  {
+   "name": "pop",
+   "t": 37.067,
+   "gain": 0.55,
+   "pan": 0,
+   "scene": "learn"
+  },
+  {
+   "name": "pop",
+   "t": 37.567,
+   "gain": 0.4,
+   "pan": 0,
+   "scene": "learn"
+  },
+  {
+   "name": "pop",
+   "t": 38.067,
+   "gain": 0.55,
+   "pan": 0,
+   "scene": "learn"
+  },
+  {
+   "name": "pop",
+   "t": 38.567,
+   "gain": 0.4,
+   "pan": 0,
+   "scene": "learn"
+  },
+  {
+   "name": "pop",
+   "t": 39.067,
+   "gain": 0.55,
+   "pan": 0,
+   "scene": "learn"
+  },
+  {
+   "name": "pop",
+   "t": 39.567,
+   "gain": 0.4,
+   "pan": 0,
+   "scene": "learn"
+  },
+  {
+   "name": "whoosh",
+   "t": 41.847,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "payments"
+  },
+  {
+   "name": "whoosh",
+   "t": 45.098,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "payments"
+  },
+  {
+   "name": "tick",
+   "t": 40.567,
+   "gain": 0.8,
+   "pan": 0,
+   "scene": "payments"
+  },
+  {
+   "name": "tick",
+   "t": 40.817,
+   "gain": 0.7000000000000001,
+   "pan": 0,
+   "scene": "payments"
+  },
+  {
+   "name": "tick",
+   "t": 41.067,
+   "gain": 0.6000000000000001,
+   "pan": 0,
+   "scene": "payments"
+  },
+  {
+   "name": "tick",
+   "t": 41.317,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "payments"
+  },
+  {
+   "name": "pop",
+   "t": 41.567,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "payments"
+  },
+  {
+   "name": "tap",
+   "t": 42.817,
+   "gain": 1,
+   "pan": 0,
+   "scene": "payments"
+  },
+  {
+   "name": "success",
+   "t": 43.317,
+   "gain": 0.9,
+   "pan": 0,
+   "scene": "payments"
+  },
+  {
+   "name": "tick",
+   "t": 44.067,
+   "gain": 0.7,
+   "pan": 0,
+   "scene": "payments"
+  },
+  {
+   "name": "pop",
+   "t": 43.692,
+   "gain": 0.55,
+   "pan": 0,
+   "scene": "payments"
+  },
+  {
+   "name": "tick",
+   "t": 46.068,
+   "gain": 0.75,
+   "pan": 0,
+   "scene": "payments"
+  },
+  {
+   "name": "tick",
+   "t": 46.318,
+   "gain": 0.75,
+   "pan": 0,
+   "scene": "payments"
+  },
+  {
+   "name": "tick",
+   "t": 46.568,
+   "gain": 0.75,
+   "pan": 0,
+   "scene": "payments"
+  },
+  {
+   "name": "tick",
+   "t": 46.818,
+   "gain": 0.75,
+   "pan": 0,
+   "scene": "payments"
+  },
+  {
+   "name": "pop",
+   "t": 47.068,
+   "gain": 0.7,
+   "pan": 0,
+   "scene": "payments"
+  },
+  {
+   "name": "pop",
+   "t": 47.318,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "payments"
+  },
+  {
+   "name": "tap",
+   "t": 50.068,
+   "gain": 1,
+   "pan": 0,
+   "scene": "appointments"
+  },
+  {
+   "name": "tap",
+   "t": 50.818,
+   "gain": 1,
+   "pan": 0,
+   "scene": "appointments"
+  },
+  {
+   "name": "success",
+   "t": 51.068,
+   "gain": 0.8,
+   "pan": 0,
+   "scene": "appointments"
+  },
+  {
+   "name": "pop",
+   "t": 51.318,
+   "gain": 0.4,
+   "pan": 0.4,
+   "scene": "appointments"
+  },
+  {
+   "name": "pop",
+   "t": 54.194,
+   "gain": 0.3,
+   "pan": 0,
+   "scene": "lpkc"
+  },
+  {
+   "name": "whoosh",
+   "t": 56.069,
+   "gain": 0.4,
+   "pan": 0,
+   "scene": "lpkc"
+  },
+  {
+   "name": "tap",
+   "t": 57.069,
+   "gain": 1,
+   "pan": 0,
+   "scene": "lpkc"
+  },
+  {
+   "name": "whoosh",
+   "t": 57.269,
+   "gain": 0.35,
+   "pan": 0.3,
+   "scene": "lpkc"
+  },
+  {
+   "name": "pop",
+   "t": 58.069,
+   "gain": 0.5,
+   "pan": 0.3,
+   "scene": "lpkc"
+  },
+  {
+   "name": "pop",
+   "t": 59.569,
+   "gain": 0.4,
+   "pan": 0,
+   "scene": "lpkc"
+  },
+  {
+   "name": "shimmer",
+   "t": 60.069,
+   "gain": 0.8,
+   "pan": 0,
+   "scene": "lpkc"
+  },
+  {
+   "name": "tick",
+   "t": 62.07,
+   "gain": 0.34,
+   "pan": -0.3,
+   "scene": "lpkc"
+  },
+  {
+   "name": "tick",
+   "t": 62.57,
+   "gain": 0.37,
+   "pan": 0.3,
+   "scene": "lpkc"
+  },
+  {
+   "name": "tick",
+   "t": 62.82,
+   "gain": 0.4,
+   "pan": -0.3,
+   "scene": "lpkc"
+  },
+  {
+   "name": "tick",
+   "t": 63.07,
+   "gain": 0.43000000000000005,
+   "pan": 0.3,
+   "scene": "lpkc"
+  },
+  {
+   "name": "tick",
+   "t": 63.32,
+   "gain": 0.46,
+   "pan": -0.3,
+   "scene": "lpkc"
+  },
+  {
+   "name": "tick",
+   "t": 63.445,
+   "gain": 0.49,
+   "pan": 0.3,
+   "scene": "lpkc"
+  },
+  {
+   "name": "tick",
+   "t": 63.57,
+   "gain": 0.52,
+   "pan": -0.3,
+   "scene": "lpkc"
+  },
+  {
+   "name": "tick",
+   "t": 63.632,
+   "gain": 0.55,
+   "pan": 0.3,
+   "scene": "lpkc"
+  },
+  {
+   "name": "tick",
+   "t": 63.695,
+   "gain": 0.5800000000000001,
+   "pan": -0.3,
+   "scene": "lpkc"
+  },
+  {
+   "name": "tick",
+   "t": 63.757,
+   "gain": 0.6100000000000001,
+   "pan": 0.3,
+   "scene": "lpkc"
+  },
+  {
+   "name": "tick",
+   "t": 63.82,
+   "gain": 0.64,
+   "pan": -0.3,
+   "scene": "lpkc"
+  },
+  {
+   "name": "tick",
+   "t": 63.882,
+   "gain": 0.6699999999999999,
+   "pan": 0.3,
+   "scene": "lpkc"
+  },
+  {
+   "name": "rise",
+   "t": 64.07,
+   "gain": 1,
+   "pan": 0,
+   "scene": "lpkc"
+  },
+  {
+   "name": "whoosh",
+   "t": 54.819,
+   "gain": 0.22,
+   "pan": 0,
+   "scene": "lpkc"
+  },
+  {
+   "name": "impact",
+   "t": 64.07,
+   "gain": 1,
+   "pan": 0,
+   "scene": "ai"
+  },
+  {
+   "name": "tick",
+   "t": 65.07,
+   "gain": 0.8,
+   "pan": 0,
+   "scene": "ai"
+  },
+  {
+   "name": "tick",
+   "t": 65.57,
+   "gain": 0.8,
+   "pan": 0,
+   "scene": "ai"
+  },
+  {
+   "name": "tick",
+   "t": 66.07,
+   "gain": 0.8,
+   "pan": 0,
+   "scene": "ai"
+  },
+  {
+   "name": "whoosh",
+   "t": 66.21,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "ai"
+  },
+  {
+   "name": "ding",
+   "t": 66.82,
+   "gain": 0.9,
+   "pan": -0.4,
+   "scene": "ai"
+  },
+  {
+   "name": "tick",
+   "t": 68.32,
+   "gain": 0.55,
+   "pan": 0,
+   "scene": "ai"
+  },
+  {
+   "name": "tick",
+   "t": 68.57,
+   "gain": 0.55,
+   "pan": 0,
+   "scene": "ai"
+  },
+  {
+   "name": "tick",
+   "t": 68.82,
+   "gain": 0.55,
+   "pan": 0,
+   "scene": "ai"
+  },
+  {
+   "name": "tick",
+   "t": 69.07,
+   "gain": 0.55,
+   "pan": 0,
+   "scene": "ai"
+  },
+  {
+   "name": "click",
+   "t": 69.321,
+   "gain": 1,
+   "pan": 0,
+   "scene": "ai"
+  },
+  {
+   "name": "whoosh",
+   "t": 69.321,
+   "gain": 0.45,
+   "pan": 0,
+   "scene": "ai"
+  },
+  {
+   "name": "tick",
+   "t": 69.821,
+   "gain": 0.7,
+   "pan": 0,
+   "scene": "ai"
+  },
+  {
+   "name": "click",
+   "t": 70.071,
+   "gain": 1,
+   "pan": 0,
+   "scene": "ai"
+  },
+  {
+   "name": "success",
+   "t": 70.121,
+   "gain": 0.9,
+   "pan": 0,
+   "scene": "ai"
+  },
+  {
+   "name": "whoosh",
+   "t": 70.571,
+   "gain": 0.35,
+   "pan": 0,
+   "scene": "ai"
+  },
+  {
+   "name": "pop",
+   "t": 71.321,
+   "gain": 0.6,
+   "pan": 0,
+   "scene": "ai"
+  },
+  {
+   "name": "pop",
+   "t": 73.321,
+   "gain": 0.45,
+   "pan": 0.1,
+   "scene": "mobile"
+  },
+  {
+   "name": "pop",
+   "t": 73.571,
+   "gain": 0.45,
+   "pan": 0.5,
+   "scene": "mobile"
+  },
+  {
+   "name": "whoosh",
+   "t": 74.431,
+   "gain": 0.35,
+   "pan": -0.2,
+   "scene": "mobile"
+  },
+  {
+   "name": "tick",
+   "t": 74.821,
+   "gain": 0.4,
+   "pan": 0,
+   "scene": "mobile"
+  },
+  {
+   "name": "tick",
+   "t": 75.071,
+   "gain": 0.4,
+   "pan": 0,
+   "scene": "mobile"
+  },
+  {
+   "name": "tick",
+   "t": 75.321,
+   "gain": 0.4,
+   "pan": 0,
+   "scene": "mobile"
+  },
+  {
+   "name": "whoosh",
+   "t": 75.681,
+   "gain": 0.35,
+   "pan": 0.2,
+   "scene": "mobile"
+  },
+  {
+   "name": "tick",
+   "t": 76.071,
+   "gain": 0.4,
+   "pan": 0,
+   "scene": "mobile"
+  },
+  {
+   "name": "tick",
+   "t": 76.321,
+   "gain": 0.4,
+   "pan": 0,
+   "scene": "mobile"
+  },
+  {
+   "name": "tick",
+   "t": 76.571,
+   "gain": 0.4,
+   "pan": 0,
+   "scene": "mobile"
+  },
+  {
+   "name": "whoosh",
+   "t": 76.971,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "mobile"
+  },
+  {
+   "name": "ding",
+   "t": 78.072,
+   "gain": 0.8,
+   "pan": 0,
+   "scene": "mobile"
+  },
+  {
+   "name": "ding",
+   "t": 79.072,
+   "gain": 0.8,
+   "pan": 0,
+   "scene": "mobile"
+  },
+  {
+   "name": "ding",
+   "t": 80.072,
+   "gain": 0.8,
+   "pan": 0,
+   "scene": "mobile"
+  },
+  {
+   "name": "ding",
+   "t": 81.072,
+   "gain": 1,
+   "pan": 0,
+   "scene": "mobile"
+  },
+  {
+   "name": "tap",
+   "t": 82.072,
+   "gain": 1,
+   "pan": 0,
+   "scene": "mobile"
+  },
+  {
+   "name": "success",
+   "t": 82.322,
+   "gain": 0.8,
+   "pan": 0,
+   "scene": "mobile"
+  },
+  {
+   "name": "whoosh",
+   "t": 82.372,
+   "gain": 0.4,
+   "pan": 0.4,
+   "scene": "mobile"
+  },
+  {
+   "name": "ding",
+   "t": 83.072,
+   "gain": 0.9,
+   "pan": 0.4,
+   "scene": "mobile"
+  },
+  {
+   "name": "whoosh",
+   "t": 84.492,
+   "gain": 0.45,
+   "pan": 0.3,
+   "scene": "montage"
+  },
+  {
+   "name": "tick",
+   "t": 85.322,
+   "gain": 0.45,
+   "pan": 0,
+   "scene": "montage"
+  },
+  {
+   "name": "tick",
+   "t": 85.447,
+   "gain": 0.45,
+   "pan": 0,
+   "scene": "montage"
+  },
+  {
+   "name": "tick",
+   "t": 85.572,
+   "gain": 0.45,
+   "pan": 0,
+   "scene": "montage"
+  },
+  {
+   "name": "tick",
+   "t": 85.697,
+   "gain": 0.45,
+   "pan": 0,
+   "scene": "montage"
+  },
+  {
+   "name": "pop",
+   "t": 86.323,
+   "gain": 0.55,
+   "pan": 0.3,
+   "scene": "montage"
+  },
+  {
+   "name": "pop",
+   "t": 86.573,
+   "gain": 0.55,
+   "pan": 0.4,
+   "scene": "montage"
+  },
+  {
+   "name": "pop",
+   "t": 86.823,
+   "gain": 0.55,
+   "pan": 0.5,
+   "scene": "montage"
+  },
+  {
+   "name": "pop",
+   "t": 87.073,
+   "gain": 0.55,
+   "pan": 0.6000000000000001,
+   "scene": "montage"
+  },
+  {
+   "name": "whoosh",
+   "t": 87.323,
+   "gain": 0.5,
+   "pan": 0,
+   "scene": "montage"
+  },
+  {
+   "name": "impact",
+   "t": 88.073,
+   "gain": 0.7,
+   "pan": 0,
+   "scene": "outro"
+  },
+  {
+   "name": "pop",
+   "t": 88.573,
+   "gain": 0.7,
+   "pan": 0,
+   "scene": "outro"
+  },
+  {
+   "name": "pop",
+   "t": 90.673,
+   "gain": 0.4,
+   "pan": 0,
+   "scene": "outro"
+  }
+ ]
+}
