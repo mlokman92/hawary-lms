@@ -68,7 +68,7 @@ together — the appointment notes name those three in one breath — so they ar
 
 Sending again does not open a second thread: `submit_report` bumps `version`,
 files the new documents under a `submitted` event carrying that number, sets the
-status back to `submitted` and **keeps the same checker**. The person who asked
+status to `in_review` and **keeps the same checker**. The person who asked
 for the changes is the person who should see them.
 
 ## Tables
@@ -92,22 +92,93 @@ me".
 
 ## Statuses
 
-    submitted ──▶ in_review ──▶ changes_requested ──▶ (student uploads) ──▶ submitted
-                     │                                                          │
-                     └──────────────────▶ approved ◀───────────────────────────-┘
+**The status follows whoever spoke last** (Oct 2026,
+`20261009090000_report_auto_status.sql`). Nobody sets it by hand except to
+approve.
 
-`submitted` and `in_review` wait on the **checker**. `changes_requested` waits on
-the **student**. `approved` is done.
+    student sends anything ──▶ in_review ◀──┐
+                                  │         │ student sends anything
+            academy sends anything ▼        │
+                           changes_requested┘
+                                  │
+            staff press Approve   ▼
+                              approved ──(staff press Reopen)──▶ in_review
 
-That split is what makes both dashboards and the nav badge possible: "how many
-are waiting on me" is `status in ('submitted','in_review')`, narrowed by RLS to
-the reader's own.
+`in_review` waits on the **checker**. `changes_requested` waits on the
+**student**. `approved` is done.
 
-**Only an upload puts a report back into `submitted`, and only a student
-uploads**, which is why `submitted` is not one of the three verdict buttons. A
-student who sends `_to_status` anyway is **ignored, not refused** — the same way
-a student naming an instructor under round robin is ignored. Deciding is simply
+- "Sends anything" is a new version, a reply or a file — from the student it
+  means the checker has something to look at, from the academy it means the
+  student does. So the status answers one question: whose turn is it.
+- **`approved` is sticky.** A "well done" after approval must not reopen the
+  report, so the automatic rule leaves an approved report alone, whoever writes.
+  Staff undo an approval with Reopen, which is an explicit `_to_status`.
+- **`submitted` ("Waiting") is no longer written.** It stays in the enum because
+  timeline entries from before the rule carry it, and because dropping an enum
+  value is not worth a table rewrite. Nothing reads it as a live state.
+- An empty post is refused unless it is a decision — otherwise sending nothing
+  would be a way to flip the status back and forth.
+
+Before this a checker chose "Being checked" or "Changes needed" with a button,
+and a fresh upload sat in `submitted` until somebody did. The owner asked for
+it to run itself: the buttons were one more thing to press after writing the
+reply that already said what the status was.
+
+"How many are waiting on me" is `status in ('submitted','in_review')`, narrowed
+by RLS to the reader's own — the `submitted` half is now always zero.
+
+Staff may still pass `_to_status` to `comment_on_report`; an explicit status
+wins over the automatic one. That is how Approve and Reopen work, and it is what
+the three verdict buttons in app builds installed before this change send. A
+student who sends `_to_status` is **ignored, not refused** — the same way a
+student naming an instructor under round robin is ignored. Deciding is simply
 not theirs to do.
+
+## The copy a checker starts from
+
+In an academy that has a **system admin** ([single-owner.md](single-owner.md) →
+"System admins"), a report passes through one more pair of hands before its
+checker hears of it (Oct 2026,
+`20261009100000_system_admin_report_handoff.sql`):
+
+    student sends, or sends again   ──▶ the system admins are told
+    a system admin adds a copy      ──▶ the checker is told
+    the checker replies             ──▶ changes_requested; the student is told
+
+The copy is the student's document with notes on it. The system admin adds it
+the ordinary way — attach, Send — and the server, seeing who is writing, files
+it as a **staff-only entry** (`report_events.staff_only`):
+
+- **It moves nothing.** The report stays `in_review`, and `reviewed_at` is left
+  alone — the student's own list reads that as "last activity".
+- **The student cannot read it, or its files.** `get_report` leaves it out of a
+  student's thread and does not carry the flag at all; the SELECT policies on
+  `report_events` and `report_files` refuse it, because a student's JWT reads
+  those tables straight from PostgREST; and `report_download` will not sign its
+  file. The student is not notified, mailed or pushed.
+- **It carries no name.** `actor_name` is null and `actor_role` is `system`; the
+  timeline calls it "Annotated copy". It is a document for the checker, not a
+  message from somebody.
+- **It is the moment the checker is told** — with `report_submitted`, the notice
+  they would have had when the report came in, worded the same.
+
+**Nothing in the product says this step exists**, and that is the owner's rule,
+not an oversight. From the student's side nothing happens between sending a
+report and hearing from their checker. On the staff side there is the copy and
+nothing about where it came from: no badge, no "pre-checked", no name on the
+entry, no line in an email or a push. Do not add one.
+
+Three edges:
+
+- **No system admin, no extra step.** `submit_report` tells the checker at once
+  when the academy has none (a branch, or this academy if the flag is ever
+  cleared), so a report can never arrive with nobody told.
+- **Only the telling is held back.** The report is assigned by the rota when it
+  is sent and sits in the checker's queue from that moment. A checker who opens
+  it early and replies has replied.
+- **A decision is still a decision.** Approve and Reopen from a system admin are
+  ordinary, visible entries with their name on them. So is anything they write
+  on a report they are themselves the checker of.
 
 ## Who may see and do what
 
@@ -125,7 +196,9 @@ would otherwise read every report in the academy straight from PostgREST, and
 hiding rows in the client would have changed nothing.
 
 `report_events` and `report_files` follow the thread with an `EXISTS` against
-the parent rather than repeating the three tests, so the two cannot disagree.
+the parent rather than repeating the three tests, so the two cannot disagree —
+plus one test of their own: a student does not see a staff-only entry (see
+"The copy a checker starts from").
 
 Clients have **no DML on any of the three tables.** Assignment has to be fair,
 and a status change has to be the same statement as the timeline entry and the
@@ -135,11 +208,11 @@ the only doors:
 | RPC | who | what |
 | --- | --- | --- |
 | `submit_report` | the student | create or bump a version; assigns on creation |
-| `comment_on_report` | student, checker, admin | say something, and (staff only) decide something |
+| `comment_on_report` | student, checker, admin | say something — the status follows; staff may also approve or reopen |
 | `reassign_report` | the checker holding it, or an admin | hand it on |
 | `get_report` | anybody the policy admits | the whole thread, projected |
 
-Plus `my_reports` (the learner's list), `report_counts` (the four tiles) and
+Plus `my_reports` (the learner's list), `report_counts` (the tiles) and
 `report_download` (entitlement for the signing function).
 
 A trainer who is **not** the checker gets `Report not found` from every one of
@@ -222,7 +295,8 @@ the comment they just wrote is noise, not a receipt. So:
 
 | event | told |
 | --- | --- |
-| `submitted` | the checker |
+| `submitted` | the academy's system admins — or the checker, when it has none |
+| a staff-only entry | the checker |
 | `comment` | whichever side did not write it |
 | `status` | the student |
 | `assigned` | the incoming checker **and** the student, minus whoever acted |
@@ -230,6 +304,20 @@ the comment they just wrote is noise, not a receipt. So:
 `assigned` tells both for the same reason `appointment_reassigned` does: a
 student whose checker changed without being told would be waiting on the wrong
 person.
+
+A reply that moved the status by itself is told as a **comment** — reading it is
+what the other side has to do. Only a decision (approve, reopen) is told as a
+`status`.
+
+**Phones** get the same events a third way: every `notifications` row is copied
+to the person's registered devices by `send-push`
+([mobile-apps.md](mobile-apps.md) → "Push"), so nothing report-specific is
+needed for it. The email is the odd one out — it is sent by a second call from
+the client that made the write, so it depends on that client staying open for a
+moment longer.
+
+**Known gap:** when an admin replies on a report somebody else holds, the
+student is told and the checker holding it is not.
 
 No receipt columns, only a per-(event, recipient) Resend `Idempotency-Key`. A
 timeline event is append-only and happens once, so there is nothing a column
@@ -250,8 +338,9 @@ there and must stay: emails already sent link to the old address, and
 `/learn/reports`.
 
 **`/lpkc`** (staff) — the queue, oldest first, paged 50 server-side with `id`
-as the final tie-break. Four `FilterStatCard`s, because a tile is a sum over a
-set and pressing it should show that set.
+as the final tie-break. Three `FilterStatCard`s — being checked, changes needed,
+approved — because a tile is a sum over a set and pressing it should show that
+set. There is no "Waiting" tile: nothing is ever in that state now.
 
 There is **no instructor filter**, and that is not an omission: RLS already
 narrows a trainer to their own reports, so a picker could not change the result
@@ -271,9 +360,20 @@ conversation, and a conversation read bottom-up is a conversation you have to
 reassemble. The reply box sits at the end of it, where what you are about to add
 will appear.
 
-The three verdicts are three buttons, not a select plus a Save — a verdict is one
-decision and pressing it is the whole act. Handing the report on is behind the
-`⋯` menu: occasional, and not something to have next to a reply box.
+**Send is the only button on the thread**, for both sides. It belongs to the
+reply box, and the status moves by itself when it is pressed (see **Statuses**),
+so there are no status buttons to choose between.
+
+**Approve is behind the `⋯` menu**, with handing on. It ends the thread — the
+student can no longer send a version — and happens once per report, and beside
+the reply box it was one mis-click from Send. On an approved report the same
+menu item reads **Reopen**: Approve has no confirmation step, so it needs an
+undo. Anything typed in the reply box goes with either, as the note explaining
+it. The mobile thread screen has the same shape.
+
+A timeline entry reads "{who} commented" whenever something was said, and shows
+the status it moved to as a badge; "{who} updated the status" is kept for a
+decision made with nothing said.
 
 **`/learn/reports`** (learner) — one row per enrolled course, keyed on
 **enrolments, not reports**, so a course with nothing sent is a row with a Send

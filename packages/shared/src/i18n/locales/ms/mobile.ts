@@ -12,6 +12,12 @@ export const mobile: MobileDict = {
     'Versi aplikasi ini terlalu lama untuk terus digunakan. Pasang versi terkini untuk meneruskan.',
   'm.update.action': 'Buka gedung aplikasi',
 
+  // --- kemas kini melalui udara: sudah dimuat turun, menunggu mula semula ---
+  'm.ota.title': 'Kemas kini baharu tersedia',
+  'm.ota.body': 'Mulakan semula aplikasi untuk melihat perubahan.',
+  'm.ota.restart': 'Mulakan semula',
+  'm.ota.later': 'Nanti',
+
   // --- akaun yang betul dalam aplikasi yang salah ---------------------------
   'm.onboarding.staff.title': 'Ini akaun kakitangan',
   'm.onboarding.staff.body':

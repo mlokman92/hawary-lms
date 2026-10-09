@@ -28,6 +28,12 @@ export type Membership = {
    * only — RLS and the RPCs are the boundary.
    */
   isDirector: boolean
+  /**
+   * A Director who is also a system admin (`academy_members.is_system_admin`).
+   * Changes what this account is called, nothing it can open: every Director
+   * gate already lets them through.
+   */
+  isSystemAdmin: boolean
 }
 
 type AcademyContextValue = {
@@ -53,6 +59,7 @@ type MemberRow = {
   academy_id: string
   role: Role
   is_director: boolean
+  is_system_admin: boolean
   academies: {
     id: string
     name: string
@@ -100,7 +107,9 @@ export function AcademyProvider({ children }: { children: ReactNode }) {
     if (resolvedFor.current !== userId) setLoading(true)
     const { data, error } = await supabase
       .from('academy_members')
-      .select('academy_id, role, is_director, academies(id, name, slug)')
+      .select(
+        'academy_id, role, is_director, is_system_admin, academies(id, name, slug)',
+      )
       .eq('user_id', userId)
       .eq('status', 'active')
 
@@ -119,6 +128,10 @@ export function AcademyProvider({ children }: { children: ReactNode }) {
           academy: r.academies,
           // `status = 'active'` is already a filter above.
           isDirector: r.role === 'admin' && r.is_director === true,
+          isSystemAdmin:
+            r.role === 'admin' &&
+            r.is_director === true &&
+            r.is_system_admin === true,
         })),
       )
     }

@@ -24,7 +24,8 @@ import {
 import { Pager } from '@/ui/Pager'
 
 type Filter = ReportStatus | 'all'
-const ORDER: ReportStatus[] = ['submitted', 'in_review', 'changes_requested', 'approved']
+// No "Waiting": a report is "being checked" from the moment it is sent.
+const ORDER: ReportStatus[] = ['in_review', 'changes_requested', 'approved']
 
 const daysSince = (iso: string): number =>
   Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000)
@@ -41,7 +42,7 @@ export default function LpkcTab() {
   const { t } = useT()
   const router = useRouter()
   const { academyId, isAdmin } = useScope()
-  const [status, setStatus] = useState<Filter>('submitted')
+  const [status, setStatus] = useState<Filter>('in_review')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
   const { data: counts } = useReportCounts(academyId)

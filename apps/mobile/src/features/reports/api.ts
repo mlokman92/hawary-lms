@@ -33,9 +33,10 @@ export type ReportStatus = Enums<'report_status'>
 export type ReportEventKind = Enums<'report_event_kind'>
 
 /**
- * Two of these wait on the checker, one waits on the student, one is finished.
- * That split is the only thing the queue's tiles and both dashboards sort on,
- * so it is stated once here rather than re-derived at each call site.
+ * The status follows whoever spoke last: the student sending anything makes it
+ * `in_review`, the academy replying makes it `changes_requested`, and
+ * `approved` is the one decision somebody presses. `submitted` is no longer
+ * written — it is here for timeline entries from before that rule.
  */
 export const REPORT_STATUS: Record<
   ReportStatus,
@@ -52,14 +53,6 @@ export const REPORT_STATUS: Record<
 
 /** Waiting on whoever checks it. The trainer dashboard's whole question. */
 export const AWAITING_CHECKER: ReportStatus[] = ['submitted', 'in_review']
-
-/** The verdicts a checker may set. `submitted` is not one — only an upload
- *  puts a report back into that state, and only the student can upload. */
-export const VERDICTS: ReportStatus[] = [
-  'in_review',
-  'changes_requested',
-  'approved',
-]
 
 export type ReportRow = ReportSubmission & {
   students: {
@@ -84,6 +77,12 @@ export type ReportEvent = {
   actor_role: 'student' | 'instructor' | 'admin' | 'system'
   created_at: string
   files: ReportFile[]
+  /**
+   * An entry the student cannot read: the annotated copy the checker starts
+   * from. Present for staff only — a student's thread leaves these out and
+   * does not carry the field.
+   */
+  staff_only?: boolean
 }
 
 export type ReportFile = {
@@ -401,7 +400,9 @@ export async function uploadReportFile(
 
   return {
     path: data.path,
-    name: data.file_name ?? file.name,
+    // The name as it was picked, not as the server read it back: a phone's
+    // upload percent-encodes the filename in transit ("My%20report.pdf").
+    name: file.name || data.file_name || 'document',
     mime: data.mime_type ?? file.type,
     size: data.size_bytes ?? file.size,
   }
@@ -496,10 +497,10 @@ export function useSubmitReport(academyId: string | null) {
 }
 
 /**
- * Say something, and optionally decide something. One call, because "please fix
- * section 3" and "changes requested" are one act by the person doing them.
- * A student's `toStatus` is dropped by the server, not hidden by the client —
- * but the client does not offer it either.
+ * Say something. The server moves the status by itself — to "being checked"
+ * when the student writes, to "changes needed" when the academy does — so
+ * `toStatus` is only for the two decisions staff make by hand: approve, and
+ * reopen an approved report. A student's `toStatus` is dropped by the server.
  */
 export function useCommentOnReport(academyId: string | null) {
   const qc = useQueryClient()

@@ -70,7 +70,8 @@ Migration `20261004100000_director_grants_staff.sql`.
 
 A **Director** is an admin whose `academy_members.is_director` is true. Hawary
 Academy has two: Madam Linda (academyhawary@gmail.com, who created the academy
-row) and Lokman (muhamadlokman92@gmail.com). Only the owner sets the flag, in
+row) and Lokman (muhamadlokman92@gmail.com), who is also its system admin (see
+"System admins"). Only the owner sets the flag, in
 SQL; `app.guard_member_director` refuses to grant it from a JWT, Directors
 included. `app.is_director(academy_id)` also requires an **active admin**
 membership. Suspending a Director pauses the power, and restoring them brings
@@ -106,6 +107,37 @@ record (see below).
 
 **Why removal is gated too.** "Only a Director adds staff" means nothing if any
 admin can suspend the Director's trainers or demote a fellow admin.
+
+## System admins
+
+Migration `20261009100000_system_admin_report_handoff.sql`.
+
+A **system admin** is a Director whose `academy_members.is_system_admin` is also
+true. Hawary Academy has one: Lokman (muhamadlokman92@gmail.com). Madam Linda
+remains a Director.
+
+- **Every Director power, by being a Director.** The flag is added to a
+  Director's row, not put in place of it — a check constraint requires
+  `role = 'admin'` and `is_director` — so no policy, RPC or guard that asks
+  `app.is_director` had to change, and nothing can drift between the two.
+- **The owner's to set, in SQL**, exactly as the Director flag is:
+  `app.guard_member_director` refuses any change to it from a JWT, and leaving
+  the admin role clears both flags.
+- **What it adds** is on the LPKC thread: system admins are the ones told when
+  a student sends a report, and what they add reaches the checker, not the
+  student ([report-checks.md](report-checks.md) → "The copy a checker starts
+  from").
+- **What it shows:** the access level reads "System admin" on the Members
+  roster, the profile and the academy switcher. `list_academy_staff` predates
+  the flag and cannot grow a column without being dropped, so the roster reads
+  the flag beside it.
+
+```sql
+-- A further system admin (an existing Director):
+update public.academy_members set is_system_admin = true
+where academy_id = '<academy id>' and user_id = '<user id>'
+  and role = 'admin' and is_director;
+```
 
 ## An archived record releases its login
 

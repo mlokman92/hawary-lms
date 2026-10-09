@@ -28,6 +28,8 @@ export const reports: ReportsDict = {
   'report.assigned_to': 'Laporan ini bersama {name}.',
   'report.resubmit': 'Hantar versi baharu',
   'report.hand_on': 'Serah kepada orang lain',
+  'report.approve': 'Luluskan',
+  'report.reopen': 'Buka semula',
   'report.open_student': 'Buka pelajar',
   'report.reply.student':
     'Tanya soalan, atau nyatakan apa yang anda ubah…',
@@ -42,6 +44,7 @@ export const reports: ReportsDict = {
   'report.event.commented': '{who} memberi komen',
   'report.event.decided': '{who} mengemas kini status',
   'report.event.assigned': '{who} menyerahkan ini kepada {to}',
+  'report.event.annotated': 'Salinan beranotasi',
   'report.event.you': '(anda)',
 
   // --- files ----------------------------------------------------------------

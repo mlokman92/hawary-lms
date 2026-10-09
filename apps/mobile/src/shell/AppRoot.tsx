@@ -19,6 +19,7 @@ import { useUpdateRequired } from '@/features/version/api'
 import { Button, T, space, useTheme } from '@/ui'
 import { FONT_FILES, ThemeProvider } from '@/ui/theme'
 import { linkOf } from './links'
+import { useOtaUpdate } from './ota'
 import { useScope } from './scope'
 
 void SplashScreen.preventAutoHideAsync()
@@ -193,7 +194,8 @@ function UpdateWall({ storeUrl }: { storeUrl: string | null }) {
 
 /**
  * Wraps the route tree: hides the splash once the gate has an answer, puts the
- * update wall in front when the build is too old, and wires push.
+ * update wall in front when the build is too old, wires push, and offers a
+ * restart when an over-the-air update has been downloaded.
  */
 export function AppFrame({
   gate,
@@ -211,6 +213,7 @@ export function AppFrame({
 
   usePushRegistration(gate === 'ready')
   usePushNavigation(gate === 'ready')
+  useOtaUpdate(gate !== 'loading' && !update?.required)
 
   const body = update?.required ? (
     <UpdateWall storeUrl={update.storeUrl} />

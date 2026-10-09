@@ -93,7 +93,18 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: app.name,
     slug: app.slug,
-    version: '1.0.0',
+    // Also the RUNTIME VERSION (below): an over-the-air update reaches only the
+    // builds that carry the same number. Raise it for every store release that
+    // changes native code — a new package, a new permission, an SDK upgrade —
+    // so an update written for the new binary is never sent to the old one.
+    // 1.0.1 is the first build that can be updated over the air at all.
+    version: '1.0.1',
+    runtimeVersion: { policy: 'appVersion' },
+    // EAS Update, one feed per app. `eas update` publishes to it; the build's
+    // channel (eas.json) says which branch of it a binary listens to.
+    updates: app.projectId
+      ? { url: `https://u.expo.dev/${app.projectId}` }
+      : undefined,
     orientation: 'portrait',
     icon: `${art}/icon.png`,
     scheme: app.scheme,

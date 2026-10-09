@@ -23,6 +23,7 @@ export const members = {
   // Access levels. A Director is an admin with academy_members.is_director, a
   // flag the owner sets in SQL; there can be several. Directors alone grant and
   // revoke staff access and change the payment and letterhead settings.
+  'members.tier.system_admin': 'System admin',
   'members.tier.director': 'Director',
   'members.tier.admin': 'Admin',
   'members.tier.trainer': 'Trainer',

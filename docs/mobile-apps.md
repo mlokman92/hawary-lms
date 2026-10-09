@@ -245,8 +245,17 @@ New with the Student app, and the piece CLAUDE.md listed as not built.
 - A file needs a hand-in to hang on, so attaching the first one saves the draft
   first.
 - The **web shows** attachments (grader and student) through
-  `features/assignments/SubmissionFiles.tsx` and does not attach. Phone photos
-  are the use case.
+  `features/assignments/SubmissionFiles.tsx` and does not attach.
+- **The Student app attaches from the files app only** (Oct 2026, the owner's
+  call): the Attach button opens the document picker directly, for a hand-in
+  and for an LPKC report alike. A photo already on the phone can be picked
+  there. The Academy app still offers camera, photos and files.
+- **How a picked file is uploaded** (`lib/storage.ts → formFile`): through
+  `expo-file-system`'s `File`, never as React Native's `{ uri, name, type }`
+  descriptor. From SDK 57 the global `fetch` is Expo's own, and it refuses that
+  descriptor before the request leaves the phone — every upload from the apps
+  failed with "Upload failed" until this was changed. The picked name is kept
+  client-side, because the filename is percent-encoded in transit.
 
 ## Announcements
 
@@ -285,6 +294,52 @@ update app_min_versions
 **It fails open.** If the row cannot be read the app runs: locking everybody
 out because a version check could not reach the server would turn a small
 problem into a total one.
+
+## Updates without a store release
+
+`expo-updates` + EAS Update, from version **1.0.1** on. A change that is only
+JavaScript — a screen, a fix, a string — is published with `eas update` and
+reaches the installed apps without a store review. A change to native code (a
+new package with native code, a permission, an icon, an SDK upgrade) still needs
+a build.
+
+- **Which builds an update reaches:** those on the same **channel** and with the
+  same **runtime version**. The channel comes from the build profile in
+  `eas.json` (`production`, `preview`, `development`). The runtime version is
+  the app `version` in `app.config.ts` (`runtimeVersion: { policy: 'appVersion' }`).
+  So **raise `version` for every store release that changes native code** —
+  otherwise an update written for the new binary is offered to the old one,
+  which cannot run it.
+- **The 1.0.0 builds cannot be updated this way.** They were built without the
+  package. Once 1.0.1 is in the stores, raising `app_min_versions` to `1.0.1`
+  (see **Forced update**) is what moves people off them.
+- **Publishing** — one command per app, because each app is its own EAS project:
+
+  ```bash
+  pnpm --filter mobile update:student "What changed"
+  pnpm --filter mobile update:academy "What changed"
+  # a third argument publishes to the internal builds instead:
+  pnpm --filter mobile update:student "What changed" preview
+  ```
+
+  `scripts/ota.mjs` rather than a bare `eas update`, for two reasons it explains
+  itself: `APP_VARIANT` picks the project (forgetting it publishes the Student
+  bundle), and from SDK 55 `eas update --environment` ignores local `.env`
+  files — the Supabase URL and key live on the build profiles in `eas.json`, and
+  a bundle exported without them throws on its first line on every phone that
+  receives it. The script reads them from the same profile the build used.
+- **In the app** (`shell/ota.ts`): the update downloads in the background at
+  launch, and again whenever the app is brought to the front. When it is ready
+  the app asks once — *New update available. Restart the app to see the
+  changes.* — **Restart** or **Later**. Later means the next cold start, without
+  being asked again.
+- The package is loaded behind a `try`: on a binary without its native half,
+  importing it throws while the module loads, and that would take the app down.
+- Nothing happens in development or on the web preview.
+
+**Try the first update on a `preview` build before `production`.** A bad update
+reaches everybody on the channel within minutes; `eas update:rollback` undoes
+one.
 
 ## UI
 
@@ -361,6 +416,8 @@ pnpm export:student         # JS-only bundle; catches resolution errors
    prompt** — EAS makes the keystore itself. **The first iOS build of each app
    has to be run by a person in a terminal**: it signs in to Apple (with 2FA)
    to make the certificate and profile, and `--non-interactive` refuses.
+   The profile also names the update channel the binary listens to (see
+   **Updates without a store release**).
 3. Push credentials — see **Push credentials**, below.
 4. Icons are in place — see **Icons**, below.
 5. Fill in the two `.well-known` files (see **Deep links**).

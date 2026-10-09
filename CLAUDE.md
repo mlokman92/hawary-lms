@@ -24,7 +24,7 @@ in `docs/`.
 - **Roles** (per academy, on `academy_members`):
   - **Director** — an admin with `is_director`. Grants and revokes staff access
     (admin/trainer), and owns the gateway & billing settings. Set by the owner in
-    SQL only.
+    SQL only. A **system admin** is a Director with `is_system_admin` as well.
   - **admin** — runs the academy: students, courses, invoices, payments,
     incentives, appointments, reports.
   - **trainer** — teaches and grades the courses they are assigned to.
@@ -165,7 +165,7 @@ pnpm --filter mobile sync:data     # after editing a web data hook
 - **Money in integer sen.** Never floats, never ringgit in the database.
 - **Columns a client must never write**, because a trigger or a generated column
   owns them: `invoices.amount_paid_sen`, `invoices.balance_sen`,
-  `assessments.total_points`, `academy_members.is_director`.
+  `assessments.total_points`, `academy_members.is_director` / `is_system_admin`.
 - **Clients have no DML** on `academy_invitations`, `notifications`,
   `incentive_payouts`, `assessment_questions`, `appointments`,
   `announcements` or `assignment_submission_files`, and no INSERT

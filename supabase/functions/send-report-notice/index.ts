@@ -15,10 +15,16 @@
 // misreport who acted in order to redirect the mail.
 //
 // WHO IS TOLD: the other party, never the actor.
-//   submitted  → the checker            (the student acted)
+//   submitted  → the academy's system admins; the checker when there are none
+//   staff-only → the checker            (the copy they start from has arrived)
 //   comment    → the other side         (either may act)
 //   status     → the student            (staff decided)
 //   assigned   → the incoming checker AND the student, minus whoever acted
+//
+// A STAFF-ONLY ENTRY NEVER REACHES THE STUDENT. `report_events.staff_only` is an
+// entry the student cannot read (docs/report-checks.md), so it is mailed to the
+// checker alone, worded as the report arriving - which for them it is - and
+// without quoting what it says.
 //
 // That is the OPPOSITE of send-appointment-notice, which mails both parties
 // including the actor. The difference is real and not an inconsistency: there,
@@ -358,7 +364,9 @@ Deno.serve(async (req) => {
   // --- 2. read the facts under the service role -----------------------------
   const { data: event, error: evErr } = await admin
     .from('report_events')
-    .select('id, report_id, kind, body, to_status, actor_id, actor_name, actor_role')
+    .select(
+      'id, report_id, kind, body, to_status, actor_id, actor_name, actor_role, staff_only',
+    )
     .eq('id', eventId)
     .eq('report_id', reportId)
     .maybeSingle()
@@ -403,14 +411,64 @@ Deno.serve(async (req) => {
   const kind = String(event.kind)
   const actorRole = String(event.actor_role)
   const actorIsStudent = actorRole === 'student'
+  const staffOnly = event.staff_only === true
 
-  const sides: Side[] =
-    kind === 'submitted'
-      ? ['instructor']
-      : kind === 'assigned'
-        ? ['instructor', 'student']
-        : // comment and status both go to whoever did not act
-          [actorIsStudent ? 'instructor' : 'student']
+  /** One person to mail: which side of the thread they read it from. */
+  type Recipient = {
+    side: Side
+    /** Names the result and the idempotency key; unique per recipient. */
+    key: string
+    userId: string | null
+    address: () => Promise<string | null>
+  }
+
+  const checker: Recipient = {
+    side: 'instructor',
+    key: 'instructor',
+    userId: instructor?.user_id ?? null,
+    address: () => addressOf(instructor),
+  }
+  const learner: Recipient = {
+    side: 'student',
+    key: 'student',
+    userId: student?.user_id ?? null,
+    address: () => addressOf(student),
+  }
+
+  /** The academy's active system admins. They read a thread as a checker does. */
+  async function systemAdmins(): Promise<Recipient[]> {
+    const { data: rows } = await admin
+      .from('academy_members')
+      .select('user_id')
+      .eq('academy_id', report!.academy_id)
+      .eq('status', 'active')
+      .eq('role', 'admin')
+      .eq('is_system_admin', true)
+    return (rows ?? []).map((row) => ({
+      side: 'instructor' as Side,
+      key: `admin-${row.user_id}`,
+      userId: row.user_id as string,
+      address: () => addressOf({ email: null, user_id: row.user_id as string }),
+    }))
+  }
+
+  let recipients: Recipient[]
+  if (staffOnly) {
+    recipients = [checker]
+  } else if (kind === 'submitted') {
+    // The checker is told later, by the staff-only entry. An academy with no
+    // system admin has no such step, so there the checker is told now.
+    const admins = await systemAdmins()
+    recipients = admins.length > 0 ? admins : [checker]
+  } else if (kind === 'assigned') {
+    recipients = [checker, learner]
+  } else {
+    // comment and status both go to whoever did not act
+    recipients = [actorIsStudent ? checker : learner]
+  }
+
+  // The words. A staff-only entry is, for the checker, the report arriving.
+  const copyKind = staffOnly ? 'submitted' : kind
 
   const base = resolveBase(
     typeof body.origin === 'string' ? body.origin : undefined,
@@ -421,23 +479,23 @@ Deno.serve(async (req) => {
 
   const results: Record<string, { sent: boolean; code: string | null }> = {}
 
-  for (const side of sides) {
+  for (const recipient of recipients) {
+    const side = recipient.side
     // Never mail the actor their own action.
-    const party = side === 'student' ? student : instructor
-    if (party?.user_id && party.user_id === event.actor_id) {
-      results[side] = { sent: false, code: 'is_actor' }
+    if (recipient.userId && recipient.userId === event.actor_id) {
+      results[recipient.key] = { sent: false, code: 'is_actor' }
       continue
     }
 
-    const to = await addressOf(party)
+    const to = await recipient.address()
     if (!to) {
-      results[side] = { sent: false, code: 'no_address' }
+      results[recipient.key] = { sent: false, code: 'no_address' }
       continue
     }
 
-    const copy = COPY[kind]?.[side]
+    const copy = COPY[copyKind]?.[side]
     if (!copy) {
-      results[side] = { sent: false, code: 'unknown_event' }
+      results[recipient.key] = { sent: false, code: 'unknown_event' }
       continue
     }
 
@@ -452,21 +510,21 @@ Deno.serve(async (req) => {
       [side === 'student' ? 'Checked by' : 'Student', other?.full_name ?? '-'],
     ]
 
-    results[side] = await send({
+    results[recipient.key] = await send({
       to,
       from,
       academy: academyName,
       heading,
       rows,
-      quote: event.body ? String(event.body) : null,
+      quote: !staffOnly && event.body ? String(event.body) : null,
       cta: copy.cta,
       url:
         side === 'student'
           ? `${base}/learn/reports/${reportId}`
           : `${base}/reports/${reportId}`,
-      // Per (event, recipient): the event happened once, and the two parties
+      // Per (event, recipient): the event happened once, and the recipients
       // fail independently, so a re-invoke fills only the gap.
-      idempotencyKey: `report-${eventId}-${side}`,
+      idempotencyKey: `report-${eventId}-${recipient.key}`,
     })
   }
 

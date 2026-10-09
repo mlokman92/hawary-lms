@@ -97,6 +97,8 @@ function FileChip({ file }: { file: ReportFile }) {
 
 /** What this entry says happened, in the reader's language. */
 function headlineOf(e: ReportEvent, t: TFn): string {
+  // A document, not a message from somebody: it carries no name.
+  if (e.staff_only) return t('report.event.annotated')
   const who = e.actor_name?.trim() || t('report.someone')
   if (e.kind === 'submitted') {
     return e.version && e.version > 1
@@ -106,9 +108,9 @@ function headlineOf(e: ReportEvent, t: TFn): string {
   if (e.kind === 'assigned') {
     return t('report.event.assigned', { who, to: e.body ?? t('report.someone') })
   }
-  if (e.kind === 'status' || (e.kind === 'comment' && e.to_status)) {
-    return t('report.event.decided', { who })
-  }
+  // A reply moves the status by itself now, so a comment that carries one is
+  // still a comment — the badge beside it says where the report went.
+  if (e.kind === 'status') return t('report.event.decided', { who })
   return t('report.event.commented', { who })
 }
 
@@ -125,9 +127,9 @@ export function ReportTimeline({
   return (
     <ol className="divide-y">
       {events.map((e) => {
-        const Icon = KIND_ICON[e.kind]
+        const Icon = e.staff_only ? FileText : KIND_ICON[e.kind]
         const status = e.to_status ? REPORT_STATUS[e.to_status] : null
-        const mine = !!myUserId && e.actor_id === myUserId
+        const mine = !e.staff_only && !!myUserId && e.actor_id === myUserId
         return (
           <li key={e.id} className="flex gap-3 px-4 py-3">
             <span

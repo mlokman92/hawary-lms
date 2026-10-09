@@ -30,9 +30,11 @@ export function AcademySwitcher() {
   // in the shell that says this account holds the extra powers.
   const roleLabel = !active
     ? ''
-    : active.isDirector
-      ? t('members.tier.director')
-      : t(`role.${active.role}` as TKey)
+    : active.isSystemAdmin
+      ? t('members.tier.system_admin')
+      : active.isDirector
+        ? t('members.tier.director')
+        : t(`role.${active.role}` as TKey)
   const name = active?.academy?.name ?? t('academy.fallback')
 
   const trigger = (

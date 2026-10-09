@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Pressable, View } from 'react-native'
+import { IS_STUDENT_APP } from '@/lib/env'
 import { errorMessage } from '@/lib/errors'
 import { useT } from '@/lib/i18n'
 import {
@@ -14,8 +15,10 @@ import { Button, FormError, Icon, Row, Sheet, T, space, useTheme } from '@/ui'
 
 /**
  * "Attach" on a phone is three different sources — the camera, the photo
- * library and the files app — and which one somebody wants depends on whether
- * their work is on paper or already a document. One button, three choices.
+ * library and the files app. The Academy app offers all three behind one
+ * button. The Student app goes straight to the files app: what a student sends
+ * in is a document, and the owner asked for the one choice (Oct 2026). A photo
+ * already on the phone can still be picked there.
  */
 export function AttachButton({
   label,
@@ -46,7 +49,9 @@ export function AttachButton({
         title={label}
         loading={busy}
         disabled={disabled}
-        onPress={() => setOpen(true)}
+        onPress={() =>
+          IS_STUDENT_APP ? void from(pickDocuments) : setOpen(true)
+        }
       />
       <Sheet visible={open} onClose={() => setOpen(false)}>
         <View>

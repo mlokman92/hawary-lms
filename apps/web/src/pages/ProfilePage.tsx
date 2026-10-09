@@ -67,7 +67,13 @@ export function ProfilePage() {
   if (isLoading) return <RouteLoading />
 
   const email = user?.email ?? ''
-  const tier = active ? memberTier({ role: active.role, is_director: active.isDirector }) : null
+  const tier = active
+    ? memberTier({
+        role: active.role,
+        is_director: active.isDirector,
+        is_system_admin: active.isSystemAdmin,
+      })
+    : null
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()

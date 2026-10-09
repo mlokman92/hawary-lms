@@ -255,6 +255,7 @@ export type Database = {
           created_at: string
           id: string
           is_director: boolean
+          is_system_admin: boolean
           joined_at: string
           role: "admin" | "trainer" | "student"
           status: Database["public"]["Enums"]["member_status"]
@@ -267,6 +268,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_director?: boolean
+          is_system_admin?: boolean
           joined_at?: string
           role: "admin" | "trainer" | "student"
           status?: Database["public"]["Enums"]["member_status"]
@@ -279,6 +281,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_director?: boolean
+          is_system_admin?: boolean
           joined_at?: string
           role?: "admin" | "trainer" | "student"
           status?: Database["public"]["Enums"]["member_status"]
@@ -2190,6 +2193,7 @@ export type Database = {
           id: string
           kind: Database["public"]["Enums"]["report_event_kind"]
           report_id: string
+          staff_only: boolean
           to_status: Database["public"]["Enums"]["report_status"] | null
           version: number | null
         }
@@ -2203,6 +2207,7 @@ export type Database = {
           id?: string
           kind: Database["public"]["Enums"]["report_event_kind"]
           report_id: string
+          staff_only?: boolean
           to_status?: Database["public"]["Enums"]["report_status"] | null
           version?: number | null
         }
@@ -2216,6 +2221,7 @@ export type Database = {
           id?: string
           kind?: Database["public"]["Enums"]["report_event_kind"]
           report_id?: string
+          staff_only?: boolean
           to_status?: Database["public"]["Enums"]["report_status"] | null
           version?: number | null
         }
@@ -2682,7 +2688,9 @@ export type Database = {
         Returns: Json
       }
       create_invitation: { Args: { _student_id: string }; Returns: Json }
+      delete_announcement: { Args: { _id: string }; Returns: undefined }
       delete_incentive_batch: { Args: { _batch: string }; Returns: undefined }
+      delete_my_account: { Args: never; Returns: undefined }
       duplicate_course: {
         Args: { _code?: string; _course_id: string; _title?: string }
         Returns: string
@@ -2983,6 +2991,7 @@ export type Database = {
         Args: { _academy: string }
         Returns: undefined
       }
+      remove_submission_file: { Args: { _file_id: string }; Returns: undefined }
       remove_toyyibpay_credentials: {
         Args: { _academy: string }
         Returns: undefined
@@ -3066,6 +3075,7 @@ export type Database = {
         Args: { _instructor_id: string }
         Returns: Json
       }
+      unregister_push_device: { Args: { _token: string }; Returns: undefined }
     }
     Enums: {
       academy_status: "active" | "suspended" | "cancelled"

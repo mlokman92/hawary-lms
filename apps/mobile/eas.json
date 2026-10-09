@@ -5,6 +5,7 @@
   },
   "build": {
     "student-development": {
+      "channel": "development",
       "developmentClient": true,
       "distribution": "internal",
       "env": {
@@ -14,6 +15,7 @@
       }
     },
     "student-preview": {
+      "channel": "preview",
       "distribution": "internal",
       "env": {
         "APP_VARIANT": "student",
@@ -25,6 +27,7 @@
       }
     },
     "student-production": {
+      "channel": "production",
       "autoIncrement": true,
       "env": {
         "APP_VARIANT": "student",
@@ -33,6 +36,7 @@
       }
     },
     "academy-development": {
+      "channel": "development",
       "developmentClient": true,
       "distribution": "internal",
       "env": {
@@ -42,6 +46,7 @@
       }
     },
     "academy-preview": {
+      "channel": "preview",
       "distribution": "internal",
       "env": {
         "APP_VARIANT": "academy",
@@ -53,6 +58,7 @@
       }
     },
     "academy-production": {
+      "channel": "production",
       "autoIncrement": true,
       "env": {
         "APP_VARIANT": "academy",

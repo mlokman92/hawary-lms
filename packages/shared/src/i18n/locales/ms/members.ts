@@ -20,6 +20,7 @@ export const members: MembersDict = {
   // (academy_members.is_director); boleh ada lebih daripada seorang. Hanya
   // pengarah memberi dan menarik balik akses kakitangan serta menukar tetapan
   // bayaran dan kepala surat.
+  'members.tier.system_admin': 'Pentadbir sistem',
   'members.tier.director': 'Pengarah',
   'members.tier.admin': 'Pentadbir',
   'members.tier.trainer': 'Jurulatih',

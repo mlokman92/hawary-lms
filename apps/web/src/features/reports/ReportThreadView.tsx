@@ -15,6 +15,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
@@ -22,7 +23,6 @@ import { FilePicker } from './FilePicker'
 import { ReportTimeline } from './ReportTimeline'
 import {
   REPORT_STATUS,
-  VERDICTS,
   useCommentOnReport,
   useReassignReport,
   useReport,
@@ -40,8 +40,8 @@ import {
  * is worse than no button.
  *
  * What differs between the two callers is the one thing that genuinely differs:
- * a student uploads the next version, staff record a verdict. Neither is a
- * cosmetic variation of the other, so `onResubmit` is a prop rather than a flag.
+ * a student uploads the next version, staff approve. Neither is a cosmetic
+ * variation of the other, so `onResubmit` is a prop rather than a flag.
  */
 export function ReportThreadView({
   academyId,
@@ -174,6 +174,19 @@ export function ReportThreadView({
                     </Link>
                   </DropdownMenuItem>
                 ) : null}
+                {/* The one status nobody's reply sets. Approving ends the
+                    thread and happens once per report, so it is kept away from
+                    Send; reopening is its undo. */}
+                {canDecide ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => void post(done ? 'in_review' : 'approved')}
+                    >
+                      {done ? t('report.reopen') : t('report.approve')}
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
           ) : null}
@@ -196,6 +209,9 @@ export function ReportThreadView({
             }
           />
 
+          {/* Send is the whole act: the server moves the status to "being
+              checked" when the student sends and to "changes needed" when the
+              academy does, so there is nothing else to press. */}
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             {academyId ? (
               <FilePicker
@@ -208,37 +224,15 @@ export function ReportThreadView({
               <span />
             )}
 
-            <div className="flex flex-wrap items-center gap-2">
-              {/* The three verdicts, as three buttons rather than a select
-                  plus a Save: a verdict is one decision and pressing it is the
-                  whole act. `submitted` is not offered — only an upload puts a
-                  report back into that state, and only the student uploads. */}
-              {canDecide
-                ? VERDICTS.map((v) => (
-                    <Button
-                      key={v}
-                      type="button"
-                      size="sm"
-                      variant={v === 'approved' ? 'default' : 'outline'}
-                      disabled={busy || report.status === v}
-                      onClick={() => void post(v)}
-                    >
-                      {t(REPORT_STATUS[v].labelKey)}
-                    </Button>
-                  ))
-                : null}
-
-              <Button
-                type="button"
-                size="sm"
-                variant={canDecide ? 'ghost' : 'default'}
-                disabled={busy || nothingToSay}
-                onClick={() => void post(null)}
-              >
-                <Send />
-                {t('report.send')}
-              </Button>
-            </div>
+            <Button
+              type="button"
+              size="sm"
+              disabled={busy || nothingToSay}
+              onClick={() => void post(null)}
+            >
+              <Send />
+              {t('report.send')}
+            </Button>
           </div>
 
           {failure ? (

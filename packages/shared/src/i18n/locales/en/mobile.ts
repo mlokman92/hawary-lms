@@ -17,6 +17,12 @@ export const mobile = {
     'This version of the app is too old to keep working. Install the latest one to carry on.',
   'm.update.action': 'Open the store',
 
+  // --- over-the-air update: downloaded, waiting for a restart ---------------
+  'm.ota.title': 'New update available',
+  'm.ota.body': 'Restart the app to see the changes.',
+  'm.ota.restart': 'Restart',
+  'm.ota.later': 'Later',
+
   // --- onboarding: the right account in the wrong app -----------------------
   'm.onboarding.staff.title': 'This is a staff account',
   'm.onboarding.staff.body':

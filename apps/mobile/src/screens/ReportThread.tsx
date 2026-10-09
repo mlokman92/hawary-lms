@@ -10,7 +10,6 @@ import { useOpenFile } from '@/features/files/api'
 import { FileLine, PendingFiles } from '@/features/files/Attach'
 import {
   REPORT_STATUS,
-  VERDICTS,
   useCommentOnReport,
   useReassignReport,
   useReport,
@@ -50,6 +49,8 @@ import {
  */
 
 function headline(e: ReportEvent, t: TFn): string {
+  // A document, not a message from somebody: it carries no name.
+  if (e.staff_only) return t('report.event.annotated')
   const who = e.actor_name?.trim() || t('report.someone')
   if (e.kind === 'submitted') {
     return e.version && e.version > 1
@@ -59,9 +60,9 @@ function headline(e: ReportEvent, t: TFn): string {
   if (e.kind === 'assigned') {
     return t('report.event.assigned', { who, to: e.body ?? t('report.someone') })
   }
-  if (e.kind === 'status' || (e.kind === 'comment' && e.to_status)) {
-    return t('report.event.decided', { who })
-  }
+  // A reply moves the status by itself, so a comment that carries one is still
+  // a comment — the badge beside it says where the report went.
+  if (e.kind === 'status') return t('report.event.decided', { who })
   return t('report.event.commented', { who })
 }
 
@@ -171,6 +172,12 @@ export function ReportThreadScreen() {
                             router.push(`/students/${report.student.id}` as never),
                         },
                       ]),
+                  // The one status nobody's reply sets; reopening is its undo.
+                  {
+                    label: done ? t('report.reopen') : t('report.approve'),
+                    icon: done ? ('rotate-ccw' as const) : ('check-circle' as const),
+                    onPress: () => void post(done ? 'in_review' : 'approved'),
+                  },
                 ]}
               />
             ),
@@ -218,7 +225,7 @@ export function ReportThreadScreen() {
 
       <Card style={{ gap: space.lg }}>
         {report.events.map((e, i) => {
-          const mine = !!user && e.actor_id === user.id
+          const mine = !e.staff_only && !!user && e.actor_id === user.id
           const to = e.to_status ? REPORT_STATUS[e.to_status] : null
           return (
             <View key={e.id} style={{ gap: 6 }}>
@@ -269,26 +276,11 @@ export function ReportThreadScreen() {
           />
         ) : null}
 
-        {/* The three verdicts are three buttons, not a picker and a Save: a
-            verdict is one decision and pressing it is the whole act. */}
-        {!isStudent ? (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
-            {VERDICTS.map((v) => (
-              <Button
-                key={v}
-                small
-                variant={v === 'approved' ? 'primary' : 'outline'}
-                title={t(REPORT_STATUS[v].labelKey)}
-                disabled={busy || report.status === v}
-                onPress={() => void post(v)}
-              />
-            ))}
-          </View>
-        ) : null}
-
+        {/* Send is the whole act: the server moves the status to "being
+            checked" when the student sends and to "changes needed" when the
+            academy does. Approve is in the header menu. */}
         <Button
           icon="send"
-          variant={isStudent ? 'primary' : 'outline'}
           title={t('report.send')}
           loading={comment.isPending}
           disabled={busy || nothingToSay}

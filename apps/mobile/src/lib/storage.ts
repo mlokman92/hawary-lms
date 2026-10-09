@@ -1,4 +1,5 @@
 import * as DocumentPicker from 'expo-document-picker'
+import { File } from 'expo-file-system'
 import * as ImagePicker from 'expo-image-picker'
 import * as WebBrowser from 'expo-web-browser'
 import { supabase } from './supabase'
@@ -24,12 +25,29 @@ export type UploadFile = {
 }
 
 /**
- * What goes into FormData for a picked file. React Native's FormData takes the
- * `{ uri, name, type }` descriptor itself where a browser takes a File — so on
- * the web preview the picker's File is passed through instead.
+ * What goes into FormData for a picked file.
+ *
+ * NOT React Native's `{ uri, name, type }` descriptor. From SDK 57 the global
+ * `fetch` is Expo's own, and it refuses that shape ("Unsupported FormDataPart
+ * implementation") before the request leaves the phone — which is what every
+ * upload did until this was changed. It takes a Blob, or anything with
+ * `bytes()`, and reads the part's filename and content type off `name` and
+ * `type`. So the file is read through expo-file-system, and the name and type
+ * are the ones the picker reported rather than whatever the cache copy is
+ * called.
+ *
+ * On the web preview the picker's own File is passed through instead.
  */
 export function formFile(file: UploadFile): Blob {
-  return file.file ?? (file as unknown as Blob)
+  if (file.file) return file.file
+  const source = new File(file.uri)
+  return {
+    name: file.name,
+    type: file.type,
+    size: file.size,
+    bytes: () => source.bytes(),
+    arrayBuffer: () => source.arrayBuffer(),
+  } as unknown as Blob
 }
 
 type UploadResponse = {
@@ -82,7 +100,9 @@ export async function uploadPrivateFile(
   if (!data?.path) throw new Error(data?.error ?? translate('upload.failed'))
   return {
     path: data.path,
-    name: data.file_name ?? file.name,
+    // As it was picked: the filename is percent-encoded in transit, so the
+    // server's copy of it reads "My%20work.pdf".
+    name: file.name || data.file_name || 'document',
     mime: data.mime_type ?? file.type,
     size: data.size_bytes ?? file.size,
   }
@@ -137,6 +157,33 @@ const DOC_TYPES = [
   'image/webp',
 ]
 
+/**
+ * The type a file's name implies. Some file providers hand back a document with
+ * no MIME type at all, and `upload-media` refuses what it cannot name.
+ */
+const TYPE_BY_EXT: Record<string, string> = {
+  pdf: 'application/pdf',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  ppt: 'application/vnd.ms-powerpoint',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  xls: 'application/vnd.ms-excel',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  txt: 'text/plain',
+  csv: 'text/csv',
+  zip: 'application/zip',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+}
+
+function typeOf(name: string, reported: string | undefined): string {
+  if (reported && reported !== 'application/octet-stream') return reported
+  const ext = name.split('.').pop()?.toLowerCase() ?? ''
+  return TYPE_BY_EXT[ext] ?? reported ?? 'application/octet-stream'
+}
+
 /** Pick documents from the phone's files. Empty when the person backs out. */
 export async function pickDocuments(): Promise<UploadFile[]> {
   const result = await DocumentPicker.getDocumentAsync({
@@ -148,7 +195,7 @@ export async function pickDocuments(): Promise<UploadFile[]> {
   return result.assets.map((a) => ({
     uri: a.uri,
     name: a.name,
-    type: a.mimeType ?? 'application/octet-stream',
+    type: typeOf(a.name, a.mimeType),
     size: a.size ?? 0,
     file: a.file,
   }))

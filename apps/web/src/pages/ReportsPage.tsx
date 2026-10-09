@@ -5,7 +5,6 @@ import {
   ClipboardCheck,
   Eye,
   FileWarning,
-  Inbox,
   MoreHorizontal,
   Users,
 } from 'lucide-react'
@@ -50,15 +49,15 @@ import {
  * `/appointments/list` reached: a control that cannot change the result is
  * worse than no control.
  *
- * Oldest first, which is the only order a queue has. The four tiles are a sum
- * over a set, so pressing one shows that set — the `/payments` rule.
+ * Oldest first, which is the only order a queue has. The three tiles are a sum
+ * over a set, so pressing one shows that set — the `/payments` rule. There is
+ * no "Waiting" tile: a report is "being checked" from the moment it is sent.
  */
 
 const TILES: {
   status: ReportStatus
-  icon: typeof Inbox
+  icon: typeof Eye
 }[] = [
-  { status: 'submitted', icon: Inbox },
   { status: 'in_review', icon: Eye },
   { status: 'changes_requested', icon: FileWarning },
   { status: 'approved', icon: CheckCircle2 },
@@ -119,7 +118,7 @@ export function ReportsPage() {
         ) : null}
       </PageHeader>
 
-      <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mt-6 grid gap-4 sm:grid-cols-3">
         {TILES.map(({ status: s, icon }) => (
           <FilterStatCard
             key={s}

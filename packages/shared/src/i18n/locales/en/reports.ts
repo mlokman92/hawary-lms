@@ -8,9 +8,9 @@
  */
 export const reports = {
   // --- status ---------------------------------------------------------------
-  // Two of these wait on the checker, one waits on the student, one is done.
   // The labels say which way the ball is facing, because that is the only thing
-  // anybody looks at a status for.
+  // anybody looks at a status for. `submitted` is no longer written; the label
+  // stays for timeline entries from before the status followed the last reply.
   'report.status.submitted': 'Waiting',
   'report.status.in_review': 'Being checked',
   'report.status.changes_requested': 'Changes needed',
@@ -37,6 +37,8 @@ export const reports = {
   'report.assigned_to': 'This report is with {name}.',
   'report.resubmit': 'Send a new version',
   'report.hand_on': 'Pass to someone else',
+  'report.approve': 'Approve',
+  'report.reopen': 'Reopen',
   'report.open_student': 'Open student',
   'report.reply.student': 'Ask a question, or say what you have changed…',
   'report.reply.staff': 'What needs fixing?',
@@ -50,6 +52,7 @@ export const reports = {
   'report.event.commented': '{who} commented',
   'report.event.decided': '{who} updated the status',
   'report.event.assigned': '{who} passed this to {to}',
+  'report.event.annotated': 'Annotated copy',
   'report.event.you': '(you)',
 
   // --- files ----------------------------------------------------------------

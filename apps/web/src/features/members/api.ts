@@ -32,6 +32,8 @@ export type StaffMember = {
    * revokes staff access, and owns the gateway and billing settings.
    */
   is_director: boolean
+  /** A Director who is also a system admin. Merged in by `useStaffMembers`. */
+  is_system_admin?: boolean
   instructor_id: string | null
   instructor_no: string | null
   instructor_status: Enums<'instructor_status'> | null
@@ -65,16 +67,27 @@ export function memberRecordPath(m: StaffMember): string | null {
  * record. Keeping them apart is what lets one account be Director *and*
  * instructor without touching the role enum.
  */
-export type MemberTier = 'director' | 'admin' | 'trainer' | 'student'
+export type MemberTier =
+  | 'system_admin'
+  | 'director'
+  | 'admin'
+  | 'trainer'
+  | 'student'
 
-export function memberTier(m: Pick<StaffMember, 'role' | 'is_director'>): MemberTier {
+export function memberTier(
+  m: Pick<StaffMember, 'role' | 'is_director' | 'is_system_admin'>,
+): MemberTier {
   // `app.is_director` needs an admin row too, so a demoted Director is not
   // still badged as one: the badge tracks the access the database grants.
-  if (m.is_director && m.role === 'admin') return 'director'
+  if (m.is_director && m.role === 'admin') {
+    // A system admin is a Director first; the flag only renames the badge.
+    return m.is_system_admin ? 'system_admin' : 'director'
+  }
   return m.role
 }
 
 export const TIER_META: Record<MemberTier, { labelKey: TKey; variant: Variant }> = {
+  system_admin: { labelKey: 'members.tier.system_admin', variant: 'default' },
   director: { labelKey: 'members.tier.director', variant: 'default' },
   admin: { labelKey: 'members.tier.admin', variant: 'secondary' },
   trainer: { labelKey: 'members.tier.trainer', variant: 'outline' },
@@ -106,11 +119,23 @@ export function useStaffMembers(academyId: string | null) {
     queryKey: membersKey(academyId),
     enabled: !!academyId,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('list_academy_staff', {
-        _academy_id: academyId!,
-      })
-      if (error) throw error
-      return (data ?? []) as unknown as StaffMember[]
+      // The RPC predates the system-admin flag and its column list cannot grow
+      // without dropping it, so the flag is read beside it: staff may read
+      // `academy_members`, and this is one short column of it.
+      const [staff, flagged] = await Promise.all([
+        supabase.rpc('list_academy_staff', { _academy_id: academyId! }),
+        supabase
+          .from('academy_members')
+          .select('user_id')
+          .eq('academy_id', academyId!)
+          .eq('is_system_admin', true),
+      ])
+      if (staff.error) throw staff.error
+      const systemAdmins = new Set((flagged.data ?? []).map((r) => r.user_id))
+      return ((staff.data ?? []) as unknown as StaffMember[]).map((m) => ({
+        ...m,
+        is_system_admin: systemAdmins.has(m.user_id),
+      }))
     },
   })
 }

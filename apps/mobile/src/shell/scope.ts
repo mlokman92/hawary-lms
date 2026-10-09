@@ -19,6 +19,8 @@ export type Scope = {
   setAcademyId: (id: string) => void
   isAdmin: boolean
   isDirector: boolean
+  /** A Director who is also a system admin. A name, not a further gate. */
+  isSystemAdmin: boolean
 }
 
 function useStudentScope(): Scope {
@@ -32,6 +34,7 @@ function useStudentScope(): Scope {
     setAcademyId,
     isAdmin: false,
     isDirector: false,
+    isSystemAdmin: false,
   }
 }
 
@@ -44,6 +47,7 @@ function useStaffScope(): Scope {
     setAcademyId: setActiveAcademyId,
     isAdmin: active?.role === 'admin',
     isDirector: active?.isDirector === true,
+    isSystemAdmin: active?.isSystemAdmin === true,
   }
 }
 

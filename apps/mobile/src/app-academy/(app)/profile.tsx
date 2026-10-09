@@ -13,7 +13,7 @@ import { Badge, Card, Row, Screen } from '@/ui'
  */
 export default function ProfileScreen() {
   const { t } = useT()
-  const { academyId, active, isDirector } = useScope()
+  const { academyId, active, isDirector, isSystemAdmin } = useScope()
   const { data: instructor } = useMyInstructorRecord(academyId)
 
   return (
@@ -27,7 +27,11 @@ export default function ProfileScreen() {
           title={active?.academy?.name ?? t('academy.fallback')}
           subtitle={[
             active ? t(active.role === 'admin' ? 'role.admin' : 'role.trainer') : null,
-            isDirector ? t('members.tier.director') : null,
+            isSystemAdmin
+              ? t('members.tier.system_admin')
+              : isDirector
+                ? t('members.tier.director')
+                : null,
           ]
             .filter(Boolean)
             .join(' · ')}
