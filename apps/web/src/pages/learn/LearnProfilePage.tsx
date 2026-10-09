@@ -4,6 +4,7 @@ import { fmtDate } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { useStudentAcademy } from '@/lib/studentAcademy'
 import { useMyStudent } from '@/features/learn/api'
+import { BillingDetailsCard } from '@/features/learn/BillingDetailsCard'
 import { useMyProfile, useUpdateMyProfile } from '@/features/profile/api'
 import { STATUS_META } from '@/features/students/status'
 import { PendingInviteList } from '@/features/invitations/PendingInviteList'
@@ -224,14 +225,22 @@ export function LearnProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Nothing to attach bank details to without an academy record — the
-            row is keyed by student_id and the policy is `owns_student`. */}
+        {/* Neither card has anything to attach to without an academy record:
+            both are keyed by the student row. Keyed by id so switching academy
+            reseeds the form from the other record. */}
         {academyId && student ? (
-          <BankAccountCard
-            academyId={academyId}
-            studentId={student.id}
-            canEdit
-          />
+          <>
+            <BillingDetailsCard
+              key={student.id}
+              academyId={academyId}
+              student={student}
+            />
+            <BankAccountCard
+              academyId={academyId}
+              studentId={student.id}
+              canEdit
+            />
+          </>
         ) : null}
       </div>
     </div>

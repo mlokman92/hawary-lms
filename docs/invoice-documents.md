@@ -83,7 +83,8 @@ via print CSS yields a different document per browser. Laying the page out in
 millimetres gives one deterministic artefact.
 
 Both documents share a letterhead (logo, academy name, address, `Tel:`,
-`SST No.:`), a **Bill to** block (name, student no., email, course), the line
+`SST No.:`), a **Bill to** block (name, organization, address, student no.,
+email, course — see §5 for who writes the organization and address), the line
 items and a totals block. They differ in what they assert:
 
 - **Invoice** — dated by `issued_at` / `due_at`, ends at *Balance due*.
@@ -169,6 +170,39 @@ language at call time.
 
 The tab strip is a plain segmented control, not shadcn `Tabs`: there is one
 panel rather than two, and it would have been the only `Tabs` in the app.
+
+## 5. The student writes their own organization and address
+
+Both documents have printed `students.organization` and `students.address` under
+**Bill to** since the columns existed, but only staff could fill them
+(`students: staff update`). A receipt is what a student hands to an employer or
+a sponsor to be reimbursed, so the person who knows what it has to say is the
+student — and the request arrived as exactly that, students asking for their
+organization to appear on the official receipt.
+
+**An RPC, not a policy.** `update_my_billing_details(_student_id,
+_organization, _address)` (`20261009090000_student_updates_billing_details.sql`)
+writes those two columns on the caller's own live record and nothing else. A
+student UPDATE policy on `students` would have been row-level: it would hand
+over `status`, `student_no`, `email` and `user_id` with it, and guarding those
+back with a trigger is more machinery than one function. Blank is stored as
+NULL, which is what makes the PDF omit the line; 200 and 500 characters are the
+caps.
+
+**The name is deliberately not in it.** `full_name` is what ToyyibPay locks
+onto the FPX page and what a certificate will carry, and
+[account-claiming.md](account-claiming.md) already settled that a name staff
+typed is not renamed from the learner's side. A wrong name is still a staff
+correction.
+
+**Where it is.** A **Billing details** card on `/learn/profile`
+(`features/learn/BillingDetailsCard.tsx`) and the same card on the Student
+app's profile screen (`screens/Account.tsx`), both over
+`useUpdateMyBillingDetails` in `features/learn/api.ts`. Saving invalidates
+`['invoice']`, because an open invoice page holds its own embedded copy of the
+student and passes it straight to the PDF. Documents are drawn on demand, so
+the next download carries the new block — including for invoices issued before
+the change. Nothing is frozen onto the invoice at issue time.
 
 ## Not done
 

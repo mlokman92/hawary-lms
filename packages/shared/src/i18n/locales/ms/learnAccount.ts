@@ -71,4 +71,8 @@ export const learnAccount: LearnAccountDict = {
     'Diuruskan oleh akademi anda — hubungi mereka untuk mengemas kini maklumat ini.',
   'lacct.profile.no_record':
     'Belum ada rekod pelajar yang dipautkan dengan akaun anda di {academy}.',
+
+  // Profil → apa yang dicetak di bawah "Bil kepada" pada invois dan resit
+  'lacct.profile.billing': 'Butiran bil',
+  'lacct.profile.billing_description': 'Dicetak pada invois dan resit anda.',
 }

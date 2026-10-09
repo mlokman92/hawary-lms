@@ -15,6 +15,7 @@ import {
   useSaveStudentBankAccount,
   useStudentBankAccount,
 } from '@/features/bank/api'
+import { useUpdateMyBillingDetails, type Student } from '@/features/learn/api'
 import { useMyProfile, useUpdateMyProfile } from '@/features/profile/api'
 import { useScope } from '@/shell/scope'
 import {
@@ -208,6 +209,89 @@ export function PreferencesCard() {
         />
       ) : null}
       <FormError error={error} />
+    </Card>
+  )
+}
+
+/**
+ * Organization and address: the part of the academy's record a student may
+ * write, because it is what their invoice and receipt print under "Bill to".
+ * Mount it keyed by the student id, so another branch's record reseeds it.
+ */
+export function BillingDetailsCard({
+  academyId,
+  student,
+}: {
+  academyId: string
+  student: Student
+}) {
+  const { t } = useT()
+  const update = useUpdateMyBillingDetails(academyId)
+  const [organization, setOrganization] = useState(student.organization ?? '')
+  const [address, setAddress] = useState(student.address ?? '')
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function save() {
+    setError(null)
+    setSaved(false)
+    try {
+      const row = await update.mutateAsync({
+        studentId: student.id,
+        organization,
+        address,
+      })
+      // Show what was stored: both are trimmed on the way in.
+      setOrganization(row.organization ?? '')
+      setAddress(row.address ?? '')
+      setSaved(true)
+    } catch (e) {
+      setError(errorMessage(e, t('lacct.profile.save_failed')))
+    }
+  }
+
+  return (
+    <Card style={{ gap: space.lg }}>
+      <View style={{ gap: 2 }}>
+        <T v="heading">{t('lacct.profile.billing')}</T>
+        <T v="small" muted>
+          {t('lacct.profile.billing_description')}
+        </T>
+      </View>
+      <Field label={t('students.field.organization')}>
+        <Input
+          value={organization}
+          maxLength={200}
+          onChangeText={(v) => {
+            setOrganization(v)
+            setSaved(false)
+          }}
+          placeholder={t('students.form.organization_placeholder')}
+        />
+      </Field>
+      <Field label={t('students.field.address')}>
+        <Input
+          value={address}
+          maxLength={500}
+          multiline
+          onChangeText={(v) => {
+            setAddress(v)
+            setSaved(false)
+          }}
+        />
+      </Field>
+      <FormError error={error} />
+      <Button
+        title={
+          update.isPending
+            ? t('common.saving')
+            : saved
+              ? t('common.saved')
+              : t('common.save')
+        }
+        loading={update.isPending}
+        onPress={() => void save()}
+      />
     </Card>
   )
 }

@@ -4,7 +4,12 @@ import { fmtDate } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { useLearner } from '@/features/learn/context'
 import { STATUS_META } from '@/features/students/status'
-import { BankAccountCard, PreferencesCard, ProfileCard } from '@/screens/Account'
+import {
+  BankAccountCard,
+  BillingDetailsCard,
+  PreferencesCard,
+  ProfileCard,
+} from '@/screens/Account'
 import { Badge, Card, Screen, T, space } from '@/ui'
 
 function Fact({ label, value }: { label: string; value: string | null | undefined }) {
@@ -20,7 +25,8 @@ function Fact({ label, value }: { label: string; value: string | null | undefine
 
 /**
  * My profile: the account (editable), the record the academy holds (not), the
- * bank account incentive payouts go to, and the device preferences.
+ * billing details the student's documents print, the bank account incentive
+ * payouts go to, and the device preferences.
  */
 export default function ProfileScreen() {
   const { t } = useT()
@@ -62,10 +68,13 @@ export default function ProfileScreen() {
         )}
       </Card>
 
-      {/* Nothing to attach bank details to without an academy record: the row
-          is keyed by student_id and the policy is `owns_student`. */}
+      {/* Neither card has anything to attach to without an academy record:
+          both are keyed by the student row. */}
       {academyId && student ? (
-        <BankAccountCard academyId={academyId} studentId={student.id} canEdit />
+        <>
+          <BillingDetailsCard key={student.id} academyId={academyId} student={student} />
+          <BankAccountCard academyId={academyId} studentId={student.id} canEdit />
+        </>
       ) : null}
 
       <PreferencesCard />
