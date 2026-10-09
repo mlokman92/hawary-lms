@@ -248,7 +248,6 @@ export function InvoiceFormDialog({
         dueDate,
         taxSen,
         notes,
-        courseId: courseFilter === 'all' ? null : courseFilter,
         createdBy: user?.id ?? null,
         // Only decide per invoice when the gateway is actually on; otherwise
         // leave NULL so the invoice picks up whatever default is in force if

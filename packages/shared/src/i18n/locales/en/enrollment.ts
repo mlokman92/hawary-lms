@@ -103,6 +103,10 @@ export const enrollment = {
   'enroll.bulk.stat.ready': 'To enroll',
   'enroll.bulk.stat.already': 'Already enrolled',
   'enroll.bulk.stat.unknown': 'No student record',
+  'enroll.bulk.stat.elsewhere': 'In another course',
+  'enroll.bulk.elsewhere_title': 'Already in another course',
+  'enroll.bulk.elsewhere_hint':
+    'A student can be in one course only. Remove them from their current course first.',
   'enroll.bulk.stat.invalid': 'Not an email',
   'enroll.bulk.stat.ambiguous': 'More than one match',
   'enroll.bulk.unknown_title': 'No student record for these addresses',

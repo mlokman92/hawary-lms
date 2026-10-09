@@ -404,8 +404,7 @@ share a WHERE clause (minus `_state`) for the reason the log's two do.
 
 Not done: deleting a payment cascades its receipt row but leaves the object in
 the bucket, as a deleted course material does — nothing sweeps either. Receipts
-are not attached in the Record payment dialog. Staff-web only; the Academy
-mobile app has no receipts screen.
+Staff-web only; the Academy mobile app has no receipts screen.
 
 ### The same receipt on the invoice page
 
@@ -423,6 +422,26 @@ Both screens share `useReceiptPicker`: one hidden file input for the screen,
 and each row's button says which payment the next chosen file belongs to. An
 upload invalidates the queue, its counts and the invoice, so whichever screen
 it was made from, the other is right when you get there.
+
+### Recording a payment
+
+**Three methods can be recorded by hand: Cash, Bank transfer, KWSP**
+(`RECORDABLE_METHODS`). FPX is not one of them. It arrives through ToyyibPay,
+whose callback writes the payment itself with the gateway's reference; an FPX
+row typed in by hand would be a second copy of money the gateway reports. The
+log still *filters* by FPX, which is why there are two lists.
+
+**A bank transfer cannot be recorded without its receipt.** It is the one
+method taken on a staff member's word, so the proof is asked for when the claim
+is made rather than chased from the queue afterwards. The receipt can only be
+attached to a payment that exists, so saving is two steps — the payment, then
+the file — and the dialog is built around the gap between them: once the
+payment is in, the form locks and the button becomes "Upload receipt", which
+retries the upload and can never record a second payment. Closing instead
+leaves the payment in the ledger, pending in the queue.
+
+This is the web dialog's rule, not the database's: a payment recorded from the
+Academy mobile app, or before 2026-10-10, has no receipt until one is uploaded.
 
 ## Nav
 

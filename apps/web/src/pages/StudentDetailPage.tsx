@@ -185,6 +185,8 @@ export function StudentDetailPage() {
   const { data: student, isLoading, error } = useStudent(id)
   const { data: enrollments } = useStudentEnrollments(id)
   const { data: events } = useStudentEnrollmentEvents(id)
+  // A refused request (`cancelled`) is not an enrolment and does not count.
+  const hasCourse = (enrollments ?? []).some((e) => e.status !== 'cancelled')
   const updateStudent = useUpdateStudent(academyId)
   const archiveStudent = useArchiveStudent(academyId)
   const unenroll = useUnenroll(academyId, id ?? '')
@@ -405,7 +407,11 @@ export function StudentDetailPage() {
       <Card>
         <CardHeader>
           <CardTitle>{t('students.enrolled.title')}</CardTitle>
-          {isStaff ? (
+          {/* One student, one course. With a course already there the button
+              could only ever be refused, so it is not offered: changing course
+              is remove, then add — two deliberate steps, because the student's
+              invoices move with them. */}
+          {isStaff && !hasCourse ? (
             <CardAction>
               <Button
                 size="sm"

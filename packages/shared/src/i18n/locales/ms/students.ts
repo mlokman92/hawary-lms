@@ -45,6 +45,8 @@ export const students: StudentsDict = {
   'students.enrolled.add': 'Tambah kursus',
   'students.enrolled.empty': 'Belum mendaftar dalam mana-mana kursus.',
   'students.enrolled.remove': 'Buang pendaftaran',
+  'students.enrolled.one_course':
+    'Seorang pelajar hanya boleh berada dalam satu kursus. Buang kursus semasa dahulu.',
   'students.enrolled.history': 'Sejarah',
   'students.enrolled.event.enrolled': 'Didaftarkan dalam {course}',
   'students.enrolled.event.moved': 'Dipindahkan dari {from} ke {course}',

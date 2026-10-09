@@ -104,6 +104,10 @@ export const enrollment: EnrollmentDict = {
   'enroll.bulk.stat.ready': 'Untuk didaftarkan',
   'enroll.bulk.stat.already': 'Telah didaftarkan',
   'enroll.bulk.stat.unknown': 'Tiada rekod pelajar',
+  'enroll.bulk.stat.elsewhere': 'Dalam kursus lain',
+  'enroll.bulk.elsewhere_title': 'Sudah berada dalam kursus lain',
+  'enroll.bulk.elsewhere_hint':
+    'Seorang pelajar hanya boleh berada dalam satu kursus. Buang mereka daripada kursus semasa dahulu.',
   'enroll.bulk.stat.invalid': 'Bukan e-mel',
   'enroll.bulk.stat.ambiguous': 'Lebih daripada satu padanan',
   'enroll.bulk.unknown_title': 'Tiada rekod pelajar untuk alamat ini',

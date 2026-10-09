@@ -12,7 +12,7 @@ Guidance for Claude Code in this repo.
 Malaysian TVET academy running the **Diploma Kemahiran Malaysia (DKM) dalam
 bidang Pengasuhan dan Pendidikan Awal Kanak-Kanak**, a programme under
 **Jabatan Pembangunan Kemahiran (JPK)**. Students attend in intakes ("Siri"),
-each a course; the business rule is **one student, one course**. New work serves
+each a course; the business rule is **one student, one course** (DB-enforced). New work serves
 this programme first. Nothing JPK-specific (programme structure, assessment
 rules, reporting formats) is modelled yet — ask, or read the doc once one exists
 in `docs/`.
@@ -164,8 +164,8 @@ pnpm --filter mobile sync:data     # after editing a web data hook
   Edge Functions.
 - **Money in integer sen.** Never floats, never ringgit in the database.
 - **Columns a client must never write**, because a trigger or a generated column
-  owns them: `invoices.amount_paid_sen` / `kwsp_paid_sen` / `balance_sen` /
-  `collected_sen` / `uncollected_sen`, `assessments.total_points`,
+  owns them: `invoices.course_id` / `amount_paid_sen` / `kwsp_paid_sen` /
+  `balance_sen` / `collected_sen` / `uncollected_sen`, `assessments.total_points`,
   `academy_members.is_director` / `is_system_admin`.
 - **Clients have no DML** on `academy_invitations`, `notifications`,
   `incentive_payouts`, `assessment_questions`, `appointments`,

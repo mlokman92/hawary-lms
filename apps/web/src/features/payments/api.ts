@@ -258,7 +258,7 @@ export function useStudentInvoices(
  * invalidated by prefix because every page and filter combination is its own
  * entry and any of them may be wrong after a write.
  */
-function invalidateMoney(qc: QueryClient, academyId: string) {
+export function invalidateMoney(qc: QueryClient, academyId: string) {
   qc.invalidateQueries({ queryKey: listKey(academyId) })
   qc.invalidateQueries({ queryKey: ['invoice-page'] })
   qc.invalidateQueries({ queryKey: ['invoice-list'] })
@@ -806,7 +806,6 @@ export function useCreateInvoices(academyId: string) {
       taxSen: number
       notes: string
       items: NewItem[]
-      courseId?: string | null
       createdBy?: string | null
       /** null = follow the academy's ToyyibPay default at pay time. */
       chargeToPayor?: boolean | null
@@ -837,7 +836,9 @@ export function useCreateInvoices(academyId: string) {
           .insert({
             academy_id: academyId,
             student_id: studentId,
-            course_id: input.courseId ?? null,
+            // No `course_id`: an invoice belongs to its student's course, and
+            // the database sets that on every write (`app.set_invoice_course`).
+            // Anything sent here would be overwritten.
             invoice_no: '',
             status: 'issued',
             subtotal_sen: subtotal,
@@ -907,21 +908,28 @@ export function useRecordPayment(academyId: string) {
       note?: string | null
       createdBy?: string | null
     }) => {
-      const { error } = await supabase.from('payments').insert({
-        academy_id: academyId,
-        invoice_id: input.invoiceId,
-        student_id: input.studentId,
-        amount_sen: input.amountSen,
-        method: input.method,
-        provider: 'manual',
-        status: 'succeeded',
-        paid_at: input.paidAt,
-        // Blank is stored as NULL, so "no note" has one representation and the
-        // ledger never has to tell an empty string from an absent one.
-        note: input.note?.trim() || null,
-        created_by: input.createdBy ?? null,
-      })
+      const { data, error } = await supabase
+        .from('payments')
+        .insert({
+          academy_id: academyId,
+          invoice_id: input.invoiceId,
+          student_id: input.studentId,
+          amount_sen: input.amountSen,
+          method: input.method,
+          provider: 'manual',
+          status: 'succeeded',
+          paid_at: input.paidAt,
+          // Blank is stored as NULL, so "no note" has one representation and the
+          // ledger never has to tell an empty string from an absent one.
+          note: input.note?.trim() || null,
+          created_by: input.createdBy ?? null,
+        })
+        // The new row's id, because a bank transfer's receipt is attached to
+        // the payment and so can only be uploaded once the payment exists.
+        .select('id')
+        .single()
       if (error) throw error
+      return data.id as string
     },
     onSuccess: (_d, vars) => {
       invalidateMoney(qc, academyId)
@@ -1091,6 +1099,21 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
   'cash',
   'bank_transfer',
   'fpx',
+  'kwsp',
+]
+
+/**
+ * What staff can record by hand: `PAYMENT_METHODS` without FPX.
+ *
+ * FPX is not something a person records. It arrives through ToyyibPay, whose
+ * callback writes the payment itself with the gateway's reference on it; an
+ * FPX row typed in by hand would be a second copy of money the gateway is
+ * about to report, or has. The log still *filters* by FPX, which is why the
+ * two lists are separate.
+ */
+export const RECORDABLE_METHODS: PaymentMethod[] = [
+  'cash',
+  'bank_transfer',
   'kwsp',
 ]
 

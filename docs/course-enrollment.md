@@ -242,6 +242,74 @@ user. Everything done through the app from 2026-10-10 carries a name.
 Staff read it (`app.is_staff`); clients have no DML on it. A student has no use
 for the name of the admin who enrolled them, so there is no `owns_student` arm.
 
+## One student, one course
+
+The business rule was always "one student, one course". Until 2026-10-10
+nothing held it: a student could be put in two courses, and one was.
+
+**`enrollments_one_course_per_student`** is a partial unique index on
+`student_id where status <> 'cancelled'`. An index, not a check in the client,
+so it holds when two admins enrol the same student at once. `cancelled` is left
+out because it is not an enrolment — it is a join request that was refused, and
+a refused request must not stop the student being accepted somewhere.
+`pending` counts: a student waiting on one course cannot also be put in
+another.
+
+**A second course is always refused; nothing moves a student.** That was the
+owner's choice over a "change course" action. Changing course is remove, then
+add — two deliberate steps — because the student's invoices move with them and
+a move nobody meant would re-file real money. So:
+
+- the student page offers **Add course** only when the student has none;
+- bulk enrol sorts addresses already in another course into their own bucket
+  and does not send them (the database would refuse the whole batch);
+- `join_academy` raises "You are already enrolled in a course at this academy"
+  before it writes anything, so a refused request leaves no record behind;
+- anything else gets the index's unique violation, which `useEnrollStudent`
+  turns into a sentence.
+
+### An invoice belongs to its student's course
+
+`invoices.course_id` used to be chosen when the invoice was raised, and it
+drifted from where the student actually was — twice in one day the owner found
+an invoice in one course and its student in another, and 25 live invoices had
+no course at all. Now it is a **consequence** of the rule above:
+
+- `app.set_invoice_course` (BEFORE INSERT OR UPDATE on `invoices`) sets it to
+  `app.student_course(student_id)` on every write. Whatever a client sends is
+  overwritten; no client sends it any more.
+- `app.sync_invoice_course` (AFTER INSERT/UPDATE/DELETE on `enrollments`)
+  re-files every invoice the student has — paid ones included — when their
+  enrolment changes. Remove the course and their invoices have none; enrol
+  them elsewhere and the invoices follow.
+
+The column stays rather than becoming a join at read time. Every money function
+and the `/payments` course filter read it, and a join would have put a second
+RLS-guarded table inside each of them — the shape that timed out before. Kept
+as a column the database owns, every existing read is already right and a
+mismatch is impossible rather than unlikely. **Never write it.**
+
+A student with no enrolment has invoices under "No course", which is the truth
+about them.
+
+### Approving a student raises their invoice
+
+`approve_enrollment` calls `app.ensure_course_invoice` on the transition out of
+`pending` — the same condition that claims the acceptance email, so a
+double-click raises one invoice. It is the shape staff were making by hand: one
+line, "Yuran <course>", at the course's `price_sen`, no tax, no due date,
+instalment terms left NULL to follow the academy's setting.
+
+It does nothing when the course has no price, or when the student already has
+a live invoice: one student, one course, one course invoice, and an invoice an
+admin already raised by hand (with a discount, say) must not be duplicated.
+SECURITY DEFINER, because the approver may be a trainer and money is admin-only
+— the invoice is a consequence of the approval, not something they wrote.
+
+Only **approval** does this. Adding a course on the student page or by bulk
+enrol does not raise an invoice; those students show on
+`/courses/:id/billing` as never invoiced, as before.
+
 ## Not done
 
 - **Rejection is silent, and a rejected student cannot re-apply.**

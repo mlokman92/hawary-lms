@@ -112,6 +112,12 @@ export const payments: PaymentsDict = {
     'Masukkan jumlah yang lebih besar daripada sifar.',
 
   // Status bayaran — keputusan baris bayaran itu sendiri, bukan invois
+  'payments.record.receipt_hint': 'PDF, JPG, PNG atau WebP, sehingga 10 MB.',
+  'payments.record.error_receipt': 'Lampirkan resit pindahan bank.',
+  'payments.record.error_receipt_size': 'Resit melebihi 10 MB.',
+  'payments.record.receipt_failed':
+    'Bayaran telah direkodkan, tetapi resit gagal dimuat naik: {reason} Cuba lagi, atau muat naik kemudian di Resit Pindahan Bank.',
+  'payments.record.retry_receipt': 'Muat naik resit',
   'payments.pstatus.pending': 'Menunggu',
   'payments.pstatus.succeeded': 'Berjaya',
   'payments.pstatus.failed': 'Gagal',

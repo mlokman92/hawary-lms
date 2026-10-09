@@ -106,6 +106,12 @@ export const payments = {
   'payments.record.note_placeholder': 'Cheque no., who handed it over…',
   'payments.record.submitting': 'Recording…',
   'payments.record.error_amount': 'Enter an amount greater than zero.',
+  'payments.record.receipt_hint': 'PDF, JPG, PNG or WebP, up to 10 MB.',
+  'payments.record.error_receipt': 'Attach the bank transfer receipt.',
+  'payments.record.error_receipt_size': 'The receipt is larger than 10 MB.',
+  'payments.record.receipt_failed':
+    'The payment was recorded, but the receipt did not upload: {reason} Try again, or upload it later from Bank Transfer Receipt.',
+  'payments.record.retry_receipt': 'Upload receipt',
 
   // Payment status — the payment row's own outcome, not the invoice's
   'payments.pstatus.pending': 'Pending',

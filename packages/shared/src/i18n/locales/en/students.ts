@@ -44,6 +44,8 @@ export const students = {
   'students.enrolled.add': 'Add course',
   'students.enrolled.empty': 'Not enrolled in any courses yet.',
   'students.enrolled.remove': 'Remove enrollment',
+  'students.enrolled.one_course':
+    'A student can be in one course only. Remove the current course first.',
   'students.enrolled.history': 'History',
   'students.enrolled.event.enrolled': 'Enrolled in {course}',
   'students.enrolled.event.moved': 'Moved from {from} to {course}',

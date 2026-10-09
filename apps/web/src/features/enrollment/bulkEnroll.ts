@@ -60,6 +60,12 @@ export type EnrollRoster = {
   students: RosterEntry[]
   /** Already on the course and active — nothing to do for these. */
   activeIds: Set<string>
+  /**
+   * In a *different* course. One student, one course: these cannot be enrolled
+   * here until they are removed from where they are, and the database would
+   * refuse the whole batch if one were sent.
+   */
+  elsewhereIds: Set<string>
 }
 
 /**
@@ -77,26 +83,38 @@ export function useEnrollRoster(
     queryKey: ['enroll-roster', academyId, courseId] as const,
     enabled: !!academyId && !!courseId,
     queryFn: async (): Promise<EnrollRoster> => {
-      const [roster, enrolled] = await Promise.all([
-        supabase
-          .from('students')
-          .select('id, full_name, email')
-          .eq('academy_id', academyId!)
-          .is('archived_at', null),
-        supabase
-          .from('enrollments')
-          .select('student_id, status')
-          .eq('course_id', courseId!),
-      ])
-      if (roster.error) throw roster.error
-      if (enrolled.error) throw enrolled.error
+      // Each student comes with their enrolments, so one read answers both
+      // "already here" and "already somewhere else".
+      const { data, error } = await supabase
+        .from('students')
+        .select('id, full_name, email, enrollments(course_id, status)')
+        .eq('academy_id', academyId!)
+        .is('archived_at', null)
+      if (error) throw error
+      const rows = (data ?? []) as unknown as (RosterEntry & {
+        enrollments: { course_id: string; status: string }[]
+      })[]
+
+      const activeIds = new Set<string>()
+      const elsewhereIds = new Set<string>()
+      for (const s of rows)
+        for (const e of s.enrollments) {
+          if (e.course_id === courseId) {
+            if (e.status === 'active') activeIds.add(s.id)
+          } else if (e.status !== 'cancelled') {
+            // A refused request does not hold a student anywhere.
+            elsewhereIds.add(s.id)
+          }
+        }
+
       return {
-        students: (roster.data ?? []) as RosterEntry[],
-        activeIds: new Set(
-          (enrolled.data ?? [])
-            .filter((e) => e.status === 'active')
-            .map((e) => e.student_id),
-        ),
+        students: rows.map(({ id, full_name, email }) => ({
+          id,
+          full_name,
+          email,
+        })),
+        activeIds,
+        elsewhereIds,
       }
     },
   })
@@ -107,6 +125,8 @@ export type Classification = {
   ready: { email: string; student: RosterEntry }[]
   /** Matched a record that is already actively enrolled. */
   already: string[]
+  /** Matched a record that is in another course, and so cannot join this one. */
+  elsewhere: string[]
   /** No student record in this academy carries this address. */
   unknown: string[]
   /** Two or more records share the address — a shared inbox, most often. */
@@ -117,7 +137,13 @@ export function classifyEmails(
   emails: string[],
   roster: EnrollRoster | undefined,
 ): Classification {
-  const out: Classification = { ready: [], already: [], unknown: [], ambiguous: [] }
+  const out: Classification = {
+    ready: [],
+    already: [],
+    elsewhere: [],
+    unknown: [],
+    ambiguous: [],
+  }
   if (!roster) return out
 
   const byEmail = new Map<string, RosterEntry[]>()
@@ -134,6 +160,7 @@ export function classifyEmails(
     if (!matches || matches.length === 0) out.unknown.push(email)
     else if (matches.length > 1) out.ambiguous.push(email)
     else if (roster.activeIds.has(matches[0].id)) out.already.push(email)
+    else if (roster.elsewhereIds.has(matches[0].id)) out.elsewhere.push(email)
     else out.ready.push({ email, student: matches[0] })
   }
 

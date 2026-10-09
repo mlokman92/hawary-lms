@@ -7,6 +7,7 @@ import {
 import type { Enums, Tables } from '@hawary/shared'
 import { supabase } from '@/lib/supabase'
 import type { TKey } from '@/lib/i18n'
+import { invalidateMoney } from '@/features/payments/api'
 
 export type AcademyEnrollmentSettings = Tables<'academy_enrollment_settings'>
 export type CourseEnrollmentSettings = Tables<'course_enrollment_settings'>
@@ -351,6 +352,11 @@ export type ApproveResult = {
   notify: boolean
   reason?: 'not_found' | 'already_active'
   status?: EnrollmentStatus
+  /**
+   * The course invoice this approval raised, or null when it raised none —
+   * the student already had one, or the course has no price.
+   */
+  invoice_id?: string | null
 }
 
 export type SendCourseAccessResult =
@@ -444,7 +450,12 @@ export function useApproveEnrollment(academyId: string | null) {
           } as SendCourseAccessResult),
       }
     },
-    onSuccess: () => invalidateEnrollment(qc, academyId),
+    onSuccess: () => {
+      invalidateEnrollment(qc, academyId)
+      // Approving raises the student's course invoice, so every money list is
+      // one invoice short until it refetches.
+      if (academyId) invalidateMoney(qc, academyId)
+    },
   })
 }
 

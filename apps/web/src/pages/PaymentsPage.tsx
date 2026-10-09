@@ -305,7 +305,7 @@ export function PaymentsPage() {
           otherwise a figure you could read but not open. The tiles keep
           showing the whole picture while one is pressed, so the next question
           is one click away rather than a click back and a click in. */}
-      <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {MONEY_TILES.map((tile) => (
           <FilterStatCard
             key={tile.key}

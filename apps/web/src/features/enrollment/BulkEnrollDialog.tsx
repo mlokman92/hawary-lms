@@ -198,6 +198,10 @@ export function BulkEnrollDialog({
                 value={buckets.already.length}
               />
               <Stat
+                label={t('enroll.bulk.stat.elsewhere')}
+                value={buckets.elsewhere.length}
+              />
+              <Stat
                 label={t('enroll.bulk.stat.unknown')}
                 value={buckets.unknown.length}
               />
@@ -212,6 +216,11 @@ export function BulkEnrollDialog({
             </div>
           ) : null}
 
+          <Bucket
+            title={t('enroll.bulk.elsewhere_title')}
+            hint={t('enroll.bulk.elsewhere_hint')}
+            emails={buckets.elsewhere}
+          />
           <Bucket
             title={t('enroll.bulk.unknown_title')}
             hint={t('enroll.bulk.unknown_hint')}

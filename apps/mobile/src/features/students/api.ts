@@ -250,6 +250,10 @@ export function useEnrollStudent(academyId: string, studentId: string) {
         })
         .select()
         .single()
+      // One student, one course: the database refuses a second with a unique
+      // violation. Say what that means rather than quote a constraint name.
+      if (error?.code === '23505')
+        throw new Error(translate('students.enrolled.one_course'))
       if (error) throw error
       return data
     },
