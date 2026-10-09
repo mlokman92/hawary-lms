@@ -625,6 +625,12 @@ async function fetchInvoicePage(
       { count: 'exact' },
     )
     .eq('academy_id', academyId)
+    // A voided invoice is not in the list. It is in no total either, so on
+    // this screen it was only ever a row that added up to nothing — and with
+    // it gone, the unfiltered list is exactly the set Total invoiced counts.
+    // Voiding still keeps the row in the database, reachable by its link:
+    // this hides a record, it does not destroy one.
+    .neq('status', 'void')
   if (courseFilter === NO_COURSE) q = q.is('course_id', null)
   else if (courseFilter !== ALL_COURSES) q = q.eq('course_id', courseFilter)
 

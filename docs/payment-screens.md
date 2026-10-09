@@ -252,6 +252,16 @@ page keeps the **first sighting of each id**; without that a row appears twice
 and React is handed a duplicate key. `/payments/log` and the report's leaf keep
 their pagers — a ledger is jumped into by search or date, not walked.
 
+### Voided invoices are not listed
+
+`/payments` leaves out `status = 'void'`. A voided invoice is in no total, so in
+this list it was a row that added up to nothing, and without it the unfiltered
+list is exactly the set the Total invoiced tile counts. It is **hidden, not
+deleted**: the row stays, opens by its link, and still shows on the student's
+own page. Two voided invoices carry payments (RM1,500 between them), and
+`payments.invoice_id` is ON DELETE RESTRICT — deleting was offered and
+declined.
+
 ### The Breakdown column
 
 Where Due used to be. It says how the Paid figure beside it arrived: **FPX**
