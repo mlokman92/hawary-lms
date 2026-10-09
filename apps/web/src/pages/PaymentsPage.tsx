@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, CheckCircle2, Clock, Plus, Wallet } from 'lucide-react'
+import { CheckCircle2, Clock, Landmark, Plus, Wallet } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { formatMYR } from '@hawary/shared'
 import { useAcademy } from '@/lib/academy'
@@ -62,10 +62,14 @@ function money(sen: number | undefined): string {
  * `stat` names the field on the totals, `key` the filter it applies; they are
  * deliberately the same idea under two names so a tile cannot show one sum and
  * open another set.
+ *
+ * Money in is two tiles, not one. A KWSP withdrawal is received by the academy
+ * but not paid by the student, so **Collected** is what arrived by every other
+ * route and **KWSP** stands beside it — the two together are everything paid.
  */
 const MONEY_TILES: {
   key: MoneyFilter
-  stat: 'total' | 'collected' | 'outstanding' | 'overdue'
+  stat: 'total' | 'collected' | 'kwsp' | 'outstanding'
   labelKey: TKey
   icon: LucideIcon
   tone: Tone
@@ -85,18 +89,18 @@ const MONEY_TILES: {
     tone: 'positive',
   },
   {
+    key: 'kwsp',
+    stat: 'kwsp',
+    labelKey: 'payments.method.kwsp',
+    icon: Landmark,
+    tone: 'info',
+  },
+  {
     key: 'outstanding',
     stat: 'outstanding',
     labelKey: 'payments.stat.outstanding',
     icon: Clock,
     tone: 'warning',
-  },
-  {
-    key: 'overdue',
-    stat: 'overdue',
-    labelKey: 'common.overdue',
-    icon: AlertTriangle,
-    tone: 'danger',
   },
 ]
 
@@ -114,7 +118,7 @@ export function PaymentsPage() {
   const [page, setPage] = useState(1)
 
   // Page 4 of every invoice is not page 4 of one course's invoices — nor of
-  // the overdue ones.
+  // the outstanding ones.
   useEffect(() => setPage(1), [courseFilter, moneyFilter])
 
   // The rows are one page; the tiles are the whole course-filtered set. Two
@@ -127,7 +131,13 @@ export function PaymentsPage() {
     page,
     moneyFilter,
   )
-  const { data: stats } = useInvoiceStats(activeAcademyId, courseFilter)
+  const { data: totals } = useInvoiceStats(activeAcademyId, courseFilter)
+  // The hook returns everything paid and the KWSP part of it; the tiles show
+  // them apart, so Collected is the remainder.
+  const stats = totals && {
+    ...totals,
+    collected: totals.collected - totals.kwsp,
+  }
 
   const allCourses = courses ?? []
   const published = allCourses.filter((c) => c.status === 'published')

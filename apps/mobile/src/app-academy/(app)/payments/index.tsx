@@ -88,6 +88,7 @@ function Invoices({ academyId }: { academyId: string }) {
     outstanding: t('payments.stat.outstanding'),
     overdue: t('common.overdue'),
     collected: t('payments.stat.collected'),
+    kwsp: t('payments.method.kwsp'),
   }
 
   return (

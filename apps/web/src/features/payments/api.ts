@@ -242,7 +242,11 @@ function invalidateMoney(qc: QueryClient, academyId: string) {
 /** Rows per page, shared by both paged lists so they feel like one product. */
 export const PAGE_SIZE = 50
 
-type PaymentLogTotalsRow = { total_count: number; received_sen: number }
+type PaymentLogTotalsRow = {
+  total_count: number
+  received_sen: number
+  kwsp_sen: number
+}
 
 /**
  * The filter arguments both log calls share, so they can never disagree.
@@ -334,6 +338,8 @@ export function usePaymentLogTotals(
       return {
         total: Number(row?.total_count ?? 0),
         receivedSen: Number(row?.received_sen ?? 0),
+        /** The KWSP part of `receivedSen` — inside it, never beside it. */
+        kwspSen: Number(row?.kwsp_sen ?? 0),
       }
     },
   })
@@ -385,26 +391,37 @@ export const ALL_COURSES = 'all'
 export const NO_COURSE = '__none__'
 
 /**
- * Which of the four money tiles is pressed, as a filter on the invoice list.
+ * Which money tile is pressed, as a filter on the invoice list.
  *
  * The tiles are sums; this is the *set* each sum was taken over, so pressing
  * one shows exactly the invoices behind the figure. `invoiced` is the whole
  * set, which is why it doubles as "no filter".
  *
  * `collected` is invoices with money against them, not invoices settled in
- * full: the tile is the raw sum of `amount_paid_sen`, and a part-paid invoice
- * contributed to it. Narrowing to `status = 'paid'` would show a set that does
- * not add up to the number above it.
+ * full: a part-paid invoice contributed to the tile, and narrowing to
+ * `status = 'paid'` would show a set that does not add up to the number above
+ * it. It is also money that did **not** come by KWSP — a withdrawal from a
+ * student's EPF account is its own figure and its own set, `kwsp`. An invoice
+ * paid partly each way is in both, because it contributed to both tiles.
  */
 export const ALL_MONEY = 'invoiced'
-export type MoneyFilter = 'invoiced' | 'collected' | 'outstanding' | 'overdue'
+export type MoneyFilter =
+  | 'invoiced'
+  | 'collected'
+  | 'kwsp'
+  | 'outstanding'
+  | 'overdue'
 
 type InvoiceTotalsRow = {
   invoiced_sen: number
   collected_sen: number
   outstanding_sen: number
   overdue_sen: number
+  kwsp_sen: number
 }
+
+const INVOICE_LIST_SELECT =
+  '*, student:students(full_name, student_no), course:courses(id, title)'
 
 /**
  * One page of invoices.
@@ -426,10 +443,17 @@ export function useInvoicePage(
     placeholderData: keepPreviousData,
     queryFn: async () => {
       const from = (page - 1) * PAGE_SIZE
+      // How an invoice was paid is not on the invoice — it carries one
+      // `amount_paid_sen` — so the two tiles that split money by route have to
+      // ask the ledger. `!inner` makes the embed a filter: only invoices with
+      // at least one matching payment come back, and `count` counts those.
+      const byRoute = money === 'collected' || money === 'kwsp'
       let q = supabase
         .from('invoices')
         .select(
-          '*, student:students(full_name, student_no), course:courses(id, title)',
+          byRoute
+            ? `${INVOICE_LIST_SELECT}, via:payments!inner(id)`
+            : INVOICE_LIST_SELECT,
           { count: 'exact' },
         )
         .eq('academy_id', academyId!)
@@ -442,7 +466,15 @@ export function useInvoicePage(
         // to match `invoice_totals` verbatim: a status added later must join
         // both or neither, or the list stops adding up to the number above it.
         q = q.neq('status', 'void').neq('status', 'cancelled').neq('status', 'draft')
-        if (money === 'collected') q = q.gt('amount_paid_sen', 0)
+        if (byRoute) {
+          // Succeeded only, as `app.sync_invoice_paid` counts: a bounced FPX
+          // attempt put no money against the invoice.
+          q = q.eq('via.status', 'succeeded')
+          q =
+            money === 'kwsp'
+              ? q.eq('via.method', 'kwsp')
+              : q.neq('via.method', 'kwsp')
+        }
         // `balance_sen` is a generated column precisely so this is a filter and
         // not a column-to-column comparison PostgREST cannot express.
         else q = q.gt('balance_sen', 0)
@@ -464,12 +496,16 @@ export function useInvoicePage(
 }
 
 /**
- * The four money tiles, over the whole filtered set rather than the page.
+ * The money tiles, over the whole filtered set rather than the page.
  *
  * This is the half of the old client-side `computeStats` a page cannot answer.
  * `invoice_totals` mirrors it exactly, asymmetries included: `collected` is the
  * raw sum of `amount_paid_sen` (an overpayment shows as collected, because it
  * was) while `outstanding` and `overdue` clamp each invoice at zero first.
+ *
+ * `kwsp` is the part of `collected` that came by KWSP — inside it, never
+ * beside it. The total is returned whole and the split left to the caller, so
+ * a screen that shows a single "collected" figure keeps showing all the money.
  */
 export function useInvoiceStats(academyId: string | null, courseFilter: string) {
   return useQuery({
@@ -489,6 +525,7 @@ export function useInvoiceStats(academyId: string | null, courseFilter: string) 
       return {
         total: Number(row?.invoiced_sen ?? 0),
         collected: Number(row?.collected_sen ?? 0),
+        kwsp: Number(row?.kwsp_sen ?? 0),
         outstanding: Number(row?.outstanding_sen ?? 0),
         overdue: Number(row?.overdue_sen ?? 0),
       }

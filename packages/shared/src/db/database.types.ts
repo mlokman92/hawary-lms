@@ -2762,6 +2762,7 @@ export type Database = {
           group_count: number
           invoice_count: number
           key: string
+          kwsp_sen: number
           label: string
           outstanding_sen: number
           paid_sen: number
@@ -2788,6 +2789,7 @@ export type Database = {
           id: string
           invoice_no: string
           issued_at: string
+          kwsp_sen: number
           status: Database["public"]["Enums"]["invoice_status"]
           student_full_name: string
           student_id: string
@@ -2808,6 +2810,7 @@ export type Database = {
           collected_sen: number
           invoice_count: number
           invoiced_sen: number
+          kwsp_sen: number
           outstanding_sen: number
           overdue_sen: number
         }[]
@@ -2932,6 +2935,7 @@ export type Database = {
           _to?: string
         }
         Returns: {
+          kwsp_sen: number
           received_sen: number
           total_count: number
         }[]
@@ -2950,6 +2954,7 @@ export type Database = {
           amount_sen: number
           group_count: number
           key: string
+          kwsp_sen: number
           label: string
           payment_count: number
           sublabel: string

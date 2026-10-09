@@ -193,14 +193,30 @@ A tile is a **sum over a set of invoices**, so pressing it shows that set —
 `FilterStatCard`s:
 
 - **Invoiced** — everything the tiles count (not void/cancelled/draft)
-- **Collected** — `amount_paid_sen > 0`
+- **Collected** — invoices with a succeeded payment that is not KWSP
+- **KWSP** — invoices with a succeeded KWSP payment
 - **Outstanding** — `balance_sen > 0`
-- **Overdue** — that plus past `due_at`
 
 **Collected is invoices with money against them, not invoices settled in
-full**: the tile is the raw sum of `amount_paid_sen` and a part-paid invoice
-contributed to it, so `status = 'paid'` would open a set that does not add up
-to the number above it.
+full**: a part-paid invoice contributed to the tile, so `status = 'paid'` would
+open a set that does not add up to the number above it.
+
+**Money in is two tiles.** A KWSP withdrawal is received by the academy but not
+paid by the student, so Collected is `collected_sen - kwsp_sen` and KWSP stands
+beside it; the two together are everything paid. See
+[payment-report.md](payment-report.md#kwsp-stands-beside-the-money-not-inside-it)
+for why the functions return the whole plus the part rather than a
+pre-subtracted figure.
+
+How an invoice was paid is not on the invoice, so those two tiles filter through
+the ledger: `via:payments!inner(id)` with `via.status = succeeded` and
+`via.method` equal (or not equal) to `kwsp`. `!inner` turns the embed into a
+filter on the invoice and `count: 'exact'` counts invoices, not payments, so the
+pager is still right. An invoice paid both ways is in both sets.
+
+There is no Overdue tile any more — the owner dropped it when KWSP was added.
+`overdue` stays in `MoneyFilter` because the Academy mobile app still offers it
+as a chip.
 
 The tiles deliberately ignore the filter they apply — one that emptied itself
 when pressed could not be un-pressed by reading it — and pressing the pressed

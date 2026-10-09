@@ -70,6 +70,26 @@ pasted `/payments/report?c=<id>` reads "this course, month by month" with no
 extra screen and no extra code. Dropping one crumb drops exactly that
 narrowing; the ones after it go with it, because they were chosen inside it.
 
+### The course is a filter as well as a rung
+
+A course picker sits beside the dates and writes the same `?c=` a pressed
+course row does. "This course" used to be reachable only by drilling through a
+month to find it, or by pasting a URL; the question is asked far more often
+than that.
+
+Because the picker now says which course is being read, the course is **not a
+crumb**. The trail walks month and student; the date window, the course and the
+view all survive every crumb, so "August 2026" from a student goes back to
+August *in that course*, and the way back to every course is the picker. One
+control per narrowing — a crumb that also cleared the picker would undo a
+filter the reader set on purpose.
+
+Changing the course clears the student: they were chosen inside it, one student
+is in one course, and keeping them would open an empty report instead of the
+course that was asked for. The picker lists **every** course, unpublished ones
+labelled, because a report reads backwards and last year's intake is exactly
+what gets asked about.
+
 The **whole state is in the URL** — window, drill, page — for the same reason
 `/payments/log`'s filter is: a report is read *to* somebody. "August,
 Prasekolah Siri 2, RM77,000" is a sentence you paste into a message, and a
@@ -85,6 +105,38 @@ bounced is the point of keeping a ledger — but a *report of money received*
 that counts them overstates the takings. Both halves of the screen have to
 count the same rows or the summary line and the column under it disagree, and
 on a money screen that is the worst available ambiguity.
+
+## KWSP stands beside the money, not inside it
+
+A KWSP (EPF Account 2) withdrawal is money the academy received but not money
+the student paid: it arrives by its own route, on its own timetable. Folded
+into "received" it hides how much students themselves have paid, which is the
+figure the owner reads these screens for. So on both views, and on `/payments`:
+
+| Column | Is |
+| --- | --- |
+| **Received** / **Paid** / **Collected** | everything that did **not** come by KWSP |
+| **KWSP** | what did |
+
+The two add up to what the column used to say. Nothing is hidden — it is one
+figure shown as two.
+
+Every function returns the **whole** amount plus `kwsp_sen`, the part of it that
+came by KWSP (`payment_report`, `payment_log_totals`, `invoice_totals`,
+`invoice_report`, `invoice_report_page`); the page does the one subtraction.
+Returning a pre-subtracted figure would have silently changed what
+`received_sen` and `collected_sen` mean for callers that do not know about the
+split — `/payments/log` and the Academy mobile app both still show the whole.
+
+On the invoice side the KWSP part comes from the ledger, because an invoice
+carries one `amount_paid_sen` and no record of how it was paid. It is summed
+**per invoice first** and joined as one row: joining `payments` directly would
+repeat each invoice once per payment and multiply the billed figure. The
+subtraction is exact rather than an estimate because `app.sync_invoice_paid`
+keeps `amount_paid_sen` equal to the succeeded payments against the invoice.
+
+Groups are still **ranked by the whole amount**. A course is not smaller
+because its students drew on KWSP to pay for it.
 
 ## Days are the academy's
 
@@ -171,15 +223,15 @@ an empty ledger with a live Export button reads as data loss.
 
 The URL carries ids, not names. The month label is formatted from its own
 `YYYY-MM` key (`fmtYearMonth` in `lib/format.ts`, pinned to UTC so a browser
-west of Kuala Lumpur cannot render August's takings as July); the course and
-student crumbs come from `useCourse` / `useStudent`, which are cached reads the
-section already makes. No label is stashed in the query string — a URL that
-carries a name goes stale the moment somebody is renamed.
+west of Kuala Lumpur cannot render August's takings as July); the student crumb
+comes from `useStudent` and the course picker from `useCourses`, both cached
+reads the section already makes. No label is stashed in the query string — a
+URL that carries a name goes stale the moment somebody is renamed.
 
 ## The `/payments` stat tiles are the same idea
 
-The four tiles on `/payments` are now `FilterStatCard`s: a tile is a **sum over
-a set of invoices**, so pressing it shows that set. "Who still owes me" was
+The four tiles on `/payments` are `FilterStatCard`s: a tile is a **sum over a
+set of invoices**, so pressing it shows that set. "Who still owes me" was
 otherwise a figure you could read but not open.
 
 The mapping is the set each sum was taken over, not a status guess:
@@ -187,14 +239,19 @@ The mapping is the set each sum was taken over, not a status guess:
 | Tile | Shows |
 | --- | --- |
 | Total invoiced | everything the tiles count (not void / cancelled / draft) |
-| Collected | `amount_paid_sen > 0` |
+| Collected | invoices with a succeeded payment that is **not** KWSP |
+| KWSP | invoices with a succeeded KWSP payment |
 | Outstanding | `balance_sen > 0` |
-| Overdue | `balance_sen > 0` and past `due_at` |
 
 **Collected is invoices with money against them, not invoices settled in full.**
-The tile is the raw sum of `amount_paid_sen` and a part-paid invoice contributed
-to it; narrowing to `status = 'paid'` would open a set that does not add up to
-the number above it.
+A part-paid invoice contributed to the tile; narrowing to `status = 'paid'`
+would open a set that does not add up to the number above it. An invoice paid
+partly by KWSP and partly otherwise is in **both** sets, because it contributed
+to both tiles.
+
+There is no Overdue tile: the owner dropped it when KWSP was added, so the row
+reads Total invoiced · Collected · KWSP · Outstanding. `overdue` survives as a
+filter value only because the Academy mobile app still offers it.
 
 The tiles keep showing the whole picture while one is pressed — a tile that
 emptied itself when pressed could not be un-pressed by reading it — and pressing
@@ -212,6 +269,8 @@ another's arrears in any sum over the column. Never write it.
 - `supabase/migrations/20260905120000_payment_report.sql` — the payments view
 - `supabase/migrations/20260905140000_receivables_report.sql` — `balance_sen`,
   `invoice_report`, `invoice_report_page`, `invoice_totals`' scope + count
+- `supabase/migrations/20261010120000_kwsp_separate.sql` — `kwsp_sen` on all
+  five functions
 - `apps/web/src/features/payments/report.ts` — drill vocabulary + both views' hooks
 - `apps/web/src/features/payments/api.ts` — `PaymentScope`, `scopeArgs`, `MoneyFilter`
 - `apps/web/src/pages/PaymentReportPage.tsx`

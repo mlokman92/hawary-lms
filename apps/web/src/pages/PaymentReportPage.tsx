@@ -6,7 +6,7 @@ import { useAcademy } from '@/lib/academy'
 import { downloadCsv } from '@/lib/csv'
 import { fmtDate, fmtYearMonth, personName } from '@/lib/format'
 import { useT, type TFn } from '@/lib/i18n'
-import { useCourse } from '@/features/courses/api'
+import { useCourses } from '@/features/courses/api'
 import { useStudent } from '@/features/students/api'
 import { PageHeader } from '@/components/patterns/PageHeader'
 import { BackLink } from '@/components/patterns/BackLink'
@@ -32,6 +32,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
+  ALL_COURSES,
   PAGE_SIZE,
   PAYMENT_METHOD_LABEL,
   fetchPaymentLogAll,
@@ -131,8 +132,15 @@ function dimHeader(dim: ReportDim, t: TFn): string {
  * by month" and needs no separate screen. When all three are fixed there is
  * nothing left to group by, and the rows themselves are what is left.
  *
+ * The course is also a **filter**: the picker beside the dates writes the same
+ * `?c=` a pressed course row does, so "this course" can be asked at any depth
+ * without drilling through a month to reach it. Like the dates, it survives
+ * the trail — the trail walks month and student, the picker owns the course.
+ *
  * Every figure comes from a totals function over the same scope the rows were
- * grouped from, so the summary and the column can never disagree.
+ * grouped from, so the summary and the column can never disagree. Money that
+ * came by KWSP is shown beside the rest, never inside it: **Received** and
+ * **Paid** on this page are what arrived by every other route.
  */
 export function PaymentReportPage() {
   const { t, tn } = useT()
@@ -223,37 +231,30 @@ export function PaymentReportPage() {
     ? paymentTotals.data !== undefined
     : invoiceTotals.data !== undefined
 
-  // Breadcrumb labels for a course and a student are not in the URL — only
-  // their ids are — so they come from the record. Cached reads the section
-  // already makes; a report is opened from somewhere else inside it.
-  const course = useCourse(
-    path.course && path.course !== NO_COURSE_KEY ? path.course : undefined,
-  )
+  // The picker's options — every course, not only the published ones: a report
+  // reads backwards, and last year's intake is exactly what gets asked about.
+  // The same cached read /payments makes for its own picker.
+  const { data: courses } = useCourses(activeAcademyId)
+  // The student's name is not in the URL — only the id is — so the crumb reads
+  // it from the record.
   const student = useStudent(path.student ?? undefined)
 
   // A crumb clears the rungs chosen *inside* it and keeps its own, so pressing
-  // "August 2026" from a student goes back to August's courses rather than all
-  // the way out. The date window and the view survive every crumb: "all of it"
-  // means all of the period being reported on, in the book being read.
+  // "August 2026" from a student goes back to August rather than all the way
+  // out. The date window, the course and the view survive every crumb: "all of
+  // it" means all of the period and course being reported on, in the book
+  // being read. The course is not a crumb because the picker already says it.
   const crumbs: Crumb[] = [
     {
       // The anchor names the book being read, so the trail reads as one
       // sentence in either view rather than saying "payments" over invoices.
       label: t(cash ? 'payments.report.all' : 'payments.report.all_invoices'),
-      params: { m: null, c: null, s: null, page: null },
+      params: { m: null, s: null, page: null },
     },
   ]
   if (path.month)
     crumbs.push({
       label: fmtYearMonth(path.month),
-      params: { c: null, s: null, page: null },
-    })
-  if (path.course)
-    crumbs.push({
-      label:
-        path.course === NO_COURSE_KEY
-          ? t('payments.report.no_course')
-          : (course.data?.title ?? t('common.loading')),
       params: { s: null, page: null },
     })
   if (path.student)
@@ -373,6 +374,39 @@ export function PaymentReportPage() {
             </SelectItem>
           </SelectContent>
         </Select>
+        {/* The student goes with the course: they were chosen inside it, and
+            one student is in one course, so keeping them would open an empty
+            report rather than the course that was asked for. */}
+        <Select
+          value={courseKey ?? ALL_COURSES}
+          onValueChange={(v) =>
+            commit({ c: v === ALL_COURSES ? null : v, s: null, page: null })
+          }
+        >
+          <SelectTrigger className="w-56" aria-label={t('common.course')}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_COURSES}>
+              {t('payments.filter.all_courses')}
+            </SelectItem>
+            <SelectItem value={NO_COURSE_KEY}>
+              {t('payments.report.no_course')}
+            </SelectItem>
+            {(courses ?? []).map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.title}
+                {c.status !== 'published'
+                  ? ` · ${t(
+                      c.status === 'draft'
+                        ? 'common.draft'
+                        : 'payments.course_status.archived',
+                    )}`
+                  : ''}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Input
           type="date"
           className="w-40"
@@ -403,8 +437,12 @@ export function PaymentReportPage() {
           {!summaryReady
             ? '—'
             : cash
-              ? tn('payments.log.summary', total, {
-                  amount: formatMYR(paymentTotals.data?.receivedSen ?? 0),
+              ? tn('payments.report.summary_received', total, {
+                  amount: formatMYR(
+                    (paymentTotals.data?.receivedSen ?? 0) -
+                      (paymentTotals.data?.kwspSen ?? 0),
+                  ),
+                  kwsp: formatMYR(paymentTotals.data?.kwspSen ?? 0),
                 })
               : tn('payments.report.summary_outstanding', total, {
                   billed: formatMYR(invoiceTotals.data?.billed ?? 0),
@@ -534,6 +572,9 @@ function ReceivedRungs({
           <TableHead className="text-right">
             {t('payments.report.received')}
           </TableHead>
+          <TableHead className="text-right">
+            {t('payments.method.kwsp')}
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -555,7 +596,10 @@ function ReceivedRungs({
               {row.paymentCount}
             </TableCell>
             <TableCell className="text-right tabular-nums">
-              {formatMYR(row.amountSen)}
+              {formatMYR(row.amountSen - row.kwspSen)}
+            </TableCell>
+            <TableCell className="text-right tabular-nums">
+              {formatMYR(row.kwspSen)}
             </TableCell>
           </TableRow>
         ))}
@@ -595,6 +639,9 @@ function OutstandingRungs({
             {t('payments.amount.paid')}
           </TableHead>
           <TableHead className="text-right">
+            {t('payments.method.kwsp')}
+          </TableHead>
+          <TableHead className="text-right">
             {t('payments.stat.outstanding')}
           </TableHead>
         </TableRow>
@@ -624,7 +671,10 @@ function OutstandingRungs({
               {formatMYR(row.billedSen)}
             </TableCell>
             <TableCell className="text-right tabular-nums">
-              {formatMYR(row.paidSen)}
+              {formatMYR(row.paidSen - row.kwspSen)}
+            </TableCell>
+            <TableCell className="text-right tabular-nums">
+              {formatMYR(row.kwspSen)}
             </TableCell>
             <TableCell className="text-right font-medium tabular-nums">
               {formatMYR(row.outstandingSen)}
@@ -698,6 +748,9 @@ function OutstandingLeaf({
             {t('payments.amount.paid')}
           </TableHead>
           <TableHead className="text-right">
+            {t('payments.method.kwsp')}
+          </TableHead>
+          <TableHead className="text-right">
             {t('payments.stat.outstanding')}
           </TableHead>
         </TableRow>
@@ -740,7 +793,10 @@ function OutstandingLeaf({
               {formatMYR(inv.total_sen)}
             </TableCell>
             <TableCell className="text-right tabular-nums">
-              {formatMYR(inv.amount_paid_sen)}
+              {formatMYR(inv.amount_paid_sen - inv.kwsp_sen)}
+            </TableCell>
+            <TableCell className="text-right tabular-nums">
+              {formatMYR(inv.kwsp_sen)}
             </TableCell>
             <TableCell className="text-right tabular-nums">
               <div className="flex items-center justify-end gap-2">
@@ -777,13 +833,15 @@ function receivedGroupCsv(
       ...(withSub ? [t('payments.log.csv.student_no')] : []),
       t('payments.report.payments'),
       t('payments.report.received'),
+      t('payments.method.kwsp'),
     ],
     ...rows.map((r) => [
       label(r.key, r.label),
       ...(withSub ? [r.sublabel ?? ''] : []),
       String(r.paymentCount),
       // Ringgit, not sen — this file is read by a human in a spreadsheet.
-      (r.amountSen / 100).toFixed(2),
+      ((r.amountSen - r.kwspSen) / 100).toFixed(2),
+      (r.kwspSen / 100).toFixed(2),
     ]),
   ]
 }
@@ -802,6 +860,7 @@ function outstandingGroupCsv(
       t('payments.report.invoices'),
       t('payments.report.billed'),
       t('payments.amount.paid'),
+      t('payments.method.kwsp'),
       t('payments.stat.outstanding'),
     ],
     ...rows.map((r) => [
@@ -809,7 +868,8 @@ function outstandingGroupCsv(
       ...(withSub ? [r.sublabel ?? ''] : []),
       String(r.invoiceCount),
       (r.billedSen / 100).toFixed(2),
-      (r.paidSen / 100).toFixed(2),
+      ((r.paidSen - r.kwspSen) / 100).toFixed(2),
+      (r.kwspSen / 100).toFixed(2),
       (r.outstandingSen / 100).toFixed(2),
     ]),
   ]
@@ -847,6 +907,7 @@ function outstandingLeafCsv(rows: ReceivableInvoiceRow[], t: TFn) {
       t('common.due'),
       t('payments.report.billed'),
       t('payments.amount.paid'),
+      t('payments.method.kwsp'),
       t('payments.stat.outstanding'),
     ],
     ...rows.map((inv) => [
@@ -856,7 +917,8 @@ function outstandingLeafCsv(rows: ReceivableInvoiceRow[], t: TFn) {
       inv.course_title ?? '',
       inv.due_at?.slice(0, 10) ?? '',
       (inv.total_sen / 100).toFixed(2),
-      (inv.amount_paid_sen / 100).toFixed(2),
+      ((inv.amount_paid_sen - inv.kwsp_sen) / 100).toFixed(2),
+      (inv.kwsp_sen / 100).toFixed(2),
       (inv.balance_sen / 100).toFixed(2),
     ]),
   ]

@@ -163,6 +163,10 @@ export const payments = {
   'payments.report.owing': 'Owing',
   'payments.report.all_invoices': 'All invoices',
   'payments.report.empty_invoices': 'No invoices issued in this period.',
+  'payments.report.summary_received_one':
+    '{count} payment · {amount} received · {kwsp} KWSP',
+  'payments.report.summary_received_other':
+    '{count} payments · {amount} received · {kwsp} KWSP',
   'payments.report.summary_outstanding_one':
     '{count} invoice · {billed} billed · {outstanding} outstanding',
   'payments.report.summary_outstanding_other':

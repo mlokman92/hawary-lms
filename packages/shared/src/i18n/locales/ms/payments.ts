@@ -167,6 +167,10 @@ export const payments: PaymentsDict = {
   'payments.report.owing': 'Terhutang',
   'payments.report.all_invoices': 'Semua invois',
   'payments.report.empty_invoices': 'Tiada invois dikeluarkan dalam tempoh ini.',
+  'payments.report.summary_received_one':
+    '{count} bayaran · {amount} diterima · {kwsp} KWSP',
+  'payments.report.summary_received_other':
+    '{count} bayaran · {amount} diterima · {kwsp} KWSP',
   'payments.report.summary_outstanding_one':
     '{count} invois · {billed} dibilkan · {outstanding} tertunggak',
   'payments.report.summary_outstanding_other':

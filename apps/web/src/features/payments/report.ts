@@ -57,7 +57,10 @@ export type ReportRow = {
   label: string
   sublabel: string | null
   paymentCount: number
+  /** Everything received, KWSP included. */
   amountSen: number
+  /** The part of `amountSen` that came by KWSP. */
+  kwspSen: number
 }
 
 /**
@@ -141,6 +144,7 @@ type ReportRpcRow = {
   sublabel: string | null
   payment_count: number
   amount_sen: number
+  kwsp_sen: number
   group_count: number
 }
 
@@ -193,6 +197,7 @@ export function usePaymentReport(
           sublabel: r.sublabel,
           paymentCount: Number(r.payment_count),
           amountSen: Number(r.amount_sen),
+          kwspSen: Number(r.kwsp_sen),
         })),
         groupCount: Number(raw[0]?.group_count ?? 0),
       }
@@ -209,7 +214,10 @@ export type ReceivableRow = {
   sublabel: string | null
   invoiceCount: number
   billedSen: number
+  /** Everything paid against the group's invoices, KWSP included. */
   paidSen: number
+  /** The part of `paidSen` that came by KWSP. */
+  kwspSen: number
   outstandingSen: number
 }
 
@@ -242,6 +250,7 @@ type ReceivableRpcRow = {
   invoice_count: number
   billed_sen: number
   paid_sen: number
+  kwsp_sen: number
   outstanding_sen: number
   group_count: number
 }
@@ -278,6 +287,7 @@ export function useInvoiceReport(
           invoiceCount: Number(r.invoice_count),
           billedSen: Number(r.billed_sen),
           paidSen: Number(r.paid_sen),
+          kwspSen: Number(r.kwsp_sen),
           outstandingSen: Number(r.outstanding_sen),
         })),
         groupCount: Number(raw[0]?.group_count ?? 0),
@@ -295,6 +305,8 @@ export type ReceivableInvoiceRow = {
   due_at: string | null
   total_sen: number
   amount_paid_sen: number
+  /** The part of `amount_paid_sen` that came by KWSP. */
+  kwsp_sen: number
   balance_sen: number
   student_id: string | null
   student_full_name: string | null
