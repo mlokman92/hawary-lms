@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle2, Clock, Landmark, Plus, Wallet } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { formatMYR } from '@hawary/shared'
@@ -140,6 +140,31 @@ function Breakdown({ invoice }: { invoice: InvoiceRow }) {
   )
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * `?c=` — a course id, or the no-course bucket. The same name
+ * `/payments/report` uses, so the two screens speak one query string.
+ *
+ * Links outlive the code that wrote them and a query string is hand-editable,
+ * so anything that is not an id reads as "all courses" here rather than
+ * reaching PostgREST, where it would fail the uuid cast and show an error
+ * instead of a list.
+ */
+function readCourse(raw: string | null): string {
+  if (raw === NO_COURSE) return NO_COURSE
+  return raw && UUID.test(raw) ? raw : ALL_COURSES
+}
+
+/**
+ * `?money=` — which tile is pressed. Only a value a tile on this page can
+ * apply: a filter with no pressed tile to show for it could not be seen, or
+ * cleared.
+ */
+function readMoney(raw: string | null): MoneyFilter {
+  return MONEY_TILES.find((tile) => tile.key === raw)?.key ?? ALL_MONEY
+}
+
 export function PaymentsPage() {
   const navigate = useNavigate()
   const { t } = useT()
@@ -148,9 +173,32 @@ export function PaymentsPage() {
   const isAdmin = active?.role === 'admin'
   const { data: courses } = useCourses(activeAcademyId)
   const [open, setOpen] = useState(false)
-  const [courseFilter, setCourseFilter] = useState(ALL_COURSES)
-  const [moneyFilter, setMoneyFilter] = useState<MoneyFilter>(ALL_MONEY)
   const [showAllCourses, setShowAllCourses] = useState(false)
+
+  // Both filters live in the address bar, not in component state. "Siri 2,
+  // outstanding" is a list you send to somebody, and the one you want back
+  // when you return from an invoice you opened out of it — and state that
+  // dies with the component can do neither. Only what was narrowed is written:
+  // the bare /payments is still "everything".
+  const [params, setParams] = useSearchParams()
+  const courseFilter = readCourse(params.get('c'))
+  const moneyFilter = readMoney(params.get('money'))
+  // `replace`: narrowing a list is not somewhere you navigate back through one
+  // click at a time, and Back from an invoice should land on the list as it
+  // was left, not on an earlier filter.
+  const setFilter = useCallback(
+    (key: 'c' | 'money', value: string | null) =>
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          if (value) next.set(key, value)
+          else next.delete(key)
+          return next
+        },
+        { replace: true },
+      ),
+    [setParams],
+  )
 
   // The rows are however many pages have been loaded; the tiles are the whole
   // course-filtered set. Two queries because the loaded rows cannot answer
@@ -171,7 +219,13 @@ export function PaymentsPage() {
   const allCourses = courses ?? []
   const published = allCourses.filter((c) => c.status === 'published')
   const unpublishedCount = allCourses.length - published.length
-  const courseOptions = showAllCourses ? allCourses : published
+  // The course in the URL is always on offer, published or not: a link to an
+  // archived course's invoices must not open with a blank picker.
+  const courseOptions = showAllCourses
+    ? allCourses
+    : allCourses.filter(
+        (c) => c.status === 'published' || c.id === courseFilter,
+      )
 
   // Pages are cut by OFFSET, so an invoice raised between two loads pushes
   // every row down one and the next page starts with a row already on screen.
@@ -206,7 +260,10 @@ export function PaymentsPage() {
       {/* Course filter — drives the stats and the records below. */}
       <div className="mt-6 flex flex-wrap items-center gap-2">
         <span className="text-muted-foreground text-sm">{t('common.course')}</span>
-        <Select value={courseFilter} onValueChange={setCourseFilter}>
+        <Select
+          value={courseFilter}
+          onValueChange={(v) => setFilter('c', v === ALL_COURSES ? null : v)}
+        >
           <SelectTrigger size="sm" className="w-56">
             <SelectValue placeholder={t('payments.filter.all_courses')} />
           </SelectTrigger>
@@ -262,7 +319,12 @@ export function PaymentsPage() {
             // Pressing the pressed one clears, so the tiles are also the way
             // back out of the filter they applied.
             onClick={() =>
-              setMoneyFilter(moneyFilter === tile.key ? ALL_MONEY : tile.key)
+              setFilter(
+                'money',
+                moneyFilter === tile.key || tile.key === ALL_MONEY
+                  ? null
+                  : tile.key,
+              )
             }
           />
         ))}

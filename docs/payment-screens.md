@@ -260,6 +260,18 @@ The tiles deliberately ignore the filter they apply — one that emptied itself
 when pressed could not be un-pressed by reading it — and pressing the pressed
 one clears.
 
+**Both filters live in the URL** — `?c=<course id | __none__>` and
+`?money=<collected | kwsp | outstanding>` — not in component state. "Siri 2,
+outstanding" is a list you send to somebody, and the list you want back when
+you return from an invoice opened out of it; state that dies with the component
+can do neither. Only what was narrowed is written, so the bare `/payments` is
+still everything. `c` is the name `/payments/report` uses, on purpose. Changes
+`replace` the history entry, so Back from an invoice lands on the list as it
+was left rather than on an earlier filter. A value the page cannot apply — a
+malformed id, a `money` with no tile — reads as "not narrowed" instead of
+reaching PostgREST as a failed cast. How far the list has been loaded is **not**
+in the URL: a link should open at the top.
+
 Every filter is a **stored column** (`balance_sen`, `collected_sen`,
 `uncollected_sen` generated; `kwsp_paid_sen` kept by `app.sync_invoice_paid`),
 because a column-to-column comparison is something PostgREST cannot express at
