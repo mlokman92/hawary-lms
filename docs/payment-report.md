@@ -135,6 +135,15 @@ repeat each invoice once per payment and multiply the billed figure. The
 subtraction is exact rather than an estimate because `app.sync_invoice_paid`
 keeps `amount_paid_sen` equal to the succeeded payments against the invoice.
 
+That per-invoice sum is a **`materialized`** CTE, and the keyword is
+load-bearing. Postgres inlines a CTE referenced once, and under RLS it then
+re-ran the sum for every invoice — each pass re-checking `app.is_admin` /
+`app.owns_student` on every payment row, about two million policy calls — so
+the first version died on the 8-second statement timeout for every signed-in
+user while returning instantly for the table owner, who has no policy to
+evaluate. Materialized, it is one pass and ~80 ms. **Verify a function that
+reads RLS-protected tables as a signed-in user, never only as `postgres`.**
+
 Groups are still **ranked by the whole amount**. A course is not smaller
 because its students drew on KWSP to pay for it.
 
@@ -271,6 +280,8 @@ another's arrears in any sum over the column. Never write it.
   `invoice_report`, `invoice_report_page`, `invoice_totals`' scope + count
 - `supabase/migrations/20261010120000_kwsp_separate.sql` — `kwsp_sen` on all
   five functions
+- `supabase/migrations/20261010123000_kwsp_materialized.sql` — the KWSP
+  subtotal computed once, not once per invoice
 - `apps/web/src/features/payments/report.ts` — drill vocabulary + both views' hooks
 - `apps/web/src/features/payments/api.ts` — `PaymentScope`, `scopeArgs`, `MoneyFilter`
 - `apps/web/src/pages/PaymentReportPage.tsx`
