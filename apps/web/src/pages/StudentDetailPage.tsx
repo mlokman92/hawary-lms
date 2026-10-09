@@ -3,8 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Pencil, Plus, Receipt, X } from 'lucide-react'
 import { formatMYR, type Enums } from '@hawary/shared'
 import { useAcademy } from '@/lib/academy'
-import { getLang, useT, type TKey } from '@/lib/i18n'
-import { localeFor, personName } from '@/lib/format'
+import { getLang, useT, type TFn, type TKey } from '@/lib/i18n'
+import { fmtDateTime, localeFor, personName } from '@/lib/format'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -51,9 +51,11 @@ import {
 import {
   useArchiveStudent,
   useStudent,
+  useStudentEnrollmentEvents,
   useStudentEnrollments,
   useUnenroll,
   useUpdateStudent,
+  type EnrollmentEvent,
   type StudentStatus,
 } from '@/features/students/api'
 import {
@@ -72,6 +74,28 @@ const ENROLLMENT_LABEL: Record<Enums<'enrollment_status'>, TKey> = {
   completed: 'students.enrollment.completed',
   dropped: 'students.enrollment.dropped',
   cancelled: 'students.enrollment.cancelled',
+}
+
+/**
+ * One history line, as a sentence. The titles are the event's own snapshots,
+ * so this never has to look a course up — and still reads after one is renamed
+ * or deleted.
+ */
+function enrollmentEventText(ev: EnrollmentEvent, t: TFn): string {
+  const course = ev.course_title
+  if (ev.kind === 'moved')
+    return t('students.enrolled.event.moved', {
+      from: ev.from_course_title ?? '—',
+      course,
+    })
+  if (ev.kind === 'removed')
+    return t('students.enrolled.event.removed', { course })
+  if (ev.kind === 'status' && ev.status)
+    return t('students.enrolled.event.status', {
+      course,
+      status: t(ENROLLMENT_LABEL[ev.status]),
+    })
+  return t('students.enrolled.event.enrolled', { course })
 }
 
 const INVOICE_LABEL: Record<InvoiceStatus, TKey> = {
@@ -160,6 +184,7 @@ export function StudentDetailPage() {
 
   const { data: student, isLoading, error } = useStudent(id)
   const { data: enrollments } = useStudentEnrollments(id)
+  const { data: events } = useStudentEnrollmentEvents(id)
   const updateStudent = useUpdateStudent(academyId)
   const archiveStudent = useArchiveStudent(academyId)
   const unenroll = useUnenroll(academyId, id ?? '')
@@ -426,6 +451,39 @@ export function StudentDetailPage() {
               ))}
             </ul>
           )}
+
+          {/* Who put this student where, and when. The list above is only the
+              present, and a course change is a delete and an insert — so
+              without this a wrong enrolment has no author. Staff only: the
+              log's own policy returns a learner nothing. */}
+          {isStaff && events && events.length > 0 ? (
+            <div className="mt-4 border-t pt-3">
+              <h3 className="text-muted-foreground mb-2 text-xs font-medium">
+                {t('students.enrolled.history')}
+              </h3>
+              <ul className="space-y-1.5">
+                {events.map((ev) => (
+                  <li
+                    key={ev.id}
+                    className="flex items-baseline justify-between gap-3 text-xs"
+                  >
+                    <span>
+                      {enrollmentEventText(ev, t)}
+                      {ev.actor_name ? (
+                        <span className="text-muted-foreground">
+                          {' '}
+                          · {ev.actor_name}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="text-muted-foreground whitespace-nowrap">
+                      {fmtDateTime(ev.created_at)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 

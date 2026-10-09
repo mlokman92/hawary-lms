@@ -195,6 +195,53 @@ refuse to move the status, which is a worse bug than a missing email.
 See `supabase/functions/send-course-access/README.md` for the four column
 states, the resend path and the kill switch.
 
+## Enrolment history
+
+`enrollments` holds the present and nothing else. It has no `created_by`, and
+the staff screens change a student's course by **deleting one row and inserting
+another** — so when a student turns out to be in the wrong course, the table
+cannot say who put them there, or that they were ever anywhere else. The owner
+met exactly that on a Siri 3 student who belonged to Siri 2.
+
+`enrollment_events` is the answer: an append-only log, shown under **Enrolled
+courses** on `/students/:id` — what happened, who did it, when.
+
+| kind | written when |
+| --- | --- |
+| `enrolled` | a row is inserted |
+| `removed` | a row is deleted |
+| `moved` | `course_id` changes on a row that stays (today only SQL does this) |
+| `status` | `status` changes — `pending` → `active` is an approval |
+
+**A trigger writes it, not the mutations.** Enrolments are written from six
+places — the student page, the course roster, bulk enrol, CSV import, the
+public link's `join_academy`, approvals — plus SQL by the owner. A log that
+depends on every caller remembering it has holes exactly where the mistakes
+are. `app.log_enrollment_event` is SECURITY DEFINER and reads `auth.uid()`, so
+the actor is whoever made the change by whatever route, including the student
+themself on a self-enrol. An UPDATE that changes neither course nor status
+(stamping `access_email_at`) writes nothing.
+
+**Titles and the actor's name are snapshots.** A line has to stay readable
+after the course is renamed or deleted and after the staff member's account is
+gone — those are the cases it is read in. The ids sit beside them and go NULL
+when the row they point at does.
+
+**The log can never block an enrolment.** When a student or a course is
+deleted its enrolments cascade, and the trigger fires for each after the parent
+is already gone; it finds nothing to attach a line to and skips. Any other
+failure is swallowed. A missing history line is a nuisance; an enrolment
+refused because the log could not be written is an outage.
+
+**The actor is blank on two kinds of line, on purpose.** The 800 enrolments
+that existed when the log was created were back-filled as `enrolled`, dated by
+`enrolled_at`, with no actor: who made them was never recorded, and a guess in
+an audit log is worse than a blank. And a change made in SQL has no signed-in
+user. Everything done through the app from 2026-10-10 carries a name.
+
+Staff read it (`app.is_staff`); clients have no DML on it. A student has no use
+for the name of the admin who enrolled them, so there is no `owns_student` arm.
+
 ## Not done
 
 - **Rejection is silent, and a rejected student cannot re-apply.**

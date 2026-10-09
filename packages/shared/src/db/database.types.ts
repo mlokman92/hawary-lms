@@ -1367,6 +1367,83 @@ export type Database = {
           },
         ]
       }
+      enrollment_events: {
+        Row: {
+          academy_id: string
+          actor_id: string | null
+          actor_name: string | null
+          course_id: string | null
+          course_title: string
+          created_at: string
+          from_course_id: string | null
+          from_course_title: string | null
+          from_status: Database["public"]["Enums"]["enrollment_status"] | null
+          id: string
+          kind: string
+          status: Database["public"]["Enums"]["enrollment_status"] | null
+          student_id: string
+        }
+        Insert: {
+          academy_id: string
+          actor_id?: string | null
+          actor_name?: string | null
+          course_id?: string | null
+          course_title: string
+          created_at?: string
+          from_course_id?: string | null
+          from_course_title?: string | null
+          from_status?: Database["public"]["Enums"]["enrollment_status"] | null
+          id?: string
+          kind: string
+          status?: Database["public"]["Enums"]["enrollment_status"] | null
+          student_id: string
+        }
+        Update: {
+          academy_id?: string
+          actor_id?: string | null
+          actor_name?: string | null
+          course_id?: string | null
+          course_title?: string
+          created_at?: string
+          from_course_id?: string | null
+          from_course_title?: string | null
+          from_status?: Database["public"]["Enums"]["enrollment_status"] | null
+          id?: string
+          kind?: string
+          status?: Database["public"]["Enums"]["enrollment_status"] | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enrollment_events_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_events_course_fkey"
+            columns: ["academy_id", "course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "enrollment_events_from_course_fkey"
+            columns: ["academy_id", "from_course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["academy_id", "id"]
+          },
+          {
+            foreignKeyName: "enrollment_events_student_fkey"
+            columns: ["academy_id", "student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["academy_id", "id"]
+          },
+        ]
+      }
       enrollments: {
         Row: {
           academy_id: string

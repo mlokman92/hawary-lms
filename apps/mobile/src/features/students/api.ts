@@ -36,6 +36,17 @@ const studentsKey = (academyId: string | null) => ['students', academyId] as con
 const studentKey = (id: string) => ['student', id] as const
 const enrollmentsKey = (studentId: string) =>
   ['enrollments', 'student', studentId] as const
+const enrollmentEventsKey = (studentId: string) =>
+  ['enrollment-events', 'student', studentId] as const
+
+/**
+ * One line of a student's enrolment history.
+ *
+ * `course_title`, `from_course_title` and `actor_name` are snapshots taken when
+ * the event happened, so a line stays readable after the course is renamed or
+ * the staff member's account is gone — the cases it gets read in.
+ */
+export type EnrollmentEvent = Tables<'enrollment_events'>
 
 export function useStudents(academyId: string | null) {
   return useQuery({
@@ -200,6 +211,31 @@ export function useStudentEnrollments(studentId: string | undefined) {
   })
 }
 
+/**
+ * Who enrolled this student, in what, and when — newest first.
+ *
+ * `enrollments` holds only the present, and a course change is a delete and an
+ * insert, so the table itself cannot say who put a student where. The log is
+ * written by a trigger (`app.log_enrollment_event`) on every enrolment change
+ * from any screen; this only reads it. Staff-only by RLS.
+ */
+export function useStudentEnrollmentEvents(studentId: string | undefined) {
+  return useQuery({
+    queryKey: enrollmentEventsKey(studentId ?? ''),
+    enabled: !!studentId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('enrollment_events')
+        .select('*')
+        .eq('student_id', studentId!)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+      if (error) throw error
+      return (data ?? []) as EnrollmentEvent[]
+    },
+  })
+}
+
 export function useEnrollStudent(academyId: string, studentId: string) {
   const qc = useQueryClient()
   return useMutation({
@@ -219,6 +255,7 @@ export function useEnrollStudent(academyId: string, studentId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: enrollmentsKey(studentId) })
+      qc.invalidateQueries({ queryKey: enrollmentEventsKey(studentId) })
       qc.invalidateQueries({ queryKey: studentsKey(academyId) })
     },
   })
@@ -237,6 +274,7 @@ export function useUnenroll(academyId: string, studentId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: enrollmentsKey(studentId) })
+      qc.invalidateQueries({ queryKey: enrollmentEventsKey(studentId) })
       qc.invalidateQueries({ queryKey: studentsKey(academyId) })
     },
   })

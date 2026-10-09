@@ -169,7 +169,7 @@ pnpm --filter mobile sync:data     # after editing a web data hook
   `academy_members.is_director` / `is_system_admin`.
 - **Clients have no DML** on `academy_invitations`, `notifications`,
   `incentive_payouts`, `assessment_questions`, `appointments`,
-  `announcements` or `assignment_submission_files`, and no INSERT
+  `announcements`, `enrollment_events` or `assignment_submission_files`, and no INSERT
   or DELETE on `academies` — those move only through RPCs or the owner. Check
   before adding a policy. `login_events` and `push_devices` have no client access at all.
 - **i18n**: keys are flat and self-prefixed, so `TKey = keyof typeof en` — a bad
