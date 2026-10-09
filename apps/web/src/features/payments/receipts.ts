@@ -131,20 +131,20 @@ export function useBankTransferReceiptCounts(
 /**
  * Attach (or replace) a payment's receipt.
  *
- * Both lists move on success: the row leaves pending, and the two counts swap
- * one between them. Invalidated by prefix because every state, search and page
- * is its own cache entry and any of them may now be wrong.
+ * The row leaves pending and the two counts swap one between them — and the
+ * payment becomes collected, which is why success refetches everything.
  */
 export function useUploadPaymentReceipt() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ paymentId, file }: { paymentId: string; file: File }) =>
       uploadPaymentReceipt(paymentId, file),
+    // Everything, not a list of keys. A receipt is what turns a bank transfer
+    // into collected money, so uploading one moves every figure in the money
+    // section — tiles, cards, the report, the invoice, the dashboard — and a
+    // key left off that list would be a stale total on a money screen.
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['bank-transfer-receipts'] })
-      void qc.invalidateQueries({ queryKey: ['bank-transfer-receipt-counts'] })
-      // The invoice page shows the same receipt beside its payment.
-      void qc.invalidateQueries({ queryKey: ['invoice'] })
+      void qc.invalidateQueries()
     },
   })
 }

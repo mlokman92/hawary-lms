@@ -61,6 +61,8 @@ export type ReportRow = {
   amountSen: number
   /** The part of `amountSen` that came by KWSP. */
   kwspSen: number
+  /** The part of `amountSen` that came by bank transfer with no receipt. */
+  unreceiptedSen: number
 }
 
 /**
@@ -145,6 +147,7 @@ type ReportRpcRow = {
   payment_count: number
   amount_sen: number
   kwsp_sen: number
+  unreceipted_sen: number
   group_count: number
 }
 
@@ -198,6 +201,7 @@ export function usePaymentReport(
           paymentCount: Number(r.payment_count),
           amountSen: Number(r.amount_sen),
           kwspSen: Number(r.kwsp_sen),
+          unreceiptedSen: Number(r.unreceipted_sen),
         })),
         groupCount: Number(raw[0]?.group_count ?? 0),
       }
@@ -218,6 +222,8 @@ export type ReceivableRow = {
   paidSen: number
   /** The part of `paidSen` that came by KWSP. */
   kwspSen: number
+  /** `paidSen` less KWSP and less bank transfers with no receipt. */
+  collectedSen: number
   /** What the academy has not collected, so it includes `kwspSen`. */
   outstandingSen: number
 }
@@ -252,6 +258,7 @@ type ReceivableRpcRow = {
   billed_sen: number
   paid_sen: number
   kwsp_sen: number
+  collected_sen: number
   outstanding_sen: number
   group_count: number
 }
@@ -289,6 +296,7 @@ export function useInvoiceReport(
           billedSen: Number(r.billed_sen),
           paidSen: Number(r.paid_sen),
           kwspSen: Number(r.kwsp_sen),
+          collectedSen: Number(r.collected_sen),
           outstandingSen: Number(r.outstanding_sen),
         })),
         groupCount: Number(raw[0]?.group_count ?? 0),
@@ -308,6 +316,8 @@ export type ReceivableInvoiceRow = {
   amount_paid_sen: number
   /** The part of `amount_paid_sen` that came by KWSP. */
   kwsp_sen: number
+  /** `amount_paid_sen` less KWSP and less bank transfers with no receipt. */
+  collected_sen: number
   /** What the student can still pay. Zero once KWSP covers the rest. */
   balance_sen: number
   /** What the academy has not collected — the figure this report shows. */

@@ -31,7 +31,10 @@ type StudentBrief = {
 }
 type CourseBrief = { id: string; title: string }
 /** Just enough of a payment to say by which route the money came. */
-type PaymentRoute = Pick<Payment, 'amount_sen' | 'provider' | 'method' | 'status'>
+type PaymentRoute = Pick<
+  Payment,
+  'amount_sen' | 'provider' | 'method' | 'status' | 'has_receipt'
+>
 export type InvoiceRow = Invoice & {
   student: StudentBrief | null
   course: CourseBrief | null
@@ -296,6 +299,8 @@ type PaymentLogTotalsRow = {
   cash_count: number
   other_sen: number
   other_count: number
+  unreceipted_sen: number
+  unreceipted_count: number
 }
 
 /**
@@ -395,11 +400,22 @@ export function usePaymentLogTotals(
         // and the four parts below add up to it: `other` is defined as the
         // remainder (the `other` method, plus card and e-wallet), so the sum
         // holds whatever methods exist.
+        // A bank transfer with no receipt is in none of the cards: it is
+        // taken out of the total and out of the Bank transfer card alike, so
+        // the parts still add up.
         collectedSen:
-          Number(row?.received_sen ?? 0) - Number(row?.kwsp_sen ?? 0),
-        collectedCount: Number(row?.collected_count ?? 0),
-        bankTransferSen: Number(row?.bank_transfer_sen ?? 0),
-        bankTransferCount: Number(row?.bank_transfer_count ?? 0),
+          Number(row?.received_sen ?? 0) -
+          Number(row?.kwsp_sen ?? 0) -
+          Number(row?.unreceipted_sen ?? 0),
+        collectedCount:
+          Number(row?.collected_count ?? 0) -
+          Number(row?.unreceipted_count ?? 0),
+        bankTransferSen:
+          Number(row?.bank_transfer_sen ?? 0) -
+          Number(row?.unreceipted_sen ?? 0),
+        bankTransferCount:
+          Number(row?.bank_transfer_count ?? 0) -
+          Number(row?.unreceipted_count ?? 0),
         fpxSen: Number(row?.fpx_sen ?? 0),
         fpxCount: Number(row?.fpx_count ?? 0),
         cashSen: Number(row?.cash_sen ?? 0),
@@ -470,10 +486,10 @@ export const NO_COURSE = '__none__'
  * student's EPF account is its own figure and its own set, `kwsp`. An invoice
  * paid partly each way is in both, because it contributed to both tiles.
  *
- * `outstanding` is what students themselves still owe — the invoice's own
- * balance. Money KWSP is covering is **not** in it: that has a tile of its
- * own, and counting it here as well would make the three money tiles add up
- * to more than the total. `overdue` is the same balance, past its due date.
+ * `outstanding` is what is still owed once KWSP is set aside: the student's
+ * own balance, plus any bank transfer whose receipt has not been uploaded.
+ * Money KWSP is covering is **not** in it — that has a tile of its own.
+ * `overdue` is the student's own balance past its due date, and nothing else.
  */
 export const ALL_MONEY = 'invoiced'
 export type MoneyFilter =
@@ -493,7 +509,9 @@ type InvoiceTotalsRow = {
   invoice_count: number
   collected_count: number
   kwsp_count: number
-  outstanding_count: number
+  unreceipted_sen: number
+  owed_sen: number
+  owed_count: number
 }
 
 // --- The staff view of an invoice --------------------------------------------
@@ -507,12 +525,17 @@ type InvoiceTotalsRow = {
 
 type CollectionFields = Pick<
   Invoice,
-  'total_sen' | 'amount_paid_sen' | 'kwsp_paid_sen'
+  'total_sen' | 'amount_paid_sen' | 'kwsp_paid_sen' | 'unreceipted_sen'
 >
 
-/** What the academy has collected: everything paid, less the KWSP part. */
+/**
+ * What the academy has collected: everything paid, less what came by KWSP and
+ * less any bank transfer whose receipt has not been uploaded. A transfer is
+ * the one payment taken on a staff member's word, so until the proof is filed
+ * it is a claim, not a collection.
+ */
 export function collectedSen(inv: CollectionFields): number {
-  return inv.amount_paid_sen - inv.kwsp_paid_sen
+  return inv.amount_paid_sen - inv.kwsp_paid_sen - inv.unreceipted_sen
 }
 
 /**
@@ -531,7 +554,8 @@ export function uncollectedSen(inv: CollectionFields): number {
  * (FPX — a callback wrote the row) or typed in by staff.
  *
  * The two add up to `collectedSen`: succeeded payments only, as the trigger
- * counts them, and KWSP left out because to staff it has not been collected.
+ * counts them, with KWSP and bank transfers that have no receipt left out
+ * because to staff neither has been collected.
  * `provider`, not `method`, is what tells them apart — a staff member can
  * record a payment and call its method anything, but only the gateway writes
  * a row whose provider is not `manual`.
@@ -544,6 +568,8 @@ export function collectedBreakdown(payments: PaymentRoute[] | undefined): {
   let manual = 0
   for (const p of payments ?? []) {
     if (p.status !== 'succeeded' || p.method === 'kwsp') continue
+    // Not collected until its receipt is in — same rule as `collectedSen`.
+    if (p.method === 'bank_transfer' && !p.has_receipt) continue
     if (p.provider === 'manual') manual += p.amount_sen
     else fpx += p.amount_sen
   }
@@ -595,7 +621,7 @@ async function fetchInvoicePage(
       // The payments ride along for the Breakdown column: an invoice
       // records how much was paid, not by which route. A plain embed, so
       // it adds columns to each row and filters nothing.
-      '*, student:students(full_name, student_no), course:courses(id, title), payments(amount_sen, provider, method, status)',
+      '*, student:students(full_name, student_no), course:courses(id, title), payments(amount_sen, provider, method, status, has_receipt)',
       { count: 'exact' },
     )
     .eq('academy_id', academyId)
@@ -612,11 +638,15 @@ async function fetchInvoicePage(
     // column-to-column comparison, which PostgREST cannot express.
     if (money === 'collected') q = q.gt('collected_sen', 0)
     else if (money === 'kwsp') q = q.gt('kwsp_paid_sen', 0)
-    // Outstanding and overdue are both the student's own balance, so an
-    // invoice whose remainder KWSP is covering is in neither.
-    else q = q.gt('balance_sen', 0)
-    if (money === 'overdue')
-      q = q.not('due_at', 'is', null).lt('due_at', new Date().toISOString())
+    // Outstanding is what is owed once KWSP is set aside — the student's
+    // balance plus any bank transfer with no receipt. Overdue stays the
+    // student's own balance: a missing receipt is not theirs to be late with.
+    else if (money === 'outstanding') q = q.gt('owed_sen', 0)
+    else
+      q = q
+        .gt('balance_sen', 0)
+        .not('due_at', 'is', null)
+        .lt('due_at', new Date().toISOString())
   }
 
   const { data, error, count } = await q
@@ -679,9 +709,11 @@ export function useInvoiceList(
  * This is the half of the old client-side `computeStats` a page cannot answer.
  * Three separate slices of what was invoiced, because every caller shows them
  * as tiles side by side: `collected` is what arrived by any route but KWSP,
- * `kwsp` is what KWSP covers, and `outstanding` is what students themselves
- * still owe. `total = collected + kwsp + outstanding` — overpayments aside:
- * `collected` is a raw sum, `outstanding` clamps each invoice at zero.
+ * with a receipt where one is required; `kwsp` is what KWSP covers; and
+ * `outstanding` is the rest — what students still owe, and what they sent by
+ * bank transfer that has no receipt yet. `total = collected + kwsp +
+ * outstanding` — overpayments aside: `collected` is a raw sum, `outstanding`
+ * clamps each invoice at zero.
  *
  * `outstanding` here is therefore **not** the staff "uncollected" figure the
  * invoice page, the report and the dashboard show. Those screens have no KWSP
@@ -707,11 +739,16 @@ export function useInvoiceStats(academyId: string | null, courseFilter: string) 
       const row = (data as unknown as InvoiceTotalsRow[] | null)?.[0]
       return {
         total: Number(row?.invoiced_sen ?? 0),
-        // `collected_sen` is everything paid; the KWSP part is taken out here.
+        // `collected_sen` is everything paid; KWSP and bank transfers with
+        // no receipt are taken out here.
         collected:
-          Number(row?.collected_sen ?? 0) - Number(row?.kwsp_sen ?? 0),
+          Number(row?.collected_sen ?? 0) -
+          Number(row?.kwsp_sen ?? 0) -
+          Number(row?.unreceipted_sen ?? 0),
         kwsp: Number(row?.kwsp_sen ?? 0),
-        outstanding: Number(row?.outstanding_sen ?? 0),
+        // What students still owe, plus what they sent by bank transfer with
+        // no receipt yet: not KWSP, which has its own tile.
+        outstanding: Number(row?.owed_sen ?? 0),
         overdue: Number(row?.overdue_sen ?? 0),
         // How many invoices each figure was summed over — counted with the
         // predicate `fetchInvoicePage` filters by, so a tile's count is the
@@ -722,7 +759,7 @@ export function useInvoiceStats(academyId: string | null, courseFilter: string) 
           total: Number(row?.invoice_count ?? 0),
           collected: Number(row?.collected_count ?? 0),
           kwsp: Number(row?.kwsp_count ?? 0),
-          outstanding: Number(row?.outstanding_count ?? 0),
+          outstanding: Number(row?.owed_count ?? 0),
         },
       }
     },

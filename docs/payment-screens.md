@@ -101,8 +101,10 @@ They come from `payment_log_totals`, the same call as the summary line, as
 FILTERs over the same rows — so they follow the search and the method filter
 and always describe the rows the table is offering.
 
-**Total collections is `received_sen - kwsp_sen`**, not everything received: to
-staff, money that came by KWSP has not been collected. **The three parts add
+**Total collections is `received_sen − kwsp_sen − unreceipted_sen`**, not
+everything received: to staff, neither KWSP money nor a bank transfer without
+its receipt has been collected. The Bank transfer card is likewise transfers
+*with* a receipt. **The three parts add
 up to it**, because those are the only three non-KWSP methods a payment can
 now be recorded as (below). `payment_log_totals` still returns `other_sen` —
 collected, and none of the three — and it is zero; if it is ever not, the row
@@ -282,17 +284,18 @@ A tile is a **sum over a set of invoices**, so pressing it shows that set —
 - **Invoiced** — everything the tiles count (not void/cancelled/draft)
 - **Collected** — `collected_sen > 0`
 - **KWSP** — `kwsp_paid_sen > 0`
-- **Outstanding** — `balance_sen > 0`
+- **Outstanding** — `owed_sen > 0`
 
 **Collected is invoices with money against them, not invoices settled in
 full**: a part-paid invoice contributed to the tile, so `status = 'paid'` would
 open a set that does not add up to the number above it.
 
 **The three money tiles are separate slices: Invoiced = Collected + KWSP +
-Outstanding.** Collected is what arrived by every route but KWSP; KWSP is what
-a withdrawal covers; Outstanding is what students themselves still owe — the
-invoice's own `balance_sen`. An invoice whose remainder KWSP is covering is
-therefore **not** in Outstanding. (One overpaid invoice makes the three exceed
+Outstanding.** Collected is what arrived by every route but KWSP — a bank
+transfer only once its receipt is uploaded; KWSP is what a withdrawal covers;
+Outstanding is the rest, `owed_sen`: what students still owe, plus what they
+sent by bank transfer with no receipt yet. An invoice whose remainder KWSP is
+covering is therefore **not** in Outstanding. (One overpaid invoice makes the three exceed
 Invoiced by its credit: Collected is a raw sum, Outstanding clamps at zero.)
 
 Outstanding first included the KWSP money, as "everything not collected". With
@@ -351,11 +354,13 @@ FPX is confirmed by the gateway's callback, a transfer is a row a staff member
 typed. The owner wants the proof beside the claim — every bank transfer carries
 the receipt it was recorded from, and one that does not is **pending**.
 
-**Pending is a fact about the paperwork, not the money.** It touches no
-`payments.status`, no `amount_paid_sen` and no total: the transfer was recorded
-as received and still counts as received. A payment is pending *exactly when it
-has no `payment_receipts` row*, so there is no flag to keep in step with
-anything. Only **succeeded** bank transfers are listed; all 2,331 that existed
+**Pending is not only paperwork.** It started that way, and within the day the
+owner made it count: a pending transfer is in no Collected figure, and on staff
+screens its money is outstanding until the receipt is uploaded
+([payment-report.md](payment-report.md#a-bank-transfer-without-its-receipt-has-not-been-collected)).
+The student's own figures — `amount_paid_sen`, the balance, the status — still
+count it; they paid. A payment is pending *exactly when it has no
+`payment_receipts` row*, mirrored onto `payments.has_receipt` by a trigger. Only **succeeded** bank transfers are listed; all 2,331 that existed
 on the day the page shipped started as pending.
 
 The page opens on the pending list, because clearing it is the job. Each row
@@ -368,10 +373,9 @@ list is worked from the top and refills as rows leave it.
 ### One table, one function, no client writes
 
 `payment_receipts` is keyed on `payment_id` — one receipt per payment, and
-uploading again replaces. It is its own table rather than columns on
-`payments` because every UPDATE of a payment fires `app.sync_invoice_paid` and
-takes the invoice's row lock; attaching a file should go nowhere near the money
-trigger.
+uploading again replaces. The file's details stay in their own table; the one
+fact the money needs — is there a receipt — is mirrored onto
+`payments.has_receipt`, and that update is what re-files the invoice.
 
 The files are in the **private** `payment-receipts` bucket (PDF, JPG, PNG,
 WebP; 10 MB), keyed `<academy_id>/<payment_id>/<uuid>.<ext>`. A receipt shows a

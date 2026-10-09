@@ -135,7 +135,7 @@ On screen:
 
 | Label | Is |
 | --- | --- |
-| **Received** / **Paid** / **Collected** | what arrived by every route but KWSP |
+| **Received** / **Paid** / **Collected** | what arrived by every route but KWSP — and for a bank transfer, only once its receipt is uploaded |
 | **KWSP** (report and tiles) | what KWSP covers |
 | **Outstanding** / **Balance** | what the academy has not collected — except the `/payments` tile, which is the student's balance only |
 | the status badge | `collectionStatus()` — Partially paid while part waits on KWSP |
@@ -196,6 +196,64 @@ it is a ledger of what arrived.
 
 Groups on the received view are still **ranked by the whole amount**. A course
 is not smaller because its students drew on KWSP to pay for it.
+
+## A bank transfer without its receipt has not been collected
+
+The receipts queue made a missing receipt visible. From 2026-10-10 it also
+**counts**: a bank transfer is the one payment taken on a staff member's word,
+and until the receipt is uploaded the money is in no Collected figure anywhere.
+On staff screens it is outstanding. All of them — the 2,331 transfers already
+in the ledger went from collected to outstanding the day this shipped, and
+Collected fell from RM1,296,000 to RM45,000 (FPX and cash). It climbs back one
+uploaded receipt at a time. That was the owner's choice, over applying the rule
+only to new payments.
+
+It is the KWSP rule with a second reason for money to be "paid but not
+collected", and it is built the same way:
+
+- **The student's side does not move.** `amount_paid_sen`, `balance_sen` and
+  `status` count every payment. A student who transferred the money owes
+  nothing, is shown nothing owing and gets no Pay button, whether or not the
+  academy has filed its copy of the receipt. A missing receipt is not the
+  student's problem.
+- **The staff reading is in columns beside them:**
+
+| Column | Is |
+| --- | --- |
+| `kwsp_paid_sen` | the part of `amount_paid_sen` that came by KWSP |
+| `unreceipted_sen` | the part that came by bank transfer with no receipt |
+| `collected_sen` | `amount_paid − kwsp_paid − unreceipted` |
+| `uncollected_sen` | `total − collected`, never below zero |
+| `owed_sen` | `total − amount_paid + unreceipted`, never below zero |
+
+There are two "outstanding"s because there are two kinds of screen.
+`uncollected_sen` is outstanding where KWSP has no figure of its own (the
+invoice page, the report, the student page, the dashboard, course billing) —
+it has the KWSP money in it. `owed_sen` is outstanding on `/payments`, where
+KWSP has a tile: the student's balance plus what they sent without proof.
+
+**Whether a payment has a receipt lives on the payment** — `payments.has_receipt`,
+flipped by `app.sync_payment_receipt` when a `payment_receipts` row appears or
+goes. Because that is an UPDATE of `payments`, it fires `app.sync_invoice_paid`,
+which recomputes `unreceipted_sen` in the same statement and under the same
+lock as `amount_paid_sen`. So uploading a receipt re-files the invoice with no
+code asking it to. It is a column and not a join at read time for the reason
+`kwsp_paid_sen` is: the aggregates run under RLS over thousands of payments,
+and a join to a second policy-guarded table is the shape that timed out.
+
+`payment_report` and `payment_log_totals` return `unreceipted_sen` beside
+`kwsp_sen`; `invoice_report` and `invoice_report_page` return `collected_sen`;
+`invoice_totals` returns `unreceipted_sen`, `owed_sen` and `owed_count`. As
+before, the existing columns keep their meaning because installed Academy
+mobile apps read them. On the web, `collectedSen()` is the one helper every
+row-level figure goes through, and it subtracts both.
+
+An upload refetches **everything** (`qc.invalidateQueries()` with no key): a
+receipt moves every figure in the money section, and a key left off a list
+would be a stale total on a money screen.
+
+Overdue is still the student's own balance past its due date, and nothing
+else.
 
 ## Days are the academy's
 
@@ -300,12 +358,13 @@ The mapping is the set each sum was taken over, not a status guess:
 | Total invoiced | everything the tiles count (not void / cancelled / draft) |
 | Collected | `collected_sen > 0` |
 | KWSP | `kwsp_paid_sen > 0` |
-| Outstanding | `balance_sen > 0` |
+| Outstanding | `owed_sen > 0` |
 
 Total invoiced = Collected + KWSP + Outstanding: three separate slices.
-Outstanding here is the student's own balance, so money KWSP is covering is in
-the KWSP tile and **not** in Outstanding — the one place a staff screen's
-"outstanding" is `balance_sen` rather than `uncollected_sen`. See
+Outstanding here is `owed_sen` — the student's balance plus bank transfers with
+no receipt — so money KWSP is covering is in the KWSP tile and **not** in
+Outstanding: the one place a staff screen's "outstanding" is not
+`uncollected_sen`. See
 [payment-screens.md](payment-screens.md#the-four-tiles-are-filters) for why:
 a screen with a KWSP figure of its own must leave that money out of
 outstanding, and a screen without one (this report, the invoice page) must
@@ -338,6 +397,8 @@ student's overpayment cannot erase another's arrears in a sum. Never write them.
   five functions
 - `supabase/migrations/20261010123000_kwsp_materialized.sql` — the KWSP
   subtotal computed once, not once per invoice
+- `supabase/migrations/20261011060000_unreceipted_not_collected.sql` —
+  `payments.has_receipt`, `unreceipted_sen`, `owed_sen`; collected redefined
 - `supabase/migrations/20261010140000_kwsp_not_collected.sql` —
   `kwsp_paid_sen`, `collected_sen`, `uncollected_sen`; the trigger; the staff
   reading in the five invoice-side functions

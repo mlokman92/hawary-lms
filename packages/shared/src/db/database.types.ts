@@ -1811,6 +1811,7 @@ export type Database = {
           kwsp_paid_sen: number
           min_partial_sen: number | null
           notes: string | null
+          owed_sen: number | null
           pay_token: string | null
           pay_token_created_at: string | null
           status: Database["public"]["Enums"]["invoice_status"]
@@ -1819,6 +1820,7 @@ export type Database = {
           tax_sen: number
           total_sen: number
           uncollected_sen: number | null
+          unreceipted_sen: number
           updated_at: string
         }
         Insert: {
@@ -1840,6 +1842,7 @@ export type Database = {
           kwsp_paid_sen?: number
           min_partial_sen?: number | null
           notes?: string | null
+          owed_sen?: number | null
           pay_token?: string | null
           pay_token_created_at?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]
@@ -1848,6 +1851,7 @@ export type Database = {
           tax_sen?: number
           total_sen?: number
           uncollected_sen?: number | null
+          unreceipted_sen?: number
           updated_at?: string
         }
         Update: {
@@ -1869,6 +1873,7 @@ export type Database = {
           kwsp_paid_sen?: number
           min_partial_sen?: number | null
           notes?: string | null
+          owed_sen?: number | null
           pay_token?: string | null
           pay_token_created_at?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]
@@ -1877,6 +1882,7 @@ export type Database = {
           tax_sen?: number
           total_sen?: number
           uncollected_sen?: number | null
+          unreceipted_sen?: number
           updated_at?: string
         }
         Relationships: [
@@ -2183,6 +2189,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           currency: string
+          has_receipt: boolean
           id: string
           invoice_id: string
           method: Database["public"]["Enums"]["payment_method"]
@@ -2200,6 +2207,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           currency?: string
+          has_receipt?: boolean
           id?: string
           invoice_id: string
           method?: Database["public"]["Enums"]["payment_method"]
@@ -2217,6 +2225,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           currency?: string
+          has_receipt?: boolean
           id?: string
           invoice_id?: string
           method?: Database["public"]["Enums"]["payment_method"]
@@ -2932,6 +2941,7 @@ export type Database = {
         }
         Returns: {
           billed_sen: number
+          collected_sen: number
           group_count: number
           invoice_count: number
           key: string
@@ -2956,6 +2966,7 @@ export type Database = {
         Returns: {
           amount_paid_sen: number
           balance_sen: number
+          collected_sen: number
           course_id: string
           course_title: string
           due_at: string
@@ -2990,8 +3001,11 @@ export type Database = {
           outstanding_count: number
           outstanding_sen: number
           overdue_sen: number
+          owed_count: number
+          owed_sen: number
           uncollected_count: number
           uncollected_sen: number
+          unreceipted_sen: number
         }[]
       }
       join_academy: {
@@ -3128,6 +3142,8 @@ export type Database = {
           other_sen: number
           received_sen: number
           total_count: number
+          unreceipted_count: number
+          unreceipted_sen: number
         }[]
       }
       payment_report: {
@@ -3148,6 +3164,7 @@ export type Database = {
           label: string
           payment_count: number
           sublabel: string
+          unreceipted_sen: number
         }[]
       }
       post_announcement: {

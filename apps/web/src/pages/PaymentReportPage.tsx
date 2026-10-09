@@ -140,9 +140,10 @@ function dimHeader(dim: ReportDim, t: TFn): string {
  * Every figure comes from a totals function over the same scope the rows were
  * grouped from, so the summary and the column can never disagree. Money that
  * came by KWSP is shown beside the rest, never inside it: **Received** and
- * **Paid** on this page are what arrived by every other route, and
- * **Outstanding** still counts what KWSP is covering — to staff it has not
- * been collected.
+ * **Paid** on this page are what arrived by every other route — and, for a
+ * bank transfer, only once its receipt has been uploaded. **Outstanding**
+ * still counts what KWSP is covering and what has no receipt: to staff
+ * neither has been collected.
  */
 export function PaymentReportPage() {
   const { t, tn } = useT()
@@ -440,10 +441,7 @@ export function PaymentReportPage() {
             ? '—'
             : cash
               ? tn('payments.report.summary_received', total, {
-                  amount: formatMYR(
-                    (paymentTotals.data?.receivedSen ?? 0) -
-                      (paymentTotals.data?.kwspSen ?? 0),
-                  ),
+                  amount: formatMYR(paymentTotals.data?.collectedSen ?? 0),
                   kwsp: formatMYR(paymentTotals.data?.kwspSen ?? 0),
                 })
               : tn('payments.report.summary_outstanding', total, {
@@ -598,7 +596,7 @@ function ReceivedRungs({
               {row.paymentCount}
             </TableCell>
             <TableCell className="text-right tabular-nums">
-              {formatMYR(row.amountSen - row.kwspSen)}
+              {formatMYR(row.amountSen - row.kwspSen - row.unreceiptedSen)}
             </TableCell>
             <TableCell className="text-right tabular-nums">
               {formatMYR(row.kwspSen)}
@@ -673,7 +671,7 @@ function OutstandingRungs({
               {formatMYR(row.billedSen)}
             </TableCell>
             <TableCell className="text-right tabular-nums">
-              {formatMYR(row.paidSen - row.kwspSen)}
+              {formatMYR(row.collectedSen)}
             </TableCell>
             <TableCell className="text-right tabular-nums">
               {formatMYR(row.kwspSen)}
@@ -795,7 +793,7 @@ function OutstandingLeaf({
               {formatMYR(inv.total_sen)}
             </TableCell>
             <TableCell className="text-right tabular-nums">
-              {formatMYR(inv.amount_paid_sen - inv.kwsp_sen)}
+              {formatMYR(inv.collected_sen)}
             </TableCell>
             <TableCell className="text-right tabular-nums">
               {formatMYR(inv.kwsp_sen)}
@@ -842,7 +840,7 @@ function receivedGroupCsv(
       ...(withSub ? [r.sublabel ?? ''] : []),
       String(r.paymentCount),
       // Ringgit, not sen — this file is read by a human in a spreadsheet.
-      ((r.amountSen - r.kwspSen) / 100).toFixed(2),
+      ((r.amountSen - r.kwspSen - r.unreceiptedSen) / 100).toFixed(2),
       (r.kwspSen / 100).toFixed(2),
     ]),
   ]
@@ -870,7 +868,7 @@ function outstandingGroupCsv(
       ...(withSub ? [r.sublabel ?? ''] : []),
       String(r.invoiceCount),
       (r.billedSen / 100).toFixed(2),
-      ((r.paidSen - r.kwspSen) / 100).toFixed(2),
+      (r.collectedSen / 100).toFixed(2),
       (r.kwspSen / 100).toFixed(2),
       (r.outstandingSen / 100).toFixed(2),
     ]),
@@ -919,7 +917,7 @@ function outstandingLeafCsv(rows: ReceivableInvoiceRow[], t: TFn) {
       inv.course_title ?? '',
       inv.due_at?.slice(0, 10) ?? '',
       (inv.total_sen / 100).toFixed(2),
-      ((inv.amount_paid_sen - inv.kwsp_sen) / 100).toFixed(2),
+      (inv.collected_sen / 100).toFixed(2),
       (inv.kwsp_sen / 100).toFixed(2),
       (inv.uncollected_sen / 100).toFixed(2),
     ]),

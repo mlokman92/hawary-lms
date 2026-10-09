@@ -44,6 +44,7 @@ export type RecentPaymentRow = {
   amount_sen: number
   paid_at: string | null
   method: Enums<'payment_method'>
+  has_receipt: boolean
   invoice: { id: string; invoice_no: string } | null
   student: { id: string; full_name: string | null } | null
 }
@@ -105,11 +106,13 @@ export const monthKeyMY = (iso: string) => MY_MONTH.format(new Date(iso))
 export const REVENUE_MONTHS = 6
 
 /**
- * Money that came by KWSP has not been collected — the rule every staff money
- * screen follows (docs/payment-report.md). The payment still shows in the
+ * Money that came by KWSP has not been collected, and neither has a bank
+ * transfer whose receipt is not uploaded — the rule every staff money screen
+ * follows (docs/payment-report.md). The payment still shows in the
  * recent-payments list; it just does not count towards a "collected" figure.
  */
-const isCollected = (p: RecentPaymentRow) => p.method !== 'kwsp'
+const isCollected = (p: RecentPaymentRow) =>
+  p.method !== 'kwsp' && !(p.method === 'bank_transfer' && !p.has_receipt)
 
 /** Sum of settled payments that landed in a given Malaysian month. */
 export function collectedInMonth(
@@ -410,7 +413,7 @@ export function usePaymentActivity(academyId: string | null) {
       const { data, error } = await supabase
         .from('payments')
         .select(
-          'id, amount_sen, paid_at, method, invoice:invoices(id, invoice_no), student:students(id, full_name)',
+          'id, amount_sen, paid_at, method, has_receipt, invoice:invoices(id, invoice_no), student:students(id, full_name)',
         )
         .eq('academy_id', academyId!)
         .eq('status', 'succeeded')
