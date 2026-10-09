@@ -92,24 +92,40 @@ last in the picker.
 
 ### The log's number cards
 
-Five cards above the ledger — **Total collections** on a row of its own, and
-under it its four parts: **Bank transfer**, **FPX**, **Cash**, **Other** — each
-an amount and the number of payments behind it. One per row on a phone, two on
-a tablet, four across on a desktop; never five across, because a ringgit figure
-in a fifth of the page is a truncated ringgit figure.
+Four cards above the ledger — **Total collections**, then its three parts:
+**Bank transfer**, **FPX**, **Cash** — each an amount and the number of
+payments behind it. One per row on a phone, two on a tablet, four across on a
+desktop.
 
 They come from `payment_log_totals`, the same call as the summary line, as
 FILTERs over the same rows — so they follow the search and the method filter
 and always describe the rows the table is offering.
 
 **Total collections is `received_sen - kwsp_sen`**, not everything received: to
-staff, money that came by KWSP has not been collected. **The four parts add up
-to it.** The first version showed only Bank transfer and FPX beside the total,
-and the row was RM50,000 short of itself; Cash and Other were added to close
-it. `other_sen` is defined as the *remainder* — collected, and not bank
-transfer, FPX or cash — so it takes in the `other` method plus card and
-e-wallet, and the sum holds whatever methods exist rather than only for those
-somebody remembered to give a card.
+staff, money that came by KWSP has not been collected. **The three parts add
+up to it**, because those are the only three non-KWSP methods a payment can
+now be recorded as (below). `payment_log_totals` still returns `other_sen` —
+collected, and none of the three — and it is zero; if it is ever not, the row
+will stop adding up, which is the signal that something was recorded through
+an old client as Other, Card or E-wallet.
+
+### Four methods
+
+A payment is recorded as **Cash, Bank transfer, FPX or KWSP** — `PAYMENT_METHODS`
+in `features/payments/api.ts`, which is both the Record payment picker and the
+log's filter. The `payment_method` enum has seven values; three are no longer
+offered:
+
+- `card` and `ewallet` were never used.
+- `other` was a stand-in. All 28 payments recorded as Other (8–9 Sept 2026,
+  RM40,500) were KWSP withdrawals entered the two days before `kwsp` existed
+  as a method, and were re-filed as KWSP on 2026-10-10. A catch-all in the
+  picker is an invitation to stop classifying, and an unclassified payment is
+  one the money screens cannot place.
+
+The enum keeps all seven and `PAYMENT_METHOD_LABEL` still labels them, so a
+row can never render blank. **Nothing in the database refuses the other
+three**: an Academy mobile app installed before this change still offers them.
 The old summary line beside the filters ("N payments · RM x received") is gone
 — the cards say it, and the owner had it removed.
 

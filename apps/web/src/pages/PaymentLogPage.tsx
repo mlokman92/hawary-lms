@@ -4,7 +4,6 @@ import {
   ArrowLeftRight,
   Banknote,
   Download,
-  Ellipsis,
   Pencil,
   Search,
   Wallet,
@@ -299,25 +298,22 @@ export function PaymentLogPage() {
         </Button>
       </PageHeader>
 
-      {/* What the ledger below adds up to, by the route the money came. The
-          total sits on its own row with its four parts under it, and the four
-          add up to it. They follow the search and the method filter: the
-          cards are about the rows on offer, not always the whole book — pick
-          FPX and Total collections is the FPX total.
+      {/* What the ledger below adds up to, and the three routes it came by:
+          the total, then its parts, which add up to it. KWSP is in none of
+          them — to staff it has not been collected. They follow the search
+          and the method filter: the cards are about the rows on offer, not
+          always the whole book — pick FPX and Total collections is the FPX
+          total.
 
-          One per row on a phone, two on a tablet, four across on a desktop.
-          Never five across: a ringgit figure in a fifth of the page is a
-          truncated ringgit figure. */}
+          One per row on a phone, two on a tablet, four across on a desktop. */}
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="sm:col-span-2 lg:col-span-4">
-          <StatCard
-            label={t('payments.log.card.total')}
-            value={money(totals.data?.collectedSen)}
-            sub={paymentCount(totals.data?.collectedCount)}
-            icon={Wallet}
-            tone="positive"
-          />
-        </div>
+        <StatCard
+          label={t('payments.log.card.total')}
+          value={money(totals.data?.collectedSen)}
+          sub={paymentCount(totals.data?.collectedCount)}
+          icon={Wallet}
+          tone="positive"
+        />
         <StatCard
           label={t('payments.method.bank_transfer')}
           value={money(totals.data?.bankTransferSen)}
@@ -335,14 +331,6 @@ export function PaymentLogPage() {
           value={money(totals.data?.cashSen)}
           sub={paymentCount(totals.data?.cashCount)}
           icon={Banknote}
-        />
-        {/* Everything collected that is none of the three before it: the
-            "other" method, and card and e-wallet with it. */}
-        <StatCard
-          label={t('payments.method.other')}
-          value={money(totals.data?.otherSen)}
-          sub={paymentCount(totals.data?.otherCount)}
-          icon={Ellipsis}
         />
       </div>
 

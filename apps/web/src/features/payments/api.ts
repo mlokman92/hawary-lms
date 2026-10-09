@@ -1074,15 +1074,24 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, TKey> = {
   other: 'payments.method.other',
 }
 
-/** Method order for the picker. Labels come from `PAYMENT_METHOD_LABEL`. */
+/**
+ * The methods a payment can be recorded as, and filtered by, in order.
+ *
+ * Four, not the enum's seven. `card` and `ewallet` were never used, and
+ * `other` was only ever a stand-in: every payment recorded as Other was a KWSP
+ * withdrawal entered before KWSP had a method of its own, and all 28 were
+ * re-filed as KWSP on 2026-10-10. A catch-all in the picker is an invitation
+ * to stop classifying, and an unclassified payment is one the money screens
+ * cannot place — so it is not offered any more.
+ *
+ * The enum keeps all seven values and `PAYMENT_METHOD_LABEL` still labels
+ * them: a row must never render blank because its method left the picker.
+ */
 export const PAYMENT_METHODS: PaymentMethod[] = [
   'cash',
   'bank_transfer',
   'fpx',
-  'card',
-  'ewallet',
   'kwsp',
-  'other',
 ]
 
 export type PaymentStatus = Enums<'payment_status'>
