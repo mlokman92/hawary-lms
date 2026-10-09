@@ -46,6 +46,8 @@ export const common = {
   'common.previous': 'Previous',
   'common.next': 'Next',
   'common.page_of': 'Page {page} of {pages}',
+  'common.load_more': 'Load more',
+  'common.shown_of': '{shown} of {total}',
 
   // States
   'common.loading': 'Loading…',

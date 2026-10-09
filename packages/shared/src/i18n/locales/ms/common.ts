@@ -42,6 +42,8 @@ export const common: CommonDict = {
   'common.previous': 'Sebelumnya',
   'common.next': 'Seterusnya',
   'common.page_of': 'Halaman {page} daripada {pages}',
+  'common.load_more': 'Muat lagi',
+  'common.shown_of': '{shown} daripada {total}',
 
   // Keadaan
   'common.loading': 'Memuatkan…',

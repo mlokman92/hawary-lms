@@ -21,6 +21,8 @@ export const payments: PaymentsDict = {
   // Jadual rekod
   'payments.records.heading': 'Rekod pembayaran',
   'payments.table.invoice': 'Invois',
+  'payments.table.breakdown': 'Pecahan',
+  'payments.breakdown.manual': 'Manual',
   'payments.empty.none': 'Belum ada invois.',
   'payments.empty.create_first': 'Cipta invois pertama anda',
   'payments.empty.no_match': 'Tiada invois yang sepadan.',

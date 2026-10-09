@@ -1,5 +1,6 @@
 import {
   keepPreviousData,
+  useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
@@ -25,9 +26,13 @@ type StudentBrief = {
   address?: string | null
 }
 type CourseBrief = { id: string; title: string }
+/** Just enough of a payment to say by which route the money came. */
+type PaymentRoute = Pick<Payment, 'amount_sen' | 'provider' | 'method' | 'status'>
 export type InvoiceRow = Invoice & {
   student: StudentBrief | null
   course: CourseBrief | null
+  /** Only on the paged list, which shows the breakdown. */
+  payments?: PaymentRoute[]
 }
 export type InvoiceDetail = Invoice & {
   student: StudentBrief | null
@@ -225,6 +230,7 @@ export function useStudentInvoices(
 function invalidateMoney(qc: QueryClient, academyId: string) {
   qc.invalidateQueries({ queryKey: listKey(academyId) })
   qc.invalidateQueries({ queryKey: ['invoice-page'] })
+  qc.invalidateQueries({ queryKey: ['invoice-list'] })
   qc.invalidateQueries({ queryKey: ['invoice-totals'] })
   qc.invalidateQueries({ queryKey: ['payment-log'] })
   qc.invalidateQueries({ queryKey: ['payment-log-totals'] })
@@ -461,6 +467,30 @@ export function uncollectedSen(inv: CollectionFields): number {
 }
 
 /**
+ * What was collected on an invoice, by the route it came: through the gateway
+ * (FPX — a callback wrote the row) or typed in by staff.
+ *
+ * The two add up to `collectedSen`: succeeded payments only, as the trigger
+ * counts them, and KWSP left out because to staff it has not been collected.
+ * `provider`, not `method`, is what tells them apart — a staff member can
+ * record a payment and call its method anything, but only the gateway writes
+ * a row whose provider is not `manual`.
+ */
+export function collectedBreakdown(payments: PaymentRoute[] | undefined): {
+  fpx: number
+  manual: number
+} {
+  let fpx = 0
+  let manual = 0
+  for (const p of payments ?? []) {
+    if (p.status !== 'succeeded' || p.method === 'kwsp') continue
+    if (p.provider === 'manual') manual += p.amount_sen
+    else fpx += p.amount_sen
+  }
+  return { fpx, manual }
+}
+
+/**
  * The status staff see, from what has been collected.
  *
  * `app.sync_invoice_paid`'s own rule, applied to the collected figure instead
@@ -482,13 +512,66 @@ export function collectionStatus(
 }
 
 /**
- * One page of invoices.
+ * One page of invoices, read.
  *
- * Still PostgREST rather than an RPC: the course filter is one `eq` and both
+ * Still PostgREST rather than an RPC: the course filter is one `eq` and the
  * embeds are plain FKs, so SQL would buy nothing. `id` joins the sort key
  * because OFFSET paging over a non-unique order can repeat one row and skip
  * another when two invoices share a `created_at`.
+ *
+ * A plain function so the two hooks below — a page at a time, and a list that
+ * grows — ask the database the same question and cannot drift apart.
  */
+async function fetchInvoicePage(
+  academyId: string,
+  courseFilter: string,
+  page: number,
+  money: MoneyFilter,
+) {
+  const from = (page - 1) * PAGE_SIZE
+  let q = supabase
+    .from('invoices')
+    .select(
+      // The payments ride along for the Breakdown column: an invoice
+      // records how much was paid, not by which route. A plain embed, so
+      // it adds columns to each row and filters nothing.
+      '*, student:students(full_name, student_no), course:courses(id, title), payments(amount_sen, provider, method, status)',
+      { count: 'exact' },
+    )
+    .eq('academy_id', academyId)
+  if (courseFilter === NO_COURSE) q = q.is('course_id', null)
+  else if (courseFilter !== ALL_COURSES) q = q.eq('course_id', courseFilter)
+
+  if (money !== ALL_MONEY) {
+    // A tile sums only real receivables, so pressing one must not turn up
+    // rows the tile did not count. A deny-list rather than an allow-list,
+    // to match `invoice_totals` verbatim: a status added later must join
+    // both or neither, or the list stops adding up to the number above it.
+    q = q.neq('status', 'void').neq('status', 'cancelled').neq('status', 'draft')
+    // Each of these is a column precisely so it is a filter and not a
+    // column-to-column comparison, which PostgREST cannot express.
+    if (money === 'collected') q = q.gt('collected_sen', 0)
+    else if (money === 'kwsp') q = q.gt('kwsp_paid_sen', 0)
+    else if (money === 'outstanding') q = q.gt('uncollected_sen', 0)
+    else
+      q = q
+        .gt('balance_sen', 0)
+        .not('due_at', 'is', null)
+        .lt('due_at', new Date().toISOString())
+  }
+
+  const { data, error, count } = await q
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .range(from, from + PAGE_SIZE - 1)
+  if (error) throw error
+  return {
+    rows: (data ?? []) as unknown as InvoiceRow[],
+    total: count ?? 0,
+  }
+}
+
+/** One page of invoices, for a screen with a pager. */
 export function useInvoicePage(
   academyId: string | null,
   courseFilter: string,
@@ -499,46 +582,35 @@ export function useInvoicePage(
     queryKey: ['invoice-page', academyId, courseFilter, money, page] as const,
     enabled: !!academyId,
     placeholderData: keepPreviousData,
-    queryFn: async () => {
-      const from = (page - 1) * PAGE_SIZE
-      let q = supabase
-        .from('invoices')
-        .select(
-          '*, student:students(full_name, student_no), course:courses(id, title)',
-          { count: 'exact' },
-        )
-        .eq('academy_id', academyId!)
-      if (courseFilter === NO_COURSE) q = q.is('course_id', null)
-      else if (courseFilter !== ALL_COURSES) q = q.eq('course_id', courseFilter)
+    queryFn: () => fetchInvoicePage(academyId!, courseFilter, page, money),
+  })
+}
 
-      if (money !== ALL_MONEY) {
-        // A tile sums only real receivables, so pressing one must not turn up
-        // rows the tile did not count. A deny-list rather than an allow-list,
-        // to match `invoice_totals` verbatim: a status added later must join
-        // both or neither, or the list stops adding up to the number above it.
-        q = q.neq('status', 'void').neq('status', 'cancelled').neq('status', 'draft')
-        // Each of these is a column precisely so it is a filter and not a
-        // column-to-column comparison, which PostgREST cannot express.
-        if (money === 'collected') q = q.gt('collected_sen', 0)
-        else if (money === 'kwsp') q = q.gt('kwsp_paid_sen', 0)
-        else if (money === 'outstanding') q = q.gt('uncollected_sen', 0)
-        else
-          q = q
-            .gt('balance_sen', 0)
-            .not('due_at', 'is', null)
-            .lt('due_at', new Date().toISOString())
-      }
-
-      const { data, error, count } = await q
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: false })
-        .range(from, from + PAGE_SIZE - 1)
-      if (error) throw error
-      return {
-        rows: (data ?? []) as unknown as InvoiceRow[],
-        total: count ?? 0,
-      }
-    },
+/**
+ * The same list, growing: each "Load more" appends the next page.
+ *
+ * `/payments` is read top-down — newest invoice first, keep going until you
+ * find it — and a pager makes that a walk through screens that each forget the
+ * last. The filter is in the key and the page is not, so changing course or
+ * pressing a tile starts again from the top without any reset code.
+ *
+ * `total` on every page is the size of the whole filtered set, so the next
+ * page exists exactly while fewer rows than that have been loaded.
+ */
+export function useInvoiceList(
+  academyId: string | null,
+  courseFilter: string,
+  money: MoneyFilter = ALL_MONEY,
+) {
+  return useInfiniteQuery({
+    queryKey: ['invoice-list', academyId, courseFilter, money] as const,
+    enabled: !!academyId,
+    placeholderData: keepPreviousData,
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) =>
+      fetchInvoicePage(academyId!, courseFilter, pageParam, money),
+    getNextPageParam: (last, pages) =>
+      pages.length * PAGE_SIZE < last.total ? pages.length + 1 : undefined,
   })
 }
 

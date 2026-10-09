@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle2, Clock, Landmark, Plus, Wallet } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -11,7 +11,6 @@ import { useCourses } from '@/features/courses/api'
 import { PageHeader } from '@/components/patterns/PageHeader'
 import { FilterStatCard } from '@/components/patterns/FilterStatCard'
 import { EmptyState } from '@/components/patterns/EmptyState'
-import { Pager } from '@/components/patterns/Pager'
 import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -37,11 +36,12 @@ import {
   INVOICE_STATUS_LABEL,
   INVOICE_STATUS_VARIANT,
   NO_COURSE,
-  PAGE_SIZE,
+  collectedBreakdown,
   collectedSen,
   collectionStatus,
-  useInvoicePage,
+  useInvoiceList,
   useInvoiceStats,
+  type InvoiceRow,
   type MoneyFilter,
 } from '@/features/payments/api'
 
@@ -107,6 +107,39 @@ const MONEY_TILES: {
   },
 ]
 
+/**
+ * How the Paid figure beside it arrived: through the gateway (FPX) or typed in
+ * by staff. The two lines add up to Paid, so KWSP is in neither — to staff it
+ * has not been collected. A route with nothing against it is left out rather
+ * than printed as RM 0.00, and an invoice with nothing collected is a dash.
+ */
+function Breakdown({ invoice }: { invoice: InvoiceRow }) {
+  const { t } = useT()
+  const { fpx, manual } = collectedBreakdown(invoice.payments)
+  if (fpx === 0 && manual === 0)
+    return <span className="text-muted-foreground">—</span>
+  return (
+    <div className="text-xs whitespace-nowrap tabular-nums">
+      {fpx > 0 ? (
+        <div>
+          <span className="text-muted-foreground">
+            {t('payments.method.fpx')}
+          </span>{' '}
+          {formatMYR(fpx)}
+        </div>
+      ) : null}
+      {manual > 0 ? (
+        <div>
+          <span className="text-muted-foreground">
+            {t('payments.breakdown.manual')}
+          </span>{' '}
+          {formatMYR(manual)}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 export function PaymentsPage() {
   const navigate = useNavigate()
   const { t } = useT()
@@ -118,22 +151,21 @@ export function PaymentsPage() {
   const [courseFilter, setCourseFilter] = useState(ALL_COURSES)
   const [moneyFilter, setMoneyFilter] = useState<MoneyFilter>(ALL_MONEY)
   const [showAllCourses, setShowAllCourses] = useState(false)
-  const [page, setPage] = useState(1)
 
-  // Page 4 of every invoice is not page 4 of one course's invoices — nor of
-  // the outstanding ones.
-  useEffect(() => setPage(1), [courseFilter, moneyFilter])
-
-  // The rows are one page; the tiles are the whole course-filtered set. Two
-  // queries because a page of 50 cannot answer "how much is outstanding" — and
-  // the tiles deliberately ignore `moneyFilter`, since a tile that emptied
-  // itself when pressed could not be un-pressed by reading it.
-  const { data, isLoading, error } = useInvoicePage(
-    activeAcademyId,
-    courseFilter,
-    page,
-    moneyFilter,
-  )
+  // The rows are however many pages have been loaded; the tiles are the whole
+  // course-filtered set. Two queries because the loaded rows cannot answer
+  // "how much is outstanding" — and the tiles deliberately ignore
+  // `moneyFilter`, since a tile that emptied itself when pressed could not be
+  // un-pressed by reading it. Changing either filter starts the list again
+  // from the top: the filters are in the query's key and the page is not.
+  const {
+    data,
+    isLoading,
+    error,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useInvoiceList(activeAcademyId, courseFilter, moneyFilter)
   const { data: stats } = useInvoiceStats(activeAcademyId, courseFilter)
 
   const allCourses = courses ?? []
@@ -141,8 +173,21 @@ export function PaymentsPage() {
   const unpublishedCount = allCourses.length - published.length
   const courseOptions = showAllCourses ? allCourses : published
 
-  const rows = data?.rows ?? []
-  const total = data?.total ?? 0
+  // Pages are cut by OFFSET, so an invoice raised between two loads pushes
+  // every row down one and the next page starts with a row already on screen.
+  // Keeping the first sighting of each id is what stops it appearing twice.
+  const rows = useMemo(() => {
+    const seen = new Set<string>()
+    const out: InvoiceRow[] = []
+    for (const page of data?.pages ?? [])
+      for (const inv of page.rows)
+        if (!seen.has(inv.id)) {
+          seen.add(inv.id)
+          out.push(inv)
+        }
+    return out
+  }, [data])
+  const total = data?.pages[0]?.total ?? 0
   // Either narrowing means an empty list is "nothing matched", not "nothing
   // exists" — and the difference decides whether the reader is offered a
   // Create button or told to widen.
@@ -255,7 +300,7 @@ export function PaymentsPage() {
                     {t('payments.amount.paid')}
                   </TableHead>
                   <TableHead>{t('common.status')}</TableHead>
-                  <TableHead>{t('common.due')}</TableHead>
+                  <TableHead>{t('payments.table.breakdown')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -301,8 +346,8 @@ export function PaymentsPage() {
                         {t(INVOICE_STATUS_LABEL[collectionStatus(inv)])}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {fmtDate(inv.due_at)}
+                    <TableCell>
+                      <Breakdown invoice={inv} />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -311,12 +356,23 @@ export function PaymentsPage() {
           </div>
         )}
 
-        <Pager
-          page={page}
-          total={total}
-          pageSize={PAGE_SIZE}
-          onPageChange={setPage}
-        />
+        {/* How far down the list you are, and the way further. Nothing at
+            all once every row is on screen — the absence says so. */}
+        {hasNextPage ? (
+          <div className="mt-4 flex items-center justify-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isFetchingNextPage}
+              onClick={() => void fetchNextPage()}
+            >
+              {isFetchingNextPage ? t('common.loading') : t('common.load_more')}
+            </Button>
+            <span className="text-muted-foreground text-sm tabular-nums">
+              {t('common.shown_of', { shown: rows.length, total })}
+            </span>
+          </div>
+        ) : null}
       </div>
 
       {activeAcademyId ? (

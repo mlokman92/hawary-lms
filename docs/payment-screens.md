@@ -177,6 +177,38 @@ Two details are load-bearing, not polish:
 - Both lists use **`keepPreviousData`**. Without it a page turn blanks the
   table through the empty state and back, which reads as an error.
 
+### `/payments` loads more instead of paging
+
+The invoice list is read top-down — newest first, keep going until you find it
+— and Previous/Next made that a walk through screens that each forget the
+last. So `/payments` has one **Load more** button and a "150 of 787" beside it;
+both disappear once every row is on screen.
+
+`fetchInvoicePage` is the read, and two hooks share it so they cannot ask
+different questions: `useInvoicePage` (a page at a time — the Academy mobile
+app still pages) and `useInvoiceList` (`useInfiniteQuery`, what the web uses).
+The filters are in the list's query key and the page is not, so changing course
+or pressing a tile starts again from the top with no reset code.
+
+Pages are still cut by OFFSET, so an invoice raised between two loads pushes
+every row down one and the next page begins with a row already on screen. The
+page keeps the **first sighting of each id**; without that a row appears twice
+and React is handed a duplicate key. `/payments/log` and the report's leaf keep
+their pagers — a ledger is jumped into by search or date, not walked.
+
+### The Breakdown column
+
+Where Due used to be. It says how the Paid figure beside it arrived: **FPX**
+(through the gateway) or **Manual** (typed in by staff). `collectedBreakdown`
+splits on `payments.provider`, not `method` — staff can record a payment and
+call its method anything, but only the gateway writes a row whose provider is
+not `manual`. Succeeded payments only, and KWSP in neither line, so the two add
+up to Paid. A route with nothing against it is left out, not printed as zero.
+
+The payments ride along as a plain embed on the list read
+(`payments(amount_sen, provider, method, status)`): it adds columns to each row
+and filters nothing.
+
 Search is debounced through `lib/useDebounced.ts` — otherwise a keystroke is
 two round trips. **CSV export walks the whole filtered set** in 200-row chunks
 via `fetchPaymentLogAll`, never the 50 rows on screen: a reconciliation that
