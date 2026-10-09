@@ -2125,6 +2125,57 @@ export type Database = {
           },
         ]
       }
+      payment_receipts: {
+        Row: {
+          academy_id: string
+          created_at: string
+          file_name: string
+          file_path: string
+          mime_type: string
+          payment_id: string
+          size_bytes: number
+          uploaded_by: string | null
+          uploaded_by_name: string | null
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          file_name: string
+          file_path: string
+          mime_type: string
+          payment_id: string
+          size_bytes: number
+          uploaded_by?: string | null
+          uploaded_by_name?: string | null
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          mime_type?: string
+          payment_id?: string
+          size_bytes?: number
+          uploaded_by?: string | null
+          uploaded_by_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_receipts_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_receipts_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: true
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           academy_id: string
@@ -2662,6 +2713,42 @@ export type Database = {
       attach_submission_file: {
         Args: { _file: Json; _submission_id: string }
         Returns: string
+      }
+      bank_transfer_receipt_counts: {
+        Args: { _academy: string; _search?: string }
+        Returns: {
+          pending_count: number
+          pending_sen: number
+          uploaded_count: number
+          uploaded_sen: number
+        }[]
+      }
+      bank_transfer_receipts_page: {
+        Args: {
+          _academy: string
+          _limit?: number
+          _offset?: number
+          _search?: string
+          _state?: string
+        }
+        Returns: {
+          amount_sen: number
+          course_title: string
+          created_at: string
+          id: string
+          invoice_id: string
+          invoice_no: string
+          note: string
+          paid_at: string
+          receipt_file_name: string
+          receipt_mime_type: string
+          receipt_uploaded_at: string
+          receipt_uploaded_by_name: string
+          recorded_by_name: string
+          student_full_name: string
+          student_id: string
+          student_no: string
+        }[]
       }
       book_appointment: {
         Args: {

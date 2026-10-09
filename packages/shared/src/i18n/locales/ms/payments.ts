@@ -178,6 +178,20 @@ export const payments: PaymentsDict = {
   'payments.report.summary_outstanding_other':
     '{count} invois · {billed} dibilkan · {outstanding} tertunggak',
 
+  // Resit pindahan bank
+  'payments.receipts.title': 'Resit Pindahan Bank',
+  'payments.receipts.subtitle':
+    'Setiap pindahan bank memerlukan resit asalnya. Selagi resit belum dimuat naik, ia menunggu.',
+  'payments.receipts.uploaded': 'Dimuat naik',
+  'payments.receipts.summary_one': '{count} menunggu · {amount}',
+  'payments.receipts.summary_other': '{count} menunggu · {amount}',
+  'payments.receipts.empty_pending': 'Semua pindahan bank sudah ada resit.',
+  'payments.receipts.empty_match': 'Tiada pindahan bank yang sepadan.',
+  'payments.receipts.recorded': 'Direkodkan',
+  'payments.receipts.receipt': 'Resit',
+  'payments.receipts.paid_on': 'Dibayar {date}',
+  'payments.receipts.replace': 'Ganti resit',
+
   // Kaedah bayaran
   'payments.method.cash': 'Tunai',
   'payments.method.bank_transfer': 'Pindahan bank',

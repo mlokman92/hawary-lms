@@ -66,7 +66,7 @@ One shell, two trees:
 
 - **Back-office** (`/`) — Dashboard · Courses · Students · Instructors ·
   Appointments · Reports for every staff member; admins also get Payments
-  (+ Log, Report), Incentives and Members (a read-only roster unless Director);
+  (+ Log, Report, Receipts), Incentives and Members (read-only unless Director);
   Directors also get Settings and Analytics. Course → module → content
   authoring, grading queues, enrollment, CSV import, notifications.
 - **Learner** (`/learn`) — courses, work, billing, appointments, reports,
@@ -97,7 +97,7 @@ Read the doc before changing the area. Each one keeps the *why*.
 | notifications (the bell) | [notifications.md](docs/notifications.md) |
 | account claiming, invitations, name fill | [account-claiming.md](docs/account-claiming.md) |
 | why money is admin-only | [money-is-admin-only.md](docs/money-is-admin-only.md) |
-| `/payments` + `/payments/log`, pagination, tiles | [payment-screens.md](docs/payment-screens.md) |
+| `/payments` + `/payments/log` + `/payments/receipts`, pagination, tiles | [payment-screens.md](docs/payment-screens.md) |
 | `/payments/report` drill | [payment-report.md](docs/payment-report.md) |
 | `/courses/:id/billing` — who was never invoiced | [course-billing.md](docs/course-billing.md) |
 | invoice/receipt PDFs, academy details | [invoice-documents.md](docs/invoice-documents.md) |
@@ -169,7 +169,7 @@ pnpm --filter mobile sync:data     # after editing a web data hook
   `academy_members.is_director` / `is_system_admin`.
 - **Clients have no DML** on `academy_invitations`, `notifications`,
   `incentive_payouts`, `assessment_questions`, `appointments`,
-  `announcements`, `enrollment_events` or `assignment_submission_files`, and no INSERT
+  `announcements`, `enrollment_events`, `payment_receipts` or `assignment_submission_files`, and no INSERT
   or DELETE on `academies` — those move only through RPCs or the owner. Check
   before adding a policy. `login_events` and `push_devices` have no client access at all.
 - **i18n**: keys are flat and self-prefixed, so `TKey = keyof typeof en` — a bad

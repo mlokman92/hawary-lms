@@ -1,0 +1,82 @@
+# What EAS Build does NOT upload.
+#
+# When this file exists the EAS CLI stops reading .gitignore altogether, so
+# everything the .gitignore files say is repeated here — the root one and the
+# ones inside apps/. Keep them in step.
+#
+# Why it exists: on Windows the CLI applies only the ROOT .gitignore (it matches
+# a nested file's folder with "/" against a path written with "\"), so builds
+# were uploading apps/landing/.next and the video caches — a 714 MB archive for
+# a 3 MB app. One file at the root has no nested rules to miss.
+#
+# node_modules and .git are always left out by the CLI.
+
+# --- not part of the mobile build -------------------------------------------
+# The promo film: renders, stills, audio. Not a workspace package.
+/video/
+# The landing site's build cache. The package itself stays: it is in the
+# workspace, and a frozen install wants every workspace package present.
+/apps/landing/.next/
+next-env.d.ts
+
+# --- from the root .gitignore -----------------------------------------------
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+out/
+.turbo/
+*.tsbuildinfo
+
+# Vite
+apps/web/dist/
+
+# Expo / React Native
+.expo/
+.expo-shared/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Env & secrets (the build reads its two public values from eas.json)
+.env
+.env.*
+!.env.example
+*.local
+
+# Supabase (local dev)
+supabase/.branches/
+supabase/.temp/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+
+# --- from apps/mobile/.gitignore ---------------------------------------------
+web-build/
+expo-env.d.ts
+.kotlin/
+.metro-health-check*
+*.pem
+/apps/mobile/example/
+/apps/mobile/ios/
+/apps/mobile/android/
+
+# --- from apps/web/.gitignore ------------------------------------------------
+logs
+dist-ssr

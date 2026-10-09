@@ -6,7 +6,7 @@
 PDFs, and [money-is-admin-only.md](money-is-admin-only.md) for why a trainer
 sees none of this.
 
-There are four money screens and each answers a different question:
+There are five money screens and each answers a different question:
 
 | screen | question |
 | --- | --- |
@@ -14,6 +14,7 @@ There are four money screens and each answers a different question:
 | `/payments/log` | what **arrived**, when, by what means |
 | `/payments/report` | where did it **come from**, who still owes |
 | `/courses/:id/billing` | who was **never invoiced** |
+| `/payments/receipts` | which bank transfers have **no receipt** yet |
 
 ## The log is a ledger, not a view of the invoice book
 
@@ -289,6 +290,69 @@ Every filter is a **stored column** (`balance_sen`, `collected_sen`,
 `uncollected_sen` generated; `kwsp_paid_sen` kept by `app.sync_invoice_paid`),
 because a column-to-column comparison is something PostgREST cannot express at
 all. **Never written by a client.**
+
+## Bank transfer receipts — `/payments/receipts`
+
+A bank transfer is the one way money arrives that the system takes on trust:
+FPX is confirmed by the gateway's callback, a transfer is a row a staff member
+typed. The owner wants the proof beside the claim — every bank transfer carries
+the receipt it was recorded from, and one that does not is **pending**.
+
+**Pending is a fact about the paperwork, not the money.** It touches no
+`payments.status`, no `amount_paid_sen` and no total: the transfer was recorded
+as received and still counts as received. A payment is pending *exactly when it
+has no `payment_receipts` row*, so there is no flag to keep in step with
+anything. Only **succeeded** bank transfers are listed; all 2,331 that existed
+on the day the page shipped started as pending.
+
+The page opens on the pending list, because clearing it is the job. Each row
+has one action — **Upload** when there is nothing, **View** when there is — and
+replacing a receipt, which is occasional, is behind the row's `⋯`. State,
+search and page are in the URL (`?state=uploaded|all`, `?q=`, `?page=`), with
+pending the unwritten default. It keeps a pager rather than Load more: the
+list is worked from the top and refills as rows leave it.
+
+### One table, one function, no client writes
+
+`payment_receipts` is keyed on `payment_id` — one receipt per payment, and
+uploading again replaces. It is its own table rather than columns on
+`payments` because every UPDATE of a payment fires `app.sync_invoice_paid` and
+takes the invoice's row lock; attaching a file should go nowhere near the money
+trigger.
+
+The files are in the **private** `payment-receipts` bucket (PDF, JPG, PNG,
+WebP; 10 MB), keyed `<academy_id>/<payment_id>/<uuid>.<ext>`. A receipt shows a
+payer's name, bank and account number, so nothing about it is public.
+
+Both halves go through the **`payment-receipt`** Edge Function — a new one,
+not a branch in `upload-media`:
+
+- **Upload** (multipart: `file`, `payment_id`). `upload-media` stops at the file
+  and leaves the caller to insert its row; here the row *is* the point and the
+  table takes no client DML. So this function uploads the object and upserts the
+  row together, and removes the object again if the row fails — there is never
+  a receipt nobody can see, or a row pointing at nothing. On a replace, the old
+  object is removed only after the new row is in.
+- **Link** (JSON: `payment_id`). Entitlement is decided by the database under
+  the caller's own JWT — the table's SELECT policy is `app.is_admin` — and only
+  the path the database hands back is signed, for 60 seconds. The body carries
+  an id, never a path.
+
+The caller must be an active **admin of the payment's own academy**; the
+academy is read from the payment, never from the request, so the object and the
+row can only land in the payment's tenant. "No such payment" and "not yours"
+return the same 404.
+
+`bank_transfer_receipts_page` and `bank_transfer_receipt_counts` are SECURITY
+INVOKER with `app.is_admin(_academy)` in the WHERE, not only in the policies:
+`payments` lets a student read their own rows, and without it a student calling
+the function would get their own transfers back, every one "pending". The two
+share a WHERE clause (minus `_state`) for the reason the log's two do.
+
+Not done: deleting a payment cascades its receipt row but leaves the object in
+the bucket, as a deleted course material does — nothing sweeps either. Receipts
+are attached on this page only, not in the Record payment dialog. Staff-web
+only; the Academy mobile app has no receipts screen.
 
 ## Nav
 

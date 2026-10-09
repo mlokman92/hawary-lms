@@ -174,6 +174,20 @@ export const payments = {
   'payments.report.summary_outstanding_other':
     '{count} invoices · {billed} billed · {outstanding} outstanding',
 
+  // Bank transfer receipts
+  'payments.receipts.title': 'Bank Transfer Receipt',
+  'payments.receipts.subtitle':
+    'Every bank transfer needs the receipt it was recorded from. Until one is uploaded, it is pending.',
+  'payments.receipts.uploaded': 'Uploaded',
+  'payments.receipts.summary_one': '{count} pending · {amount}',
+  'payments.receipts.summary_other': '{count} pending · {amount}',
+  'payments.receipts.empty_pending': 'Every bank transfer has its receipt.',
+  'payments.receipts.empty_match': 'No bank transfers match.',
+  'payments.receipts.recorded': 'Recorded',
+  'payments.receipts.receipt': 'Receipt',
+  'payments.receipts.paid_on': 'Paid {date}',
+  'payments.receipts.replace': 'Replace receipt',
+
   // Payment methods
   'payments.method.cash': 'Cash',
   'payments.method.bank_transfer': 'Bank transfer',

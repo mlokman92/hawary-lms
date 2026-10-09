@@ -3,6 +3,7 @@ import {
   CalendarClock,
   ClipboardCheck,
   ChartColumn,
+  FileCheck,
   ChartLine,
   ClipboardList,
   FileCheck2,
@@ -118,6 +119,13 @@ const adminNav = (t: TFn, isDirector: boolean): NavItem[] => [
       // And "where did it come from" is a third: the log is a flat list and
       // the answer is a hierarchy, so it cannot be a filter on the log.
       { title: t('nav.payment_report'), to: '/payments/report', icon: ChartColumn },
+      // The paperwork behind the ledger: which bank transfers still have no
+      // receipt. A destination because it is a queue to work through.
+      {
+        title: t('nav.payment_receipts'),
+        to: '/payments/receipts',
+        icon: FileCheck,
+      },
     ],
   },
   { title: t('nav.incentives'), to: '/incentives', icon: HandCoins },

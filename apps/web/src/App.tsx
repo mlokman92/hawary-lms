@@ -59,6 +59,7 @@ import { PaymentsPage } from './pages/PaymentsPage'
 import { InvoiceDetailPage } from './pages/InvoiceDetailPage'
 import { PaymentLogPage } from './pages/PaymentLogPage'
 import { PaymentReportPage } from './pages/PaymentReportPage'
+import { PaymentReceiptsPage } from './pages/PaymentReceiptsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { MembersPage } from './pages/MembersPage'
@@ -268,6 +269,10 @@ export default function App() {
                       <Route
                         path="/payments/report"
                         element={<PaymentReportPage />}
+                      />
+                      <Route
+                        path="/payments/receipts"
+                        element={<PaymentReceiptsPage />}
                       />
                       <Route path="/payments/:id" element={<InvoiceDetailPage />} />
                       <Route path="/incentives" element={<IncentivesPage />} />

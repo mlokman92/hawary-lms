@@ -21,6 +21,7 @@ export const nav: NavDict = {
   'nav.payments': 'Pembayaran',
   'nav.payment_log': 'Log bayaran',
   'nav.payment_report': 'Laporan bayaran',
+  'nav.payment_receipts': 'Resit Pindahan Bank',
   'nav.incentives': 'Insentif',
   'nav.members': 'Ahli',
   'nav.settings': 'Tetapan',

@@ -22,6 +22,7 @@ export const nav = {
   'nav.payments': 'Payments',
   'nav.payment_log': 'Payment log',
   'nav.payment_report': 'Payment report',
+  'nav.payment_receipts': 'Bank Transfer Receipt',
   'nav.incentives': 'Incentive',
   'nav.members': 'Members',
   'nav.settings': 'Settings',

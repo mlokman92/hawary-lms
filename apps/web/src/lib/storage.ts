@@ -140,3 +140,48 @@ export async function materialUrl(
   if (!data?.url) throw new Error(data?.error ?? translate('material.no_url'))
   return data.url
 }
+
+/**
+ * Attach the receipt a bank-transfer payment was recorded from.
+ *
+ * One call does both halves — the object and its `payment_receipts` row — on
+ * the server, because the row *is* the point: a payment is pending exactly
+ * when it has none, and the table takes no client writes. Uploading to a
+ * payment that already has a receipt replaces it.
+ *
+ * The function, not this caller, decides who may: an admin of the payment's
+ * own academy. Nothing here names an academy at all.
+ */
+export async function uploadPaymentReceipt(
+  paymentId: string,
+  file: File,
+): Promise<void> {
+  const body = new FormData()
+  body.append('file', file)
+  body.append('payment_id', paymentId)
+
+  const { data, error } = await supabase.functions.invoke<UploadResponse>(
+    'payment-receipt',
+    { body },
+  )
+  if (error) throw await functionError(error)
+  if (!data?.ok) throw new Error(data?.error ?? translate('upload.failed'))
+}
+
+/**
+ * A 60-second signed URL for a payment's receipt.
+ *
+ * Minted per click for the reason `materialUrl` is: the bucket is private, and
+ * the URL is all that stands between a payer's bank details and whoever holds
+ * the link.
+ */
+export async function paymentReceiptUrl(paymentId: string): Promise<string> {
+  const { data, error } = await supabase.functions.invoke<{
+    url?: string
+    error?: string
+  }>('payment-receipt', { body: { payment_id: paymentId } })
+
+  if (error) throw await functionError(error)
+  if (!data?.url) throw new Error(data?.error ?? translate('upload.failed'))
+  return data.url
+}

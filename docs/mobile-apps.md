@@ -418,6 +418,14 @@ pnpm export:student         # JS-only bundle; catches resolution errors
    to make the certificate and profile, and `--non-interactive` refuses.
    The profile also names the update channel the binary listens to (see
    **Updates without a store release**).
+
+   **What a build uploads is decided by the root `.easignore`**, not by
+   `.gitignore` — once that file exists the CLI reads nothing else, so it
+   repeats every `.gitignore` in the repo. It is there because on Windows the
+   CLI applies only the *root* `.gitignore` and skips the ones in subfolders:
+   builds were uploading `apps/landing/.next` and the promo film's caches, a
+   714 MB archive that took seven minutes to compress. It is now about 5 MB.
+   A new ignore rule goes in both files.
 3. Push credentials — see **Push credentials**, below.
 4. Icons are in place — see **Icons**, below.
 5. Fill in the two `.well-known` files (see **Deep links**).
