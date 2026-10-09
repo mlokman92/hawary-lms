@@ -288,6 +288,10 @@ type PaymentLogTotalsRow = {
   bank_transfer_count: number
   fpx_sen: number
   fpx_count: number
+  cash_sen: number
+  cash_count: number
+  other_sen: number
+  other_count: number
 }
 
 /**
@@ -383,9 +387,10 @@ export function usePaymentLogTotals(
         receivedSen: Number(row?.received_sen ?? 0),
         /** The KWSP part of `receivedSen` — inside it, never beside it. */
         kwspSen: Number(row?.kwsp_sen ?? 0),
-        // The log's number cards. Collected is everything received but KWSP;
-        // bank transfer and FPX are two parts of it, not the whole — cash and
-        // "other" make up the rest, so the two do not add up to it.
+        // The log's number cards. Collected is everything received but KWSP,
+        // and the four parts below add up to it: `other` is defined as the
+        // remainder (the `other` method, plus card and e-wallet), so the sum
+        // holds whatever methods exist.
         collectedSen:
           Number(row?.received_sen ?? 0) - Number(row?.kwsp_sen ?? 0),
         collectedCount: Number(row?.collected_count ?? 0),
@@ -393,6 +398,10 @@ export function usePaymentLogTotals(
         bankTransferCount: Number(row?.bank_transfer_count ?? 0),
         fpxSen: Number(row?.fpx_sen ?? 0),
         fpxCount: Number(row?.fpx_count ?? 0),
+        cashSen: Number(row?.cash_sen ?? 0),
+        cashCount: Number(row?.cash_count ?? 0),
+        otherSen: Number(row?.other_sen ?? 0),
+        otherCount: Number(row?.other_count ?? 0),
       }
     },
   })

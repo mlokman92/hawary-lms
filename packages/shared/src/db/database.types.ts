@@ -3118,10 +3118,14 @@ export type Database = {
         Returns: {
           bank_transfer_count: number
           bank_transfer_sen: number
+          cash_count: number
+          cash_sen: number
           collected_count: number
           fpx_count: number
           fpx_sen: number
           kwsp_sen: number
+          other_count: number
+          other_sen: number
           received_sen: number
           total_count: number
         }[]

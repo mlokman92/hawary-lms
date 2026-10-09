@@ -92,18 +92,24 @@ last in the picker.
 
 ### The log's number cards
 
-Three cards above the ledger: **Total collections**, **Bank transfer**, **FPX**
-— each an amount and the number of payments behind it. One per row on a phone,
-three across from `sm` up: three ringgit figures side by side do not fit a
-narrow screen.
+Five cards above the ledger — **Total collections** on a row of its own, and
+under it its four parts: **Bank transfer**, **FPX**, **Cash**, **Other** — each
+an amount and the number of payments behind it. One per row on a phone, two on
+a tablet, four across on a desktop; never five across, because a ringgit figure
+in a fifth of the page is a truncated ringgit figure.
 
 They come from `payment_log_totals`, the same call as the summary line, as
 FILTERs over the same rows — so they follow the search and the method filter
 and always describe the rows the table is offering.
 
 **Total collections is `received_sen - kwsp_sen`**, not everything received: to
-staff, money that came by KWSP has not been collected. **Bank transfer + FPX
-is less than the total**: cash and "other" are in the total and have no card.
+staff, money that came by KWSP has not been collected. **The four parts add up
+to it.** The first version showed only Bank transfer and FPX beside the total,
+and the row was RM50,000 short of itself; Cash and Other were added to close
+it. `other_sen` is defined as the *remainder* — collected, and not bank
+transfer, FPX or cash — so it takes in the `other` method plus card and
+e-wallet, and the sum holds whatever methods exist rather than only for those
+somebody remembered to give a card.
 The old summary line beside the filters ("N payments · RM x received") is gone
 — the cards say it, and the owner had it removed.
 
