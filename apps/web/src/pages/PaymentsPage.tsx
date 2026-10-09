@@ -65,10 +65,11 @@ function money(sen: number | undefined): string {
  * deliberately the same idea under two names so a tile cannot show one sum and
  * open another set.
  *
- * A KWSP withdrawal is not money the academy has collected, so **Collected**
- * is what arrived by every other route and **Outstanding** still counts what
- * KWSP is covering. **KWSP** stands between them as the part of Outstanding
- * that is not the student's to pay: Total invoiced = Collected + Outstanding.
+ * The three money tiles are separate slices of the first:
+ * Total invoiced = Collected + KWSP + Outstanding. **Collected** is what
+ * arrived by every route but KWSP, **KWSP** is what a withdrawal covers, and
+ * **Outstanding** is what students themselves still owe — so an invoice whose
+ * remainder KWSP is covering is not in Outstanding.
  */
 const MONEY_TILES: {
   key: MoneyFilter

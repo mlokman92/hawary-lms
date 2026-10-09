@@ -228,19 +228,32 @@ A tile is a **sum over a set of invoices**, so pressing it shows that set —
 - **Invoiced** — everything the tiles count (not void/cancelled/draft)
 - **Collected** — `collected_sen > 0`
 - **KWSP** — `kwsp_paid_sen > 0`
-- **Outstanding** — `uncollected_sen > 0`
+- **Outstanding** — `balance_sen > 0`
 
 **Collected is invoices with money against them, not invoices settled in
 full**: a part-paid invoice contributed to the tile, so `status = 'paid'` would
 open a set that does not add up to the number above it.
 
-**To staff, KWSP money has not been collected.** Collected is what arrived by
-every other route; Outstanding still counts what KWSP is covering; KWSP is the
-part of Outstanding that is not the student's to pay. Invoiced = Collected +
-Outstanding. The rows under the tiles follow: the Paid column is
+**The three money tiles are separate slices: Invoiced = Collected + KWSP +
+Outstanding.** Collected is what arrived by every route but KWSP; KWSP is what
+a withdrawal covers; Outstanding is what students themselves still owe — the
+invoice's own `balance_sen`. An invoice whose remainder KWSP is covering is
+therefore **not** in Outstanding. (One overpaid invoice makes the three exceed
+Invoiced by its credit: Collected is a raw sum, Outstanding clamps at zero.)
+
+Outstanding first included the KWSP money, as "everything not collected". With
+a KWSP tile beside it that counted the same ringgit twice, and the owner had it
+taken out. **This is the one staff screen where "outstanding" is not
+`uncollected_sen`**: the invoice page, the report, the student page, the
+dashboard and course billing have no KWSP figure of their own, so on those the
+KWSP money has to sit in outstanding or be nowhere. A screen with a KWSP tile
+must leave it out; a screen without one must keep it in.
+
+The rows under the tiles still read as staff do: the Paid column is
 `collectedSen(inv)` and the badge is `collectionStatus(inv)`, so a row the
-student sees as Paid reads Partially paid here. The whole rule, and why the
-student's own figures are deliberately left alone, is in
+student sees as Paid reads Partially paid here while part of it waits on KWSP —
+and such a row appears under KWSP, not under Outstanding. The whole rule, and
+why the student's own figures are deliberately left alone, is in
 [payment-report.md](payment-report.md#to-staff-kwsp-money-has-not-been-collected).
 
 There is no Overdue tile any more — the owner dropped it when KWSP was added.
@@ -251,9 +264,9 @@ student's to be late with.
 Each tile also says **how many invoices** its figure was summed over — "RM
 40,000.00 (80)". `invoice_totals` counts them with the very predicate the
 tile's filter uses, so the number on the tile is the number of rows the list
-shows when it is pressed. The counts are **not a partition**: an invoice paid
-partly by KWSP is in Collected, KWSP and Outstanding at once, so they add up to
-more than the Invoiced count. The count wraps under the amount on a narrow tile
+shows when it is pressed. The money is three slices but the counts are **not
+a partition**: an invoice paid partly by bank transfer and partly by KWSP is in
+both Collected and KWSP, so they add up to more than the Invoiced count. The count wraps under the amount on a narrow tile
 rather than truncating — a clipped count is a wrong count.
 
 The tiles deliberately ignore the filter they apply — one that emptied itself

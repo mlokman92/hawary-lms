@@ -414,10 +414,10 @@ export const NO_COURSE = '__none__'
  * student's EPF account is its own figure and its own set, `kwsp`. An invoice
  * paid partly each way is in both, because it contributed to both tiles.
  *
- * `outstanding` is what the academy has not collected, so it includes every
- * `kwsp` invoice: to staff, money covered by KWSP is still to come.
- * `overdue` stays on the student's own balance — KWSP money is not theirs to
- * be late with.
+ * `outstanding` is what students themselves still owe — the invoice's own
+ * balance. Money KWSP is covering is **not** in it: that has a tile of its
+ * own, and counting it here as well would make the three money tiles add up
+ * to more than the total. `overdue` is the same balance, past its due date.
  */
 export const ALL_MONEY = 'invoiced'
 export type MoneyFilter =
@@ -437,7 +437,7 @@ type InvoiceTotalsRow = {
   invoice_count: number
   collected_count: number
   kwsp_count: number
-  uncollected_count: number
+  outstanding_count: number
 }
 
 // --- The staff view of an invoice --------------------------------------------
@@ -556,12 +556,11 @@ async function fetchInvoicePage(
     // column-to-column comparison, which PostgREST cannot express.
     if (money === 'collected') q = q.gt('collected_sen', 0)
     else if (money === 'kwsp') q = q.gt('kwsp_paid_sen', 0)
-    else if (money === 'outstanding') q = q.gt('uncollected_sen', 0)
-    else
-      q = q
-        .gt('balance_sen', 0)
-        .not('due_at', 'is', null)
-        .lt('due_at', new Date().toISOString())
+    // Outstanding and overdue are both the student's own balance, so an
+    // invoice whose remainder KWSP is covering is in neither.
+    else q = q.gt('balance_sen', 0)
+    if (money === 'overdue')
+      q = q.not('due_at', 'is', null).lt('due_at', new Date().toISOString())
   }
 
   const { data, error, count } = await q
@@ -622,14 +621,18 @@ export function useInvoiceList(
  * The money tiles, over the whole filtered set rather than the page.
  *
  * This is the half of the old client-side `computeStats` a page cannot answer.
- * The figures are the **staff** reading of the book, because every caller is a
- * staff screen: `collected` is what arrived by any route but KWSP, `kwsp` is
- * what KWSP covers, and `outstanding` is what the academy has not collected —
- * so it includes `kwsp`, and `total = collected + outstanding` (overpayments
- * aside: `collected` is a raw sum, `outstanding` clamps each invoice at zero).
+ * Three separate slices of what was invoiced, because every caller shows them
+ * as tiles side by side: `collected` is what arrived by any route but KWSP,
+ * `kwsp` is what KWSP covers, and `outstanding` is what students themselves
+ * still owe. `total = collected + kwsp + outstanding` — overpayments aside:
+ * `collected` is a raw sum, `outstanding` clamps each invoice at zero.
  *
- * `overdue` is the exception. It is the student's own balance past its due
- * date; money KWSP is covering is not theirs to be late with.
+ * `outstanding` here is therefore **not** the staff "uncollected" figure the
+ * invoice page, the report and the dashboard show. Those screens have no KWSP
+ * figure of their own, so KWSP money has to sit in their outstanding or be
+ * nowhere; a screen with a KWSP tile must leave it out or count it twice.
+ *
+ * `overdue` is that same balance, past its due date.
  */
 export function useInvoiceStats(academyId: string | null, courseFilter: string) {
   return useQuery({
@@ -652,17 +655,18 @@ export function useInvoiceStats(academyId: string | null, courseFilter: string) 
         collected:
           Number(row?.collected_sen ?? 0) - Number(row?.kwsp_sen ?? 0),
         kwsp: Number(row?.kwsp_sen ?? 0),
-        outstanding: Number(row?.uncollected_sen ?? 0),
+        outstanding: Number(row?.outstanding_sen ?? 0),
         overdue: Number(row?.overdue_sen ?? 0),
         // How many invoices each figure was summed over — counted with the
-        // predicate `useInvoicePage` filters by, so a tile's count is the
-        // number of rows the list shows when that tile is pressed. An invoice
-        // paid partly by KWSP is in three of them; they are not a partition.
+        // predicate `fetchInvoicePage` filters by, so a tile's count is the
+        // number of rows the list shows when that tile is pressed. The money
+        // is three slices but the invoices are not: one paid partly by bank
+        // transfer and partly by KWSP is counted under both.
         counts: {
           total: Number(row?.invoice_count ?? 0),
           collected: Number(row?.collected_count ?? 0),
           kwsp: Number(row?.kwsp_count ?? 0),
-          outstanding: Number(row?.uncollected_count ?? 0),
+          outstanding: Number(row?.outstanding_count ?? 0),
         },
       }
     },

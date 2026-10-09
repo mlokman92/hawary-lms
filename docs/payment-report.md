@@ -136,8 +136,8 @@ On screen:
 | Label | Is |
 | --- | --- |
 | **Received** / **Paid** / **Collected** | what arrived by every route but KWSP |
-| **KWSP** (report and tiles) | what KWSP covers — a part of Outstanding |
-| **Outstanding** / **Balance** | what the academy has not collected |
+| **KWSP** (report and tiles) | what KWSP covers |
+| **Outstanding** / **Balance** | what the academy has not collected — except the `/payments` tile, which is the student's balance only |
 | the status badge | `collectionStatus()` — Partially paid while part waits on KWSP |
 
 The invoice page (`/payments/:id`) shows Paid and Balance only; the KWSP
@@ -300,11 +300,16 @@ The mapping is the set each sum was taken over, not a status guess:
 | Total invoiced | everything the tiles count (not void / cancelled / draft) |
 | Collected | `collected_sen > 0` |
 | KWSP | `kwsp_paid_sen > 0` |
-| Outstanding | `uncollected_sen > 0` |
+| Outstanding | `balance_sen > 0` |
 
-Total invoiced = Collected + Outstanding. **KWSP is a part of Outstanding**,
-not a fourth slice: it is the share of what is uncollected that is not the
-student's to pay, and every KWSP invoice is also in the Outstanding set.
+Total invoiced = Collected + KWSP + Outstanding: three separate slices.
+Outstanding here is the student's own balance, so money KWSP is covering is in
+the KWSP tile and **not** in Outstanding — the one place a staff screen's
+"outstanding" is `balance_sen` rather than `uncollected_sen`. See
+[payment-screens.md](payment-screens.md#the-four-tiles-are-filters) for why:
+a screen with a KWSP figure of its own must leave that money out of
+outstanding, and a screen without one (this report, the invoice page) must
+keep it in.
 
 **Collected is invoices with money against them, not invoices settled in full.**
 A part-paid invoice contributed to the tile; narrowing to `status = 'paid'`

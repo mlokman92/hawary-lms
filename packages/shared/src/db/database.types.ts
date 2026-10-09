@@ -2900,6 +2900,7 @@ export type Database = {
           invoiced_sen: number
           kwsp_count: number
           kwsp_sen: number
+          outstanding_count: number
           outstanding_sen: number
           overdue_sen: number
           uncollected_count: number
