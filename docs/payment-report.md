@@ -106,46 +106,96 @@ that counts them overstates the takings. Both halves of the screen have to
 count the same rows or the summary line and the column under it disagree, and
 on a money screen that is the worst available ambiguity.
 
-## KWSP stands beside the money, not inside it
+## To staff, KWSP money has not been collected
 
-A KWSP (EPF Account 2) withdrawal is money the academy received but not money
-the student paid: it arrives by its own route, on its own timetable. Folded
-into "received" it hides how much students themselves have paid, which is the
-figure the owner reads these screens for. So on both views, and on `/payments`:
+A KWSP (EPF Account 2) withdrawal settles the student's share of an invoice,
+but it is not money the academy has collected. The owner reads an invoice with
+RM2,000 by bank transfer and RM500 by KWSP as **RM500 outstanding**, and every
+staff money screen says so. The student's side says the opposite, correctly:
+that invoice owes them nothing more.
 
-| Column | Is |
+So one invoice row carries **two readings**, each consistent with itself:
+
+| Reading | Paid | Still owing | Used by |
+| --- | --- | --- | --- |
+| student | `amount_paid_sen` | `balance_sen`, and `status` | `/learn`, the Student app, the pay link, `create-bill`, the invoice and receipt PDFs |
+| staff | `collected_sen` | `uncollected_sen` | every back-office money screen |
+
+`kwsp_paid_sen` is the part of `amount_paid_sen` that came by KWSP;
+`collected_sen = amount_paid_sen - kwsp_paid_sen`; `uncollected_sen =
+greatest(0, total_sen - collected_sen)`. Student: total = paid + balance.
+Staff: total = collected + uncollected, with KWSP sitting in uncollected.
+
+**The student's columns did not change meaning, and must not.** Counting KWSP
+out of `amount_paid_sen` would have been one line in the trigger — and would
+have put a balance and a Pay button in front of 110 students for money KWSP
+had already covered, with an FPX link that would take it a second time.
+
+On screen:
+
+| Label | Is |
 | --- | --- |
-| **Received** / **Paid** / **Collected** | everything that did **not** come by KWSP |
-| **KWSP** | what did |
+| **Received** / **Paid** / **Collected** | what arrived by every route but KWSP |
+| **KWSP** (report and tiles) | what KWSP covers — a part of Outstanding |
+| **Outstanding** / **Balance** | what the academy has not collected |
+| the status badge | `collectionStatus()` — Partially paid while part waits on KWSP |
 
-The two add up to what the column used to say. Nothing is hidden — it is one
-figure shown as two.
+The invoice page (`/payments/:id`) shows Paid and Balance only; the KWSP
+payment is in the list under them, and a third line in the summary was removed
+at the owner's request.
 
-Every function returns the **whole** amount plus `kwsp_sen`, the part of it that
-came by KWSP (`payment_report`, `payment_log_totals`, `invoice_totals`,
-`invoice_report`, `invoice_report_page`); the page does the one subtraction.
-Returning a pre-subtracted figure would have silently changed what
-`received_sen` and `collected_sen` mean for callers that do not know about the
-split — `/payments/log` and the Academy mobile app both still show the whole.
+**What the page shows follows the staff reading; what it lets you do follows
+the student's.** Record payment, Void and the pay link still test
+`invoice.status` and `total_sen - amount_paid_sen`. An invoice KWSP has covered
+reads Partially paid and offers no Record payment, on purpose: either action
+would take the same money twice.
 
-On the invoice side the KWSP part comes from the ledger, because an invoice
-carries one `amount_paid_sen` and no record of how it was paid. It is summed
-**per invoice first** and joined as one row: joining `payments` directly would
-repeat each invoice once per payment and multiply the billed figure. The
-subtraction is exact rather than an estimate because `app.sync_invoice_paid`
-keeps `amount_paid_sen` equal to the succeeded payments against the invoice.
+`collectedSen`, `uncollectedSen` and `collectionStatus` in
+`features/payments/api.ts` are the staff reading for a row already in hand, and
+every staff screen goes through them. `collectionStatus` is
+`app.sync_invoice_paid`'s own rule applied to the collected figure.
 
-That per-invoice sum is a **`materialized`** CTE, and the keyword is
-load-bearing. Postgres inlines a CTE referenced once, and under RLS it then
-re-ran the sum for every invoice — each pass re-checking `app.is_admin` /
-`app.owns_student` on every payment row, about two million policy calls — so
-the first version died on the 8-second statement timeout for every signed-in
-user while returning instantly for the table owner, who has no policy to
-evaluate. Materialized, it is one pass and ~80 ms. **Verify a function that
-reads RLS-protected tables as a signed-in user, never only as `postgres`.**
+**Overdue stays on the student's balance.** Money KWSP is covering is not the
+student's to be late with.
 
-Groups are still **ranked by the whole amount**. A course is not smaller
-because its students drew on KWSP to pay for it.
+### Why columns
+
+`kwsp_paid_sen` is written by `app.sync_invoice_paid` in the same UPDATE, under
+the same row lock, as `amount_paid_sen`; the other two are generated. They are
+columns rather than a join to `payments` at read time for two reasons:
+
+- The `/payments` list is a plain PostgREST read and can only filter on a
+  column. "Show me what is uncollected" is `uncollected_sen > 0`.
+- The join is what broke the first version. It summed KWSP per invoice in a
+  CTE; Postgres inlined it and, under RLS, re-ran it for every invoice —
+  re-checking `app.is_admin` / `app.owns_student` on every payment row, about
+  two million policy calls — so three functions died on the 8-second statement
+  timeout for every signed-in user while returning instantly for the table
+  owner, who has no policy to evaluate. **Verify a function that reads
+  RLS-protected tables as a signed-in user, never only as `postgres`.**
+
+The trigger's extra `is distinct from` on `kwsp_paid_sen` is for a payment
+whose method is corrected to or from KWSP: `amount_paid_sen` does not move
+then, and an invoice still `issued` would otherwise be skipped.
+
+### What the functions return
+
+`payment_report` and `payment_log_totals` return everything received plus
+`kwsp_sen`, the part of it that came by KWSP; the page subtracts.
+`invoice_report` returns `paid_sen` (everything), `kwsp_sen`, and
+`outstanding_sen` as the staff figure, and ranks debtors by it.
+`invoice_report_page` carries `uncollected_sen` beside `balance_sen`.
+`course_billing_summary` / `course_billing_roster` report collected and
+uncollected, so a student waiting on KWSP is `partial`, not `paid`.
+
+`invoice_totals` keeps `collected_sen` and `outstanding_sen` as the student
+reading and adds `kwsp_sen` and `uncollected_sen`, because the Academy mobile
+apps already installed read the old two; `useInvoiceStats` turns them into the
+staff figures. `/payments/log` still shows one received figure, KWSP included —
+it is a ledger of what arrived.
+
+Groups on the received view are still **ranked by the whole amount**. A course
+is not smaller because its students drew on KWSP to pay for it.
 
 ## Days are the academy's
 
@@ -248,15 +298,17 @@ The mapping is the set each sum was taken over, not a status guess:
 | Tile | Shows |
 | --- | --- |
 | Total invoiced | everything the tiles count (not void / cancelled / draft) |
-| Collected | invoices with a succeeded payment that is **not** KWSP |
-| KWSP | invoices with a succeeded KWSP payment |
-| Outstanding | `balance_sen > 0` |
+| Collected | `collected_sen > 0` |
+| KWSP | `kwsp_paid_sen > 0` |
+| Outstanding | `uncollected_sen > 0` |
+
+Total invoiced = Collected + Outstanding. **KWSP is a part of Outstanding**,
+not a fourth slice: it is the share of what is uncollected that is not the
+student's to pay, and every KWSP invoice is also in the Outstanding set.
 
 **Collected is invoices with money against them, not invoices settled in full.**
 A part-paid invoice contributed to the tile; narrowing to `status = 'paid'`
-would open a set that does not add up to the number above it. An invoice paid
-partly by KWSP and partly otherwise is in **both** sets, because it contributed
-to both tiles.
+would open a set that does not add up to the number above it.
 
 There is no Overdue tile: the owner dropped it when KWSP was added, so the row
 reads Total invoiced · Collected · KWSP · Outstanding. `overdue` survives as a
@@ -266,12 +318,11 @@ The tiles keep showing the whole picture while one is pressed — a tile that
 emptied itself when pressed could not be un-pressed by reading it — and pressing
 the pressed one clears, so the tiles are also the way back out.
 
-`balance_sen` is a **generated stored column** (`greatest(0, total_sen -
-amount_paid_sen)`) added for this: `total_sen - amount_paid_sen > 0` is a
-column-to-column comparison, which PostgREST cannot express at all. Clamped at
-zero for the same reason `invoice_totals` clamps — an overpayment is not a
-negative debt, and letting it go negative would let one student's credit erase
-another's arrears in any sum over the column. Never write it.
+Each filter is a **stored column** because a comparison between two columns is
+something PostgREST cannot express at all. `balance_sen` was the first
+(`greatest(0, total_sen - amount_paid_sen)`); `collected_sen` and
+`uncollected_sen` follow it. All are clamped or derived in the database so one
+student's overpayment cannot erase another's arrears in a sum. Never write them.
 
 ## Files
 
@@ -282,6 +333,9 @@ another's arrears in any sum over the column. Never write it.
   five functions
 - `supabase/migrations/20261010123000_kwsp_materialized.sql` — the KWSP
   subtotal computed once, not once per invoice
+- `supabase/migrations/20261010140000_kwsp_not_collected.sql` —
+  `kwsp_paid_sen`, `collected_sen`, `uncollected_sen`; the trigger; the staff
+  reading in the five invoice-side functions
 - `apps/web/src/features/payments/report.ts` — drill vocabulary + both views' hooks
 - `apps/web/src/features/payments/api.ts` — `PaymentScope`, `scopeArgs`, `MoneyFilter`
 - `apps/web/src/pages/PaymentReportPage.tsx`

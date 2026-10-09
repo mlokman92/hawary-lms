@@ -164,8 +164,9 @@ pnpm --filter mobile sync:data     # after editing a web data hook
   Edge Functions.
 - **Money in integer sen.** Never floats, never ringgit in the database.
 - **Columns a client must never write**, because a trigger or a generated column
-  owns them: `invoices.amount_paid_sen`, `invoices.balance_sen`,
-  `assessments.total_points`, `academy_members.is_director` / `is_system_admin`.
+  owns them: `invoices.amount_paid_sen` / `kwsp_paid_sen` / `balance_sen` /
+  `collected_sen` / `uncollected_sen`, `assessments.total_points`,
+  `academy_members.is_director` / `is_system_admin`.
 - **Clients have no DML** on `academy_invitations`, `notifications`,
   `incentive_payouts`, `assessment_questions`, `appointments`,
   `announcements` or `assignment_submission_files`, and no INSERT

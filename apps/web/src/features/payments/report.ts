@@ -218,6 +218,7 @@ export type ReceivableRow = {
   paidSen: number
   /** The part of `paidSen` that came by KWSP. */
   kwspSen: number
+  /** What the academy has not collected, so it includes `kwspSen`. */
   outstandingSen: number
 }
 
@@ -307,7 +308,10 @@ export type ReceivableInvoiceRow = {
   amount_paid_sen: number
   /** The part of `amount_paid_sen` that came by KWSP. */
   kwsp_sen: number
+  /** What the student can still pay. Zero once KWSP covers the rest. */
   balance_sen: number
+  /** What the academy has not collected — the figure this report shows. */
+  uncollected_sen: number
   student_id: string | null
   student_full_name: string | null
   student_no: string | null
@@ -383,7 +387,9 @@ export function useReceivableTotals(
         count: Number(row?.invoice_count ?? 0),
         billed: Number(row?.invoiced_sen ?? 0),
         paid: Number(row?.collected_sen ?? 0),
-        outstanding: Number(row?.outstanding_sen ?? 0),
+        // What the academy has not collected — money covered by KWSP included,
+        // as on every rung below this line.
+        outstanding: Number(row?.uncollected_sen ?? 0),
         overdue: Number(row?.overdue_sen ?? 0),
       }
     },
@@ -396,6 +402,7 @@ type InvoiceTotalsRow = {
   collected_sen: number
   outstanding_sen: number
   overdue_sen: number
+  uncollected_sen: number
 }
 
 /** One request's worth of rows when sweeping the whole scope for the CSV. */

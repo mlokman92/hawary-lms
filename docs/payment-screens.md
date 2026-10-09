@@ -96,7 +96,8 @@ ringgit decimals, because the file's job is reconciliation in a spreadsheet.
 
 `app.sync_invoice_paid` is an AFTER INSERT/UPDATE/DELETE trigger on `payments`
 that recomputes `invoices.amount_paid_sen` and the invoice status from
-`sum(payments where succeeded)`. **Clients must not write either column.**
+`sum(payments where succeeded)`, and `kwsp_paid_sen` from the KWSP rows among
+them. **Clients must not write any of the three.**
 
 `useRecordPayment` used to write them itself, as `currentPaidSen + amountSen`,
 where `currentPaidSen` came from whatever the *page* was showing. Two payments
@@ -193,40 +194,36 @@ A tile is a **sum over a set of invoices**, so pressing it shows that set —
 `FilterStatCard`s:
 
 - **Invoiced** — everything the tiles count (not void/cancelled/draft)
-- **Collected** — invoices with a succeeded payment that is not KWSP
-- **KWSP** — invoices with a succeeded KWSP payment
-- **Outstanding** — `balance_sen > 0`
+- **Collected** — `collected_sen > 0`
+- **KWSP** — `kwsp_paid_sen > 0`
+- **Outstanding** — `uncollected_sen > 0`
 
 **Collected is invoices with money against them, not invoices settled in
 full**: a part-paid invoice contributed to the tile, so `status = 'paid'` would
 open a set that does not add up to the number above it.
 
-**Money in is two tiles.** A KWSP withdrawal is received by the academy but not
-paid by the student, so Collected is `collected_sen - kwsp_sen` and KWSP stands
-beside it; the two together are everything paid. See
-[payment-report.md](payment-report.md#kwsp-stands-beside-the-money-not-inside-it)
-for why the functions return the whole plus the part rather than a
-pre-subtracted figure.
-
-How an invoice was paid is not on the invoice, so those two tiles filter through
-the ledger: `via:payments!inner(id)` with `via.status = succeeded` and
-`via.method` equal (or not equal) to `kwsp`. `!inner` turns the embed into a
-filter on the invoice and `count: 'exact'` counts invoices, not payments, so the
-pager is still right. An invoice paid both ways is in both sets.
+**To staff, KWSP money has not been collected.** Collected is what arrived by
+every other route; Outstanding still counts what KWSP is covering; KWSP is the
+part of Outstanding that is not the student's to pay. Invoiced = Collected +
+Outstanding. The rows under the tiles follow: the Paid column is
+`collectedSen(inv)` and the badge is `collectionStatus(inv)`, so a row the
+student sees as Paid reads Partially paid here. The whole rule, and why the
+student's own figures are deliberately left alone, is in
+[payment-report.md](payment-report.md#to-staff-kwsp-money-has-not-been-collected).
 
 There is no Overdue tile any more — the owner dropped it when KWSP was added.
 `overdue` stays in `MoneyFilter` because the Academy mobile app still offers it
-as a chip.
+as a chip, and it stays on `balance_sen`: money KWSP is covering is not the
+student's to be late with.
 
 The tiles deliberately ignore the filter they apply — one that emptied itself
 when pressed could not be un-pressed by reading it — and pressing the pressed
 one clears.
 
-**`invoices.balance_sen`** is a generated stored column
-(`greatest(0, total_sen - amount_paid_sen)`) added for this: `total_sen -
-amount_paid_sen > 0` is a column-to-column comparison PostgREST cannot express
-at all. Clamped at zero so one student's overpayment cannot erase another's
-arrears in any sum over it, and **never written by a client**.
+Every filter is a **stored column** (`balance_sen`, `collected_sen`,
+`uncollected_sen` generated; `kwsp_paid_sen` kept by `app.sync_invoice_paid`),
+because a column-to-column comparison is something PostgREST cannot express at
+all. **Never written by a client.**
 
 ## Nav
 

@@ -66,6 +66,10 @@ export function sampleInvoice(academyId: string): InvoiceDetail {
     // Generated in the database; computed here so the fixture agrees with what
     // a real row would hold rather than carrying a second, invented balance.
     balance_sen: Math.max(0, subtotalSen + TAX_SEN - PAID_SEN),
+    // No KWSP money in the sample, so collected is simply what was paid.
+    kwsp_paid_sen: 0,
+    collected_sen: PAID_SEN,
+    uncollected_sen: Math.max(0, subtotalSen + TAX_SEN - PAID_SEN),
     issued_at: ISSUED_AT,
     due_at: DUE_AT,
     notes: translate('doc.sample.notes'),

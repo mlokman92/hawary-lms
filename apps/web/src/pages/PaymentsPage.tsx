@@ -38,6 +38,8 @@ import {
   INVOICE_STATUS_VARIANT,
   NO_COURSE,
   PAGE_SIZE,
+  collectedSen,
+  collectionStatus,
   useInvoicePage,
   useInvoiceStats,
   type MoneyFilter,
@@ -63,9 +65,10 @@ function money(sen: number | undefined): string {
  * deliberately the same idea under two names so a tile cannot show one sum and
  * open another set.
  *
- * Money in is two tiles, not one. A KWSP withdrawal is received by the academy
- * but not paid by the student, so **Collected** is what arrived by every other
- * route and **KWSP** stands beside it — the two together are everything paid.
+ * A KWSP withdrawal is not money the academy has collected, so **Collected**
+ * is what arrived by every other route and **Outstanding** still counts what
+ * KWSP is covering. **KWSP** stands between them as the part of Outstanding
+ * that is not the student's to pay: Total invoiced = Collected + Outstanding.
  */
 const MONEY_TILES: {
   key: MoneyFilter
@@ -131,13 +134,7 @@ export function PaymentsPage() {
     page,
     moneyFilter,
   )
-  const { data: totals } = useInvoiceStats(activeAcademyId, courseFilter)
-  // The hook returns everything paid and the KWSP part of it; the tiles show
-  // them apart, so Collected is the remainder.
-  const stats = totals && {
-    ...totals,
-    collected: totals.collected - totals.kwsp,
-  }
+  const { data: stats } = useInvoiceStats(activeAcademyId, courseFilter)
 
   const allCourses = courses ?? []
   const published = allCourses.filter((c) => c.status === 'published')
@@ -289,12 +286,16 @@ export function PaymentsPage() {
                     <TableCell className="text-right tabular-nums">
                       {formatMYR(inv.total_sen)}
                     </TableCell>
+                    {/* Paid and status as staff read them: money covered by
+                        KWSP has not been collected. */}
                     <TableCell className="text-right tabular-nums">
-                      {formatMYR(inv.amount_paid_sen)}
+                      {formatMYR(collectedSen(inv))}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={INVOICE_STATUS_VARIANT[inv.status]}>
-                        {t(INVOICE_STATUS_LABEL[inv.status])}
+                      <Badge
+                        variant={INVOICE_STATUS_VARIANT[collectionStatus(inv)]}
+                      >
+                        {t(INVOICE_STATUS_LABEL[collectionStatus(inv)])}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">

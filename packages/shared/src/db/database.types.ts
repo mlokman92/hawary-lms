@@ -1721,6 +1721,7 @@ export type Database = {
           amount_paid_sen: number
           balance_sen: number | null
           charge_to_payor: boolean | null
+          collected_sen: number | null
           course_id: string | null
           created_at: string
           created_by: string | null
@@ -1730,6 +1731,7 @@ export type Database = {
           id: string
           invoice_no: string
           issued_at: string | null
+          kwsp_paid_sen: number
           min_partial_sen: number | null
           notes: string | null
           pay_token: string | null
@@ -1739,6 +1741,7 @@ export type Database = {
           subtotal_sen: number
           tax_sen: number
           total_sen: number
+          uncollected_sen: number | null
           updated_at: string
         }
         Insert: {
@@ -1747,6 +1750,7 @@ export type Database = {
           amount_paid_sen?: number
           balance_sen?: number | null
           charge_to_payor?: boolean | null
+          collected_sen?: number | null
           course_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -1756,6 +1760,7 @@ export type Database = {
           id?: string
           invoice_no: string
           issued_at?: string | null
+          kwsp_paid_sen?: number
           min_partial_sen?: number | null
           notes?: string | null
           pay_token?: string | null
@@ -1765,6 +1770,7 @@ export type Database = {
           subtotal_sen?: number
           tax_sen?: number
           total_sen?: number
+          uncollected_sen?: number | null
           updated_at?: string
         }
         Update: {
@@ -1773,6 +1779,7 @@ export type Database = {
           amount_paid_sen?: number
           balance_sen?: number | null
           charge_to_payor?: boolean | null
+          collected_sen?: number | null
           course_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -1782,6 +1789,7 @@ export type Database = {
           id?: string
           invoice_no?: string
           issued_at?: string | null
+          kwsp_paid_sen?: number
           min_partial_sen?: number | null
           notes?: string | null
           pay_token?: string | null
@@ -1791,6 +1799,7 @@ export type Database = {
           subtotal_sen?: number
           tax_sen?: number
           total_sen?: number
+          uncollected_sen?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -2795,6 +2804,7 @@ export type Database = {
           student_id: string
           student_no: string
           total_sen: number
+          uncollected_sen: number
         }[]
       }
       invoice_totals: {
@@ -2813,6 +2823,7 @@ export type Database = {
           kwsp_sen: number
           outstanding_sen: number
           overdue_sen: number
+          uncollected_sen: number
         }[]
       }
       join_academy: {

@@ -53,6 +53,8 @@ import {
   INVOICE_STATUS_LABEL,
   INVOICE_STATUS_VARIANT,
   PAYMENT_METHOD_LABEL,
+  collectedSen,
+  collectionStatus,
   useInvoice,
   useVoidInvoice,
 } from '@/features/payments/api'
@@ -101,7 +103,20 @@ export function InvoiceDetailPage() {
     )
   }
 
-  const balance = invoice.total_sen - invoice.amount_paid_sen
+  // Two readings of one invoice, kept apart on purpose.
+  //
+  // What the page *shows* is the staff's: money that came by KWSP has not been
+  // collected, so it is not in Paid, it is still in the balance, and the badge
+  // says Partially paid.
+  //
+  // What the page *lets you do* follows the student's: `invoice.status` and
+  // `payable` count every payment, KWSP included. An invoice KWSP has covered
+  // owes the student nothing more, so it offers no Record payment and no pay
+  // link — either would take the same money twice.
+  const collected = collectedSen(invoice)
+  const balance = invoice.total_sen - collected
+  const status = collectionStatus(invoice)
+  const payable = invoice.total_sen - invoice.amount_paid_sen
   const canPay = invoice.status !== 'paid' && invoice.status !== 'void'
   const canVoid = invoice.status !== 'paid' && invoice.status !== 'void'
 
@@ -120,8 +135,8 @@ export function InvoiceDetailPage() {
               <h1 className="text-xl font-semibold tracking-tight">
                 {invoice.invoice_no}
               </h1>
-              <Badge variant={INVOICE_STATUS_VARIANT[invoice.status]}>
-                {t(INVOICE_STATUS_LABEL[invoice.status])}
+              <Badge variant={INVOICE_STATUS_VARIANT[status]}>
+                {t(INVOICE_STATUS_LABEL[status])}
               </Badge>
             </div>
             <p className="text-muted-foreground mt-1 text-sm">
@@ -286,7 +301,7 @@ export function InvoiceDetailPage() {
             <div className="my-1 border-t" />
             <Amount
               label={t('payments.amount.paid')}
-              value={formatMYR(invoice.amount_paid_sen)}
+              value={formatMYR(collected)}
             />
             <Amount
               label={t('payments.amount.balance')}
@@ -366,7 +381,7 @@ export function InvoiceDetailPage() {
           minPartialSen={
             invoice.min_partial_sen ?? paymentSettings?.min_partial_sen ?? null
           }
-          balanceSen={balance}
+          balanceSen={payable}
         />
       ) : null}
 

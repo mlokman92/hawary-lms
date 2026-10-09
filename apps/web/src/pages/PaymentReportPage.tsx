@@ -140,7 +140,9 @@ function dimHeader(dim: ReportDim, t: TFn): string {
  * Every figure comes from a totals function over the same scope the rows were
  * grouped from, so the summary and the column can never disagree. Money that
  * came by KWSP is shown beside the rest, never inside it: **Received** and
- * **Paid** on this page are what arrived by every other route.
+ * **Paid** on this page are what arrived by every other route, and
+ * **Outstanding** still counts what KWSP is covering — to staff it has not
+ * been collected.
  */
 export function PaymentReportPage() {
   const { t, tn } = useT()
@@ -800,9 +802,9 @@ function OutstandingLeaf({
             </TableCell>
             <TableCell className="text-right tabular-nums">
               <div className="flex items-center justify-end gap-2">
-                <SettledBadge owed={inv.balance_sen} t={t} />
+                <SettledBadge owed={inv.uncollected_sen} t={t} />
                 <span className="font-medium">
-                  {formatMYR(inv.balance_sen)}
+                  {formatMYR(inv.uncollected_sen)}
                 </span>
               </div>
             </TableCell>
@@ -919,7 +921,7 @@ function outstandingLeafCsv(rows: ReceivableInvoiceRow[], t: TFn) {
       (inv.total_sen / 100).toFixed(2),
       ((inv.amount_paid_sen - inv.kwsp_sen) / 100).toFixed(2),
       (inv.kwsp_sen / 100).toFixed(2),
-      (inv.balance_sen / 100).toFixed(2),
+      (inv.uncollected_sen / 100).toFixed(2),
     ]),
   ]
 }

@@ -407,6 +407,11 @@ export const NO_COURSE = '__none__'
  * it. It is also money that did **not** come by KWSP — a withdrawal from a
  * student's EPF account is its own figure and its own set, `kwsp`. An invoice
  * paid partly each way is in both, because it contributed to both tiles.
+ *
+ * `outstanding` is what the academy has not collected, so it includes every
+ * `kwsp` invoice: to staff, money covered by KWSP is still to come.
+ * `overdue` stays on the student's own balance — KWSP money is not theirs to
+ * be late with.
  */
 export const ALL_MONEY = 'invoiced'
 export type MoneyFilter =
@@ -422,10 +427,59 @@ type InvoiceTotalsRow = {
   outstanding_sen: number
   overdue_sen: number
   kwsp_sen: number
+  uncollected_sen: number
 }
 
-const INVOICE_LIST_SELECT =
-  '*, student:students(full_name, student_no), course:courses(id, title)'
+// --- The staff view of an invoice --------------------------------------------
+//
+// An invoice is read two ways. The student's: `amount_paid_sen`, `balance_sen`
+// and `status` count every payment, KWSP included, and are what the learner's
+// billing page and the pay link use. The staff's: money that came by KWSP has
+// not been collected, so "paid" is the rest and the KWSP part is still
+// outstanding. These three helpers are that second reading, and every staff
+// screen goes through them so the two cannot be mixed on one page.
+
+type CollectionFields = Pick<
+  Invoice,
+  'total_sen' | 'amount_paid_sen' | 'kwsp_paid_sen'
+>
+
+/** What the academy has collected: everything paid, less the KWSP part. */
+export function collectedSen(inv: CollectionFields): number {
+  return inv.amount_paid_sen - inv.kwsp_paid_sen
+}
+
+/**
+ * What the academy has not collected, never below zero.
+ *
+ * The same expression as the `uncollected_sen` column, computed from the
+ * columns under it rather than read: a generated column is typed nullable, and
+ * a figure on a money screen should not need a fallback.
+ */
+export function uncollectedSen(inv: CollectionFields): number {
+  return Math.max(0, inv.total_sen - collectedSen(inv))
+}
+
+/**
+ * The status staff see, from what has been collected.
+ *
+ * `app.sync_invoice_paid`'s own rule, applied to the collected figure instead
+ * of the paid one — so an invoice the student sees as Paid reads Partially
+ * paid here while part of it is waiting on KWSP, and Issued if KWSP is all
+ * there is. An invoice with no KWSP money comes back unchanged.
+ */
+export function collectionStatus(
+  inv: CollectionFields & Pick<Invoice, 'status'>,
+): InvoiceStatus {
+  if (inv.status === 'void' || inv.status === 'cancelled' || inv.status === 'draft')
+    return inv.status
+  const collected = collectedSen(inv)
+  if (collected >= inv.total_sen) return 'paid'
+  if (collected > 0) return 'partially_paid'
+  return inv.status === 'paid' || inv.status === 'partially_paid'
+    ? 'issued'
+    : inv.status
+}
 
 /**
  * One page of invoices.
@@ -447,17 +501,10 @@ export function useInvoicePage(
     placeholderData: keepPreviousData,
     queryFn: async () => {
       const from = (page - 1) * PAGE_SIZE
-      // How an invoice was paid is not on the invoice — it carries one
-      // `amount_paid_sen` — so the two tiles that split money by route have to
-      // ask the ledger. `!inner` makes the embed a filter: only invoices with
-      // at least one matching payment come back, and `count` counts those.
-      const byRoute = money === 'collected' || money === 'kwsp'
       let q = supabase
         .from('invoices')
         .select(
-          byRoute
-            ? `${INVOICE_LIST_SELECT}, via:payments!inner(id)`
-            : INVOICE_LIST_SELECT,
+          '*, student:students(full_name, student_no), course:courses(id, title)',
           { count: 'exact' },
         )
         .eq('academy_id', academyId!)
@@ -470,20 +517,16 @@ export function useInvoicePage(
         // to match `invoice_totals` verbatim: a status added later must join
         // both or neither, or the list stops adding up to the number above it.
         q = q.neq('status', 'void').neq('status', 'cancelled').neq('status', 'draft')
-        if (byRoute) {
-          // Succeeded only, as `app.sync_invoice_paid` counts: a bounced FPX
-          // attempt put no money against the invoice.
-          q = q.eq('via.status', 'succeeded')
-          q =
-            money === 'kwsp'
-              ? q.eq('via.method', 'kwsp')
-              : q.neq('via.method', 'kwsp')
-        }
-        // `balance_sen` is a generated column precisely so this is a filter and
-        // not a column-to-column comparison PostgREST cannot express.
-        else q = q.gt('balance_sen', 0)
-        if (money === 'overdue')
-          q = q.not('due_at', 'is', null).lt('due_at', new Date().toISOString())
+        // Each of these is a column precisely so it is a filter and not a
+        // column-to-column comparison, which PostgREST cannot express.
+        if (money === 'collected') q = q.gt('collected_sen', 0)
+        else if (money === 'kwsp') q = q.gt('kwsp_paid_sen', 0)
+        else if (money === 'outstanding') q = q.gt('uncollected_sen', 0)
+        else
+          q = q
+            .gt('balance_sen', 0)
+            .not('due_at', 'is', null)
+            .lt('due_at', new Date().toISOString())
       }
 
       const { data, error, count } = await q
@@ -503,13 +546,14 @@ export function useInvoicePage(
  * The money tiles, over the whole filtered set rather than the page.
  *
  * This is the half of the old client-side `computeStats` a page cannot answer.
- * `invoice_totals` mirrors it exactly, asymmetries included: `collected` is the
- * raw sum of `amount_paid_sen` (an overpayment shows as collected, because it
- * was) while `outstanding` and `overdue` clamp each invoice at zero first.
+ * The figures are the **staff** reading of the book, because every caller is a
+ * staff screen: `collected` is what arrived by any route but KWSP, `kwsp` is
+ * what KWSP covers, and `outstanding` is what the academy has not collected —
+ * so it includes `kwsp`, and `total = collected + outstanding` (overpayments
+ * aside: `collected` is a raw sum, `outstanding` clamps each invoice at zero).
  *
- * `kwsp` is the part of `collected` that came by KWSP — inside it, never
- * beside it. The total is returned whole and the split left to the caller, so
- * a screen that shows a single "collected" figure keeps showing all the money.
+ * `overdue` is the exception. It is the student's own balance past its due
+ * date; money KWSP is covering is not theirs to be late with.
  */
 export function useInvoiceStats(academyId: string | null, courseFilter: string) {
   return useQuery({
@@ -528,16 +572,22 @@ export function useInvoiceStats(academyId: string | null, courseFilter: string) 
       const row = (data as unknown as InvoiceTotalsRow[] | null)?.[0]
       return {
         total: Number(row?.invoiced_sen ?? 0),
-        collected: Number(row?.collected_sen ?? 0),
+        // `collected_sen` is everything paid; the KWSP part is taken out here.
+        collected:
+          Number(row?.collected_sen ?? 0) - Number(row?.kwsp_sen ?? 0),
         kwsp: Number(row?.kwsp_sen ?? 0),
-        outstanding: Number(row?.outstanding_sen ?? 0),
+        outstanding: Number(row?.uncollected_sen ?? 0),
         overdue: Number(row?.overdue_sen ?? 0),
       }
     },
   })
 }
 
-/** Billed / paid / outstanding totals for a set of invoices (excludes void/draft). */
+/**
+ * Billed / paid / outstanding totals for a set of invoices (excludes
+ * void/draft), as staff read them: paid is what was collected, so money
+ * covered by KWSP is still outstanding.
+ */
 export function invoiceTotals(invoices: Invoice[]) {
   let billed = 0
   let paid = 0
@@ -545,7 +595,7 @@ export function invoiceTotals(invoices: Invoice[]) {
     if (inv.status === 'void' || inv.status === 'cancelled' || inv.status === 'draft')
       continue
     billed += inv.total_sen
-    paid += inv.amount_paid_sen
+    paid += collectedSen(inv)
   }
   return { billed, paid, outstanding: Math.max(0, billed - paid) }
 }

@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import type { Lang } from '@/lib/i18n'
 import { localeFor } from '@/lib/format'
 import { countOf, type CourseRow } from '@/features/courses/api'
-import type { InvoiceRow } from '@/features/payments/api'
+import { collectedSen, type InvoiceRow } from '@/features/payments/api'
 
 /**
  * Dashboard data layer.
@@ -104,6 +104,13 @@ export const monthKeyMY = (iso: string) => MY_MONTH.format(new Date(iso))
 /** How many months the revenue chart covers, current month included. */
 export const REVENUE_MONTHS = 6
 
+/**
+ * Money that came by KWSP has not been collected — the rule every staff money
+ * screen follows (docs/payment-report.md). The payment still shows in the
+ * recent-payments list; it just does not count towards a "collected" figure.
+ */
+const isCollected = (p: RecentPaymentRow) => p.method !== 'kwsp'
+
 /** Sum of settled payments that landed in a given Malaysian month. */
 export function collectedInMonth(
   rows: RecentPaymentRow[],
@@ -112,7 +119,9 @@ export function collectedInMonth(
   const key = monthKeyMY(monthStartIso(monthsAgo))
   return rows.reduce(
     (sum, p) =>
-      p.paid_at && monthKeyMY(p.paid_at) === key ? sum + p.amount_sen : sum,
+      isCollected(p) && p.paid_at && monthKeyMY(p.paid_at) === key
+        ? sum + p.amount_sen
+        : sum,
     0,
   )
 }
@@ -178,7 +187,7 @@ export function revenueSeries(
   }
 
   for (const pay of payments) {
-    if (!pay.paid_at) continue
+    if (!pay.paid_at || !isCollected(pay)) continue
     const bucket = byKey.get(monthKeyMY(pay.paid_at))
     if (bucket) bucket.collected += pay.amount_sen
   }
@@ -227,7 +236,8 @@ export function invoiceStats(invoices: InvoiceRow[]): InvoiceStats {
     // Overpayment is allowed (record_gateway_payment leaves amount_paid_sen
     // above total_sen), so clamp both sides: unclamped, one student's credit
     // silently erases another's debt and the meter runs past 100%.
-    paid += Math.min(inv.amount_paid_sen, inv.total_sen)
+    // Collected, not paid: what KWSP covers is still outstanding to staff.
+    paid += Math.min(collectedSen(inv), inv.total_sen)
 
     const balance = Math.max(0, inv.total_sen - inv.amount_paid_sen)
     if (balance === 0) continue

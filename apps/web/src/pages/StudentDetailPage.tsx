@@ -42,6 +42,8 @@ import { MANUAL_STATUSES, STATUS_META } from '@/features/students/status'
 import { InvoiceFormDialog } from '@/features/payments/InvoiceFormDialog'
 import {
   INVOICE_STATUS_VARIANT,
+  collectedSen,
+  collectionStatus,
   invoiceTotals,
   useStudentInvoices,
   type InvoiceStatus,
@@ -482,10 +484,10 @@ export function StudentDetailPage() {
                         <Receipt className="text-muted-foreground size-3.5 shrink-0" />
                         {inv.invoice_no}
                         <Badge
-                          variant={INVOICE_STATUS_VARIANT[inv.status]}
+                          variant={INVOICE_STATUS_VARIANT[collectionStatus(inv)]}
                           className="capitalize"
                         >
-                          {t(INVOICE_LABEL[inv.status])}
+                          {t(INVOICE_LABEL[collectionStatus(inv)])}
                         </Badge>
                       </div>
                       <div className="text-muted-foreground mt-0.5 text-xs">
@@ -511,11 +513,11 @@ export function StudentDetailPage() {
                       <div className="text-sm font-medium tabular-nums">
                         {formatMYR(inv.total_sen)}
                       </div>
-                      {inv.amount_paid_sen > 0 &&
-                      inv.amount_paid_sen < inv.total_sen ? (
+                      {collectedSen(inv) > 0 &&
+                      collectedSen(inv) < inv.total_sen ? (
                         <div className="text-muted-foreground text-xs tabular-nums">
                           {t('students.billing.amount_paid', {
-                            amount: formatMYR(inv.amount_paid_sen),
+                            amount: formatMYR(collectedSen(inv)),
                           })}
                         </div>
                       ) : null}
