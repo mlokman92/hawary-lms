@@ -10,6 +10,7 @@ import { TONE_CLASS, type Tone } from '@/lib/tone'
 export function FilterStatCard({
   label,
   value,
+  count,
   icon: Icon,
   tone,
   active,
@@ -17,6 +18,12 @@ export function FilterStatCard({
 }: {
   label: string
   value: number | string
+  /**
+   * How many rows the value was summed over — for a tile whose value is money
+   * rather than a count already. Shown after the value, and it wraps under it
+   * rather than truncating: a clipped count is a wrong count.
+   */
+  count?: number
   icon: LucideIcon
   tone: Tone
   active: boolean
@@ -37,7 +44,16 @@ export function FilterStatCard({
       </div>
       <div className="min-w-0">
         <p className="text-muted-foreground text-xs">{label}</p>
-        <p className="truncate text-lg font-semibold tabular-nums">{value}</p>
+        {count === undefined ? (
+          <p className="truncate text-lg font-semibold tabular-nums">{value}</p>
+        ) : (
+          <p className="flex flex-wrap items-baseline gap-x-1.5 text-lg font-semibold tabular-nums">
+            <span className="min-w-0 truncate">{value}</span>
+            <span className="text-muted-foreground text-sm font-normal">
+              ({count})
+            </span>
+          </p>
+        )}
       </div>
     </button>
   )

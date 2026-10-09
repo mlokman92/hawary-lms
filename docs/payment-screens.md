@@ -216,6 +216,14 @@ There is no Overdue tile any more — the owner dropped it when KWSP was added.
 as a chip, and it stays on `balance_sen`: money KWSP is covering is not the
 student's to be late with.
 
+Each tile also says **how many invoices** its figure was summed over — "RM
+40,000.00 (80)". `invoice_totals` counts them with the very predicate the
+tile's filter uses, so the number on the tile is the number of rows the list
+shows when it is pressed. The counts are **not a partition**: an invoice paid
+partly by KWSP is in Collected, KWSP and Outstanding at once, so they add up to
+more than the Invoiced count. The count wraps under the amount on a narrow tile
+rather than truncating — a clipped count is a wrong count.
+
 The tiles deliberately ignore the filter they apply — one that emptied itself
 when pressed could not be un-pressed by reading it — and pressing the pressed
 one clears.

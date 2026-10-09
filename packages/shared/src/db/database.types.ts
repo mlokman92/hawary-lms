@@ -2817,12 +2817,15 @@ export type Database = {
           _to?: string
         }
         Returns: {
+          collected_count: number
           collected_sen: number
           invoice_count: number
           invoiced_sen: number
+          kwsp_count: number
           kwsp_sen: number
           outstanding_sen: number
           overdue_sen: number
+          uncollected_count: number
           uncollected_sen: number
         }[]
       }

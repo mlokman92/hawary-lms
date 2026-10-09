@@ -424,6 +424,10 @@ type InvoiceTotalsRow = {
   overdue_sen: number
   kwsp_sen: number
   uncollected_sen: number
+  invoice_count: number
+  collected_count: number
+  kwsp_count: number
+  uncollected_count: number
 }
 
 // --- The staff view of an invoice --------------------------------------------
@@ -574,6 +578,16 @@ export function useInvoiceStats(academyId: string | null, courseFilter: string) 
         kwsp: Number(row?.kwsp_sen ?? 0),
         outstanding: Number(row?.uncollected_sen ?? 0),
         overdue: Number(row?.overdue_sen ?? 0),
+        // How many invoices each figure was summed over — counted with the
+        // predicate `useInvoicePage` filters by, so a tile's count is the
+        // number of rows the list shows when that tile is pressed. An invoice
+        // paid partly by KWSP is in three of them; they are not a partition.
+        counts: {
+          total: Number(row?.invoice_count ?? 0),
+          collected: Number(row?.collected_count ?? 0),
+          kwsp: Number(row?.kwsp_count ?? 0),
+          outstanding: Number(row?.uncollected_count ?? 0),
+        },
       }
     },
   })

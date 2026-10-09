@@ -208,6 +208,9 @@ export function PaymentsPage() {
             key={tile.key}
             label={t(tile.labelKey)}
             value={money(stats?.[tile.stat])}
+            // The number of invoices behind the figure — the same set the
+            // tile opens. Absent, not zero, until the totals have arrived.
+            count={stats?.counts[tile.stat]}
             icon={tile.icon}
             tone={tile.tone}
             active={moneyFilter === tile.key}
