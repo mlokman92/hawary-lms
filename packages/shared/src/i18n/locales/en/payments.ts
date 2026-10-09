@@ -133,6 +133,10 @@ export const payments = {
   'payments.log.csv.recorded_by': 'Recorded by',
   'payments.log.summary_one': '{count} payment · {amount} received',
   'payments.log.summary_other': '{count} payments · {amount} received',
+  'payments.log.all_methods': 'All methods',
+  'payments.log.card.total': 'Total collections',
+  'payments.log.card.count_one': '{count} payment',
+  'payments.log.card.count_other': '{count} payments',
   'payments.log.export': 'Export CSV',
   'payments.log.exporting': 'Exporting…',
   'payments.log.empty': 'No payments recorded yet.',
@@ -187,6 +191,8 @@ export const payments = {
   'payments.receipts.receipt': 'Receipt',
   'payments.receipts.paid_on': 'Paid {date}',
   'payments.receipts.replace': 'Replace receipt',
+  'payments.receipts.view': 'View receipt',
+  'payments.receipts.pending': 'Receipt pending',
 
   // Payment methods
   'payments.method.cash': 'Cash',

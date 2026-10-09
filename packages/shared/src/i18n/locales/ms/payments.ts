@@ -137,6 +137,10 @@ export const payments: PaymentsDict = {
   'payments.log.csv.recorded_by': 'Direkod oleh',
   'payments.log.summary_one': '{count} bayaran · {amount} diterima',
   'payments.log.summary_other': '{count} bayaran · {amount} diterima',
+  'payments.log.all_methods': 'Semua kaedah',
+  'payments.log.card.total': 'Jumlah kutipan',
+  'payments.log.card.count_one': '{count} bayaran',
+  'payments.log.card.count_other': '{count} bayaran',
   'payments.log.export': 'Eksport CSV',
   'payments.log.exporting': 'Mengeksport…',
   'payments.log.empty': 'Belum ada bayaran direkodkan.',
@@ -191,6 +195,8 @@ export const payments: PaymentsDict = {
   'payments.receipts.receipt': 'Resit',
   'payments.receipts.paid_on': 'Dibayar {date}',
   'payments.receipts.replace': 'Ganti resit',
+  'payments.receipts.view': 'Lihat resit',
+  'payments.receipts.pending': 'Resit menunggu',
 
   // Kaedah bayaran
   'payments.method.cash': 'Tunai',

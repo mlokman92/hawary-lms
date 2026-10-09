@@ -90,6 +90,37 @@ The invoice detail page still *prints* the note read-only under its payment row;
 its own paperwork. It sits before `other` in the enum so the catch-all stays
 last in the picker.
 
+### The log's number cards
+
+Three cards above the ledger: **Total collections**, **Bank transfer**, **FPX**
+— each an amount and the number of payments behind it. One per row on a phone,
+three across from `sm` up: three ringgit figures side by side do not fit a
+narrow screen.
+
+They come from `payment_log_totals`, the same call as the summary line, as
+FILTERs over the same rows — so they follow the search and the method filter
+and always describe the rows the table is offering.
+
+**Total collections is `received_sen - kwsp_sen`**, not everything received: to
+staff, money that came by KWSP has not been collected. **Bank transfer + FPX
+is less than the total**: cash and "other" are in the total and have no card.
+The old summary line beside the filters ("N payments · RM x received") is gone
+— the cards say it, and the owner had it removed.
+
+### The log filters by method, not status
+
+The picker beside the search box is **method of payment** (`?method=`), where a
+status picker used to be. Every row in this ledger is `succeeded`, so the
+status picker had one useful value; what is asked of a ledger is "show me the
+bank transfers" or "what came by KWSP". A row that did fail or was refunded
+still says so with a badge, and both log functions keep `_status` as an
+argument because the Academy mobile apps already installed call them by name
+without `_method` — its NULL default keeps them resolving to the one function
+that exists. `?status=` on an old link is ignored.
+
+The method narrows the cards too, since they share the filter: pick FPX and
+Total collections *is* the FPX total, and the Bank transfer card reads zero.
+
 **Export CSV** reuses `lib/csv.ts`'s `downloadCsv` and writes ISO dates +
 ringgit decimals, because the file's job is reconciliation in a spreadsheet.
 
@@ -351,8 +382,25 @@ share a WHERE clause (minus `_state`) for the reason the log's two do.
 
 Not done: deleting a payment cascades its receipt row but leaves the object in
 the bucket, as a deleted course material does — nothing sweeps either. Receipts
-are attached on this page only, not in the Record payment dialog. Staff-web
-only; the Academy mobile app has no receipts screen.
+are not attached in the Record payment dialog. Staff-web only; the Academy
+mobile app has no receipts screen.
+
+### The same receipt on the invoice page
+
+`/payments/:id` lists the invoice's payments, and a bank transfer there carries
+the same control: **Receipt pending** and Upload, or View receipt with Replace
+behind `⋯`. It is the place an admin is already standing when they record the
+transfer, so the proof can be attached without a trip to the queue.
+
+`payments(*, receipt:payment_receipts(...))` on the invoice read supplies it —
+a one-to-one embed, so `receipt` is an object or null. The learner's invoice
+page runs that same read; `payment_receipts` is admin-only by RLS, so for a
+student `receipt` is always null and the control is not drawn at all.
+
+Both screens share `useReceiptPicker`: one hidden file input for the screen,
+and each row's button says which payment the next chosen file belongs to. An
+upload invalidates the queue, its counts and the invoice, so whichever screen
+it was made from, the other is right when you get there.
 
 ## Nav
 

@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Download, Pencil, Search } from 'lucide-react'
+import {
+  ArrowLeftRight,
+  Download,
+  Pencil,
+  Search,
+  Wallet,
+  Zap,
+} from 'lucide-react'
 import { formatMYR } from '@hawary/shared'
 import { useAcademy } from '@/lib/academy'
 import { downloadCsv } from '@/lib/csv'
@@ -11,6 +18,7 @@ import { PageHeader } from '@/components/patterns/PageHeader'
 import { BackLink } from '@/components/patterns/BackLink'
 import { EmptyState } from '@/components/patterns/EmptyState'
 import { Pager } from '@/components/patterns/Pager'
+import { StatCard } from '@/components/patterns/StatCard'
 import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -38,16 +46,16 @@ import {
   fetchPaymentLogAll,
   PAGE_SIZE,
   PAYMENT_METHOD_LABEL,
+  PAYMENT_METHODS,
   PAYMENT_PROVIDER_LABEL,
   PAYMENT_STATUS_LABEL,
   PAYMENT_STATUS_VARIANT,
-  PAYMENT_STATUSES,
   usePaymentLogPage,
   usePaymentLogTotals,
   type PaymentLogFilters,
   type PaymentLogRow,
   type PaymentLogSort,
-  type PaymentStatus,
+  type PaymentMethod,
 } from '@/features/payments/api'
 
 const ALL = '__all__'
@@ -77,14 +85,20 @@ function withParams(
 }
 
 /**
+ * `?method=` — how the money came.
+ *
  * A query string is hand-editable and links outlive the code that wrote them,
- * so an unknown status reads as "all" rather than reaching the RPC, where it
- * would fail the `payment_status` cast and show the reader an error instead of
+ * so an unknown method reads as "all" rather than reaching the RPC, where it
+ * would fail the `payment_method` cast and show the reader an error instead of
  * a ledger.
+ *
+ * This replaced a status filter. Every row in this ledger is `succeeded`, so
+ * that picker had one useful value; what gets asked of a ledger is "show me
+ * the bank transfers". A row that did fail still says so, with a badge.
  */
-function readStatus(raw: string | null): PaymentStatus | typeof ALL {
-  return raw && (PAYMENT_STATUSES as readonly string[]).includes(raw)
-    ? (raw as PaymentStatus)
+function readMethod(raw: string | null): PaymentMethod | typeof ALL {
+  return raw && (PAYMENT_METHODS as readonly string[]).includes(raw)
+    ? (raw as PaymentMethod)
     : ALL
 }
 
@@ -197,7 +211,7 @@ export function PaymentLogPage() {
   const [noteTarget, setNoteTarget] = useState<NoteTarget | null>(null)
 
   const search = params.get('q')?.trim() ?? ''
-  const status = readStatus(params.get('status'))
+  const method = readMethod(params.get('method'))
   const sort: PaymentLogSort = params.get('sort') === 'paid' ? 'paid' : 'recorded'
   const page = readPage(params.get('page'))
 
@@ -233,17 +247,26 @@ export function PaymentLogPage() {
   }, [search])
 
   const filters: PaymentLogFilters = useMemo(
-    () => ({ search, status: status === ALL ? null : status }),
-    [search, status],
+    () => ({
+      search,
+      status: null,
+      method: method === ALL ? null : method,
+    }),
+    [search, method],
   )
 
   const rows = usePaymentLogPage(activeAcademyId, filters, sort, page)
   const totals = usePaymentLogTotals(activeAcademyId, filters)
 
   const total = totals.data?.total ?? 0
-  const received = totals.data?.receivedSen ?? 0
   const list = rows.data ?? []
-  const filtering = search.trim() !== '' || status !== ALL
+  // A dash, not RM 0.00, while the totals are in flight: a confident zero
+  // reads as "nothing was collected", which is a claim and not a placeholder.
+  const money = (sen: number | undefined) =>
+    sen === undefined ? '—' : formatMYR(sen)
+  const paymentCount = (n: number | undefined) =>
+    n === undefined ? undefined : tn('payments.log.card.count', n)
+  const filtering = search.trim() !== '' || method !== ALL
 
   async function exportCsv() {
     if (!activeAcademyId) return
@@ -274,7 +297,34 @@ export function PaymentLogPage() {
         </Button>
       </PageHeader>
 
-      <div className="mt-6 flex flex-wrap items-center gap-2">
+      {/* What the ledger below adds up to, by the route the money came. They
+          follow the search and the method filter: the cards are about the
+          rows on offer, not always the whole book — pick FPX and Total
+          collections is the FPX total. One
+          per row on a phone — three amounts side by side do not fit there. */}
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard
+          label={t('payments.log.card.total')}
+          value={money(totals.data?.collectedSen)}
+          sub={paymentCount(totals.data?.collectedCount)}
+          icon={Wallet}
+          tone="positive"
+        />
+        <StatCard
+          label={t('payments.method.bank_transfer')}
+          value={money(totals.data?.bankTransferSen)}
+          sub={paymentCount(totals.data?.bankTransferCount)}
+          icon={ArrowLeftRight}
+        />
+        <StatCard
+          label={t('payments.method.fpx')}
+          value={money(totals.data?.fpxSen)}
+          sub={paymentCount(totals.data?.fpxCount)}
+          icon={Zap}
+        />
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
         <div className="relative min-w-56 flex-1">
           <Search
             className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
@@ -289,17 +339,17 @@ export function PaymentLogPage() {
           />
         </div>
         <Select
-          value={status}
-          onValueChange={(v) => commit({ status: v === ALL ? null : v, page: null })}
+          value={method}
+          onValueChange={(v) => commit({ method: v === ALL ? null : v, page: null })}
         >
           <SelectTrigger className="w-44">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>{t('payments.log.all_statuses')}</SelectItem>
-            {PAYMENT_STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>
-                {t(PAYMENT_STATUS_LABEL[s])}
+            <SelectItem value={ALL}>{t('payments.log.all_methods')}</SelectItem>
+            {PAYMENT_METHODS.map((m) => (
+              <SelectItem key={m} value={m}>
+                {t(PAYMENT_METHOD_LABEL[m])}
               </SelectItem>
             ))}
           </SelectContent>
@@ -318,13 +368,6 @@ export function PaymentLogPage() {
             <SelectItem value="paid">{t('payments.log.sort.paid')}</SelectItem>
           </SelectContent>
         </Select>
-        <p className="text-muted-foreground ml-auto text-sm tabular-nums">
-          {totals.data === undefined
-            ? '—'
-            : tn('payments.log.summary', total, {
-                amount: formatMYR(received),
-              })}
-        </p>
       </div>
 
       <div className="mt-4">

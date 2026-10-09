@@ -6,9 +6,11 @@ import {
   Loader2,
   MoreHorizontal,
   Receipt,
+  Upload,
 } from 'lucide-react'
 import { formatMYR } from '@hawary/shared'
 import { useAcademy } from '@/lib/academy'
+import { errorMessage } from '@/lib/errors'
 import { fmtDate } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { Badge } from '@/components/ui/badge'
@@ -50,6 +52,10 @@ import { hasReceipt, useInvoiceDocuments } from '@/features/payments/documents'
 import { RecordPaymentDialog } from '@/features/payments/RecordPaymentDialog'
 import { PayLinkCard } from '@/features/payments/PayLinkCard'
 import {
+  useOpenPaymentReceipt,
+  useReceiptPicker,
+} from '@/features/payments/receipts'
+import {
   INVOICE_STATUS_LABEL,
   INVOICE_STATUS_VARIANT,
   PAYMENT_METHOD_LABEL,
@@ -82,6 +88,11 @@ export function InvoiceDetailPage() {
   const voidInvoice = useVoidInvoice(academyId)
   const docs = useInvoiceDocuments(activeAcademyId)
   const [payOpen, setPayOpen] = useState(false)
+  // One file input for every payment on the page; a row's button says which
+  // payment the next chosen file belongs to.
+  const picker = useReceiptPicker()
+  const openReceipt = useOpenPaymentReceipt()
+  const receiptFailure = picker.error ?? openReceipt.error
 
   if (isLoading) {
     return (
@@ -357,13 +368,78 @@ export function InvoiceDetailPage() {
                       <div className="text-muted-foreground text-xs">{p.note}</div>
                     ) : null}
                   </div>
-                  <span className="text-muted-foreground">
-                    {fmtDate(p.paid_at ?? p.created_at)}
-                  </span>
+                  <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
+                    {/* The proof behind a bank transfer, where the payment
+                        is. The same receipt /payments/receipts queues; a
+                        transfer without one is pending there and here. Admin
+                        only — the receipt's own policy returns nobody else
+                        anything, so for them the control could only fail. */}
+                    {isAdmin &&
+                    p.method === 'bank_transfer' &&
+                    p.status === 'succeeded' ? (
+                      picker.uploadingId === p.id ? (
+                        <Button variant="outline" size="sm" disabled>
+                          {t('common.uploading')}
+                        </Button>
+                      ) : p.receipt ? (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={openReceipt.isPending}
+                            title={p.receipt.file_name}
+                            onClick={() => openReceipt.mutate(p.id)}
+                          >
+                            {t('payments.receipts.view')}
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon-sm">
+                                <MoreHorizontal />
+                                <span className="sr-only">
+                                  {t('common.actions')}
+                                </span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => picker.pick(p.id)}
+                              >
+                                <Upload /> {t('payments.receipts.replace')}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      ) : (
+                        <>
+                          <Badge variant="secondary">
+                            {t('payments.receipts.pending')}
+                          </Badge>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={picker.busy}
+                            onClick={() => picker.pick(p.id)}
+                          >
+                            <Upload /> {t('common.upload')}
+                          </Button>
+                        </>
+                      )
+                    ) : null}
+                    <span className="text-muted-foreground whitespace-nowrap">
+                      {fmtDate(p.paid_at ?? p.created_at)}
+                    </span>
+                  </div>
                 </li>
               ))}
             </ul>
           )}
+          {receiptFailure ? (
+            <p className="text-destructive mt-3 text-sm">
+              {errorMessage(receiptFailure, t('upload.failed'))}
+            </p>
+          ) : null}
+          <input {...picker.inputProps} />
         </CardContent>
       </Card>
 

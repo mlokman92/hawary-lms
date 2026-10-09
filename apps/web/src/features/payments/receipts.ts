@@ -1,3 +1,4 @@
+import { useCallback, useRef, type ChangeEvent } from 'react'
 import {
   keepPreviousData,
   useMutation,
@@ -142,8 +143,63 @@ export function useUploadPaymentReceipt() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['bank-transfer-receipts'] })
       void qc.invalidateQueries({ queryKey: ['bank-transfer-receipt-counts'] })
+      // The invoice page shows the same receipt beside its payment.
+      void qc.invalidateQueries({ queryKey: ['invoice'] })
     },
   })
+}
+
+/** What the file picker offers. The function and the bucket both re-check. */
+export const RECEIPT_ACCEPT = 'application/pdf,image/jpeg,image/png,image/webp'
+
+/**
+ * One hidden file input for a whole screen of payments.
+ *
+ * Both screens that take a receipt — the receipts queue and the invoice page —
+ * list several payments, and only one of them can be choosing a file at a
+ * time. So the screen mounts a single `<input {...inputProps} />`, each row's
+ * button calls `pick(paymentId)`, and the file that comes back belongs to
+ * whichever payment asked last.
+ *
+ * `uploadingId` is the payment whose upload is in flight, so its row can say
+ * so; `error` is the last upload's failure, in the function's own words.
+ */
+export function useReceiptPicker() {
+  const upload = useUploadPaymentReceipt()
+  const input = useRef<HTMLInputElement>(null)
+  const target = useRef<string | null>(null)
+  const { mutate } = upload
+
+  const pick = useCallback((paymentId: string) => {
+    target.current = paymentId
+    input.current?.click()
+  }, [])
+
+  const onChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      // Cleared so choosing the same file again — after an error, say — still
+      // fires a change.
+      e.target.value = ''
+      if (!file || !target.current) return
+      mutate({ paymentId: target.current, file })
+    },
+    [mutate],
+  )
+
+  return {
+    pick,
+    busy: upload.isPending,
+    uploadingId: upload.isPending ? (upload.variables?.paymentId ?? null) : null,
+    error: upload.error,
+    inputProps: {
+      ref: input,
+      type: 'file' as const,
+      accept: RECEIPT_ACCEPT,
+      className: 'hidden',
+      onChange,
+    },
+  }
 }
 
 /**

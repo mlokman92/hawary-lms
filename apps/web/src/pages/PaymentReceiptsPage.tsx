@@ -41,7 +41,7 @@ import {
   useBankTransferReceiptCounts,
   useBankTransferReceipts,
   useOpenPaymentReceipt,
-  useUploadPaymentReceipt,
+  useReceiptPicker,
   type ReceiptState,
 } from '@/features/payments/receipts'
 
@@ -61,9 +61,6 @@ function readPage(raw: string | null): number {
   const n = Number(raw)
   return Number.isInteger(n) && n >= 1 ? n : 1
 }
-
-/** What the file picker offers. The function and the bucket both re-check. */
-const ACCEPT = 'application/pdf,image/jpeg,image/png,image/webp'
 
 /**
  * Bank transfer receipts: every bank transfer in the ledger, and whether the
@@ -127,7 +124,9 @@ export function PaymentReceiptsPage() {
     page,
   )
   const counts = useBankTransferReceiptCounts(activeAcademyId, search)
-  const upload = useUploadPaymentReceipt()
+  // One file input for the whole table; a row's button says which payment
+  // the next chosen file belongs to.
+  const picker = useReceiptPicker()
   const open = useOpenPaymentReceipt()
 
   const list = rows.data ?? []
@@ -138,26 +137,7 @@ export function PaymentReceiptsPage() {
         ? (counts.data?.uploaded ?? 0)
         : (counts.data?.pending ?? 0) + (counts.data?.uploaded ?? 0)
 
-  // One file input for the whole table, not one per row: fifty hidden inputs
-  // is fifty tab stops for something only one row can be using. `target` is
-  // the payment the next chosen file belongs to.
-  const fileInput = useRef<HTMLInputElement>(null)
-  const target = useRef<string | null>(null)
-  function pick(paymentId: string) {
-    target.current = paymentId
-    fileInput.current?.click()
-  }
-  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    // Clear it so choosing the same file again — after an error, say — still
-    // fires a change.
-    e.target.value = ''
-    if (!file || !target.current) return
-    upload.mutate({ paymentId: target.current, file })
-  }
-  const uploadingId = upload.isPending ? upload.variables?.paymentId : null
-
-  const failure = upload.error ?? open.error
+  const failure = picker.error ?? open.error
 
   return (
     <div className="mx-auto w-full max-w-6xl">
@@ -167,13 +147,7 @@ export function PaymentReceiptsPage() {
         description={t('payments.receipts.subtitle')}
       />
 
-      <input
-        ref={fileInput}
-        type="file"
-        accept={ACCEPT}
-        className="hidden"
-        onChange={onFile}
-      />
+      <input {...picker.inputProps} />
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
         <div className="relative min-w-56 flex-1">
@@ -327,7 +301,7 @@ export function PaymentReceiptsPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-right whitespace-nowrap">
-                      {uploadingId === p.id ? (
+                      {picker.uploadingId === p.id ? (
                         <Button variant="outline" size="sm" disabled>
                           {t('common.uploading')}
                         </Button>
@@ -351,7 +325,9 @@ export function PaymentReceiptsPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => pick(p.id)}>
+                              <DropdownMenuItem
+                                onClick={() => picker.pick(p.id)}
+                              >
                                 <Upload /> {t('payments.receipts.replace')}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -361,8 +337,8 @@ export function PaymentReceiptsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          disabled={upload.isPending}
-                          onClick={() => pick(p.id)}
+                          disabled={picker.busy}
+                          onClick={() => picker.pick(p.id)}
                         >
                           <Upload /> {t('common.upload')}
                         </Button>

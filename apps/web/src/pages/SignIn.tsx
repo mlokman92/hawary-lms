@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { MessageCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { SUPPORT_WHATSAPP_URL } from '@/lib/support'
 import { useT } from '@/lib/i18n'
 import { AuthCard } from '@/components/AuthCard'
 import { Button } from '@/components/ui/button'
@@ -45,7 +47,18 @@ export function SignIn() {
   }
 
   return (
-    <AuthCard title={t('auth.signin.title')} subtitle={t('auth.signin.subtitle')}>
+    <AuthCard
+      title={t('auth.signin.title')}
+      subtitle={t('auth.signin.subtitle')}
+      corner={
+        <Button variant="outline" size="sm" asChild>
+          <a href={SUPPORT_WHATSAPP_URL} target="_blank" rel="noreferrer">
+            <MessageCircle className="size-4" />
+            {t('common.help_whatsapp')}
+          </a>
+        </Button>
+      }
+    >
       {notice ? (
         <p className="bg-muted text-muted-foreground mb-4 rounded-md border p-3 text-sm">
           {notice}

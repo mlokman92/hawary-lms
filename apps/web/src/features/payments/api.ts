@@ -34,11 +34,24 @@ export type InvoiceRow = Invoice & {
   /** Only on the paged list, which shows the breakdown. */
   payments?: PaymentRoute[]
 }
+/**
+ * A payment on the invoice page, with its bank-transfer receipt if one was
+ * uploaded. `receipt` is null both when there is none and when the reader is
+ * not an admin — `payment_receipts` is admin-only by RLS, so the learner's
+ * invoice page, which runs this same read, is simply never told.
+ */
+export type InvoicePayment = Payment & {
+  receipt?: {
+    file_name: string
+    created_at: string
+    uploaded_by_name: string | null
+  } | null
+}
 export type InvoiceDetail = Invoice & {
   student: StudentBrief | null
   course: CourseBrief | null
   items: InvoiceItem[]
-  payments: Payment[]
+  payments: InvoicePayment[]
 }
 export type StudentInvoiceRow = Invoice & { course: CourseBrief | null }
 
@@ -100,6 +113,8 @@ export type PaymentScope = {
 export type PaymentLogFilters = {
   search: string
   status: PaymentStatus | null
+  /** How the money came. Absent or null is every method. */
+  method?: PaymentMethod | null
   /** Absent on `/payments/log`, which is the whole ledger by definition. */
   scope?: PaymentScope
 }
@@ -151,9 +166,25 @@ const logKey = (
   sort: PaymentLogSort,
   page: number,
 ) =>
-  ['payment-log', a, f.search, f.status, scopeKey(f.scope), sort, page] as const
+  [
+    'payment-log',
+    a,
+    f.search,
+    f.status,
+    f.method ?? '',
+    scopeKey(f.scope),
+    sort,
+    page,
+  ] as const
 const logTotalsKey = (a: string | null, f: PaymentLogFilters) =>
-  ['payment-log-totals', a, f.search, f.status, scopeKey(f.scope)] as const
+  [
+    'payment-log-totals',
+    a,
+    f.search,
+    f.status,
+    f.method ?? '',
+    scopeKey(f.scope),
+  ] as const
 
 export function useInvoices(academyId: string | null) {
   return useQuery({
@@ -174,7 +205,7 @@ export function useInvoices(academyId: string | null) {
 }
 
 const DETAIL_SELECT =
-  '*, student:students(full_name, student_no, email, organization, address), course:courses(id, title), items:invoice_items(*), payments(*)'
+  '*, student:students(full_name, student_no, email, organization, address), course:courses(id, title), items:invoice_items(*), payments(*, receipt:payment_receipts(file_name, created_at, uploaded_by_name))'
 
 /** The same read outside React — the PDF helpers need it on click, not on render. */
 export async function fetchInvoiceDetail(id: string): Promise<InvoiceDetail> {
@@ -252,6 +283,11 @@ type PaymentLogTotalsRow = {
   total_count: number
   received_sen: number
   kwsp_sen: number
+  collected_count: number
+  bank_transfer_sen: number
+  bank_transfer_count: number
+  fpx_sen: number
+  fpx_count: number
 }
 
 /**
@@ -267,6 +303,7 @@ export function scopeArgs(filters: PaymentLogFilters) {
   return {
     ...(filters.search.trim() ? { _search: filters.search.trim() } : {}),
     ...(filters.status ? { _status: filters.status } : {}),
+    ...(filters.method ? { _method: filters.method } : {}),
     ...(s?.from ? { _from: s.from } : {}),
     ...(s?.to ? { _to: s.to } : {}),
     ...(s?.courseId ? { _course: s.courseId } : {}),
@@ -346,6 +383,16 @@ export function usePaymentLogTotals(
         receivedSen: Number(row?.received_sen ?? 0),
         /** The KWSP part of `receivedSen` — inside it, never beside it. */
         kwspSen: Number(row?.kwsp_sen ?? 0),
+        // The log's number cards. Collected is everything received but KWSP;
+        // bank transfer and FPX are two parts of it, not the whole — cash and
+        // "other" make up the rest, so the two do not add up to it.
+        collectedSen:
+          Number(row?.received_sen ?? 0) - Number(row?.kwsp_sen ?? 0),
+        collectedCount: Number(row?.collected_count ?? 0),
+        bankTransferSen: Number(row?.bank_transfer_sen ?? 0),
+        bankTransferCount: Number(row?.bank_transfer_count ?? 0),
+        fpxSen: Number(row?.fpx_sen ?? 0),
+        fpxCount: Number(row?.fpx_count ?? 0),
       }
     },
   })

@@ -3074,6 +3074,7 @@ export type Database = {
           _course?: string
           _from?: string
           _limit?: number
+          _method?: Database["public"]["Enums"]["payment_method"]
           _no_course?: boolean
           _offset?: number
           _search?: string
@@ -3107,6 +3108,7 @@ export type Database = {
           _academy: string
           _course?: string
           _from?: string
+          _method?: Database["public"]["Enums"]["payment_method"]
           _no_course?: boolean
           _search?: string
           _status?: Database["public"]["Enums"]["payment_status"]
@@ -3114,6 +3116,11 @@ export type Database = {
           _to?: string
         }
         Returns: {
+          bank_transfer_count: number
+          bank_transfer_sen: number
+          collected_count: number
+          fpx_count: number
+          fpx_sen: number
           kwsp_sen: number
           received_sen: number
           total_count: number
