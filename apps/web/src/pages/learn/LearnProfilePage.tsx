@@ -4,7 +4,7 @@ import { fmtDate } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { useStudentAcademy } from '@/lib/studentAcademy'
 import { useMyStudent } from '@/features/learn/api'
-import { BillingDetailsCard } from '@/features/learn/BillingDetailsCard'
+import { StudentDetailsCard } from '@/features/learn/StudentDetailsCard'
 import { useMyProfile, useUpdateMyProfile } from '@/features/profile/api'
 import { STATUS_META } from '@/features/students/status'
 import { PendingInviteList } from '@/features/invitations/PendingInviteList'
@@ -230,7 +230,7 @@ export function LearnProfilePage() {
             reseeds the form from the other record. */}
         {academyId && student ? (
           <>
-            <BillingDetailsCard
+            <StudentDetailsCard
               key={student.id}
               academyId={academyId}
               student={student}

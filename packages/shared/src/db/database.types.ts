@@ -3105,6 +3105,40 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      update_my_student_details: {
+        Args: {
+          _address: string
+          _ic_number: string
+          _organization: string
+          _student_id: string
+        }
+        Returns: {
+          academy_id: string
+          address: string | null
+          archived_at: string | null
+          avatar_url: string | null
+          created_at: string
+          created_by: string | null
+          date_of_birth: string | null
+          email: string | null
+          full_name: string | null
+          gender: Database["public"]["Enums"]["gender"] | null
+          ic_number: string | null
+          id: string
+          organization: string | null
+          phone: string | null
+          status: Database["public"]["Enums"]["student_status"]
+          student_no: string
+          updated_at: string
+          user_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "students"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       academy_status: "active" | "suspended" | "cancelled"

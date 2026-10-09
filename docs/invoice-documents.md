@@ -171,7 +171,7 @@ language at call time.
 The tab strip is a plain segmented control, not shadcn `Tabs`: there is one
 panel rather than two, and it would have been the only `Tabs` in the app.
 
-## 5. The student writes their own organization and address
+## 5. The student writes their own organization, address and IC number
 
 Both documents have printed `students.organization` and `students.address` under
 **Bill to** since the columns existed, but only staff could fill them
@@ -195,14 +195,44 @@ onto the FPX page and what a certificate will carry, and
 typed is not renamed from the learner's side. A wrong name is still a staff
 correction.
 
-**Where it is.** A **Billing details** card on `/learn/profile`
-(`features/learn/BillingDetailsCard.tsx`) and the same card on the Student
-app's profile screen (`screens/Account.tsx`), both over
-`useUpdateMyBillingDetails` in `features/learn/api.ts`. Saving invalidates
-`['invoice']`, because an open invoice page holds its own embedded copy of the
-student and passes it straight to the PDF. Documents are drawn on demand, so
-the next download carries the new block — including for invoices issued before
-the change. Nothing is frozen onto the invoice at issue time.
+**Where it is.** A **My details** card on `/learn/profile`
+(`features/learn/StudentDetailsCard.tsx`) and the same card on the Student
+app's profile screen (`screens/Account.tsx`), both over `useUpdateMyDetails`
+in `features/learn/api.ts`. Saving invalidates `['invoice']`, because an open
+invoice page holds its own embedded copy of the student and passes it straight
+to the PDF. Documents are drawn on demand, so the next download carries the new
+block — including for invoices issued before the change. Nothing is frozen onto
+the invoice at issue time.
+
+### The IC number rides on the same card
+
+A day later the same card took a third field, `students.ic_number`. It prints
+on neither document — it is here because it is the same decision: 188 of the
+596 linked students had no IC on file, the academy needs one for every JPK
+registration, and the student is the one holding the card.
+
+**A second function, not a fourth argument.**
+`update_my_student_details(_student_id, _ic_number, _organization, _address)`
+(`20261010090000_student_updates_own_details.sql`) is what the web and the next
+mobile build call. `update_my_billing_details` is left in place because the
+Student app bundle published on 9 Oct calls it with three arguments, and
+PostgREST resolves an RPC by its argument names. Retire it once no installed
+build is older than the one that carries the new card.
+
+**The number is normalised, in two places that must agree.**
+`normalizeIcNumber` in `packages/shared/src/domain/ic.ts` and the function
+body: spaces and dashes are stripped; all digits must be exactly twelve (a
+MyKad number — 576 of the 578 on file were already stored that way, which is
+also what search and the CSV import's duplicate check compare); anything with a
+letter in it is read as a passport number, 5–20 letters and digits, upper-cased.
+The client check exists only so the message is translated; the server check is
+the rule. The staff form is still free text.
+
+**Blank clears it,** like the other two fields: the form shows what is stored
+and stores what it shows. A student can therefore remove an IC number staff
+typed. That was accepted over the alternative — a blank that silently keeps the
+old value — because a form that does not do what it displays is the worse
+surprise, and staff can type it back.
 
 ## Not done
 

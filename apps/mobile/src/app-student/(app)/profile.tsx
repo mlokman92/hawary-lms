@@ -6,9 +6,9 @@ import { useLearner } from '@/features/learn/context'
 import { STATUS_META } from '@/features/students/status'
 import {
   BankAccountCard,
-  BillingDetailsCard,
   PreferencesCard,
   ProfileCard,
+  StudentDetailsCard,
 } from '@/screens/Account'
 import { Badge, Card, Screen, T, space } from '@/ui'
 
@@ -25,8 +25,8 @@ function Fact({ label, value }: { label: string; value: string | null | undefine
 
 /**
  * My profile: the account (editable), the record the academy holds (not), the
- * billing details the student's documents print, the bank account incentive
- * payouts go to, and the device preferences.
+ * details the student fills in themselves, the bank account incentive payouts
+ * go to, and the device preferences.
  */
 export default function ProfileScreen() {
   const { t } = useT()
@@ -72,7 +72,7 @@ export default function ProfileScreen() {
           both are keyed by the student row. */}
       {academyId && student ? (
         <>
-          <BillingDetailsCard key={student.id} academyId={academyId} student={student} />
+          <StudentDetailsCard key={student.id} academyId={academyId} student={student} />
           <BankAccountCard academyId={academyId} studentId={student.id} canEdit />
         </>
       ) : null}

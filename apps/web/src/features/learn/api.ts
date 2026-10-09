@@ -41,26 +41,30 @@ export function useMyStudent(academyId: string | null) {
 }
 
 /**
- * The two fields a student may write on their own record: what the invoice and
- * the receipt print under "Bill to".
+ * The three fields a student may write on their own record: the IC number, and
+ * the organization and address the invoice and the receipt print under "Bill
+ * to".
  *
  * `students` has no student UPDATE policy — a row-level grant would hand over
  * `status` and `student_no` with it — so this goes through an RPC that writes
- * exactly these two columns on the caller's own record. Blank is sent as `''`
- * and stored as NULL, which is what makes the PDF omit the line.
+ * exactly these columns on the caller's own record. Blank is sent as `''` and
+ * stored as NULL, which is what makes the PDF omit the line. The IC number is
+ * normalised and checked again on the server.
  */
-export function useUpdateMyBillingDetails(academyId: string | null) {
+export function useUpdateMyDetails(academyId: string | null) {
   const qc = useQueryClient()
   const { user } = useAuth()
   const uid = user?.id ?? null
   return useMutation({
     mutationFn: async (input: {
       studentId: string
+      icNumber: string
       organization: string
       address: string
     }) => {
-      const { data, error } = await supabase.rpc('update_my_billing_details', {
+      const { data, error } = await supabase.rpc('update_my_student_details', {
         _student_id: input.studentId,
+        _ic_number: input.icNumber,
         _organization: input.organization,
         _address: input.address,
       })

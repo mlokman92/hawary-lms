@@ -4,6 +4,7 @@ import {
   MALAYSIAN_BANKS,
   bankName,
   maskAccountNumber,
+  normalizeIcNumber,
 } from '@hawary/shared'
 import { useAuth } from '@/lib/auth'
 import { IS_STUDENT_APP } from '@/lib/env'
@@ -15,7 +16,7 @@ import {
   useSaveStudentBankAccount,
   useStudentBankAccount,
 } from '@/features/bank/api'
-import { useUpdateMyBillingDetails, type Student } from '@/features/learn/api'
+import { useUpdateMyDetails, type Student } from '@/features/learn/api'
 import { useMyProfile, useUpdateMyProfile } from '@/features/profile/api'
 import { useScope } from '@/shell/scope'
 import {
@@ -214,11 +215,11 @@ export function PreferencesCard() {
 }
 
 /**
- * Organization and address: the part of the academy's record a student may
- * write, because it is what their invoice and receipt print under "Bill to".
- * Mount it keyed by the student id, so another branch's record reseeds it.
+ * The part of the academy's record a student writes themselves: the IC number,
+ * and the organization and address their invoice and receipt print under "Bill
+ * to". Mount it keyed by the student id, so another branch's record reseeds it.
  */
-export function BillingDetailsCard({
+export function StudentDetailsCard({
   academyId,
   student,
 }: {
@@ -226,7 +227,8 @@ export function BillingDetailsCard({
   student: Student
 }) {
   const { t } = useT()
-  const update = useUpdateMyBillingDetails(academyId)
+  const update = useUpdateMyDetails(academyId)
+  const [icNumber, setIcNumber] = useState(student.ic_number ?? '')
   const [organization, setOrganization] = useState(student.organization ?? '')
   const [address, setAddress] = useState(student.address ?? '')
   const [saved, setSaved] = useState(false)
@@ -235,13 +237,21 @@ export function BillingDetailsCard({
   async function save() {
     setError(null)
     setSaved(false)
+    const ic = normalizeIcNumber(icNumber)
+    if (ic === null) {
+      setError(t('lacct.profile.ic_invalid'))
+      return
+    }
     try {
       const row = await update.mutateAsync({
         studentId: student.id,
+        icNumber: ic,
         organization,
         address,
       })
-      // Show what was stored: both are trimmed on the way in.
+      // Show what was stored: the IC number loses its dashes and the other two
+      // are trimmed on the way in.
+      setIcNumber(row.ic_number ?? '')
       setOrganization(row.organization ?? '')
       setAddress(row.address ?? '')
       setSaved(true)
@@ -252,12 +262,20 @@ export function BillingDetailsCard({
 
   return (
     <Card style={{ gap: space.lg }}>
-      <View style={{ gap: 2 }}>
-        <T v="heading">{t('lacct.profile.billing')}</T>
-        <T v="small" muted>
-          {t('lacct.profile.billing_description')}
-        </T>
-      </View>
+      <T v="heading">{t('lacct.profile.details')}</T>
+      <Field label={t('students.field.ic')}>
+        <Input
+          value={icNumber}
+          maxLength={30}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          onChangeText={(v) => {
+            setIcNumber(v)
+            setSaved(false)
+          }}
+          placeholder={t('students.form.ic_placeholder')}
+        />
+      </Field>
       <Field label={t('students.field.organization')}>
         <Input
           value={organization}
@@ -269,7 +287,7 @@ export function BillingDetailsCard({
           placeholder={t('students.form.organization_placeholder')}
         />
       </Field>
-      <Field label={t('students.field.address')}>
+      <Field label={t('students.field.address')} hint={t('lacct.profile.billing_hint')}>
         <Input
           value={address}
           maxLength={500}

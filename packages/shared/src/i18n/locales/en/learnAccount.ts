@@ -72,10 +72,12 @@ export const learnAccount = {
   'lacct.profile.no_record':
     'No student record is linked to your account in {academy} yet.',
 
-  // Profile → what the invoice and receipt print under "Bill to"
-  'lacct.profile.billing': 'Billing details',
-  'lacct.profile.billing_description':
-    'Printed on your invoices and receipts.',
+  // Profile → the part of the record the student writes
+  'lacct.profile.details': 'My details',
+  'lacct.profile.ic_invalid':
+    'Enter a 12-digit IC number, or a passport number.',
+  'lacct.profile.billing_hint':
+    'Organization and address are printed on your invoices and receipts.',
 } as const
 
 export type LearnAccountDict = Record<keyof typeof learnAccount, string>

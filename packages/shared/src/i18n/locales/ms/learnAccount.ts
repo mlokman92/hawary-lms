@@ -72,7 +72,10 @@ export const learnAccount: LearnAccountDict = {
   'lacct.profile.no_record':
     'Belum ada rekod pelajar yang dipautkan dengan akaun anda di {academy}.',
 
-  // Profil → apa yang dicetak di bawah "Bil kepada" pada invois dan resit
-  'lacct.profile.billing': 'Butiran bil',
-  'lacct.profile.billing_description': 'Dicetak pada invois dan resit anda.',
+  // Profil → bahagian rekod yang diisi oleh pelajar
+  'lacct.profile.details': 'Butiran saya',
+  'lacct.profile.ic_invalid':
+    'Masukkan nombor IC 12 digit, atau nombor pasport.',
+  'lacct.profile.billing_hint':
+    'Organisasi dan alamat dicetak pada invois dan resit anda.',
 }
