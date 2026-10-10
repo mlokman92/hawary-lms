@@ -21,7 +21,6 @@ export const payments = {
   'payments.records.heading': 'Payment records',
   'payments.table.invoice': 'Invoice',
   'payments.table.breakdown': 'Breakdown',
-  'payments.breakdown.manual': 'Manual',
   'payments.empty.none': 'No invoices yet.',
   'payments.empty.create_first': 'Create your first invoice',
   'payments.empty.no_match': 'No invoices match.',

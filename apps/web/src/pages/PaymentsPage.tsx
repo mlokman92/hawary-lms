@@ -12,7 +12,6 @@ import { PageHeader } from '@/components/patterns/PageHeader'
 import { FilterStatCard } from '@/components/patterns/FilterStatCard'
 import { EmptyState } from '@/components/patterns/EmptyState'
 import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -33,12 +32,10 @@ import { InvoiceFormDialog } from '@/features/payments/InvoiceFormDialog'
 import {
   ALL_COURSES,
   ALL_MONEY,
-  INVOICE_STATUS_LABEL,
-  INVOICE_STATUS_VARIANT,
   NO_COURSE,
-  collectedBreakdown,
+  PAYMENT_METHOD_LABEL,
   collectedSen,
-  collectionStatus,
+  paymentBreakdown,
   useInvoiceList,
   useInvoiceStats,
   type InvoiceRow,
@@ -109,34 +106,33 @@ const MONEY_TILES: {
 ]
 
 /**
- * How the Paid figure beside it arrived: through the gateway (FPX) or typed in
- * by staff. The two lines add up to Paid, so KWSP is in neither — to staff it
- * has not been collected. A route with nothing against it is left out rather
- * than printed as RM 0.00, and an invoice with nothing collected is a dash.
+ * Where an invoice's money came from, one route per line.
+ *
+ * The lines in full strength add up to the Paid column. The muted ones are
+ * money the student has paid that staff do not yet count as collected — KWSP,
+ * and a bank transfer still waiting for its receipt, which says so — and they
+ * are what explains a row that reads "Paid RM 0.00" on an invoice the student
+ * has settled. An invoice nobody has paid anything towards is a dash.
  */
 function Breakdown({ invoice }: { invoice: InvoiceRow }) {
   const { t } = useT()
-  const { fpx, manual } = collectedBreakdown(invoice.payments)
-  if (fpx === 0 && manual === 0)
+  const lines = paymentBreakdown(invoice.payments)
+  if (lines.length === 0)
     return <span className="text-muted-foreground">—</span>
   return (
     <div className="text-xs whitespace-nowrap tabular-nums">
-      {fpx > 0 ? (
-        <div>
+      {lines.map((line) => (
+        <div
+          key={`${line.method}-${line.pendingReceipt}`}
+          className={line.collected ? undefined : 'text-muted-foreground'}
+        >
           <span className="text-muted-foreground">
-            {t('payments.method.fpx')}
+            {t(PAYMENT_METHOD_LABEL[line.method])}
           </span>{' '}
-          {formatMYR(fpx)}
+          {formatMYR(line.amountSen)}
+          {line.pendingReceipt ? ` · ${t('payments.receipts.pending')}` : ''}
         </div>
-      ) : null}
-      {manual > 0 ? (
-        <div>
-          <span className="text-muted-foreground">
-            {t('payments.breakdown.manual')}
-          </span>{' '}
-          {formatMYR(manual)}
-        </div>
-      ) : null}
+      ))}
     </div>
   )
 }
@@ -362,7 +358,6 @@ export function PaymentsPage() {
                   <TableHead className="text-right">
                     {t('payments.amount.paid')}
                   </TableHead>
-                  <TableHead>{t('common.status')}</TableHead>
                   <TableHead>{t('payments.table.breakdown')}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -397,17 +392,12 @@ export function PaymentsPage() {
                     <TableCell className="text-right tabular-nums">
                       {formatMYR(inv.total_sen)}
                     </TableCell>
-                    {/* Paid and status as staff read them: money covered by
-                        KWSP has not been collected. */}
+                    {/* Paid as staff read it: neither KWSP nor a bank transfer
+                        with no receipt has been collected. There is no status
+                        column — Total, Paid and the breakdown beside them
+                        already say where the invoice stands, in ringgit. */}
                     <TableCell className="text-right tabular-nums">
                       {formatMYR(collectedSen(inv))}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={INVOICE_STATUS_VARIANT[collectionStatus(inv)]}
-                      >
-                        {t(INVOICE_STATUS_LABEL[collectionStatus(inv)])}
-                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Breakdown invoice={inv} />

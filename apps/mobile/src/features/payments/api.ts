@@ -549,31 +549,58 @@ export function uncollectedSen(inv: CollectionFields): number {
   return Math.max(0, inv.total_sen - collectedSen(inv))
 }
 
+/** One line of an invoice's breakdown: a route, and what came by it. */
+export type BreakdownLine = {
+  method: PaymentMethod
+  amountSen: number
+  /**
+   * False for the two kinds of money staff do not count as collected: KWSP,
+   * and a bank transfer whose receipt has not been uploaded.
+   */
+  collected: boolean
+  /** A bank transfer still waiting for its receipt. */
+  pendingReceipt: boolean
+}
+
 /**
- * What was collected on an invoice, by the route it came: through the gateway
- * (FPX — a callback wrote the row) or typed in by staff.
+ * Everything paid against an invoice, by the route it came.
  *
- * The two add up to `collectedSen`: succeeded payments only, as the trigger
- * counts them, with KWSP and bank transfers that have no receipt left out
- * because to staff neither has been collected.
- * `provider`, not `method`, is what tells them apart — a staff member can
- * record a payment and call its method anything, but only the gateway writes
- * a row whose provider is not `manual`.
+ * Every route, not only the collected ones. The first version listed what had
+ * been collected and nothing else, and once a bank transfer needed a receipt
+ * to count, nearly every row had nothing to list — an invoice with RM2,000
+ * transferred and RM500 from KWSP read as a dash beside "Paid RM 0.00", with
+ * no sign of where the RM2,500 was. So each line says its route, and the two
+ * that are not collected say so: the `collected` lines add up to the Paid
+ * column, and the rest is what is behind the difference.
+ *
+ * A bank transfer is split in two when only some of it has a receipt, because
+ * those are two different answers to "has this been collected". Succeeded
+ * payments only, as the trigger counts them.
  */
-export function collectedBreakdown(payments: PaymentRoute[] | undefined): {
-  fpx: number
-  manual: number
-} {
-  let fpx = 0
-  let manual = 0
+export function paymentBreakdown(
+  payments: PaymentRoute[] | undefined,
+): BreakdownLine[] {
+  const lines = new Map<string, BreakdownLine>()
   for (const p of payments ?? []) {
-    if (p.status !== 'succeeded' || p.method === 'kwsp') continue
-    // Not collected until its receipt is in — same rule as `collectedSen`.
-    if (p.method === 'bank_transfer' && !p.has_receipt) continue
-    if (p.provider === 'manual') manual += p.amount_sen
-    else fpx += p.amount_sen
+    if (p.status !== 'succeeded') continue
+    const pendingReceipt = p.method === 'bank_transfer' && !p.has_receipt
+    const key = `${p.method}|${pendingReceipt}`
+    const line = lines.get(key)
+    if (line) line.amountSen += p.amount_sen
+    else
+      lines.set(key, {
+        method: p.method,
+        amountSen: p.amount_sen,
+        collected: p.method !== 'kwsp' && !pendingReceipt,
+        pendingReceipt,
+      })
   }
-  return { fpx, manual }
+  // Collected first, then in the picker's order, so a column of rows reads
+  // the same way down the page.
+  const order = (l: BreakdownLine) =>
+    (l.collected ? 0 : 10) +
+    (PAYMENT_METHODS.indexOf(l.method) + 1 || PAYMENT_METHODS.length + 1)
+  return [...lines.values()].sort((a, b) => order(a) - order(b))
 }
 
 /**

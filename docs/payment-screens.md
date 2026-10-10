@@ -264,26 +264,20 @@ declined.
 
 ### The Breakdown column
 
-Where Due used to be. It says how the Paid figure beside it arrived: **FPX**
-(through the gateway) or **Manual** (typed in by staff). `collectedBreakdown`
-splits on `payments.provider`, not `method` — staff can record a payment and
-call its method anything, but only the gateway writes a row whose provider is
-not `manual`. Succeeded payments only, and KWSP in neither line, so the two add
-up to Paid. A route with nothing against it is left out, not printed as zero.
+Where Due used to be. One line per route the invoice's money came by — FPX,
+Cash, Bank transfer, KWSP — from `paymentBreakdown`, over the payments that ride
+along on the list read as a plain embed (it adds columns to each row and
+filters nothing).
 
-The payments ride along as a plain embed on the list read
-(`payments(amount_sen, provider, method, status)`): it adds columns to each row
-and filters nothing.
-
-Search is debounced through `lib/useDebounced.ts` — otherwise a keystroke is
-two round trips. **CSV export walks the whole filtered set** in 200-row chunks
-via `fetchPaymentLogAll`, never the 50 rows on screen: a reconciliation that
-stops at row 50 is worse than none, and 200 is the `_limit` clamp the RPC
-enforces. `invalidateMoney` is the one place a money write invalidates all six
-cached lists.
-
-Still unbounded and deliberately left so: the **dashboard**'s `useInvoices`,
-which reads every invoice for its 6-month chart and stat tiles.
+**Every route is listed, not only the collected ones.** The first version
+listed what had been collected, split into FPX and Manual, and its lines added
+up to Paid. Once a bank transfer needed a receipt to count, nearly every row
+had nothing to list: an invoice with RM2,000 transferred and RM500 from KWSP
+read as a dash beside "Paid RM 0.00", with no sign of where the RM2,500 was.
+So the lines in full strength still add up to Paid, and the muted ones are
+what the student has paid that staff do not count yet — KWSP, and a bank
+transfer marked "Receipt pending". A transfer is split into two lines when only
+part of it has a receipt. Succeeded payments only.
 
 ## The four tiles are filters
 
@@ -317,9 +311,11 @@ KWSP money has to sit in outstanding or be nowhere. A screen with a KWSP tile
 must leave it out; a screen without one must keep it in.
 
 The rows under the tiles still read as staff do: the Paid column is
-`collectedSen(inv)` and the badge is `collectionStatus(inv)`, so a row the
-student sees as Paid reads Partially paid here while part of it waits on KWSP —
-and such a row appears under KWSP, not under Outstanding. The whole rule, and
+`collectedSen(inv)`, so a row the student sees as paid can read RM 0.00 here
+while its money waits on KWSP or a receipt. The list has **no status column**
+— the owner removed it: Total, Paid and the Breakdown beside them already say
+where an invoice stands, in ringgit, and a badge repeating that in a word was
+one more thing to keep honest. The invoice page still shows the badge. The whole rule, and
 why the student's own figures are deliberately left alone, is in
 [payment-report.md](payment-report.md#to-staff-kwsp-money-has-not-been-collected).
 
