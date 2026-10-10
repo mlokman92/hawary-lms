@@ -158,8 +158,8 @@ export function PaymentReceiptsPage() {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={t('payments.log.search_placeholder')}
-            aria-label={t('payments.log.search_placeholder')}
+            placeholder={t('payments.receipts.search_placeholder')}
+            aria-label={t('payments.receipts.search_placeholder')}
             className="pl-8"
           />
         </div>

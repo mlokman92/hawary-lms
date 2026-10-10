@@ -376,6 +376,21 @@ search and page are in the URL (`?state=uploaded|all`, `?q=`, `?page=`), with
 pending the unwritten default. It keeps a pager rather than Load more: the
 list is worked from the top and refills as rows leave it.
 
+### Searching by phone number
+
+A receipt usually arrives by WhatsApp from a number, and the number is often
+all the admin has: the banking screenshot shows the payer's bank, not which
+student they are. So the queue's search also takes a phone number, matched
+**digits to digits** — `0123456789`, `012-345 6789` and `+60 12-345 6789` are
+one number, and a text search would find only the spelling on the record.
+
+`app.phone_needle(_search)` returns the digits to look for, or NULL when the
+text is not a phone number: only digits, spaces and `+ - ( )`, and at least
+four digits once the leading `60` or `0` is dropped. The guard is the point —
+without it "siri 2" would match every student with a 2 in their number — and
+dropping the prefix is what lets `0123…` find a number stored as `60123…`.
+A partial number works: the last six digits are enough.
+
 ### One table, one function, no client writes
 
 `payment_receipts` is keyed on `payment_id` — one receipt per payment, and

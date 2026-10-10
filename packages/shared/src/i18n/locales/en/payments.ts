@@ -188,6 +188,8 @@ export const payments = {
   'payments.receipts.subtitle':
     'Every bank transfer needs the receipt it was recorded from. Until one is uploaded, it is pending.',
   'payments.receipts.uploaded': 'Uploaded',
+  'payments.receipts.search_placeholder':
+    'Search student, phone number, invoice or note',
   'payments.receipts.summary_one': '{count} pending · {amount}',
   'payments.receipts.summary_other': '{count} pending · {amount}',
   'payments.receipts.empty_pending': 'Every bank transfer has its receipt.',
