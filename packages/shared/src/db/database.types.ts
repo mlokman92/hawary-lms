@@ -1316,8 +1316,10 @@ export type Database = {
           created_by: string | null
           currency: string
           description: string | null
+          end_date: string | null
           id: string
           price_sen: number
+          start_date: string | null
           status: Database["public"]["Enums"]["course_status"]
           title: string
           updated_at: string
@@ -1330,8 +1332,10 @@ export type Database = {
           created_by?: string | null
           currency?: string
           description?: string | null
+          end_date?: string | null
           id?: string
           price_sen?: number
+          start_date?: string | null
           status?: Database["public"]["Enums"]["course_status"]
           title: string
           updated_at?: string
@@ -1344,8 +1348,10 @@ export type Database = {
           created_by?: string | null
           currency?: string
           description?: string | null
+          end_date?: string | null
           id?: string
           price_sen?: number
+          start_date?: string | null
           status?: Database["public"]["Enums"]["course_status"]
           title?: string
           updated_at?: string
@@ -2583,6 +2589,51 @@ export type Database = {
           },
         ]
       }
+      student_ic_copies: {
+        Row: {
+          academy_id: string
+          created_at: string
+          file_name: string
+          file_path: string
+          size_bytes: number
+          student_id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          file_name: string
+          file_path: string
+          size_bytes: number
+          student_id: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          size_bytes?: number
+          student_id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_ic_copies_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_ic_copies_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       students: {
         Row: {
           academy_id: string
@@ -2598,6 +2649,7 @@ export type Database = {
           ic_number: string | null
           id: string
           organization: string | null
+          personal_address: string | null
           phone: string | null
           status: Database["public"]["Enums"]["student_status"]
           student_no: string
@@ -2618,6 +2670,7 @@ export type Database = {
           ic_number?: string | null
           id?: string
           organization?: string | null
+          personal_address?: string | null
           phone?: string | null
           status?: Database["public"]["Enums"]["student_status"]
           student_no: string
@@ -2638,6 +2691,7 @@ export type Database = {
           ic_number?: string | null
           id?: string
           organization?: string | null
+          personal_address?: string | null
           phone?: string | null
           status?: Database["public"]["Enums"]["student_status"]
           student_no?: string
@@ -3304,6 +3358,7 @@ export type Database = {
           ic_number: string | null
           id: string
           organization: string | null
+          personal_address: string | null
           phone: string | null
           status: Database["public"]["Enums"]["student_status"]
           student_no: string
@@ -3317,40 +3372,78 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      update_my_student_details: {
-        Args: {
-          _address: string
-          _ic_number: string
-          _organization: string
-          _student_id: string
-        }
-        Returns: {
-          academy_id: string
-          address: string | null
-          archived_at: string | null
-          avatar_url: string | null
-          created_at: string
-          created_by: string | null
-          date_of_birth: string | null
-          email: string | null
-          full_name: string | null
-          gender: Database["public"]["Enums"]["gender"] | null
-          ic_number: string | null
-          id: string
-          organization: string | null
-          phone: string | null
-          status: Database["public"]["Enums"]["student_status"]
-          student_no: string
-          updated_at: string
-          user_id: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "students"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+      update_my_student_details:
+        | {
+            Args: {
+              _address: string
+              _ic_number: string
+              _organization: string
+              _student_id: string
+            }
+            Returns: {
+              academy_id: string
+              address: string | null
+              archived_at: string | null
+              avatar_url: string | null
+              created_at: string
+              created_by: string | null
+              date_of_birth: string | null
+              email: string | null
+              full_name: string | null
+              gender: Database["public"]["Enums"]["gender"] | null
+              ic_number: string | null
+              id: string
+              organization: string | null
+              personal_address: string | null
+              phone: string | null
+              status: Database["public"]["Enums"]["student_status"]
+              student_no: string
+              updated_at: string
+              user_id: string | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "students"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              _address: string
+              _ic_number: string
+              _organization: string
+              _personal_address: string
+              _student_id: string
+            }
+            Returns: {
+              academy_id: string
+              address: string | null
+              archived_at: string | null
+              avatar_url: string | null
+              created_at: string
+              created_by: string | null
+              date_of_birth: string | null
+              email: string | null
+              full_name: string | null
+              gender: Database["public"]["Enums"]["gender"] | null
+              ic_number: string | null
+              id: string
+              organization: string | null
+              personal_address: string | null
+              phone: string | null
+              status: Database["public"]["Enums"]["student_status"]
+              student_no: string
+              updated_at: string
+              user_id: string | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "students"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
     }
     Enums: {
       academy_status: "active" | "suspended" | "cancelled"

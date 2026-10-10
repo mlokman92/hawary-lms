@@ -79,6 +79,20 @@ export function fmtDay(day: string | null | undefined): string {
 }
 
 /**
+ * Two calendar days as a span — "1 Apr 2026 – 1 Oct 2026". Null when neither
+ * is set, so a caller joining a line of facts can drop it; a span missing one
+ * end keeps the em dash, because a course with a start and no end is exactly
+ * that and should read as it.
+ */
+export function fmtDayRange(
+  start: string | null | undefined,
+  end: string | null | undefined,
+): string | null {
+  if (!start && !end) return null
+  return `${fmtDay(start)} – ${fmtDay(end)}`
+}
+
+/**
  * Avatar fallback initials. Language-neutral, but it belongs with the other
  * display helpers: several surfaces render the same person and should not each
  * decide what a two-word name collapses to.

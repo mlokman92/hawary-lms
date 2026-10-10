@@ -185,3 +185,38 @@ export async function paymentReceiptUrl(paymentId: string): Promise<string> {
   if (!data?.url) throw new Error(data?.error ?? translate('upload.failed'))
   return data.url
 }
+
+/**
+ * Upload the PDF copy of a student identity card (or replace the one there).
+ *
+ * The `ic-copy` function writes the object and its `student_ic_copies` row
+ * together, for the reason `uploadPaymentReceipt` gives. It decides who may:
+ * the account the student record is linked to. Nothing here names an academy.
+ */
+export async function uploadIcCopy(studentId: string, file: File): Promise<void> {
+  const body = new FormData()
+  body.append('file', file)
+  body.append('student_id', studentId)
+
+  const { data, error } = await supabase.functions.invoke<UploadResponse>(
+    'ic-copy',
+    { body },
+  )
+  if (error) throw await functionError(error)
+  if (!data?.ok) throw new Error(data?.error ?? translate('upload.failed'))
+}
+
+/**
+ * A 60-second signed URL for one IC copy. The bucket is private; the function
+ * signs only what `student_ic_copies` shows this caller.
+ */
+export async function icCopyUrl(studentId: string): Promise<string> {
+  const { data, error } = await supabase.functions.invoke<{
+    url?: string
+    error?: string
+  }>('ic-copy', { body: { student_id: studentId } })
+
+  if (error) throw await functionError(error)
+  if (!data?.url) throw new Error(data?.error ?? translate('upload.failed'))
+  return data.url
+}

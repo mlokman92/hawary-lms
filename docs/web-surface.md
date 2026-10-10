@@ -66,6 +66,16 @@ holding notes, materials, assessments and assignments. Editors stay routable at
 `course_modules` is the only hierarchy — see
 [course-modules.md](course-modules.md).
 
+A course carries its intake's **`start_date` / `end_date`** — plain `date`
+columns, both optional, `end_date >= start_date` by constraint. They are set in
+the course form and read back on the card and the course header through
+`fmtDayRange`, which formats a calendar day pinned to UTC so it cannot shift in
+a browser outside Malaysia. They are **what the course says about itself and
+nothing else**: no policy, RPC or status reads them. A course does not open,
+close or archive on its dates — `status` still decides who sees it, and
+enrollment has its own `closes_at`. A copy starts without them
+([course-duplication.md](course-duplication.md)).
+
 Reorder/move via `reorder_course_modules` + `reorder_module_items(module, kind,
 ordered_ids)`. Items are **drag-sortable** (`features/courses/ModuleItemList.tsx`,
 dnd-kit): by handle, not whole-row — the row also holds a link, a switch and a

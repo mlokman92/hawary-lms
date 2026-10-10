@@ -11,9 +11,10 @@ import { useUpdateMyDetails, type Student } from './api'
 
 /**
  * The part of the academy's record a student writes themselves: the IC number
- * — they are the one holding the card — and the organization and address their
+ * — they are the one holding the card — the organization and address their
  * invoice and receipt print under "Bill to", which only they know a sponsor's
- * requirements for. Everything else on the record stays with staff.
+ * requirements for, and their personal address, which is theirs and prints
+ * nowhere. Everything else on the record stays with staff.
  */
 export function StudentDetailsCard({
   academyId,
@@ -27,6 +28,9 @@ export function StudentDetailsCard({
   const [icNumber, setIcNumber] = useState(student.ic_number ?? '')
   const [organization, setOrganization] = useState(student.organization ?? '')
   const [address, setAddress] = useState(student.address ?? '')
+  const [personalAddress, setPersonalAddress] = useState(
+    student.personal_address ?? '',
+  )
   const [err, setErr] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
 
@@ -45,12 +49,14 @@ export function StudentDetailsCard({
         icNumber: ic,
         organization,
         address,
+        personalAddress,
       })
-      // Show what was stored: the IC number loses its dashes and the other two
+      // Show what was stored: the IC number loses its dashes and the others
       // are trimmed on the way in.
       setIcNumber(row.ic_number ?? '')
       setOrganization(row.organization ?? '')
       setAddress(row.address ?? '')
+      setPersonalAddress(row.personal_address ?? '')
       setSaved(true)
     } catch (e2) {
       setErr(errorMessage(e2, t('lacct.profile.save_failed')))
@@ -112,6 +118,22 @@ export function StudentDetailsCard({
             <p className="text-muted-foreground text-xs">
               {t('lacct.profile.billing_hint')}
             </p>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="details_personal_address">
+              {t('students.field.personal_address')}
+            </Label>
+            <Textarea
+              id="details_personal_address"
+              rows={3}
+              value={personalAddress}
+              maxLength={500}
+              autoComplete="street-address"
+              onChange={(e) => {
+                setPersonalAddress(e.target.value)
+                setSaved(false)
+              }}
+            />
           </div>
 
           {err ? <p className="text-destructive text-sm">{err}</p> : null}

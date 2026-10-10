@@ -218,6 +218,10 @@ export function PreferencesCard() {
  * The part of the academy's record a student writes themselves: the IC number,
  * and the organization and address their invoice and receipt print under "Bill
  * to". Mount it keyed by the student id, so another branch's record reseeds it.
+ *
+ * The personal address is written on the web only for now. The save sends back
+ * the one already stored, because the function writes every field it is given
+ * and a blank here would erase what the student typed there.
  */
 export function StudentDetailsCard({
   academyId,
@@ -248,6 +252,7 @@ export function StudentDetailsCard({
         icNumber: ic,
         organization,
         address,
+        personalAddress: student.personal_address ?? '',
       })
       // Show what was stored: the IC number loses its dashes and the other two
       // are trimmed on the way in.

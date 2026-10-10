@@ -19,7 +19,7 @@ import {
 import { formatMYR } from '@hawary/shared'
 import { useAcademy } from '@/lib/academy'
 import { useAuth } from '@/lib/auth'
-import { fmtDate } from '@/lib/format'
+import { fmtDate, fmtDayRange } from '@/lib/format'
 import { useT, type TKey } from '@/lib/i18n'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -399,6 +399,7 @@ export function CourseDetailPage() {
           <p className="text-muted-foreground mt-1 text-sm">
             {[
               course.code,
+              fmtDayRange(course.start_date, course.end_date),
               formatMYR(course.price_sen),
               tn('courses.module_count', moduleCount),
             ]

@@ -96,6 +96,19 @@ export const studentImportSpec: ImportSpec = {
       sample: '12 Jalan Melati, 43000 Kajang, Selangor',
     },
     {
+      key: 'personal_address',
+      column: 'personal_address',
+      labelKey: 'students.field.personal_address',
+      aliases: [
+        'personal address',
+        'home address',
+        'alamat peribadi',
+        'alamat rumah',
+        'alamat kediaman',
+      ],
+      sample: '7 Jalan Kenanga 3, 43000 Kajang, Selangor',
+    },
+    {
       key: 'status',
       column: 'status',
       labelKey: 'common.status',

@@ -41,9 +41,9 @@ export function useMyStudent(academyId: string | null) {
 }
 
 /**
- * The three fields a student may write on their own record: the IC number, and
- * the organization and address the invoice and the receipt print under "Bill
- * to".
+ * The four fields a student may write on their own record: the IC number, the
+ * organization and address the invoice and the receipt print under "Bill to",
+ * and their personal address, which prints on neither.
  *
  * `students` has no student UPDATE policy — a row-level grant would hand over
  * `status` and `student_no` with it — so this goes through an RPC that writes
@@ -61,12 +61,14 @@ export function useUpdateMyDetails(academyId: string | null) {
       icNumber: string
       organization: string
       address: string
+      personalAddress: string
     }) => {
       const { data, error } = await supabase.rpc('update_my_student_details', {
         _student_id: input.studentId,
         _ic_number: input.icNumber,
         _organization: input.organization,
         _address: input.address,
+        _personal_address: input.personalAddress,
       })
       if (error) throw error
       return data as Student

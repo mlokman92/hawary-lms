@@ -36,6 +36,7 @@ export const students = {
   'students.field.phone_number': 'Phone number',
   'students.field.organization': 'Organization',
   'students.field.address': 'Address',
+  'students.field.personal_address': 'Personal address',
   'students.gender.male': 'Male',
   'students.gender.female': 'Female',
 

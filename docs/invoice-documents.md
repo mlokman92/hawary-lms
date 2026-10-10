@@ -234,6 +234,29 @@ typed. That was accepted over the alternative — a blank that silently keeps th
 old value — because a form that does not do what it displays is the worse
 surprise, and staff can type it back.
 
+### The personal address is a fourth field, and prints on neither document
+
+`students.personal_address` is where the student lives. It is a separate column
+because `students.address` already means something else — the **Bill to** block,
+which for nearly every record that has one sits under an organization — and one
+column could not be both. Nothing was moved between them: an address typed
+before this stays where it was typed.
+
+Staff write it in the student form (and the CSV import, as `personal_address`);
+the student writes it on the same **My details** card, web only for now. The
+Student app's card does not show it and sends back the stored value on save, so
+saving there cannot blank what was typed here.
+
+**A fifth argument this time, as an overload.**
+`update_my_student_details(_student_id, _ic_number, _organization, _address,
+_personal_address)` (`20261011100000_student_personal_address.sql`) sits beside
+the four-argument function of the same name. Installed Student app builds call
+the four-argument one, and since neither signature has a default a call can
+only match one of them; the older function leaves `personal_address` alone. The
+generated types carry the pair as a union, which is why
+`video/tools/capture/fake/gen-schema.mjs` reads a bare `name:` line. Retire the
+four-argument function with `update_my_billing_details`, at the same moment.
+
 ## Not done
 
 - The receipt covers the **invoice**, not one payment. A per-payment receipt

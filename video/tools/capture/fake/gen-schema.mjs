@@ -132,7 +132,8 @@ const functions = []
 {
   const [s, e] = section('Functions')
   for (let i = s; i < e; i++) {
-    const m = /^      (\w+): \{?/.exec(lines[i])
+    // An overloaded function is `name:` alone, its signatures a union below.
+    const m = /^      (\w+):(?: |$)/.exec(lines[i])
     if (m && !functions.includes(m[1])) functions.push(m[1])
   }
 }

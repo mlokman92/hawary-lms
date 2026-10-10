@@ -24,6 +24,10 @@ export const nav = {
   'nav.payment_report': 'Payment report',
   'nav.payment_receipts': 'Bank Transfer Receipt',
   'nav.incentives': 'Incentive',
+  // Documents: one parent, on both shells, over the letter and the IC copy.
+  'nav.documents': 'Documents',
+  'nav.offer_letter': 'Offer letter',
+  'nav.ic_copy': 'IC copy',
   'nav.members': 'Members',
   'nav.settings': 'Settings',
   'nav.analytics': 'Analytics',

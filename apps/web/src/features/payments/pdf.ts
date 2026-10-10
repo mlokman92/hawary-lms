@@ -66,7 +66,7 @@ const FOLD: Record<string, string> = {
   ' ': ' ',
 }
 
-function pdfText(value: unknown): string {
+export function pdfText(value: unknown): string {
   return String(value ?? '').replace(
     /[‘’‚“”–—…• ]/g,
     (c) => FOLD[c] ?? c,

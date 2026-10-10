@@ -37,6 +37,7 @@ export const students: StudentsDict = {
   'students.field.phone_number': 'Nombor telefon',
   'students.field.organization': 'Organisasi',
   'students.field.address': 'Alamat',
+  'students.field.personal_address': 'Alamat peribadi',
   'students.gender.male': 'Lelaki',
   'students.gender.female': 'Perempuan',
 

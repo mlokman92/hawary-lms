@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { formatMYR } from '@hawary/shared'
 import { useAcademy } from '@/lib/academy'
+import { fmtDayRange } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -190,9 +191,11 @@ export function CoursesPage() {
                       >
                         <h2 className="truncate font-medium">{c.title}</h2>
                       </Link>
-                      {c.code ? (
+                      {c.code || c.start_date || c.end_date ? (
                         <p className="text-muted-foreground mt-0.5 truncate text-xs">
-                          {c.code}
+                          {[c.code, fmtDayRange(c.start_date, c.end_date)]
+                            .filter(Boolean)
+                            .join(' · ')}
                         </p>
                       ) : null}
                       {c.description ? (
@@ -348,7 +351,11 @@ export function CoursesPage() {
                       {c.title}
                     </Link>
                     <p className="text-muted-foreground mt-0.5 truncate text-xs">
-                      {[c.code, formatMYR(c.price_sen)]
+                      {[
+                        c.code,
+                        fmtDayRange(c.start_date, c.end_date),
+                        formatMYR(c.price_sen),
+                      ]
                         .filter(Boolean)
                         .join(' · ')}
                     </p>

@@ -23,6 +23,7 @@ import { courses as enCourses } from './locales/en/courses'
 import { enrollment as enEnrollment } from './locales/en/enrollment'
 import { modules as enModules } from './locales/en/modules'
 import { students as enStudents } from './locales/en/students'
+import { studentDocs as enStudentDocs } from './locales/en/studentDocs'
 import { instructors as enInstructors } from './locales/en/instructors'
 import { payments as enPayments } from './locales/en/payments'
 import { pay as enPay } from './locales/en/pay'
@@ -56,6 +57,7 @@ import { courses as msCourses } from './locales/ms/courses'
 import { enrollment as msEnrollment } from './locales/ms/enrollment'
 import { modules as msModules } from './locales/ms/modules'
 import { students as msStudents } from './locales/ms/students'
+import { studentDocs as msStudentDocs } from './locales/ms/studentDocs'
 import { instructors as msInstructors } from './locales/ms/instructors'
 import { payments as msPayments } from './locales/ms/payments'
 import { pay as msPay } from './locales/ms/pay'
@@ -91,6 +93,7 @@ export const en = {
   ...enEnrollment,
   ...enModules,
   ...enStudents,
+  ...enStudentDocs,
   ...enInstructors,
   ...enPayments,
   ...enPay,
@@ -141,6 +144,7 @@ export const ms: Record<TKey, string> = {
   ...msEnrollment,
   ...msModules,
   ...msStudents,
+  ...msStudentDocs,
   ...msInstructors,
   ...msPayments,
   ...msPay,

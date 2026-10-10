@@ -51,6 +51,8 @@ export function CourseFormDialog({
   const [description, setDescription] = useState('')
   const [status, setStatus] = useState<CourseStatus>('draft')
   const [price, setPrice] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -60,6 +62,8 @@ export function CourseFormDialog({
     setDescription(course?.description ?? '')
     setStatus(course?.status ?? 'draft')
     setPrice(course ? senToRinggit(course.price_sen) : '')
+    setStartDate(course?.start_date ?? '')
+    setEndDate(course?.end_date ?? '')
     setError(null)
   }, [open, course])
 
@@ -71,6 +75,13 @@ export function CourseFormDialog({
       setError(t('courses.form.title_required'))
       return
     }
+    // yyyy-mm-dd sorts as text, so this is the same comparison the
+    // courses_dates_ordered constraint makes — said here in the reader's
+    // language rather than as a raw check violation.
+    if (startDate && endDate && endDate < startDate) {
+      setError(t('courses.form.dates_order'))
+      return
+    }
     setError(null)
     const fields = {
       title: title.trim(),
@@ -79,6 +90,8 @@ export function CourseFormDialog({
       status,
       price_sen: ringgitToSen(price),
       currency: 'MYR',
+      start_date: startDate || null,
+      end_date: endDate || null,
     }
     try {
       if (isEdit && course) {
@@ -138,6 +151,28 @@ export function CourseFormDialog({
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="0.00"
+              />
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="start-date">{t('courses.form.start_date')}</Label>
+              <Input
+                id="start-date"
+                type="date"
+                value={startDate}
+                max={endDate || undefined}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="end-date">{t('courses.form.end_date')}</Label>
+              <Input
+                id="end-date"
+                type="date"
+                value={endDate}
+                min={startDate || undefined}
+                onChange={(e) => setEndDate(e.target.value)}
               />
             </div>
           </div>

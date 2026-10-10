@@ -399,6 +399,11 @@ export function StudentDetailPage() {
               value={student.address}
               className="sm:col-span-2"
             />
+            <Field
+              label={t('students.field.personal_address')}
+              value={student.personal_address}
+              className="sm:col-span-2"
+            />
           </dl>
         </CardContent>
       </Card>

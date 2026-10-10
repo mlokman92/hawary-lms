@@ -33,10 +33,14 @@ Two fields are asked for rather than derived:
   `ACCA-1-copy` is a made-up identifier that looks deliberate. The RPC checks
   for a clash up front so the caller gets a sentence, not a raw `23505`.
 
-Three things are reset rather than copied:
+Four things are reset rather than copied:
 
 - **status** → `draft`. A copy is not ready to be shown or sold, whatever the
   original was.
+- **`start_date` / `end_date`** on the course → `NULL`, for the reason below:
+  the copy *is* the next intake, and it does not run on the last one's dates.
+  Nothing clears them — `duplicate_course` names the columns it carries and
+  these two are not among them. Keep it that way if the function is rewritten.
 - **`available_from` / `available_until`** on assessments, and **`due_at`** on
   assignments → `NULL`. An intake that inherits last year's window opens already
   closed, and every assignment in it is already overdue. A blank date is

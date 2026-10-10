@@ -62,6 +62,7 @@ export function StudentFormDialog({
   const [avatarUrl, setAvatarUrl] = useState('')
   const [organization, setOrganization] = useState('')
   const [address, setAddress] = useState('')
+  const [personalAddress, setPersonalAddress] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -75,6 +76,7 @@ export function StudentFormDialog({
     setAvatarUrl(student?.avatar_url ?? '')
     setOrganization(student?.organization ?? '')
     setAddress(student?.address ?? '')
+    setPersonalAddress(student?.personal_address ?? '')
     setError(null)
   }, [open, student])
 
@@ -97,6 +99,7 @@ export function StudentFormDialog({
       avatar_url: avatarUrl.trim() || null,
       organization: organization.trim() || null,
       address: address.trim() || null,
+      personal_address: personalAddress.trim() || null,
     }
     try {
       if (isEdit && student) {
@@ -248,6 +251,17 @@ export function StudentFormDialog({
                     rows={3}
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="personal_address">
+                    {t('students.field.personal_address')}
+                  </Label>
+                  <Textarea
+                    id="personal_address"
+                    rows={3}
+                    value={personalAddress}
+                    onChange={(e) => setPersonalAddress(e.target.value)}
                   />
                 </div>
               </AccordionContent>

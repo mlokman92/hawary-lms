@@ -33,6 +33,8 @@ import { LearnProfilePage } from './pages/learn/LearnProfilePage'
 import { LearnAppointmentsPage } from './pages/learn/LearnAppointmentsPage'
 import { LearnReportsPage } from './pages/learn/LearnReportsPage'
 import { LearnReportPage } from './pages/learn/LearnReportPage'
+import { LearnOfferLetterPage } from './pages/learn/LearnOfferLetterPage'
+import { LearnIcCopyPage } from './pages/learn/LearnIcCopyPage'
 import { SignIn } from './pages/SignIn'
 import { SignUp } from './pages/SignUp'
 import { ForgotPassword } from './pages/ForgotPassword'
@@ -75,6 +77,8 @@ import { ReportsPage } from './pages/ReportsPage'
 import { ReportDetailPage } from './pages/ReportDetailPage'
 import { IncentivesPage } from './pages/IncentivesPage'
 import { IncentiveBatchPage } from './pages/IncentiveBatchPage'
+import { OfferLettersPage } from './pages/OfferLettersPage'
+import { IcCopiesPage } from './pages/IcCopiesPage'
 
 function LegacyReportRedirect() {
   const { id } = useParams<{ id: string }>()
@@ -164,6 +168,20 @@ export default function App() {
                     <Route
                       path="/learn/reports/:id"
                       element={<LearnReportPage />}
+                    />
+                    {/* Documents. The parent has no page of its own: it is
+                        the rail's heading for the two below. */}
+                    <Route
+                      path="/learn/documents"
+                      element={<Navigate to="/learn/documents/offer-letter" replace />}
+                    />
+                    <Route
+                      path="/learn/documents/offer-letter"
+                      element={<LearnOfferLetterPage />}
+                    />
+                    <Route
+                      path="/learn/documents/ic-copy"
+                      element={<LearnIcCopyPage />}
                     />
                     <Route path="/learn/profile" element={<LearnProfilePage />} />
                     {/* In-tree catch-all. Without it an unknown /learn/* URL hits
@@ -277,6 +295,15 @@ export default function App() {
                       <Route path="/payments/:id" element={<InvoiceDetailPage />} />
                       <Route path="/incentives" element={<IncentivesPage />} />
                       <Route path="/incentives/:id" element={<IncentiveBatchPage />} />
+                      <Route
+                        path="/documents"
+                        element={<Navigate to="/documents/offer-letters" replace />}
+                      />
+                      <Route
+                        path="/documents/offer-letters"
+                        element={<OfferLettersPage />}
+                      />
+                      <Route path="/documents/ic-copies" element={<IcCopiesPage />} />
                       {/* The roster RPC is admin-only too. No /members/:id: a
                           member's page *is* their instructor or student record,
                           so the roster links straight there rather than

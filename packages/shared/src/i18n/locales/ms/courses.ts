@@ -24,7 +24,7 @@ export const courses: CoursesDict = {
   'courses.duplicate.copies.body':
     'Modul, nota, bahan, penilaian berserta soalan dan jawapannya, tugasan, dan pengajar yang ditugaskan. Salinan dicipta sebagai draf.',
   'courses.duplicate.skips.body':
-    'Pelajar, pendaftaran, penghantaran, percubaan dan invois tidak disalin. Tarikh buka dan tarikh akhir dikosongkan supaya anda boleh menetapkan tarikh kemasukan ini.',
+    'Pelajar, pendaftaran, penghantaran, percubaan dan invois tidak disalin. Tarikh kursus, tarikh buka dan tarikh akhir dikosongkan supaya anda boleh menetapkan tarikh kemasukan ini.',
   'courses.duplicate.confirm': 'Salin kursus',
   'courses.duplicate.working': 'Menyalin…',
   'courses.status.archived': 'Diarkibkan',
@@ -101,6 +101,10 @@ export const courses: CoursesDict = {
   'courses.form.code': 'Kod (pilihan)',
   'courses.form.code_placeholder': 'KIMP-101',
   'courses.form.price': 'Harga (RM)',
+  'courses.form.start_date': 'Tarikh mula',
+  'courses.form.end_date': 'Tarikh tamat',
+  'courses.form.dates_order':
+    'Tarikh tamat tidak boleh lebih awal daripada tarikh mula.',
   'courses.form.description': 'Penerangan (pilihan)',
   'courses.form.description_placeholder': 'Apa yang dipelajari dalam kursus ini…',
   'courses.form.title_required': 'Tajuk wajib diisi.',

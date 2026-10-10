@@ -66,11 +66,11 @@ One shell, two trees:
 
 - **Back-office** (`/`) — Dashboard · Courses · Students · Instructors ·
   Appointments · Reports for every staff member; admins also get Payments
-  (+ Log, Report, Receipts), Incentives and Members (read-only unless Director);
-  Directors also get Settings and Analytics. Course → module → content
-  authoring, grading queues, enrollment, CSV import, notifications.
+  (+ Log, Report, Receipts), Incentives, Documents and Members (read-only
+  unless Director); Directors also get Settings and Analytics. Course → module
+  → content authoring, grading queues, enrollment, CSV import, notifications.
 - **Learner** (`/learn`) — courses, work, billing, appointments, reports,
-  profile.
+  documents, profile.
 - People get in by **invitation or claiming**: staff create the student record
   (a Director the instructor record), and the account that signs in with that
   email claims it.
@@ -110,6 +110,7 @@ Read the doc before changing the area. Each one keeps the *why*.
 | the two mobile apps, push, deep links, attachments, announcements | [mobile-apps.md](docs/mobile-apps.md) |
 | the logo, its colours and files (`brand/`) | [brand.md](docs/brand.md) |
 | `/analytics` — what counts as a login, the `login_events` log | [analytics.md](docs/analytics.md) |
+| offer letter, IC copy (`ic-copies` bucket) | [documents.md](docs/documents.md) |
 | product scope | [requirements.md](docs/requirements.md) |
 
 ## Not built
@@ -120,8 +121,8 @@ Read the doc before changing the area. Each one keeps the *why*.
   `available_from/until` and `type` are enforced server-side but set only in
   SQL. The editor writes `title`, `is_published` and `instructions`.
 - Opening a branch has no UI ([single-owner.md](docs/single-owner.md)).
-- BM for transactional email and Edge Function errors — both are English.
-- Scheduled expiry sweep for invitations; web code-splitting.
+- BM for transactional email and Edge Function errors — both are English;
+  scheduled expiry sweep for invitations; web code-splitting.
 
 ## Commands (use pnpm, not npm)
 
@@ -169,15 +170,14 @@ pnpm --filter mobile sync:data     # after editing a web data hook
   `assessments.total_points`, `academy_members.is_director` / `is_system_admin`.
 - **Clients have no DML** on `academy_invitations`, `notifications`,
   `incentive_payouts`, `assessment_questions`, `appointments`,
-  `announcements`, `enrollment_events`, `payment_receipts` or `assignment_submission_files`, and no INSERT
+  `announcements`, `enrollment_events`, `payment_receipts`, `student_ic_copies` or `assignment_submission_files`, and no INSERT
   or DELETE on `academies` — those move only through RPCs or the owner. Check
   before adding a policy. `login_events` and `push_devices` have no client access at all.
 - **i18n**: keys are flat and self-prefixed, so `TKey = keyof typeof en` — a bad
   key **and** a missing Malay entry are both compile errors. Use `useT()` →
   `t`/`tn`; `translate()` is the non-reactive escape hatch for plain helpers
   only.
-- Web: `@` path alias; Vite `resolve.dedupe` pins a single React (pnpm
-  monorepo).
+- Web: `@` path alias; Vite `resolve.dedupe` pins one React (pnpm monorepo).
 
 ## Working agreements
 

@@ -23,7 +23,7 @@ export const courses = {
   'courses.duplicate.copies.body':
     'Modules, notes, materials, assessments with their questions and answer keys, assignments, and the assigned instructors. The copy is created as a draft.',
   'courses.duplicate.skips.body':
-    'Students, enrolments, submissions, attempts and invoices are not copied. Opening and due dates are cleared so you can set this intake’s own.',
+    'Students, enrolments, submissions, attempts and invoices are not copied. The course dates, opening dates and due dates are cleared so you can set this intake’s own.',
   'courses.duplicate.confirm': 'Duplicate course',
   'courses.duplicate.working': 'Duplicating…',
   'courses.status.archived': 'Archived',
@@ -100,6 +100,9 @@ export const courses = {
   'courses.form.code': 'Code (optional)',
   'courses.form.code_placeholder': 'WELD-101',
   'courses.form.price': 'Price (RM)',
+  'courses.form.start_date': 'Start date',
+  'courses.form.end_date': 'End date',
+  'courses.form.dates_order': 'The end date cannot be before the start date.',
   'courses.form.description': 'Description (optional)',
   'courses.form.description_placeholder': 'What this course covers…',
   'courses.form.title_required': 'Title is required.',

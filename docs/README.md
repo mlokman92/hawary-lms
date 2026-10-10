@@ -48,6 +48,9 @@ row to the table in `CLAUDE.md` if it is a new area.
   the token flow that survives beside it, and how names cross the gap.
 - [student-instructor-roles.md](student-instructor-roles.md) — the two role
   axes and the attempt/submission write guards.
+- [documents.md](documents.md) — the offer letter (drawn on demand from the
+  record, and what a student needs before they may download theirs) and the IC
+  copy (a private bucket, one Edge Function, admin-or-own).
 - [academy-registration.md](academy-registration.md) — the original plan for
   account setup and identity reconciliation. Its self-registration half is
   superseded by [single-owner.md](single-owner.md).

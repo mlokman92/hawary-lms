@@ -7,7 +7,9 @@ import {
   ChartLine,
   ClipboardList,
   FileCheck2,
+  FileText,
   HandCoins,
+  IdCard,
   LayoutDashboard,
   ListChecks,
   Presentation,
@@ -129,6 +131,22 @@ const adminNav = (t: TFn, isDirector: boolean): NavItem[] => [
     ],
   },
   { title: t('nav.incentives'), to: '/incentives', icon: HandCoins },
+  // What the academy issues to a student and what it collects from one. Admin
+  // only: an IC copy is nobody else's business (`student_ic_copies` says the
+  // same), and the letter sits with it so the pair has one address.
+  {
+    title: t('nav.documents'),
+    to: '/documents',
+    icon: FileText,
+    children: [
+      {
+        title: t('nav.offer_letter'),
+        to: '/documents/offer-letters',
+        icon: ScrollText,
+      },
+      { title: t('nav.ic_copy'), to: '/documents/ic-copies', icon: IdCard },
+    ],
+  },
   { title: t('nav.members'), to: '/members', icon: ShieldCheck },
   ...(isDirector
     ? [{ title: t('nav.settings'), to: '/settings', icon: Settings }]

@@ -4,9 +4,12 @@ import {
   ClipboardCheck,
   ClipboardList,
   FileCheck2,
+  FileText,
+  IdCard,
   LayoutDashboard,
   ListTodo,
   Receipt,
+  ScrollText,
   UserRound,
 } from 'lucide-react'
 import { useT } from '@/lib/i18n'
@@ -69,6 +72,23 @@ export function LearnSidebar() {
           title: t('nav.learn.reports'),
           to: '/learn/reports',
           icon: ClipboardCheck,
+        },
+        {
+          title: t('nav.documents'),
+          to: '/learn/documents',
+          icon: FileText,
+          children: [
+            {
+              title: t('nav.offer_letter'),
+              to: '/learn/documents/offer-letter',
+              icon: ScrollText,
+            },
+            {
+              title: t('nav.ic_copy'),
+              to: '/learn/documents/ic-copy',
+              icon: IdCard,
+            },
+          ],
         },
       ],
     },
