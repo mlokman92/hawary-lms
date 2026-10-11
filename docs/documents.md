@@ -1,20 +1,29 @@
-# Documents — the offer letter and the IC copy
+# Documents — the offer letter, the IC copy and the employment letter
 
-One parent in both rails, **Documents**, over two pages: the **offer letter**
+One parent in both rails, **Documents**, over three pages: the **offer letter**
 (surat tawaran) the academy issues to a student, and the **IC copy** (salinan
-kad pengenalan) it collects from one. Web only for now; the mobile apps come
-later.
+kad pengenalan) and the **employment letter** (Surat Pengesahan Tempoh Bekerja)
+it collects from one. Web only for now; the mobile apps come later.
 
 | | staff (admin only) | student |
 | --- | --- | --- |
 | offer letter | `/documents/offer-letters` — every student, who has signed, download any | `/learn/documents/offer-letter` — sign, agree, download their own |
 | IC copy | `/documents/ic-copies` — every student, view the copy | `/learn/documents/ic-copy` — upload, replace, view |
+| employment letter | `/documents/employment-letters` — as the IC copy | `/learn/documents/employment-letter` — as the IC copy |
 
 `/documents` and `/learn/documents` redirect to the letter: the parent is a
-heading in the rail, not a page. Both staff pages are one roster
+heading in the rail, not a page. The staff pages are one roster
 (`features/documents/DocumentStudentList.tsx`, one read in
 `features/documents/api.ts`) with search and a course filter, and one trailing
 cell that is the page's own business.
+
+**The roster opens on the interesting half.** Each page's third filter has a
+default (`statusFilter.defaultValue`): the offer letter opens on *Signed and
+agreed*, the IC copy and the employment letter on *Uploaded*. *All statuses* is
+one click away; the choice is not remembered between visits. The two uploaded
+documents also list the newest course first (`newestCourseFirst`: latest
+`start_date` first, no start date last, names alphabetical within a course); the
+offer letter stays alphabetical.
 
 A student's **course** here is their one enrolment that is not cancelled —
 `enrollments_one_course_per_student` allows exactly one — whatever state it is
@@ -171,7 +180,27 @@ either (`DocumentStudentList`'s optional `statusFilter`; the IC copy page does
 not pass one). Signing and agreeing are one act: there is no row for a student
 who ticked and did not sign, nor the reverse.
 
-## The IC copy
+## The IC copy and the employment letter
+
+Two documents, one shape. Everything below is written for the IC copy; the
+employment letter is the same in every respect but the names:
+
+| | IC copy | employment letter |
+| --- | --- | --- |
+| table | `student_ic_copies` | `student_employment_letters` |
+| bucket | `ic-copies` | `employment-letters` |
+| Edge Function | `ic-copy` | `employment-letter` |
+| migration | `20261011110000_student_ic_copies.sql` | `20261012120000_student_employment_letters.sql` |
+
+The Edge Function is a copy of the other with the names changed, not one
+function with a `kind`: a mistake in one cannot reach the other's bucket, and
+the live IC copy function was not touched to add the second document. The
+pages are written once (`features/documents/UploadedPdfPages.tsx`) and the
+web's upload and link helpers are one pair of functions over a function name
+(`lib/storage.ts`).
+
+The employment letter is **not required of anyone** — nothing blocks on it, and
+a student with none simply shows *Not uploaded*.
 
 ### Shape
 
@@ -220,4 +249,7 @@ orphaned, as a deleted payment's receipt does. Nothing sweeps either yet.
 - A replaced signature is gone — the row is overwritten, with no history of the
   earlier one.
 - Staff cannot clear a signature from the app; that is the owner's, in SQL.
-- No way for a student to remove an IC copy, only to replace it.
+- No way for a student to remove an IC copy or an employment letter, only to
+  replace it.
+- The employment letter has no expiry and no notion of which employer or period
+  it covers; it is a file, as the IC copy is.

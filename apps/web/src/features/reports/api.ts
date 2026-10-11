@@ -91,6 +91,10 @@ export type ReportThread = {
   id: string
   academy_id: string
   title: string
+  /** Null on reports sent before these were asked for. */
+  introduction: string | null
+  objectives: string | null
+  problem_statement: string | null
   status: ReportStatus
   version: number
   auto_assigned: boolean
@@ -124,6 +128,9 @@ export type MyReportRow = {
   report: {
     id: string
     title: string
+    introduction: string | null
+    objectives: string | null
+    problem_statement: string | null
     status: ReportStatus
     version: number
     submitted_at: string
@@ -459,12 +466,18 @@ export function useSubmitReport(academyId: string | null) {
     mutationFn: async (input: {
       courseId: string
       title: string
+      introduction: string
+      objectives: string
+      problemStatement: string
       files: PendingFile[]
     }) => {
       const { data, error } = await supabase.rpc('submit_report', {
         _academy_id: academyId!,
         _course_id: input.courseId,
         _title: input.title,
+        _introduction: input.introduction,
+        _objectives: input.objectives,
+        _problem_statement: input.problemStatement,
         _files: input.files,
       })
       if (error) throw error

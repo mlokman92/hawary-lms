@@ -26,6 +26,7 @@ export const nav: NavDict = {
   'nav.documents': 'Dokumen',
   'nav.offer_letter': 'Surat tawaran',
   'nav.ic_copy': 'Salinan kad pengenalan',
+  'nav.employment_letter': 'Surat Pengesahan Tempoh Bekerja',
   'nav.members': 'Ahli',
   'nav.settings': 'Tetapan',
   'nav.analytics': 'Analitik',

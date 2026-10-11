@@ -1,15 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Enums, Tables } from '@hawary/shared'
 import { supabase } from '@/lib/supabase'
-import { icCopyUrl, uploadIcCopy } from '@/lib/storage'
+import {
+  employmentLetterUrl,
+  icCopyUrl,
+  uploadEmploymentLetter,
+  uploadIcCopy,
+} from '@/lib/storage'
 
 /**
- * Documents — the offer letter and the IC copy. See docs/documents.md.
+ * Documents — the offer letter, the IC copy and the employment letter. See
+ * docs/documents.md.
  *
- * Both staff pages list the same people, so they share one read: every live
- * student, the course they are on and whether an IC copy is on file. Neither
- * page is reachable by a trainer, and the IC copy half would come back empty
- * for one anyway — `student_ic_copies` is admin-or-own.
+ * The staff pages list the same people, so they share one read: every live
+ * student, the course they are on and which of their documents are on file.
+ * None is reachable by a trainer, and the uploaded halves would come back
+ * empty for one anyway — those tables are admin-or-own.
  */
 
 export type DocumentCourse = {
@@ -18,12 +24,19 @@ export type DocumentCourse = {
   start_date: string | null
 }
 
+/** A student's own PDF on file — an IC copy or an employment letter. */
+export type UploadedPdf = Pick<
+  Tables<'student_ic_copies'>,
+  'created_at' | 'file_name'
+>
+
 export type DocumentStudent = Pick<
   Tables<'students'>,
   'id' | 'student_no' | 'full_name' | 'email' | 'ic_number' | 'personal_address'
 > & {
   course: DocumentCourse | null
-  icCopy: Pick<Tables<'student_ic_copies'>, 'created_at' | 'file_name'> | null
+  icCopy: UploadedPdf | null
+  employmentLetter: UploadedPdf | null
   /** When the student signed and agreed to the letter's terms; null if not. */
   offerAcceptedAt: string | null
 }
@@ -56,22 +69,33 @@ export function useDocumentStudents(academyId: string | null) {
       const { data, error } = await supabase
         .from('students')
         .select(
-          'id, student_no, full_name, email, ic_number, personal_address, enrollments(status, courses(id, title, start_date)), ic_copy:student_ic_copies(created_at, file_name), offer_acceptance:student_offer_acceptances(accepted_at)',
+          'id, student_no, full_name, email, ic_number, personal_address, enrollments(status, courses(id, title, start_date)), ic_copy:student_ic_copies(created_at, file_name), employment_letter:student_employment_letters(created_at, file_name), offer_acceptance:student_offer_acceptances(accepted_at)',
         )
         .eq('academy_id', academyId!)
         .is('archived_at', null)
         .order('full_name', { ascending: true })
       if (error) throw error
-      type Row = Omit<DocumentStudent, 'course' | 'icCopy' | 'offerAcceptedAt'> & {
+      type Row = Omit<
+        DocumentStudent,
+        'course' | 'icCopy' | 'employmentLetter' | 'offerAcceptedAt'
+      > & {
         enrollments: EnrollmentEmbed[] | null
-        ic_copy: DocumentStudent['icCopy']
+        ic_copy: UploadedPdf | null
+        employment_letter: UploadedPdf | null
         offer_acceptance: { accepted_at: string } | null
       }
       return ((data ?? []) as unknown as Row[]).map<DocumentStudent>(
-        ({ enrollments, ic_copy, offer_acceptance, ...student }) => ({
+        ({
+          enrollments,
+          ic_copy,
+          employment_letter,
+          offer_acceptance,
+          ...student
+        }) => ({
           ...student,
           course: courseOf(enrollments),
           icCopy: ic_copy,
+          employmentLetter: employment_letter,
           offerAcceptedAt: offer_acceptance?.accepted_at ?? null,
         }),
       )
@@ -151,38 +175,65 @@ export function useSignOfferLetter(studentId: string | undefined) {
   })
 }
 
-const myIcCopyKey = (studentId: string | undefined) =>
-  ['my-ic-copy', studentId] as const
+/**
+ * A student's own uploaded PDFs: the same three hooks for each document, so
+ * the learner page and the staff page are written once over either.
+ */
+export type UploadedPdfKind = 'ic' | 'employment'
 
-export function useMyIcCopy(studentId: string | undefined) {
+const PDF_KINDS = {
+  ic: {
+    table: 'student_ic_copies',
+    key: 'my-ic-copy',
+    upload: uploadIcCopy,
+    url: icCopyUrl,
+  },
+  employment: {
+    table: 'student_employment_letters',
+    key: 'my-employment-letter',
+    upload: uploadEmploymentLetter,
+    url: employmentLetterUrl,
+  },
+} as const
+
+const myPdfKey = (kind: UploadedPdfKind, studentId: string | undefined) =>
+  [PDF_KINDS[kind].key, studentId] as const
+
+export function useMyPdf(kind: UploadedPdfKind, studentId: string | undefined) {
   return useQuery({
-    queryKey: myIcCopyKey(studentId),
+    queryKey: myPdfKey(kind, studentId),
     enabled: !!studentId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('student_ic_copies')
+        .from(PDF_KINDS[kind].table)
         .select('created_at, file_name')
         .eq('student_id', studentId!)
         .maybeSingle()
       if (error) throw error
-      return data
+      return data as UploadedPdf | null
     },
   })
 }
 
-export function useUploadMyIcCopy(studentId: string | undefined) {
+export function useUploadMyPdf(
+  kind: UploadedPdfKind,
+  studentId: string | undefined,
+) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (file: File) => uploadIcCopy(studentId!, file),
-    onSuccess: () => qc.invalidateQueries({ queryKey: myIcCopyKey(studentId) }),
+    mutationFn: (file: File) => PDF_KINDS[kind].upload(studentId!, file),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: myPdfKey(kind, studentId) })
+      qc.invalidateQueries({ queryKey: ['document-students'] })
+    },
   })
 }
 
-/** Open a student's IC copy in a new tab, through a link minted for the click. */
-export function useOpenIcCopy() {
+/** Open a student's PDF in a new tab, through a link minted for the click. */
+export function useOpenPdf(kind: UploadedPdfKind) {
   return useMutation({
     mutationFn: async (studentId: string) => {
-      const url = await icCopyUrl(studentId)
+      const url = await PDF_KINDS[kind].url(studentId)
       // window.opener would hand the new tab a reference back to this one.
       window.open(url, '_blank', 'noopener,noreferrer')
     },

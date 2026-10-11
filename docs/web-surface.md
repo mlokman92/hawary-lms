@@ -222,6 +222,27 @@ Shared editor (`lib/blocks.ts` + `components/BlocksEditor.tsx`) — text / image
 youtube — used by assessments and assignments. Notes use the rich-text
 `content` column instead.
 
+### A recorded lecture in a note
+
+A note's `content` may hold one `<video src="https://…">` — the `LectureVideo`
+Tiptap node, registered in **both** `RichTextView` and `RichTextEditor` so that
+saving a note in the editor does not strip it. A non-https `src` fails to parse
+and is dropped. There is **no insert control and no upload**: the row is written
+in SQL, and the file lives wherever the URL points (today a public bucket on a
+second Supabase account). The mobile note screen renders the stored HTML in a
+web view, so it plays there with no app change.
+
+Two properties of the file decide how it plays, and neither is in the app:
+
+- **`moov` at the end of the file** makes the browser fetch the index (about
+  6 MB for 3½ hours) before the first frame. `ffmpeg -c copy -movflags
+  +faststart` fixes it without re-encoding.
+- **The URL is the access control.** A public bucket serves anyone with the
+  link, and the link is in the page HTML. Real privacy means a private bucket
+  and a signed URL minted after the entitlement check — the `material-url`
+  pattern ([course-materials.md](course-materials.md)) with a lifetime of hours,
+  not 60 seconds, because a player keeps requesting ranges on the same URL.
+
 ## Storage
 
 Public `avatars` + `note-media` buckets, keyed `<academy_id>/<uuid>.<ext>`;

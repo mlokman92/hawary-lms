@@ -4,6 +4,7 @@ import { BubbleMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Image from '@tiptap/extension-image'
+import { LectureVideo } from '@/components/LectureVideo'
 import {
   Bold,
   Code,
@@ -173,6 +174,7 @@ export function RichTextEditor({
       }),
       Placeholder.configure({ placeholder: placeholderText }),
       Image.configure({ inline: false, allowBase64: false }),
+      LectureVideo,
     ],
     content: value,
     editorProps: {

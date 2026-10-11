@@ -134,6 +134,33 @@ student who sends `_to_status` is **ignored, not refused** — the same way a
 student naming an instructor under round robin is ignored. Deciding is simply
 not theirs to do.
 
+## What a report says (Oct 2026)
+
+Sending a report asks for four things: **Title** (`title`, what it always was),
+**Introduction** (Pengenalan), **Objectives** (Objektif) and **Problem
+statement** (Penyata masalah) — `introduction`, `objectives`,
+`problem_statement` on `report_submissions`
+(`20261012110000_report_brief.sql`).
+
+- **They live on the thread, not on a version.** One thread per (student,
+  course) means one introduction per thread. Sending a new version opens the
+  same dialog seeded from what is stored, required again, and what is sent
+  replaces it. Earlier wording is not kept — the timeline keeps the *files* per
+  version, and nobody asked for the text's history.
+- **Required by the server**, not only the button: the 7-argument
+  `submit_report` raises for a blank one. A report sent before this has all
+  three null and is not backfilled; the next version has to fill them in.
+- **Shown on `/learn/reports/:id` and `/lpkc/:id`** — one `ReportThreadView`,
+  so the checker reads what the student wrote beside the documents. Nothing is
+  drawn for a field that is empty.
+- **The 4-argument `submit_report` still exists**, as a wrapper over the same
+  `app.submit_report_impl`, for Student app builds installed before this: it
+  passes the three as null and leaves whatever the thread already holds. It is a
+  deliberate hole in "required" and should be removed (one `drop function`) once
+  the Student app that asks for the fields has shipped. The two overloads have
+  no shared defaults so PostgREST never sees an ambiguous call.
+- Capped at 5000 characters each by a check constraint.
+
 ## The copy a checker starts from
 
 In an academy that has a **system admin** ([single-owner.md](single-owner.md) →
@@ -207,7 +234,7 @@ the only doors:
 
 | RPC | who | what |
 | --- | --- | --- |
-| `submit_report` | the student | create or bump a version; assigns on creation |
+| `submit_report` | the student | create or bump a version; assigns on creation; title, introduction, objectives and problem statement required |
 | `comment_on_report` | student, checker, admin | say something — the status follows; staff may also approve or reopen |
 | `reassign_report` | the checker holding it, or an admin | hand it on |
 | `get_report` | anybody the policy admits | the whole thread, projected |

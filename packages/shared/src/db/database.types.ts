@@ -2465,6 +2465,9 @@ export type Database = {
           created_by: string | null
           id: string
           instructor_id: string | null
+          introduction: string | null
+          objectives: string | null
+          problem_statement: string | null
           reviewed_at: string | null
           status: Database["public"]["Enums"]["report_status"]
           student_id: string
@@ -2482,6 +2485,9 @@ export type Database = {
           created_by?: string | null
           id?: string
           instructor_id?: string | null
+          introduction?: string | null
+          objectives?: string | null
+          problem_statement?: string | null
           reviewed_at?: string | null
           status?: Database["public"]["Enums"]["report_status"]
           student_id: string
@@ -2499,6 +2505,9 @@ export type Database = {
           created_by?: string | null
           id?: string
           instructor_id?: string | null
+          introduction?: string | null
+          objectives?: string | null
+          problem_statement?: string | null
           reviewed_at?: string | null
           status?: Database["public"]["Enums"]["report_status"]
           student_id?: string
@@ -2586,6 +2595,51 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "students"
             referencedColumns: ["academy_id", "id"]
+          },
+        ]
+      }
+      student_employment_letters: {
+        Row: {
+          academy_id: string
+          created_at: string
+          file_name: string
+          file_path: string
+          size_bytes: number
+          student_id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          file_name: string
+          file_path: string
+          size_bytes: number
+          student_id: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          size_bytes?: number
+          student_id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_employment_letters_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_employment_letters_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "students"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -3368,15 +3422,28 @@ export type Database = {
         }[]
       }
       submit_attempt: { Args: { _attempt_id: string }; Returns: Json }
-      submit_report: {
-        Args: {
-          _academy_id: string
-          _course_id: string
-          _files: Json
-          _title: string
-        }
-        Returns: Json
-      }
+      submit_report:
+        | {
+            Args: {
+              _academy_id: string
+              _course_id: string
+              _files: Json
+              _title: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _academy_id: string
+              _course_id: string
+              _files: Json
+              _introduction: string
+              _objectives: string
+              _problem_statement: string
+              _title: string
+            }
+            Returns: Json
+          }
       unlink_instructor_account: {
         Args: { _instructor_id: string }
         Returns: Json

@@ -35,6 +35,7 @@ export function DocumentStudentList({
   lastHead,
   lastCell,
   statusFilter,
+  newestCourseFirst,
 }: {
   /** Header of the trailing column. */
   lastHead: ReactNode
@@ -42,14 +43,21 @@ export function DocumentStudentList({
   /**
    * A third narrowing, for a page whose document has a state worth filtering
    * on. `allLabel` is the option that filters nothing; `matches` is asked only
-   * about the others.
+   * about the others. `defaultValue` is what the page opens on — one of the
+   * options, else everyone.
    */
   statusFilter?: {
     label: string
     allLabel: string
+    defaultValue?: string
     options: { value: string; label: string }[]
     matches: (student: DocumentStudent, value: string) => boolean
   }
+  /**
+   * Order by the course's start date, latest first, instead of by name. A
+   * student on a course with no start date goes last.
+   */
+  newestCourseFirst?: boolean
 }) {
   const { t } = useT()
   const { activeAcademyId } = useAcademy()
@@ -60,7 +68,7 @@ export function DocumentStudentList({
   } = useDocumentStudents(activeAcademyId)
   const [search, setSearch] = useState('')
   const [course, setCourse] = useState('all')
-  const [status, setStatus] = useState('all')
+  const [status, setStatus] = useState(statusFilter?.defaultValue ?? 'all')
 
   const courses = useMemo(() => {
     const byId = new Map<string, string>()
@@ -74,7 +82,7 @@ export function DocumentStudentList({
 
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return (students ?? []).filter(
+    const matching = (students ?? []).filter(
       (s) =>
         (course === 'all' || s.course?.id === course) &&
         (status === 'all' || !statusFilter || statusFilter.matches(s, status)) &&
@@ -83,7 +91,15 @@ export function DocumentStudentList({
             v?.toLowerCase().includes(q),
           )),
     )
-  }, [students, search, course, status, statusFilter])
+    if (!newestCourseFirst) return matching
+    // The read is ordered by name and sort is stable, so students on one
+    // course stay alphabetical.
+    return matching.sort((a, b) => {
+      const x = a.course?.start_date ?? ''
+      const y = b.course?.start_date ?? ''
+      return x === y ? 0 : x === '' ? 1 : y === '' ? -1 : x < y ? 1 : -1
+    })
+  }, [students, search, course, status, statusFilter, newestCourseFirst])
 
   return (
     <div className="mt-6">

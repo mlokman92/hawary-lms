@@ -57,6 +57,7 @@ export function OfferLettersPage() {
         statusFilter={{
           label: t('sdoc.offer.signed'),
           allLabel: t('sdoc.offer.all_statuses'),
+          defaultValue: 'signed',
           options: [
             { value: 'signed', label: t('sdoc.offer.signed') },
             { value: 'unsigned', label: t('sdoc.offer.not_signed') },

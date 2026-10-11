@@ -74,6 +74,14 @@ export function ReportThreadView({
   const canReassign = !isStudent
   const done = report.status === 'approved'
 
+  const brief = (
+    [
+      { key: 'introduction', labelKey: 'report.submit.introduction', text: report.introduction },
+      { key: 'objectives', labelKey: 'report.submit.objectives', text: report.objectives },
+      { key: 'problem', labelKey: 'report.submit.problem', text: report.problem_statement },
+    ] as const
+  ).filter((b) => b.text?.trim())
+
   async function post(toStatus: ReportStatus | null) {
     setFailure(null)
     try {
@@ -192,6 +200,22 @@ export function ReportThreadView({
           ) : null}
         </div>
       </div>
+
+      {/* What the work is about, as the student wrote it. Reports sent before
+          these were asked for have none, and show nothing here rather than
+          three empty headings. */}
+      {brief.length > 0 ? (
+        <Card className="mt-6 gap-5 p-4">
+          {brief.map((b) => (
+            <section key={b.key}>
+              <h2 className="text-muted-foreground text-xs font-medium">
+                {t(b.labelKey)}
+              </h2>
+              <p className="mt-1 text-sm whitespace-pre-wrap">{b.text}</p>
+            </section>
+          ))}
+        </Card>
+      ) : null}
 
       <Card className="mt-6 gap-0 py-0">
         <ReportTimeline events={report.events} myUserId={user?.id ?? null} />

@@ -67,8 +67,11 @@ export const reports = {
   'report.submit.desc': 'For {course}. Your academy assigns a checker for you.',
   'report.submit.desc_again':
     'This becomes version {version}. The same person keeps checking it.',
-  'report.submit.what': 'What are you sending?',
+  'report.submit.what': 'Title',
   'report.submit.what_hint': 'e.g. LPKC, slide and portfolio',
+  'report.submit.introduction': 'Introduction',
+  'report.submit.objectives': 'Objectives',
+  'report.submit.problem': 'Problem statement',
   'report.submit.files': 'Documents',
   'report.submit.send': 'Send for checking',
   'report.submit.sending': 'Sending…',

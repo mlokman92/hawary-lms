@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { FilePicker } from './FilePicker'
 import { useSubmitReport, type MyReportRow, type PendingFile } from './api'
 
@@ -26,6 +27,10 @@ import { useSubmitReport, type MyReportRow, type PendingFile } from './api'
  * The title is free text and deliberately so — "LPKC, slide dan portfolio" is
  * how this academy actually describes a batch, and a document-type picker would
  * be an entity invented to hold three words.
+ *
+ * The introduction, objectives and problem statement are required on every
+ * send, not only the first: they sit on the thread, so a new version starts from
+ * what is there and the student edits it.
  */
 export function SubmitReportDialog({
   academyId,
@@ -44,21 +49,34 @@ export function SubmitReportDialog({
   const submit = useSubmitReport(academyId)
 
   const [title, setTitle] = useState('')
+  const [introduction, setIntroduction] = useState('')
+  const [objectives, setObjectives] = useState('')
+  const [problem, setProblem] = useState('')
   const [files, setFiles] = useState<PendingFile[]>([])
   const [error, setError] = useState<string | null>(null)
 
   const existing = row?.report ?? null
 
-  // Reset per opening, and seed the title from the thread being added to: a
-  // resubmission is nearly always the same batch of documents again, so making
-  // somebody retype "LPKC, slide dan portfolio" would be asking a question
-  // whose answer is already on screen.
+  // Reset per opening, and seed the text from the thread being added to: a
+  // resubmission is nearly always the same work again, so making somebody
+  // retype "LPKC, slide dan portfolio" — or their introduction — would be
+  // asking a question whose answer is already on screen. A report sent before
+  // these were asked for seeds them empty, and so must be filled in.
   useEffect(() => {
     if (!open) return
     setTitle(existing?.title ?? '')
+    setIntroduction(existing?.introduction ?? '')
+    setObjectives(existing?.objectives ?? '')
+    setProblem(existing?.problem_statement ?? '')
     setFiles([])
     setError(null)
-  }, [open, existing?.title])
+  }, [
+    open,
+    existing?.title,
+    existing?.introduction,
+    existing?.objectives,
+    existing?.problem_statement,
+  ])
 
   async function save() {
     if (!row) return
@@ -67,6 +85,9 @@ export function SubmitReportDialog({
       const res = await submit.mutateAsync({
         courseId: row.course_id,
         title,
+        introduction,
+        objectives,
+        problemStatement: problem,
         files,
       })
       onOpenChange(false)
@@ -78,7 +99,7 @@ export function SubmitReportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {existing ? t('report.submit.title_again') : t('report.submit.title')}
@@ -100,6 +121,46 @@ export function SubmitReportDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t('report.submit.what_hint')}
+              disabled={submit.isPending}
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="report-introduction">
+              {t('report.submit.introduction')}
+            </Label>
+            <Textarea
+              id="report-introduction"
+              value={introduction}
+              onChange={(e) => setIntroduction(e.target.value)}
+              rows={4}
+              maxLength={5000}
+              disabled={submit.isPending}
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="report-objectives">
+              {t('report.submit.objectives')}
+            </Label>
+            <Textarea
+              id="report-objectives"
+              value={objectives}
+              onChange={(e) => setObjectives(e.target.value)}
+              rows={4}
+              maxLength={5000}
+              disabled={submit.isPending}
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="report-problem">{t('report.submit.problem')}</Label>
+            <Textarea
+              id="report-problem"
+              value={problem}
+              onChange={(e) => setProblem(e.target.value)}
+              rows={4}
+              maxLength={5000}
               disabled={submit.isPending}
             />
           </div>
@@ -129,10 +190,15 @@ export function SubmitReportDialog({
           </Button>
           <Button
             onClick={() => void save()}
-            // Both are required by the RPC, so refusing here says the same
-            // thing a round trip would, sooner.
+            // All of these are required by the RPC, so refusing here says
+            // the same thing a round trip would, sooner.
             disabled={
-              submit.isPending || files.length === 0 || title.trim() === ''
+              submit.isPending ||
+              files.length === 0 ||
+              title.trim() === '' ||
+              introduction.trim() === '' ||
+              objectives.trim() === '' ||
+              problem.trim() === ''
             }
           >
             {submit.isPending ? t('report.submit.sending') : t('report.submit.send')}

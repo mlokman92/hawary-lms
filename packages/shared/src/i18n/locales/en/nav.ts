@@ -28,6 +28,7 @@ export const nav = {
   'nav.documents': 'Documents',
   'nav.offer_letter': 'Offer letter',
   'nav.ic_copy': 'IC copy',
+  'nav.employment_letter': 'Employment duration letter',
   'nav.members': 'Members',
   'nav.settings': 'Settings',
   'nav.analytics': 'Analytics',

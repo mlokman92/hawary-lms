@@ -30,13 +30,20 @@ export const studentDocs: StudentDocsDict = {
   'sdoc.offer.agree_required':
     'Tandakan kotak untuk bersetuju dengan terma dan syarat.',
 
+  // PDF yang dimuat naik pelajar — dikongsi salinan IC dan surat pengesahan
+  'sdoc.file.uploaded': 'Dimuat naik',
+  'sdoc.file.not_uploaded': 'Belum dimuat naik',
+  'sdoc.file.choose': 'Muat naik PDF',
+  'sdoc.file.replace': 'Ganti PDF',
+  'sdoc.file.too_large': 'Fail melebihi {max} MB.',
+  'sdoc.file.uploaded_on': 'Dimuat naik pada {date}',
+
   // Salinan kad pengenalan
   'sdoc.ic.title': 'Salinan kad pengenalan',
-  'sdoc.ic.uploaded': 'Dimuat naik',
-  'sdoc.ic.not_uploaded': 'Belum dimuat naik',
-  'sdoc.ic.choose': 'Muat naik PDF',
-  'sdoc.ic.replace': 'Ganti PDF',
   'sdoc.ic.pdf_only': 'Muat naik salinan kad pengenalan anda sebagai fail PDF.',
-  'sdoc.ic.too_large': 'Fail melebihi {max} MB.',
-  'sdoc.ic.uploaded_on': 'Dimuat naik pada {date}',
+
+  // Surat Pengesahan Tempoh Bekerja
+  'sdoc.employment.title': 'Surat Pengesahan Tempoh Bekerja',
+  'sdoc.employment.pdf_only':
+    'Muat naik Surat Pengesahan Tempoh Bekerja anda sebagai fail PDF.',
 }

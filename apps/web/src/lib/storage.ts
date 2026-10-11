@@ -4,6 +4,9 @@ import { translate } from './i18n'
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+/** The Edge Functions that keep a student's own PDF — see docs/documents.md. */
+type StudentPdfFunction = 'ic-copy' | 'employment-letter'
+
 type UploadResponse = {
   ok?: boolean
   url?: string
@@ -187,36 +190,55 @@ export async function paymentReceiptUrl(paymentId: string): Promise<string> {
 }
 
 /**
- * Upload the PDF copy of a student identity card (or replace the one there).
+ * Upload a student's own PDF (or replace the one there) through the Edge
+ * Function that keeps that document — `ic-copy` or `employment-letter`.
  *
- * The `ic-copy` function writes the object and its `student_ic_copies` row
- * together, for the reason `uploadPaymentReceipt` gives. It decides who may:
- * the account the student record is linked to. Nothing here names an academy.
+ * The function writes the object and its table row together, for the reason
+ * `uploadPaymentReceipt` gives. It decides who may: the account the student
+ * record is linked to. Nothing here names an academy.
  */
-export async function uploadIcCopy(studentId: string, file: File): Promise<void> {
+async function uploadStudentPdf(
+  fn: StudentPdfFunction,
+  studentId: string,
+  file: File,
+): Promise<void> {
   const body = new FormData()
   body.append('file', file)
   body.append('student_id', studentId)
 
-  const { data, error } = await supabase.functions.invoke<UploadResponse>(
-    'ic-copy',
-    { body },
-  )
+  const { data, error } = await supabase.functions.invoke<UploadResponse>(fn, {
+    body,
+  })
   if (error) throw await functionError(error)
   if (!data?.ok) throw new Error(data?.error ?? translate('upload.failed'))
 }
 
 /**
- * A 60-second signed URL for one IC copy. The bucket is private; the function
- * signs only what `student_ic_copies` shows this caller.
+ * A 60-second signed URL for one student PDF. The bucket is private; the
+ * function signs only what the document's table shows this caller.
  */
-export async function icCopyUrl(studentId: string): Promise<string> {
+async function studentPdfUrl(
+  fn: StudentPdfFunction,
+  studentId: string,
+): Promise<string> {
   const { data, error } = await supabase.functions.invoke<{
     url?: string
     error?: string
-  }>('ic-copy', { body: { student_id: studentId } })
+  }>(fn, { body: { student_id: studentId } })
 
   if (error) throw await functionError(error)
   if (!data?.url) throw new Error(data?.error ?? translate('upload.failed'))
   return data.url
 }
+
+/** The IC copy: `student_ic_copies`, bucket `ic-copies`. */
+export const uploadIcCopy = (studentId: string, file: File) =>
+  uploadStudentPdf('ic-copy', studentId, file)
+export const icCopyUrl = (studentId: string) =>
+  studentPdfUrl('ic-copy', studentId)
+
+/** The Surat Pengesahan Tempoh Bekerja: `student_employment_letters`. */
+export const uploadEmploymentLetter = (studentId: string, file: File) =>
+  uploadStudentPdf('employment-letter', studentId, file)
+export const employmentLetterUrl = (studentId: string) =>
+  studentPdfUrl('employment-letter', studentId)

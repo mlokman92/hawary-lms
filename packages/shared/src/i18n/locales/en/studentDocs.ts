@@ -1,4 +1,4 @@
-/** Documents: the offer letter and the IC copy, on both shells. */
+/** Documents: the offer letter, the IC copy and the employment letter, on both shells. */
 export const studentDocs = {
   // Offer letter — staff list
   'sdoc.offer.title': 'Offer letter',
@@ -29,15 +29,22 @@ export const studentDocs = {
   'sdoc.offer.agree_required':
     'Tick the box to agree to the terms and conditions.',
 
+  // A PDF the student uploads — shared by the IC copy and the employment letter
+  'sdoc.file.uploaded': 'Uploaded',
+  'sdoc.file.not_uploaded': 'Not uploaded',
+  'sdoc.file.choose': 'Upload PDF',
+  'sdoc.file.replace': 'Replace PDF',
+  'sdoc.file.too_large': 'The file is larger than {max} MB.',
+  'sdoc.file.uploaded_on': 'Uploaded {date}',
+
   // IC copy
   'sdoc.ic.title': 'IC copy',
-  'sdoc.ic.uploaded': 'Uploaded',
-  'sdoc.ic.not_uploaded': 'Not uploaded',
-  'sdoc.ic.choose': 'Upload PDF',
-  'sdoc.ic.replace': 'Replace PDF',
   'sdoc.ic.pdf_only': 'Upload your IC copy as a PDF file.',
-  'sdoc.ic.too_large': 'The file is larger than {max} MB.',
-  'sdoc.ic.uploaded_on': 'Uploaded {date}',
+
+  // Employment letter (Surat Pengesahan Tempoh Bekerja)
+  'sdoc.employment.title': 'Employment duration letter',
+  'sdoc.employment.pdf_only':
+    'Upload your employment duration letter as a PDF file.',
 } as const
 
 export type StudentDocsDict = Record<keyof typeof studentDocs, string>

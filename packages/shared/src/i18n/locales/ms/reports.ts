@@ -60,8 +60,11 @@ export const reports: ReportsDict = {
     'Untuk {course}. Akademi anda akan menetapkan penyemak untuk anda.',
   'report.submit.desc_again':
     'Ini menjadi versi {version}. Orang yang sama akan terus menyemaknya.',
-  'report.submit.what': 'Apa yang anda hantar?',
+  'report.submit.what': 'Tajuk',
   'report.submit.what_hint': 'cth. LPKC, slaid dan portfolio',
+  'report.submit.introduction': 'Pengenalan',
+  'report.submit.objectives': 'Objektif',
+  'report.submit.problem': 'Penyata masalah',
   'report.submit.files': 'Dokumen',
   'report.submit.send': 'Hantar untuk semakan',
   'report.submit.sending': 'Menghantar…',
