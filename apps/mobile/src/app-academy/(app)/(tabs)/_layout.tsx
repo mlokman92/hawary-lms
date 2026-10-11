@@ -1,5 +1,5 @@
 import { useAcademyQueue } from '@/features/grading/api'
-import { useReportCounts } from '@/features/reports/api'
+import { awaitingChecker, useReportCounts } from '@/features/reports/api'
 import { AppTabs } from '@/shell/nav'
 import { useScope } from '@/shell/scope'
 
@@ -20,7 +20,7 @@ export default function AcademyTabs() {
   const toMark =
     (assessments ?? []).filter((r) => r.status === 'submitted').length +
     (assignments ?? []).filter((r) => r.status === 'submitted').length
-  const toCheck = (reports?.submitted ?? 0) + (reports?.in_review ?? 0)
+  const toCheck = awaitingChecker(reports)
 
   return (
     <AppTabs

@@ -104,7 +104,7 @@ export function ReportThreadScreen() {
     )
   }
 
-  const status = REPORT_STATUS[report.status]
+  const status = REPORT_STATUS[report.stage ?? report.status]
   const isStudent = report.my_role === 'student'
   const isAdmin = report.my_role === 'admin'
   const done = report.status === 'approved'

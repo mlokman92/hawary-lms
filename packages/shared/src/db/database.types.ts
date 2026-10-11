@@ -3375,6 +3375,19 @@ export type Database = {
           mime_type: string
         }[]
       }
+      report_stage: {
+        Args: {
+          _r: Database["public"]["Tables"]["report_submissions"]["Row"]
+        }
+        Returns: string
+      }
+      report_stage_counts: {
+        Args: { _academy_id: string }
+        Returns: {
+          n: number
+          stage: string
+        }[]
+      }
       resend_invitation: { Args: { _invitation_id: string }; Returns: Json }
       revoke_invitation: {
         Args: { _invitation_id: string }

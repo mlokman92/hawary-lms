@@ -13,6 +13,8 @@ export const reports = {
   // stays for timeline entries from before the status followed the last reply.
   'report.status.submitted': 'Waiting',
   'report.status.in_review': 'Being checked',
+  'report.status.moderating': 'Moderating',
+  'report.status.pending_approval': 'Pending trainer approval',
   'report.status.changes_requested': 'Changes needed',
   'report.status.approved': 'Approved',
 
@@ -52,7 +54,7 @@ export const reports = {
   'report.event.commented': '{who} commented',
   'report.event.decided': '{who} updated the status',
   'report.event.assigned': '{who} passed this to {to}',
-  'report.event.annotated': 'Annotated copy',
+  'report.event.annotated': 'Hawary Academy LMS',
   'report.event.you': '(you)',
 
   // --- files ----------------------------------------------------------------

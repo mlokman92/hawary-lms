@@ -4,6 +4,8 @@ export const reports: ReportsDict = {
   // --- status ---------------------------------------------------------------
   'report.status.submitted': 'Menunggu',
   'report.status.in_review': 'Sedang disemak',
+  'report.status.moderating': 'Sedang dimoderasi',
+  'report.status.pending_approval': 'Menunggu kelulusan jurulatih',
   'report.status.changes_requested': 'Perlu pembetulan',
   'report.status.approved': 'Diluluskan',
 
@@ -44,7 +46,7 @@ export const reports: ReportsDict = {
   'report.event.commented': '{who} memberi komen',
   'report.event.decided': '{who} mengemas kini status',
   'report.event.assigned': '{who} menyerahkan ini kepada {to}',
-  'report.event.annotated': 'Salinan beranotasi',
+  'report.event.annotated': 'Hawary Academy LMS',
   'report.event.you': '(anda)',
 
   // --- files ----------------------------------------------------------------

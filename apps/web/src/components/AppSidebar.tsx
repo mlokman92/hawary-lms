@@ -25,7 +25,7 @@ import { useAcademy } from '@/lib/academy'
 import { useT, type TFn } from '@/lib/i18n'
 import { usePendingEnrollmentCount } from '@/features/enrollment/api'
 import { useUpcomingAppointmentCount } from '@/features/appointments/api'
-import { useReportCounts } from '@/features/reports/api'
+import { awaitingChecker, useReportCounts } from '@/features/reports/api'
 import { useAnalyticsAccess } from '@/features/analytics/api'
 import { AcademySwitcher } from './AcademySwitcher'
 import { ShellSidebar } from './shell/ShellSidebar'
@@ -177,7 +177,7 @@ export function AppSidebar() {
     t,
     pendingEnrollments ?? 0,
     upcomingAppointments ?? 0,
-    (reportCounts?.submitted ?? 0) + (reportCounts?.in_review ?? 0),
+    awaitingChecker(reportCounts),
   )
   const groups: NavGroup[] = [
     {

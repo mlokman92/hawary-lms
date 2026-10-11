@@ -134,6 +134,38 @@ student who sends `_to_status` is **ignored, not refused** — the same way a
 student naming an instructor under round robin is ignored. Deciding is simply
 not theirs to do.
 
+## Stages staff see (Oct 2026)
+
+Inside `in_review`, staff read two stages
+(`20261012130000_report_stages.sql`):
+
+| stage              | when                                                       | label (EN)                |
+| ------------------ | ---------------------------------------------------------- | ------------------------- |
+| `moderating`       | `in_review`, no staff-only entry on the current version    | Moderating                |
+| `pending_approval` | `in_review`, a staff-only entry on the current version     | Pending trainer approval  |
+
+`changes_requested` and `approved` are read as they are. An academy with no
+system admin has no first step, so there `in_review` reads `pending_approval`
+and nobody is ever "moderating".
+
+- **A reading, not a status.** `report_submissions.status` keeps its four
+  values and a student keeps seeing "Being checked": a student's JWT reads that
+  column straight from PostgREST, so a stored `moderating` would have shown them
+  the step. The stage is built from the staff-only entry, which they cannot
+  read.
+- **`public.report_stage(report_submissions)`** returns it, and PostgREST
+  serves it as a computed column — the queue selects `report_stage` and filters
+  on it. It re-reads the row by id and checks `app.report_role`, because it is
+  also callable as `/rpc/report_stage` with a row the caller made up: no access
+  gives null, the student whose report it is gets the plain status.
+- **`report_stage_counts`** is the tiles' query. `report_counts` is untouched,
+  for app builds that already read it.
+- **A new version goes back to `moderating`**, because the staff-only entry is
+  matched on `version`. Reopening an approved report lands on
+  `pending_approval` when its version already has the entry.
+- The status is not stored, so it moves nothing and notifies nobody; the
+  entries and notices are exactly as in the section above.
+
 ## What a report says (Oct 2026)
 
 Sending a report asks for four things: **Title** (`title`, what it always was),
@@ -183,9 +215,10 @@ it as a **staff-only entry** (`report_events.staff_only`):
   `report_events` and `report_files` refuse it, because a student's JWT reads
   those tables straight from PostgREST; and `report_download` will not sign its
   file. The student is not notified, mailed or pushed.
-- **It carries no name.** `actor_name` is null and `actor_role` is `system`; the
-  timeline calls it "Annotated copy". It is a document for the checker, not a
-  message from somebody.
+- **It carries no person's name.** `actor_name` is null and `actor_role` is
+  `system`; the timeline headlines it "Hawary Academy LMS" (`report.event.annotated`,
+  the same in EN and BM, for old entries and new). It is a document for the
+  checker, not a message from somebody.
 - **It is the moment the checker is told** — with `report_submitted`, the notice
   they would have had when the report came in, worded the same.
 

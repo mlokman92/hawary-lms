@@ -27,17 +27,31 @@ export type ReportStatus = Enums<'report_status'>
 export type ReportEventKind = Enums<'report_event_kind'>
 
 /**
+ * What staff read a report as. The stored status plus two stages inside "being
+ * checked": `moderating` until a system admin has added something, then
+ * `pending_approval` — the trainer's turn. A reading, not a column: the
+ * student's own copy of the report never carries either, and `stage` equals
+ * `status` for them (docs/report-checks.md → "Stages staff see").
+ */
+export type ReportStage = ReportStatus | 'moderating' | 'pending_approval'
+
+/**
  * The status follows whoever spoke last: the student sending anything makes it
  * `in_review`, the academy replying makes it `changes_requested`, and
  * `approved` is the one decision somebody presses. `submitted` is no longer
  * written — it is here for timeline entries from before that rule.
  */
 export const REPORT_STATUS: Record<
-  ReportStatus,
+  ReportStage,
   { labelKey: TKey; tone: Tone }
 > = {
   submitted: { labelKey: 'report.status.submitted', tone: 'info' },
   in_review: { labelKey: 'report.status.in_review', tone: 'warning' },
+  moderating: { labelKey: 'report.status.moderating', tone: 'info' },
+  pending_approval: {
+    labelKey: 'report.status.pending_approval',
+    tone: 'warning',
+  },
   changes_requested: {
     labelKey: 'report.status.changes_requested',
     tone: 'danger',
@@ -48,7 +62,30 @@ export const REPORT_STATUS: Record<
 /** Waiting on whoever checks it. The trainer dashboard's whole question. */
 export const AWAITING_CHECKER: ReportStatus[] = ['submitted', 'in_review']
 
+/** How many are waiting on the checking side, whatever stage they are at. */
+export function awaitingChecker(
+  counts: Record<ReportStage, number> | undefined,
+): number {
+  if (!counts) return 0
+  return (
+    counts.submitted +
+    counts.in_review +
+    counts.moderating +
+    counts.pending_approval
+  )
+}
+
+/** The stage a row is read as; the plain status where the server gave none. */
+export function stageOf(r: {
+  status: ReportStatus
+  report_stage?: string | null
+}): ReportStage {
+  return (r.report_stage as ReportStage | null | undefined) ?? r.status
+}
+
 export type ReportRow = ReportSubmission & {
+  /** The computed column: only on rows selected with `report_stage`. */
+  report_stage?: string | null
   students: {
     id: string
     full_name: string | null
@@ -96,6 +133,8 @@ export type ReportThread = {
   objectives: string | null
   problem_statement: string | null
   status: ReportStatus
+  /** What staff read it as. Equal to `status` in a student's copy. */
+  stage: ReportStage
   version: number
   auto_assigned: boolean
   submitted_at: string
@@ -153,7 +192,7 @@ export type PendingFile = {
 export const REPORT_PAGE_SIZE = 50
 
 export type ReportFilters = {
-  status: ReportStatus | 'all'
+  status: ReportStage | 'all'
   /** Matched against the student's name, through an inner embed. */
   search: string
 }
@@ -219,6 +258,7 @@ export function useReportQueue(
         .from('report_submissions')
         .select(
           `*,
+           report_stage,
            students!inner(id, full_name, student_no, email),
            courses(id, title, code),
            instructors(id, full_name)`,
@@ -226,7 +266,13 @@ export function useReportQueue(
         )
         .eq('academy_id', academyId!)
 
-      if (filters.status !== 'all') q = q.eq('status', filters.status)
+      // The two stages are a reading of the thread, so they filter on the
+      // computed column; the stored statuses stay on the indexed column.
+      if (filters.status === 'moderating' || filters.status === 'pending_approval') {
+        q = q.filter('report_stage', 'eq', filters.status)
+      } else if (filters.status !== 'all') {
+        q = q.eq('status', filters.status)
+      }
       if (search) q = q.ilike('students.full_name', `%${search}%`)
 
       const { data, error, count } = await q
@@ -255,22 +301,20 @@ export function useReportCounts(academyId: string | null) {
     queryKey: countsKey(academyId),
     enabled: !!academyId,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('report_counts', {
+      const { data, error } = await supabase.rpc('report_stage_counts', {
         _academy_id: academyId!,
       })
       if (error) throw error
-      const out: Record<ReportStatus, number> = {
+      const out: Record<ReportStage, number> = {
         submitted: 0,
         in_review: 0,
+        moderating: 0,
+        pending_approval: 0,
         changes_requested: 0,
         approved: 0,
       }
-      const rows = (data ?? []) as unknown as {
-        status: ReportStatus
-        n: number
-      }[]
-      for (const r of rows) {
-        out[r.status] = Number(r.n)
+      for (const r of data ?? []) {
+        if (r.stage in out) out[r.stage as ReportStage] = Number(r.n)
       }
       return out
     },
@@ -295,6 +339,7 @@ export function useMyReportQueue(
         .from('report_submissions')
         .select(
           `*,
+           report_stage,
            students(id, full_name, student_no, email),
            courses(id, title, code),
            instructors(id, full_name)`,

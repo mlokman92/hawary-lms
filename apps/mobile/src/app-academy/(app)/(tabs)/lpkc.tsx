@@ -6,8 +6,9 @@ import {
   REPORT_PAGE_SIZE,
   REPORT_STATUS,
   useReportCounts,
+  stageOf,
   useReportQueue,
-  type ReportStatus,
+  type ReportStage,
 } from '@/features/reports/api'
 import { useScope } from '@/shell/scope'
 import {
@@ -23,9 +24,22 @@ import {
 } from '@/ui'
 import { Pager } from '@/ui/Pager'
 
-type Filter = ReportStatus | 'all'
-// No "Waiting": a report is "being checked" from the moment it is sent.
-const ORDER: ReportStatus[] = ['in_review', 'changes_requested', 'approved']
+type Filter = ReportStage | 'all'
+// No "Waiting": a report is "moderating" from the moment it is sent, and
+// "pending trainer approval" once a system admin has added to it.
+const ORDER: ReportStage[] = [
+  'moderating',
+  'pending_approval',
+  'changes_requested',
+  'approved',
+]
+// A trainer's turn comes first on their own screen.
+const TRAINER_FIRST: ReportStage[] = [
+  'pending_approval',
+  'moderating',
+  'changes_requested',
+  'approved',
+]
 
 const daysSince = (iso: string): number =>
   Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000)
@@ -42,10 +56,16 @@ export default function LpkcTab() {
   const { t } = useT()
   const router = useRouter()
   const { academyId, isAdmin } = useScope()
-  const [status, setStatus] = useState<Filter>('in_review')
+  const [picked, setPicked] = useState<Filter | null>(null)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
   const { data: counts } = useReportCounts(academyId)
+  // Until somebody picks a chip: the first stage that has anything in it.
+  const status: Filter =
+    picked ??
+    (counts
+      ? ((isAdmin ? ORDER : TRAINER_FIRST).find((s) => counts[s] > 0) ?? 'all')
+      : 'all')
   const { data, isLoading, error, refetch, isRefetching } = useReportQueue(
     academyId,
     { status, search },
@@ -60,7 +80,7 @@ export default function LpkcTab() {
       <Chips<Filter>
         value={status}
         onChange={(v) => {
-          setStatus(v)
+          setPicked(v)
           setPage(0)
         }}
         options={[
@@ -97,7 +117,7 @@ export default function LpkcTab() {
       ) : (
         <Card flush>
           {rows.map((r, i) => {
-            const meta = REPORT_STATUS[r.status]
+            const meta = REPORT_STATUS[stageOf(r)]
             return (
               <Row
                 key={r.id}

@@ -6,6 +6,7 @@ import {
   Eye,
   FileWarning,
   MoreHorizontal,
+  UserCheck,
   Users,
 } from 'lucide-react'
 import { useAcademy } from '@/lib/academy'
@@ -33,10 +34,11 @@ import { ReportPoolDialog } from '@/features/reports/ReportPoolDialog'
 import {
   REPORT_PAGE_SIZE,
   REPORT_STATUS,
+  stageOf,
   useReportCounts,
   useReportQueue,
   type ReportFilters,
-  type ReportStatus,
+  type ReportStage,
 } from '@/features/reports/api'
 
 /**
@@ -49,16 +51,18 @@ import {
  * `/appointments/list` reached: a control that cannot change the result is
  * worse than no control.
  *
- * Oldest first, which is the only order a queue has. The three tiles are a sum
+ * Oldest first, which is the only order a queue has. The four tiles are a sum
  * over a set, so pressing one shows that set — the `/payments` rule. There is
- * no "Waiting" tile: a report is "being checked" from the moment it is sent.
+ * no "Waiting" tile: a report is "moderating" from the moment it is sent, and
+ * "pending trainer approval" once a system admin has added to it.
  */
 
 const TILES: {
-  status: ReportStatus
+  status: ReportStage
   icon: typeof Eye
 }[] = [
-  { status: 'in_review', icon: Eye },
+  { status: 'moderating', icon: Eye },
+  { status: 'pending_approval', icon: UserCheck },
   { status: 'changes_requested', icon: FileWarning },
   { status: 'approved', icon: CheckCircle2 },
 ]
@@ -68,7 +72,7 @@ export function ReportsPage() {
   const { activeAcademyId, active } = useAcademy()
   const isAdmin = active?.role === 'admin'
 
-  const [status, setStatus] = useState<ReportStatus | 'all'>('all')
+  const [status, setStatus] = useState<ReportStage | 'all'>('all')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
   const [poolOpen, setPoolOpen] = useState(false)
@@ -86,7 +90,7 @@ export function ReportsPage() {
   const total = queue.data?.total ?? 0
 
   /** A tile both filters and un-filters: pressing the pressed one clears. */
-  function toggle(next: ReportStatus) {
+  function toggle(next: ReportStage) {
     setStatus((cur) => (cur === next ? 'all' : next))
     setPage(0)
   }
@@ -118,7 +122,7 @@ export function ReportsPage() {
         ) : null}
       </PageHeader>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {TILES.map(({ status: s, icon }) => (
           <FilterStatCard
             key={s}
@@ -170,7 +174,7 @@ export function ReportsPage() {
           <Card className="gap-0 py-0">
             <ul className="divide-y">
               {rows.map((r) => {
-                const meta = REPORT_STATUS[r.status]
+                const meta = REPORT_STATUS[stageOf(r)]
                 return (
                   <li key={r.id}>
                     <Link

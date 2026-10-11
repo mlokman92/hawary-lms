@@ -67,7 +67,7 @@ export function ReportThreadView({
   if (error) return <ErrorBlock error={error} className="mt-6" />
   if (!report) return null
 
-  const status = REPORT_STATUS[report.status]
+  const status = REPORT_STATUS[report.stage ?? report.status]
   const isStudent = report.my_role === 'student'
   const isAdmin = report.my_role === 'admin'
   const canDecide = !isStudent

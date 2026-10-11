@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import {
   ArrowRightLeft,
+  Check,
   CheckCircle2,
-  Download,
   FileText,
   MessageSquare,
   Upload,
@@ -50,16 +50,15 @@ function humanSize(bytes: number | null): string {
 /**
  * One attached document. The URL is minted on click and lives 60 seconds, so
  * there is nothing to render until somebody asks — which is also why this is a
- * button and not an anchor.
+ * button and not an anchor. Clicking opens it; there is no separate download.
  */
 function FileChip({ file }: { file: ReportFile }) {
-  const { t } = useT()
   const [busy, setBusy] = useState(false)
 
-  async function open(download: boolean) {
+  async function open() {
     setBusy(true)
     try {
-      const url = await reportFileUrl(file.id, download)
+      const url = await reportFileUrl(file.id, false)
       window.open(url, '_blank', 'noopener,noreferrer')
     } finally {
       setBusy(false)
@@ -67,31 +66,22 @@ function FileChip({ file }: { file: ReportFile }) {
   }
 
   return (
-    <span className="bg-muted/60 inline-flex items-center gap-1 rounded-md py-1 pr-1 pl-2 text-xs">
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => void open(false)}
-        className="flex min-w-0 items-center gap-1.5 hover:underline"
-      >
-        <FileText className="size-3.5 shrink-0" aria-hidden />
-        <span className="max-w-56 truncate">{file.file_name}</span>
+    <button
+      type="button"
+      disabled={busy}
+      onClick={() => void open()}
+      className="bg-muted/60 hover:bg-muted flex min-w-0 max-w-full items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm transition-colors disabled:opacity-60"
+    >
+      <FileText className="size-6 shrink-0" aria-hidden />
+      <span className="min-w-0">
+        <span className="block truncate font-medium">{file.file_name}</span>
         {file.size_bytes ? (
-          <span className="text-muted-foreground shrink-0">
+          <span className="text-muted-foreground block text-xs">
             {humanSize(file.size_bytes)}
           </span>
         ) : null}
-      </button>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => void open(true)}
-        aria-label={t('report.file.download', { name: file.file_name })}
-        className="hover:bg-background rounded p-1"
-      >
-        <Download className="size-3" />
-      </button>
-    </span>
+      </span>
+    </button>
   )
 }
 
@@ -127,18 +117,27 @@ export function ReportTimeline({
   return (
     <ol className="divide-y">
       {events.map((e) => {
-        const Icon = e.staff_only ? FileText : KIND_ICON[e.kind]
+        const Icon = e.staff_only ? Check : KIND_ICON[e.kind]
         const status = e.to_status ? REPORT_STATUS[e.to_status] : null
         const mine = !e.staff_only && !!myUserId && e.actor_id === myUserId
         return (
           <li key={e.id} className="flex gap-3 px-4 py-3">
-            <span
-              className={cn(
-                'bg-muted mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full',
-                status && TONE_CLASS[status.tone],
-              )}
-            >
-              <Icon className="size-3.5" aria-hidden />
+            {/* The slot stays size-7 so the text lines up with the other
+                entries; the check sits smaller inside it. */}
+            <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center">
+              <span
+                className={cn(
+                  'flex items-center justify-center rounded-full',
+                  e.staff_only
+                    ? 'size-5 bg-emerald-600 text-white dark:bg-emerald-500'
+                    : cn('bg-muted size-7', status && TONE_CLASS[status.tone]),
+                )}
+              >
+                <Icon
+                  className={e.staff_only ? 'size-3' : 'size-3.5'}
+                  aria-hidden
+                />
+              </span>
             </span>
 
             <div className="min-w-0 flex-1">
@@ -169,7 +168,7 @@ export function ReportTimeline({
               ) : null}
 
               {e.files.length > 0 ? (
-                <div className="mt-2 flex flex-wrap gap-1.5">
+                <div className="mt-3 flex flex-wrap gap-2">
                   {e.files.map((f) => (
                     <FileChip key={f.id} file={f} />
                   ))}

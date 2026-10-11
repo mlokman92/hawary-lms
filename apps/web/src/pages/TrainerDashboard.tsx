@@ -13,6 +13,7 @@ import { useMyInstructorRecord } from '@/features/profile/api'
 import { useAcademyQueue, useMyGradableCourses, type QueueRow } from '@/features/grading/api'
 import {
   REPORT_STATUS,
+  stageOf,
   useMyReportQueue,
   type ReportRow,
 } from '@/features/reports/api'
@@ -167,7 +168,7 @@ function ReportRowItem({ row }: { row: ReportRow }) {
           </span>
         </span>
         <Badge variant="outline" className="shrink-0">
-          {t(REPORT_STATUS[row.status].labelKey)}
+          {t(REPORT_STATUS[stageOf(row)].labelKey)}
         </Badge>
         <span
           className={
