@@ -3,9 +3,10 @@ import { pdfText } from '@/features/payments/pdf'
 import emblemUrl from './assets/emblem.jpg'
 import wordmarkUrl from './assets/wordmark.jpg'
 import signatureUrl from './assets/signature.png'
+import { OFFER_TERMS } from './terms'
 
 /**
- * The offer letter (surat tawaran) — see docs/offer-letter.md.
+ * The offer letter (surat tawaran) — see docs/documents.md.
  *
  * Drawn with jsPDF for the same reason the invoice is (features/payments/
  * pdf.ts): one deterministic A4 artefact, built on demand from what the record
@@ -14,8 +15,10 @@ import signatureUrl from './assets/signature.png'
  * are that letter's, in points.
  *
  * Four things on page one come from the record — the date, the name, the IC
- * number and the address. Everything else is the letter. It is always Malay,
- * whatever language the reader has the app in: it is a document, not a screen.
+ * number and the address. Page six is the student's acceptance: the declaration,
+ * and the signature and date they gave it on, when they have. Everything else
+ * is the letter. It is always Malay, whatever language the reader has the app
+ * in: it is a document, not a screen.
  */
 
 export type OfferLetterInput = {
@@ -27,6 +30,13 @@ export type OfferLetterInput = {
   address: string | null
   /** `courses.start_date` of the student's course, 'YYYY-MM-DD'. */
   startDate: string | null
+  /**
+   * The student's signature, a PNG data URL, and the moment they gave it
+   * (`student_offer_acceptances`). Without them the acceptance page prints with
+   * a blank line to sign and date by hand.
+   */
+  signature?: string | null
+  agreedAt?: string | null
 }
 
 // --- page geometry (pt, A4 portrait) ----------------------------------------
@@ -75,6 +85,23 @@ export function letterDate(day: string | null): string {
   if (!m) return ''
   const month = MONTHS[Number(m[2]) - 1]
   return month ? `${m[3]} ${month} ${m[1]}` : ''
+}
+
+/**
+ * A moment as the day it was on the academy's clock — Malaysia, UTC+8, no
+ * daylight saving — so the date a student signed does not depend on where the
+ * letter is downloaded.
+ */
+function letterDateOf(moment: string | null | undefined): string {
+  const t = moment ? new Date(moment) : null
+  if (!t || Number.isNaN(t.getTime())) return ''
+  const day = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kuala_Lumpur',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(t)
+  return letterDate(day)
 }
 
 /** A MyKad number gets its dashes back; a passport number prints as stored. */
@@ -513,6 +540,68 @@ function pageFive(doc: jsPDF, images: Images) {
   line(doc, y + LEAD, 'Hawary Academy')
 }
 
+/** Width and height of a PNG data URL, read from its header, 16 bytes in. */
+function pngSize(url: string): { width: number; height: number } | null {
+  const m = /^data:image\/png;base64,([A-Za-z0-9+/]{32})/.exec(url)
+  if (!m?.[1]) return null
+  try {
+    const bytes = atob(m[1])
+    const at = (i: number) =>
+      ((bytes.charCodeAt(i) << 24) |
+        (bytes.charCodeAt(i + 1) << 16) |
+        (bytes.charCodeAt(i + 2) << 8) |
+        bytes.charCodeAt(i + 3)) >>>
+      0
+    const width = at(16)
+    const height = at(20)
+    return width > 0 && height > 0 ? { width, height } : null
+  } catch {
+    return null
+  }
+}
+
+const SIGN_W = 160 // the room a signature has above its dotted line
+const SIGN_H = 50
+
+/**
+ * The student's acceptance. With a signature on file it carries the picture and
+ * the day it was given; without one, the same page has a line to sign and date
+ * by hand — the staff download asks nothing of the record, so nor does this.
+ */
+function pageSix(doc: jsPDF, input: OfferLetterInput) {
+  let y = heading(doc, TOP, OFFER_TERMS.title)
+  OFFER_TERMS.paragraphs.forEach((text, i) => {
+    y = block(doc, y + (i === 0 ? LEAD : PARA), [text])
+  })
+
+  y = line(doc, y + PARA, 'Tandatangan calon,')
+
+  // Across the dotted line, as on page five, and drawn first so that the dots
+  // land on top of the ink. Scaled to fit, never stretched.
+  const size = input.signature ? pngSize(input.signature) : null
+  if (input.signature && size) {
+    const scale = Math.min(SIGN_W / size.width, SIGN_H / size.height)
+    const w = size.width * scale
+    const h = size.height * scale
+    doc.addImage(input.signature, 'PNG', L + 6, y + 55 - h, w, h)
+  }
+  y = line(doc, y + LEAD * 3, '.'.repeat(73))
+
+  const field = (at: number, label: string, text: string) => {
+    setFont(doc, 'normal')
+    doc.text(label, L, at)
+    doc.text(':', L + 110, at)
+    return block(doc, at, [text], {
+      x: L + 120,
+      justify: false,
+      maxLines: 2,
+    })
+  }
+  y = field(y + LEAD, 'Nama', (input.fullName ?? '').trim().toUpperCase())
+  y = field(y + LEAD, 'No. kad pengenalan', letterIc(input.icNumber))
+  field(y + LEAD, 'Tarikh', letterDateOf(input.agreedAt) || '.'.repeat(30))
+}
+
 // --- entry points -----------------------------------------------------------
 
 /** `Surat Tawaran - NUR AISYAH.pdf`, or just `Surat Tawaran.pdf` for a blank. */
@@ -541,6 +630,7 @@ export async function buildOfferLetter(input: OfferLetterInput) {
     () => pageThree(doc),
     () => pageFour(doc),
     () => pageFive(doc, images),
+    () => pageSix(doc, input),
   ]
   pages.forEach((draw, i) => {
     if (i > 0) doc.addPage()

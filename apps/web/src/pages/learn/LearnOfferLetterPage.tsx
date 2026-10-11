@@ -5,9 +5,10 @@ import { normalizeIcNumber } from '@hawary/shared'
 import { useStudentAcademy } from '@/lib/studentAcademy'
 import { useT } from '@/lib/i18n'
 import { errorMessage } from '@/lib/errors'
-import { fmtDay } from '@/lib/format'
+import { fmtDate, fmtDay } from '@/lib/format'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -23,23 +24,30 @@ import {
 import { useMyInvoices } from '@/features/learn/billing'
 import {
   useMyDocumentCourse,
+  useMyOfferAcceptance,
+  useSignOfferLetter,
   type DocumentCourse,
+  type OfferAcceptance,
 } from '@/features/documents/api'
 import { downloadOfferLetter } from '@/features/offer-letter/letter'
+import { OFFER_TERMS } from '@/features/offer-letter/terms'
+import { SignaturePad } from '@/features/offer-letter/SignaturePad'
 
 /**
  * The student's own offer letter.
  *
- * Three things have to be true before there is a letter to hand over, and the
- * page shows the first that is not:
+ * Three things stand between a student and the file, and the page shows the
+ * first that is not met:
  *   1. a course with a start date — it is the date the letter carries;
  *   2. a payment, of any amount, on any of their invoices. `amount_paid_sen`
  *      is the student's side of the ledger: it counts a bank transfer whether
  *      or not the academy has filed the receipt, so a student who paid is not
  *      kept waiting on the academy's paperwork;
- *   3. an IC number and a personal address, which the letter prints. Whichever
- *      is missing is asked for here, saved to the record, and then the letter
- *      downloads — one step, not a trip to the profile page and back.
+ *   3. the student's own part: an IC number and a personal address, which the
+ *      letter prints, and a signature with the terms agreed, which it carries
+ *      on its last page. Whatever is missing is asked for here, saved to the
+ *      record, and then the letter downloads — one step, not a trip to the
+ *      profile page and back.
  *
  * These are what the academy asks for, not an access boundary: the letter is
  * drawn in the browser from the student's own record.
@@ -50,12 +58,15 @@ export function LearnOfferLetterPage() {
   const student = useMyStudent(academyId)
   const course = useMyDocumentCourse(academyId, student.data?.id)
   const invoices = useMyInvoices(academyId, student.data?.id)
+  const acceptance = useMyOfferAcceptance(student.data?.id)
 
   const header = <PageHeader title={t('sdoc.offer.title')} />
-  const error = student.error ?? course.error ?? invoices.error
+  const error =
+    student.error ?? course.error ?? invoices.error ?? acceptance.error
   const loading =
     student.isLoading ||
-    (!!student.data && (course.isLoading || invoices.isLoading))
+    (!!student.data &&
+      (course.isLoading || invoices.isLoading || acceptance.isLoading))
 
   let body
   if (loading) body = <LoadingBlock />
@@ -88,6 +99,7 @@ export function LearnOfferLetterPage() {
         academyId={academyId}
         student={student.data}
         course={course.data}
+        acceptance={acceptance.data ?? null}
       />
     )
 
@@ -103,13 +115,16 @@ function OfferLetterCard({
   academyId,
   student,
   course,
+  acceptance,
 }: {
   academyId: string | null
   student: Student
   course: DocumentCourse
+  acceptance: OfferAcceptance | null
 }) {
   const { t } = useT()
   const update = useUpdateMyDetails(academyId)
+  const sign = useSignOfferLetter(student.id)
   // An IC number staff typed freehand can be one the save would refuse, so it
   // counts as missing too — and is offered back to be corrected.
   const storedIc = normalizeIcNumber(student.ic_number ?? '')
@@ -118,8 +133,16 @@ function OfferLetterCard({
 
   const [icNumber, setIcNumber] = useState(student.ic_number ?? '')
   const [address, setAddress] = useState('')
+  const [signature, setSignature] = useState<string | null>(null)
+  const [agreed, setAgreed] = useState(false)
+  // A signature on file is used as it is; the student may give another.
+  const [resign, setResign] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+
+  // Signing is what is asked of the student until there is a signature on
+  // file, or until they choose to replace it.
+  const signing = !acceptance || resign
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -134,6 +157,14 @@ function OfferLetterCard({
     }
     if (needsAddress && !address.trim()) {
       setErr(t('sdoc.offer.address_required'))
+      return
+    }
+    if (signing && !signature) {
+      setErr(t('sdoc.offer.signature_required'))
+      return
+    }
+    if (signing && !agreed) {
+      setErr(t('sdoc.offer.agree_required'))
       return
     }
 
@@ -153,11 +184,22 @@ function OfferLetterCard({
                 : (student.personal_address ?? ''),
             })
           : student
+
+      let given = acceptance
+      if (signing && signature) {
+        const acceptedAt = await sign.mutateAsync(signature)
+        given = { signature, accepted_at: acceptedAt }
+        setResign(false)
+        setSignature(null)
+      }
+
       await downloadOfferLetter({
         fullName: row.full_name,
         icNumber: row.ic_number,
         address: row.personal_address,
         startDate: course.start_date,
+        signature: given?.signature,
+        agreedAt: given?.accepted_at,
       })
     } catch (e2) {
       setErr(errorMessage(e2, t('sdoc.download_failed')))
@@ -206,12 +248,81 @@ function OfferLetterCard({
             </div>
           ) : null}
 
+          {/* The academy's wording, in Malay whatever the app's language. */}
+          <div lang="ms" className="bg-muted/40 grid gap-2 rounded-md border p-4 text-sm">
+            <p className="font-semibold">{OFFER_TERMS.title}</p>
+            {OFFER_TERMS.paragraphs.map((p) => (
+              <p key={p}>{p}</p>
+            ))}
+          </div>
+
+          <div className="grid gap-2">
+            <p className="text-sm font-medium">{t('sdoc.offer.signature')}</p>
+            {signing ? (
+              <>
+                <SignaturePad
+                  className="max-w-md"
+                  label={t('sdoc.offer.signature')}
+                  clearLabel={t('common.clear')}
+                  onChange={setSignature}
+                />
+                <Label className="items-start gap-2 leading-snug font-normal">
+                  <Checkbox
+                    className="mt-0.5"
+                    checked={agreed}
+                    onCheckedChange={(v) => setAgreed(v === true)}
+                  />
+                  {t('sdoc.offer.agree')}
+                </Label>
+                {acceptance ? (
+                  <div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setResign(false)
+                        setSignature(null)
+                        setAgreed(false)
+                      }}
+                    >
+                      {t('common.cancel')}
+                    </Button>
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <img
+                  src={acceptance.signature}
+                  alt={t('sdoc.offer.signature')}
+                  className="aspect-[3/1] w-full max-w-xs rounded-md border bg-white"
+                />
+                <div className="flex items-center gap-3">
+                  <span className="text-muted-foreground text-xs">
+                    {t('sdoc.offer.signed_on', {
+                      date: fmtDate(acceptance.accepted_at),
+                    })}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setResign(true)}
+                  >
+                    {t('sdoc.offer.sign_again')}
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+
           {err ? <p className="text-destructive text-sm">{err}</p> : null}
 
           <div>
             <Button type="submit" disabled={busy}>
               <Download />{' '}
-              {needsIc || needsAddress
+              {needsIc || needsAddress || signing
                 ? t('sdoc.offer.save_and_download')
                 : t('common.download')}
             </Button>

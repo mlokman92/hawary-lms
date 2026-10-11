@@ -24,7 +24,15 @@ export type DocumentStudent = Pick<
 > & {
   course: DocumentCourse | null
   icCopy: Pick<Tables<'student_ic_copies'>, 'created_at' | 'file_name'> | null
+  /** When the student signed and agreed to the letter's terms; null if not. */
+  offerAcceptedAt: string | null
 }
+
+/** A student's signature on the offer letter, and when they gave it. */
+export type OfferAcceptance = Pick<
+  Tables<'student_offer_acceptances'>,
+  'signature' | 'accepted_at'
+>
 
 type EnrollmentEmbed = {
   status: Enums<'enrollment_status'>
@@ -48,21 +56,23 @@ export function useDocumentStudents(academyId: string | null) {
       const { data, error } = await supabase
         .from('students')
         .select(
-          'id, student_no, full_name, email, ic_number, personal_address, enrollments(status, courses(id, title, start_date)), ic_copy:student_ic_copies(created_at, file_name)',
+          'id, student_no, full_name, email, ic_number, personal_address, enrollments(status, courses(id, title, start_date)), ic_copy:student_ic_copies(created_at, file_name), offer_acceptance:student_offer_acceptances(accepted_at)',
         )
         .eq('academy_id', academyId!)
         .is('archived_at', null)
         .order('full_name', { ascending: true })
       if (error) throw error
-      type Row = Omit<DocumentStudent, 'course' | 'icCopy'> & {
+      type Row = Omit<DocumentStudent, 'course' | 'icCopy' | 'offerAcceptedAt'> & {
         enrollments: EnrollmentEmbed[] | null
         ic_copy: DocumentStudent['icCopy']
+        offer_acceptance: { accepted_at: string } | null
       }
       return ((data ?? []) as unknown as Row[]).map<DocumentStudent>(
-        ({ enrollments, ic_copy, ...student }) => ({
+        ({ enrollments, ic_copy, offer_acceptance, ...student }) => ({
           ...student,
           course: courseOf(enrollments),
           icCopy: ic_copy,
+          offerAcceptedAt: offer_acceptance?.accepted_at ?? null,
         }),
       )
     },
@@ -88,6 +98,55 @@ export function useMyDocumentCourse(
         .eq('student_id', studentId!)
       if (error) throw error
       return courseOf(data as unknown as EnrollmentEmbed[])
+    },
+  })
+}
+
+/**
+ * The signature on file for one student, or null when they have not signed.
+ * RLS decides who may ask: an admin, or the student themselves.
+ */
+export async function fetchOfferAcceptance(
+  studentId: string,
+): Promise<OfferAcceptance | null> {
+  const { data, error } = await supabase
+    .from('student_offer_acceptances')
+    .select('signature, accepted_at')
+    .eq('student_id', studentId)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+const myOfferAcceptanceKey = (studentId: string | undefined) =>
+  ['my-offer-acceptance', studentId] as const
+
+export function useMyOfferAcceptance(studentId: string | undefined) {
+  return useQuery({
+    queryKey: myOfferAcceptanceKey(studentId),
+    enabled: !!studentId,
+    queryFn: () => fetchOfferAcceptance(studentId!),
+  })
+}
+
+/**
+ * Sign and agree. Returns the moment the database recorded, which is the date
+ * the letter prints — not the browser's clock.
+ */
+export function useSignOfferLetter(studentId: string | undefined) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (signature: string) => {
+      const { data, error } = await supabase.rpc('sign_offer_letter', {
+        _student_id: studentId!,
+        _signature: signature,
+      })
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: myOfferAcceptanceKey(studentId) })
+      qc.invalidateQueries({ queryKey: ['document-students'] })
     },
   })
 }

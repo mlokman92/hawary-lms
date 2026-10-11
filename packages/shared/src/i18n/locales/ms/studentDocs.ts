@@ -9,6 +9,9 @@ export const studentDocs: StudentDocsDict = {
   'sdoc.empty.none': 'Tiada pelajar lagi.',
   'sdoc.empty.no_match': 'Tiada pelajar yang sepadan.',
   'sdoc.download_failed': 'Fail tidak dapat disediakan. Cuba lagi.',
+  'sdoc.offer.signed': 'Ditandatangani dan dipersetujui',
+  'sdoc.offer.not_signed': 'Belum ditandatangani',
+  'sdoc.offer.all_statuses': 'Semua status',
 
   // Surat tawaran — milik pelajar sendiri
   'sdoc.offer.not_ready': 'Surat tawaran anda belum tersedia.',
@@ -18,6 +21,14 @@ export const studentDocs: StudentDocsDict = {
   'sdoc.offer.save_and_download': 'Simpan dan muat turun',
   'sdoc.offer.ic_required': 'Masukkan nombor IC anda.',
   'sdoc.offer.address_required': 'Masukkan alamat peribadi anda.',
+  'sdoc.offer.signature': 'Tandatangan',
+  'sdoc.offer.sign_again': 'Tandatangan semula',
+  'sdoc.offer.signed_on': 'Ditandatangani pada {date}',
+  'sdoc.offer.agree':
+    'Saya telah membaca dan bersetuju dengan terma dan syarat di atas.',
+  'sdoc.offer.signature_required': 'Tandatangan dalam kotak yang disediakan.',
+  'sdoc.offer.agree_required':
+    'Tandakan kotak untuk bersetuju dengan terma dan syarat.',
 
   // Salinan kad pengenalan
   'sdoc.ic.title': 'Salinan kad pengenalan',

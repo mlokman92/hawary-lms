@@ -8,6 +8,9 @@ export const studentDocs = {
   'sdoc.empty.none': 'No students yet.',
   'sdoc.empty.no_match': 'No students match.',
   'sdoc.download_failed': 'The file could not be prepared. Try again.',
+  'sdoc.offer.signed': 'Signed and agreed',
+  'sdoc.offer.not_signed': 'Not signed',
+  'sdoc.offer.all_statuses': 'All statuses',
 
   // Offer letter — the student's own
   'sdoc.offer.not_ready': 'Your offer letter is not ready yet.',
@@ -17,6 +20,14 @@ export const studentDocs = {
   'sdoc.offer.save_and_download': 'Save and download',
   'sdoc.offer.ic_required': 'Enter your IC number.',
   'sdoc.offer.address_required': 'Enter your personal address.',
+  'sdoc.offer.signature': 'Signature',
+  'sdoc.offer.sign_again': 'Sign again',
+  'sdoc.offer.signed_on': 'Signed {date}',
+  'sdoc.offer.agree':
+    'I have read and agree to the terms and conditions above.',
+  'sdoc.offer.signature_required': 'Sign in the box.',
+  'sdoc.offer.agree_required':
+    'Tick the box to agree to the terms and conditions.',
 
   // IC copy
   'sdoc.ic.title': 'IC copy',

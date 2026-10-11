@@ -34,10 +34,22 @@ import { useDocumentStudents, type DocumentStudent } from './api'
 export function DocumentStudentList({
   lastHead,
   lastCell,
+  statusFilter,
 }: {
   /** Header of the trailing column. */
   lastHead: ReactNode
   lastCell: (student: DocumentStudent) => ReactNode
+  /**
+   * A third narrowing, for a page whose document has a state worth filtering
+   * on. `allLabel` is the option that filters nothing; `matches` is asked only
+   * about the others.
+   */
+  statusFilter?: {
+    label: string
+    allLabel: string
+    options: { value: string; label: string }[]
+    matches: (student: DocumentStudent, value: string) => boolean
+  }
 }) {
   const { t } = useT()
   const { activeAcademyId } = useAcademy()
@@ -48,6 +60,7 @@ export function DocumentStudentList({
   } = useDocumentStudents(activeAcademyId)
   const [search, setSearch] = useState('')
   const [course, setCourse] = useState('all')
+  const [status, setStatus] = useState('all')
 
   const courses = useMemo(() => {
     const byId = new Map<string, string>()
@@ -64,12 +77,13 @@ export function DocumentStudentList({
     return (students ?? []).filter(
       (s) =>
         (course === 'all' || s.course?.id === course) &&
+        (status === 'all' || !statusFilter || statusFilter.matches(s, status)) &&
         (!q ||
           [s.full_name, s.student_no, s.ic_number, s.email].some((v) =>
             v?.toLowerCase().includes(q),
           )),
     )
-  }, [students, search, course])
+  }, [students, search, course, status, statusFilter])
 
   return (
     <div className="mt-6">
@@ -96,6 +110,21 @@ export function DocumentStudentList({
             ))}
           </SelectContent>
         </Select>
+        {statusFilter ? (
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger className="w-56" aria-label={statusFilter.label}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{statusFilter.allLabel}</SelectItem>
+              {statusFilter.options.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
       </div>
 
       {isLoading ? (

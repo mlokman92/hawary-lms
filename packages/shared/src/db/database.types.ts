@@ -2634,6 +2634,42 @@ export type Database = {
           },
         ]
       }
+      student_offer_acceptances: {
+        Row: {
+          academy_id: string
+          accepted_at: string
+          signature: string
+          student_id: string
+        }
+        Insert: {
+          academy_id: string
+          accepted_at?: string
+          signature: string
+          student_id: string
+        }
+        Update: {
+          academy_id?: string
+          accepted_at?: string
+          signature?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_offer_acceptances_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_offer_acceptances_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       students: {
         Row: {
           academy_id: string
@@ -3317,6 +3353,10 @@ export type Database = {
           _secret: string
         }
         Returns: Json
+      }
+      sign_offer_letter: {
+        Args: { _signature: string; _student_id: string }
+        Returns: string
       }
       start_attempt: { Args: { _assessment_id: string }; Returns: Json }
       submission_download: {

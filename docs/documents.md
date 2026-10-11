@@ -7,7 +7,7 @@ later.
 
 | | staff (admin only) | student |
 | --- | --- | --- |
-| offer letter | `/documents/offer-letters` — every student, download any | `/learn/documents/offer-letter` — their own |
+| offer letter | `/documents/offer-letters` — every student, who has signed, download any | `/learn/documents/offer-letter` — sign, agree, download their own |
 | IC copy | `/documents/ic-copies` — every student, view the copy | `/learn/documents/ic-copy` — upload, replace, view |
 
 `/documents` and `/learn/documents` redirect to the letter: the parent is a
@@ -27,9 +27,10 @@ in.
 `features/offer-letter/letter.ts` draws the letter with jsPDF, as
 `features/payments/pdf.ts` draws an invoice: built on demand from what the
 record says today, nothing saved, nothing frozen. The wording, the page breaks
-and the positions are the academy's own five-page letter, measured in points
-from the PDF it was supplied as. It is always Malay, whatever language the app
-is in — it is a document, not a screen.
+and the positions of pages one to five are the academy's own letter, measured in
+points from the PDF it was supplied as. Page six is the student's acceptance
+([below](#the-acceptance-page-six)). It is always Malay, whatever language the
+app is in — it is a document, not a screen.
 
 Four values on page one come from the record. Everything else is the letter.
 
@@ -79,10 +80,34 @@ two lines for it; a third fits at full size, anything longer is set at 9pt and
 cut at five lines, and past two lines the blank line under the address gives
 way so the last paragraph stays clear of the footer.
 
+### The acceptance (page six)
+
+The letter ends with a declaration the student accepts — *Pengakuan penerimaan
+tawaran dan persetujuan terma & syarat* — and a place to sign. The wording is
+`features/offer-letter/terms.ts`: one text for the student's page and the
+letter, Malay whatever the app's language, so it is **not** in the i18n
+dictionary and has no English twin to drift from it.
+
+What page six carries comes from `student_offer_acceptances`:
+
+| | signed | not signed |
+| --- | --- | --- |
+| signature | the picture, scaled to fit 160 × 50 pt, across the dotted line | the dotted line, bare |
+| Nama / No. kad pengenalan | from the record | from the record |
+| Tarikh | the day it was signed, on the **Malaysian** calendar | dots, to fill in by hand |
+
+The day is `accepted_at` read in `Asia/Kuala_Lumpur`, not in the reader's
+timezone: a late-evening signature must not print as the day before for
+somebody downloading it from abroad. (Contrast the start date, a calendar day
+with no time at all, which is never run through `Date`.)
+
 ### Who may download
 
 **An admin, anything.** The staff page asks nothing of the record: whatever is
-missing prints as a blank, to be filled in by hand.
+missing prints as a blank, to be filled in by hand — including page six's
+signature when the student has not signed, and a payment nobody has made. If
+the student has signed, the signature is read for that click and the letter
+carries it.
 
 **A student, when three things are true**, and the page shows the first that is
 not:
@@ -94,17 +119,57 @@ not:
    whether or not the academy has filed its receipt, so a student who paid is
    not kept waiting on the academy's paperwork. The page offers a link to
    billing and nothing else;
-3. the record has an **IC number** and a **personal address**. Whichever is
-   missing is asked for on the page, saved through `update_my_student_details`
-   ([invoice-documents.md](invoice-documents.md) §5) and the letter downloads
-   in the same step. An IC number staff typed freehand that the function would
-   refuse counts as missing and is offered back to be corrected.
+3. the student's own part is done. In one form, whatever is missing is asked
+   for, saved, and the letter downloads in the same step:
+   - an **IC number** and a **personal address**, saved through
+     `update_my_student_details` ([invoice-documents.md](invoice-documents.md)
+     §5). An IC number staff typed freehand that the function would refuse
+     counts as missing and is offered back to be corrected;
+   - a **signature**, drawn in the box, and the **terms agreed** by ticking the
+     checkbox under them — both required, in that order, before anything is
+     saved.
+
+Once a signature is on file the form shows it with the date, and the button is
+a plain *Download*. **Sign again** reopens the box for a replacement; it asks
+for the agreement again, because it is a new acceptance.
 
 These are what the academy asks for, **not an access boundary**. The letter is
 drawn in the browser from the student's own record and a template that ships
 with the app, so there is nothing for RLS to guard: a student who bypassed the
 page would obtain their own letter. If the payment rule ever has to be
-enforced, the letter has to be built server-side.
+enforced, the letter has to be built server-side. What *is* enforced is who may
+write or read a signature — below.
+
+### The signature and who may read it
+
+`student_offer_acceptances` — `student_id` is the primary key, so signing again
+replaces — with `signature` (the PNG as a data URL), `academy_id` and
+`accepted_at`. Migration `20261012100000_student_offer_acceptances.sql`.
+
+- **Written** only by `sign_offer_letter(_student_id, _signature)`, a SECURITY
+  DEFINER RPC: the caller must be the account the student record is linked to,
+  the record must not be archived, and the academy is copied from the record.
+  Staff do not sign for a student. Clients have no DML on the table.
+  `accepted_at` is the database's `now()`, which the page hands straight to the
+  letter — never the browser's clock.
+- **Read** by **`app.is_admin OR app.owns_student`**, as an IC copy is. Not
+  `app.is_staff`: a trainer reads students and has no use for anybody's
+  signature. The staff list embeds `accepted_at` only; the picture is fetched
+  for the one student whose letter is being downloaded.
+- **Kept in the table, not a bucket.** The pad draws a 900 × 300 black-on-white
+  PNG, a few kilobytes of ink, so a private bucket and an Edge Function would be
+  more machinery than it deserves. The shape is checked twice, by a `check`
+  constraint and again in the RPC: a PNG data URL, 300,000 characters at most.
+  If signatures ever become large or varied, they move to a bucket as the IC
+  copies did.
+- **White paper, not transparent.** The picture reads the same in either theme
+  on the page and lays onto the letter with no alpha channel to go wrong.
+
+The staff page lists the date beside each download — *Signed and agreed* — or
+*Not signed*, and a third filter beside search and course narrows the roster to
+either (`DocumentStudentList`'s optional `statusFilter`; the IC copy page does
+not pass one). Signing and agreeing are one act: there is no row for a student
+who ticked and did not sign, nor the reverse.
 
 ## The IC copy
 
@@ -148,4 +213,11 @@ orphaned, as a deleted payment's receipt does. Nothing sweeps either yet.
 
 - Mobile. The Student app has neither page.
 - No record of who downloaded a letter, or when.
+- The terms are not versioned. An acceptance records when, not which wording:
+  page six is drawn from `terms.ts` as it reads today, like the rest of the
+  letter, so changing the text changes what an old signature appears under. If
+  that matters, freeze the text on the row at signing.
+- A replaced signature is gone — the row is overwritten, with no history of the
+  earlier one.
+- Staff cannot clear a signature from the app; that is the owner's, in SQL.
 - No way for a student to remove an IC copy, only to replace it.
