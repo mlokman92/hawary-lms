@@ -5,6 +5,12 @@ import { fmtDateTime } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { PendingFiles } from '@/features/files/Attach'
 import {
+  BriefFields,
+  EMPTY_BRIEF,
+  briefComplete,
+  type Brief,
+} from '@/features/reports/BriefFields'
+import {
   REPORT_STATUS,
   useMyReports,
   useSubmitReport,
@@ -42,6 +48,7 @@ export default function ReportsTab() {
 
   const [target, setTarget] = useState<MyReportRow | null>(null)
   const [title, setTitle] = useState('')
+  const [brief, setBrief] = useState<Brief>(EMPTY_BRIEF)
   const [files, setFiles] = useState<PendingFile[]>([])
   const [failure, setFailure] = useState<string | null>(null)
 
@@ -52,10 +59,14 @@ export default function ReportsTab() {
       const res = await submit.mutateAsync({
         courseId: target.course_id,
         title: title.trim(),
+        introduction: brief.introduction,
+        objectives: brief.objectives,
+        problemStatement: brief.problem,
         files,
       })
       setTarget(null)
       setTitle('')
+      setBrief(EMPTY_BRIEF)
       setFiles([])
       router.push(`/reports/${res.id}` as never)
     } catch (e) {
@@ -137,6 +148,11 @@ export default function ReportsTab() {
         <Field label={t('report.submit.what')} hint={t('report.submit.what_hint')}>
           <Input value={title} onChangeText={setTitle} />
         </Field>
+        <BriefFields
+          value={brief}
+          onChange={setBrief}
+          disabled={submit.isPending}
+        />
         <Field label={t('report.submit.files')}>
           {academyId ? (
             <PendingFiles
@@ -153,7 +169,7 @@ export default function ReportsTab() {
             submit.isPending ? t('report.submit.sending') : t('report.submit.send')
           }
           loading={submit.isPending}
-          disabled={!title.trim() || files.length === 0}
+          disabled={!title.trim() || !briefComplete(brief)}
           onPress={() => void send()}
         />
       </Sheet>

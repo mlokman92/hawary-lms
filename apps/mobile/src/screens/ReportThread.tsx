@@ -9,10 +9,17 @@ import { useT, type TFn } from '@/lib/i18n'
 import { useOpenFile } from '@/features/files/api'
 import { FileLine, PendingFiles } from '@/features/files/Attach'
 import {
+  BriefFields,
+  EMPTY_BRIEF,
+  briefComplete,
+  type Brief,
+} from '@/features/reports/BriefFields'
+import {
   REPORT_STATUS,
   useCommentOnReport,
   useReassignReport,
   useReport,
+  useSetReportBrief,
   useSubmitReport,
   type PendingFile,
   type ReportEvent,
@@ -85,7 +92,14 @@ export function ReportThreadScreen() {
   // "Send a new version" — the student's one action besides replying.
   const [again, setAgain] = useState(false)
   const [title, setTitle] = useState('')
+  const [againBrief, setAgainBrief] = useState<Brief>(EMPTY_BRIEF)
   const [newFiles, setNewFiles] = useState<PendingFile[]>([])
+
+  // A report sent without these can have them added in place, by its student,
+  // without sending a version (docs/report-checks.md → "What a report says").
+  const setBrief = useSetReportBrief(academyId)
+  const [draft, setDraft] = useState<Brief>(EMPTY_BRIEF)
+  const [briefFailure, setBriefFailure] = useState<string | null>(null)
 
   if (isLoading) {
     return (
@@ -110,6 +124,32 @@ export function ReportThreadScreen() {
   const done = report.status === 'approved'
   const busy = comment.isPending || reassign.isPending
   const nothingToSay = body.trim() === '' && files.length === 0
+
+  const briefFields = [
+    { key: 'introduction', labelKey: 'report.submit.introduction', text: report.introduction },
+    { key: 'objectives', labelKey: 'report.submit.objectives', text: report.objectives },
+    { key: 'problem', labelKey: 'report.submit.problem', text: report.problem_statement },
+  ] as const
+  const written = briefFields.filter((b) => b.text?.trim())
+  // Only the student it belongs to may fill a blank, and only a blank.
+  const missing = isStudent
+    ? briefFields.filter((b) => !b.text?.trim()).map((b) => b.key)
+    : []
+
+  async function saveBrief() {
+    setBriefFailure(null)
+    try {
+      await setBrief.mutateAsync({
+        reportId: id,
+        introduction: draft.introduction,
+        objectives: draft.objectives,
+        problemStatement: draft.problem,
+      })
+      setDraft(EMPTY_BRIEF)
+    } catch (e) {
+      setBriefFailure(errorMessage(e, t('common.error')))
+    }
+  }
 
   async function post(toStatus: ReportStatus | null) {
     setFailure(null)
@@ -138,6 +178,9 @@ export function ReportThreadScreen() {
       await submit.mutateAsync({
         courseId: report.course.id,
         title: title.trim() || report.title,
+        introduction: againBrief.introduction,
+        objectives: againBrief.objectives,
+        problemStatement: againBrief.problem,
         files: newFiles,
       })
       setAgain(false)
@@ -218,9 +261,47 @@ export function ReportThreadScreen() {
           title={t('report.resubmit')}
           onPress={() => {
             setTitle(report.title)
+            setAgainBrief({
+              introduction: report.introduction ?? '',
+              objectives: report.objectives ?? '',
+              problem: report.problem_statement ?? '',
+            })
             setAgain(true)
           }}
         />
+      ) : null}
+
+      {written.length > 0 || missing.length > 0 ? (
+        <Card style={{ gap: space.lg }}>
+          {written.map((b) => (
+            <View key={b.key} style={{ gap: 4 }}>
+              <T v="small" muted>
+                {t(b.labelKey)}
+              </T>
+              <T>{b.text}</T>
+            </View>
+          ))}
+          {missing.length > 0 ? (
+            <>
+              <BriefFields
+                value={draft}
+                onChange={setDraft}
+                disabled={setBrief.isPending}
+                only={missing}
+              />
+              <FormError error={briefFailure} />
+              <Button
+                title={t('common.save')}
+                loading={setBrief.isPending}
+                disabled={
+                  setBrief.isPending ||
+                  missing.every((k) => draft[k].trim() === '')
+                }
+                onPress={() => void saveBrief()}
+              />
+            </>
+          ) : null}
+        </Card>
       ) : null}
 
       <Card style={{ gap: space.lg }}>
@@ -310,6 +391,11 @@ export function ReportThreadScreen() {
         <Field label={t('report.submit.what')} hint={t('report.submit.what_hint')}>
           <Input value={title} onChangeText={setTitle} />
         </Field>
+        <BriefFields
+          value={againBrief}
+          onChange={setAgainBrief}
+          disabled={submit.isPending}
+        />
         <Field label={t('report.submit.files')}>
           {academyId ? (
             <PendingFiles
@@ -326,7 +412,7 @@ export function ReportThreadScreen() {
             submit.isPending ? t('report.submit.sending') : t('report.submit.send')
           }
           loading={submit.isPending}
-          disabled={newFiles.length === 0}
+          disabled={!briefComplete(againBrief)}
           onPress={() => void sendAgain()}
         />
       </Sheet>

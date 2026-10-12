@@ -114,6 +114,22 @@ Deno.serve(async (req) => {
   )
 
   if (!success) {
+    // The callback answers 200 whatever happens, so without this a payment the
+    // gateway took and we did not settle leaves no trace here at all (9 Oct 2026:
+    // six paid bills sat unsettled with nothing in the logs to say why).
+    console.log(
+      JSON.stringify({
+        event: 'callback_not_settled',
+        intent: intent.id,
+        bill_code: intent.bill_code,
+        posted_status: fields.status ?? null,
+        txns: txns.map((t) => ({
+          status: str(t.billpaymentStatus),
+          ref: str(t.billExternalReferenceNo),
+          amount: str(t.billpaymentAmount),
+        })),
+      }),
+    )
     if (String(fields.status ?? '') === '3') {
       await admin
         .from('payment_intents')
@@ -136,12 +152,24 @@ Deno.serve(async (req) => {
     intent.bill_code
   const paidAt = parseDate(success.billPaymentDate ?? success.billpaymentDate)
 
-  await admin.rpc('record_gateway_payment', {
+  const { data: outcome, error } = await admin.rpc('record_gateway_payment', {
     _intent_id: intent.id,
     _amount_sen: amountSen,
     _provider_ref: providerRef,
     _paid_at: paidAt,
   })
+  // 'recorded' and 'duplicate' are the settled outcomes; anything else (an RPC
+  // error, 'amount_mismatch', 'reconcile_void') is a payment for staff to look at.
+  if (error || (outcome !== 'recorded' && outcome !== 'duplicate')) {
+    console.error(
+      JSON.stringify({
+        event: 'callback_settle_failed',
+        intent: intent.id,
+        outcome: outcome ?? null,
+        error: error?.message ?? null,
+      }),
+    )
+  }
 
   return ok()
 })

@@ -549,6 +549,33 @@ export function useSubmitReport(academyId: string | null) {
 }
 
 /**
+ * Fill in the introduction, objectives or problem statement a report was sent
+ * without. The server only writes a field that is still empty and moves
+ * nothing else, so a blank argument is "leave it" and this is not a reply.
+ */
+export function useSetReportBrief(academyId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      reportId: string
+      introduction?: string
+      objectives?: string
+      problemStatement?: string
+    }) => {
+      const { error } = await supabase.rpc('set_report_brief', {
+        _report_id: input.reportId,
+        _introduction: input.introduction?.trim() || undefined,
+        _objectives: input.objectives?.trim() || undefined,
+        _problem_statement: input.problemStatement?.trim() || undefined,
+      })
+      if (error) throw error
+    },
+    onSuccess: (_res, input) =>
+      invalidateReports(qc, academyId, input.reportId),
+  })
+}
+
+/**
  * Say something. The server moves the status by itself — to "being checked"
  * when the student writes, to "changes needed" when the academy does — so
  * `toStatus` is only for the two decisions staff make by hand: approve, and

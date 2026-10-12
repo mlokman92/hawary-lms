@@ -20,5 +20,8 @@ Idempotent and cheap: short-circuits with no ToyyibPay call once the invoice is
 Callers:
 - **Result page** (`/pay/:token/result`) polls it every 4s until settled (self-heals).
 - **Staff** "Check payment status" button on the invoice detail triggers it on demand.
+- **pg_cron** `payment-intent-sweep` calls it every 15 minutes for each invoice with
+  a live intent from the last 14 days — so a payer who paid and never came back is
+  still settled (`20261012140000_payment_intent_sweep.sql`).
 
 This is the **authoritative reconciler**; `toyyibpay-callback` is just a fast-path.

@@ -26,6 +26,7 @@ import {
   useCommentOnReport,
   useReassignReport,
   useReport,
+  useSetReportBrief,
   type PendingFile,
   type ReportStatus,
 } from './api'
@@ -58,10 +59,17 @@ export function ReportThreadView({
   const { data: report, isLoading, error } = useReport(reportId)
   const comment = useCommentOnReport(academyId)
   const reassign = useReassignReport(academyId)
+  const setBrief = useSetReportBrief(academyId)
 
   const [body, setBody] = useState('')
   const [files, setFiles] = useState<PendingFile[]>([])
   const [failure, setFailure] = useState<string | null>(null)
+  const [draft, setDraft] = useState({
+    introduction: '',
+    objectives: '',
+    problem: '',
+  })
+  const [briefFailure, setBriefFailure] = useState<string | null>(null)
 
   if (isLoading) return <LoadingBlock className="mt-6" />
   if (error) return <ErrorBlock error={error} className="mt-6" />
@@ -74,13 +82,30 @@ export function ReportThreadView({
   const canReassign = !isStudent
   const done = report.status === 'approved'
 
-  const brief = (
-    [
-      { key: 'introduction', labelKey: 'report.submit.introduction', text: report.introduction },
-      { key: 'objectives', labelKey: 'report.submit.objectives', text: report.objectives },
-      { key: 'problem', labelKey: 'report.submit.problem', text: report.problem_statement },
-    ] as const
-  ).filter((b) => b.text?.trim())
+  const fields = [
+    { key: 'introduction', labelKey: 'report.submit.introduction', text: report.introduction },
+    { key: 'objectives', labelKey: 'report.submit.objectives', text: report.objectives },
+    { key: 'problem', labelKey: 'report.submit.problem', text: report.problem_statement },
+  ] as const
+  const brief = fields.filter((b) => b.text?.trim())
+  // Only the student whose report it is can fill a blank, and only a blank: to
+  // change what is written they send a new version, as before.
+  const missing = isStudent ? fields.filter((b) => !b.text?.trim()) : []
+
+  async function saveBrief() {
+    setBriefFailure(null)
+    try {
+      await setBrief.mutateAsync({
+        reportId,
+        introduction: draft.introduction,
+        objectives: draft.objectives,
+        problemStatement: draft.problem,
+      })
+      setDraft({ introduction: '', objectives: '', problem: '' })
+    } catch (e) {
+      setBriefFailure(errorMessage(e, t('common.error')))
+    }
+  }
 
   async function post(toStatus: ReportStatus | null) {
     setFailure(null)
@@ -201,10 +226,10 @@ export function ReportThreadView({
         </div>
       </div>
 
-      {/* What the work is about, as the student wrote it. Reports sent before
-          these were asked for have none, and show nothing here rather than
-          three empty headings. */}
-      {brief.length > 0 ? (
+      {/* What the work is about, as the student wrote it. For staff, a report
+          sent before these were asked for shows nothing here rather than
+          three empty headings; for its student, each blank is a box. */}
+      {brief.length > 0 || missing.length > 0 ? (
         <Card className="mt-6 gap-5 p-4">
           {brief.map((b) => (
             <section key={b.key}>
@@ -214,6 +239,48 @@ export function ReportThreadView({
               <p className="mt-1 text-sm whitespace-pre-wrap">{b.text}</p>
             </section>
           ))}
+
+          {missing.map((m) => (
+            <section key={m.key}>
+              <label
+                htmlFor={`brief-${m.key}`}
+                className="text-muted-foreground text-xs font-medium"
+              >
+                {t(m.labelKey)}
+              </label>
+              <Textarea
+                id={`brief-${m.key}`}
+                className="mt-1"
+                rows={3}
+                maxLength={5000}
+                value={draft[m.key]}
+                disabled={setBrief.isPending}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, [m.key]: e.target.value }))
+                }
+              />
+            </section>
+          ))}
+
+          {missing.length > 0 ? (
+            <div className="flex items-center justify-end gap-3">
+              {briefFailure ? (
+                <p className="text-destructive mr-auto text-sm">
+                  {briefFailure}
+                </p>
+              ) : null}
+              <Button
+                size="sm"
+                disabled={
+                  setBrief.isPending ||
+                  missing.every((m) => draft[m.key].trim() === '')
+                }
+                onClick={() => void saveBrief()}
+              >
+                {t('common.save')}
+              </Button>
+            </div>
+          ) : null}
         </Card>
       ) : null}
 

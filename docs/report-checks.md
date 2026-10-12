@@ -192,6 +192,20 @@ statement** (Penyata masalah) — `introduction`, `objectives`,
   the Student app that asks for the fields has shipped. The two overloads have
   no shared defaults so PostgREST never sees an ambiguous call.
 - Capped at 5000 characters each by a check constraint.
+- **A student can fill in a blank without sending a version.**
+  `set_report_brief` (`20261012150000_report_brief_fill_in.sql`) writes only the
+  fields that are still empty, for the student the report belongs to, at any
+  status. It cannot overwrite wording — changing what is written is still a new
+  version — and it is not a reply: no timeline entry, no notification, no status
+  move. The thread screen shows a box for each blank to its student, on both web
+  and mobile; staff see nothing for a blank.
+- **Documents are optional** (`20261012160000_report_files_optional.sql`). The
+  four fields are the substance of a send; a null or empty file list is a
+  complete submission, with its `submitted` entry, version and notice. Documents
+  can follow as a reply. A `files` value that is not a list is still refused.
+- **The mobile Student app asks for the same fields** — both send sheets and the
+  thread screen (`features/reports/BriefFields.tsx`). Builds installed before
+  that ships keep working through the 4-argument door.
 
 ## The copy a checker starts from
 

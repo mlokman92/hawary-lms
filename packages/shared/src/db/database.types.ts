@@ -3411,6 +3411,15 @@ export type Database = {
         Args: { _batch: string; _student_ids: string[] }
         Returns: Json
       }
+      set_report_brief: {
+        Args: {
+          _introduction?: string
+          _objectives?: string
+          _problem_statement?: string
+          _report_id: string
+        }
+        Returns: Json
+      }
       set_toyyibpay_credentials: {
         Args: {
           _academy: string

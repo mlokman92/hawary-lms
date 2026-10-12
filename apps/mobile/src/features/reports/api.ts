@@ -134,6 +134,10 @@ export type ReportThread = {
   id: string
   academy_id: string
   title: string
+  /** Null on reports sent before these were asked for. */
+  introduction: string | null
+  objectives: string | null
+  problem_statement: string | null
   status: ReportStatus
   /** What staff read it as. Equal to `status` in a student's copy. */
   stage: ReportStage
@@ -169,6 +173,9 @@ export type MyReportRow = {
   report: {
     id: string
     title: string
+    introduction: string | null
+    objectives: string | null
+    problem_statement: string | null
     status: ReportStatus
     version: number
     submitted_at: string
@@ -510,12 +517,18 @@ export function useSubmitReport(academyId: string | null) {
     mutationFn: async (input: {
       courseId: string
       title: string
+      introduction: string
+      objectives: string
+      problemStatement: string
       files: PendingFile[]
     }) => {
       const { data, error } = await supabase.rpc('submit_report', {
         _academy_id: academyId!,
         _course_id: input.courseId,
         _title: input.title,
+        _introduction: input.introduction,
+        _objectives: input.objectives,
+        _problem_statement: input.problemStatement,
         _files: input.files,
       })
       if (error) throw error
@@ -538,6 +551,33 @@ export function useSubmitReport(academyId: string | null) {
       return res
     },
     onSuccess: (res) => invalidateReports(qc, academyId, res.id),
+  })
+}
+
+/**
+ * Fill in the introduction, objectives or problem statement a report was sent
+ * without. The server only writes a field that is still empty and moves
+ * nothing else, so a blank argument is "leave it" and this is not a reply.
+ */
+export function useSetReportBrief(academyId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      reportId: string
+      introduction?: string
+      objectives?: string
+      problemStatement?: string
+    }) => {
+      const { error } = await supabase.rpc('set_report_brief', {
+        _report_id: input.reportId,
+        _introduction: input.introduction?.trim() || undefined,
+        _objectives: input.objectives?.trim() || undefined,
+        _problem_statement: input.problemStatement?.trim() || undefined,
+      })
+      if (error) throw error
+    },
+    onSuccess: (_res, input) =>
+      invalidateReports(qc, academyId, input.reportId),
   })
 }
 

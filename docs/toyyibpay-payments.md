@@ -565,6 +565,41 @@ since "can I pay this in two?" is a phone call. Both are `app.is_admin` writes
 under `invoices: admin update`: the per-invoice override stays with every admin,
 so any admin can still say yes to that call.
 
+## A paid bill nobody returns to is swept every 15 minutes
+
+"Reconciliation-driven" above was only true while somebody was looking.
+`verify-payment` ran when the payer sat on the result page or staff pressed
+"Check payment status"; the callback is a fast path that can miss. A payer who
+paid and closed the tab, on a callback that did not settle, left an approved
+ToyyibPay bill and a `pending` intent with no payment row — and nothing would
+ever retry.
+
+That is what happened on 8–9 Oct 2026: six bills (five RM500 part payments and
+one RM2,500 full payment) approved at the gateway, none in the ledger, found only
+because one payer reported an empty receipt. The settle RPC was never at fault —
+replayed by hand it recorded cleanly as both `postgres` and `service_role`. The
+callback had been delivered, with the right nonce, and answered 200 without
+settling; why is not known, because it logged nothing on that path. The leading
+suspicion is a race (the gateway calls back before `getBillTransactions` shows the
+transaction), which the sweep makes irrelevant.
+
+`20261012140000_payment_intent_sweep.sql` schedules `payment-intent-sweep`
+(`*/15 * * * *`): one `verify-payment` call per invoice that has a `created` or
+`pending` intent with a bill code, created in the last 14 days, on an invoice that
+is not `paid`. It reuses the public, token-gated function rather than a new one, so
+it needs no Vault secret and there is one copy of the settle logic. Older intents
+are left alone so an abandoned bill stops costing a gateway call a quarter-hour; a
+late payment on one still reconciles from the staff button.
+
+The callback now logs `callback_not_settled` (with the gateway's transaction
+statuses) and `callback_settle_failed` (RPC error or an outcome other than
+`recorded`/`duplicate`), so the next miss says why.
+
+**Finding a stranded payment by hand:** list intents `pending` older than a few
+minutes and `POST getBillTransactions` with the `bill_code` — a row with
+`billpaymentStatus` `1` and `billExternalReferenceNo` equal to the intent id is a
+payment we have not recorded (`3` is failed, `4` is unpaid).
+
 ## The payment date is `dd-mm-yyyy` in Malaysia time, and says so nowhere
 
 `billPaymentDate` comes back as `01-09-2026 17:03:11`. Both halves of that are

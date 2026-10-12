@@ -99,7 +99,7 @@ export function SubmitReportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
             {existing ? t('report.submit.title_again') : t('report.submit.title')}
@@ -191,10 +191,9 @@ export function SubmitReportDialog({
           <Button
             onClick={() => void save()}
             // All of these are required by the RPC, so refusing here says
-            // the same thing a round trip would, sooner.
+            // the same thing a round trip would, sooner. Documents are not.
             disabled={
               submit.isPending ||
-              files.length === 0 ||
               title.trim() === '' ||
               introduction.trim() === '' ||
               objectives.trim() === '' ||
