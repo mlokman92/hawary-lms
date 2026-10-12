@@ -74,6 +74,9 @@ row to the table in `CLAUDE.md` if it is a new area.
 - [payment-screens.md](payment-screens.md) — `/payments` and `/payments/log`:
   the ledger, why `amount_paid_sen` is derived from it, back-dated payments,
   server-side pagination, and the clickable tiles.
+- [receipt-check.md](receipt-check.md) — the bulk check of bank receipts
+  against the ledger that Claude runs on request: the pass / flag / leave rules
+  and who decided them, the steps, and the scripts in `tools/receipt-check/`.
 - [payment-report.md](payment-report.md) — the money-received drill
   (month → course → student → payments) and why its rungs are independent
   narrowings rather than a path.
