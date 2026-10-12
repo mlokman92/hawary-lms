@@ -110,6 +110,12 @@ export const courses: CoursesDict = {
   'courses.form.title_required': 'Tajuk wajib diisi.',
   'courses.form.save_changes': 'Simpan perubahan',
   'courses.form.create': 'Cipta kursus',
+  // Bahagian LPKC yang dihantar oleh ambilan ini. Medan pentadbir; label
+  // ini juga nama bahagian sesuatu laporan pada skrin LPKC.
+  'courses.form.lpkc_stages': 'Peringkat LPKC',
+  'courses.lpkc_stage.summary': 'Ringkasan LPKC',
+  'courses.lpkc_stage.report': 'Laporan LPKC',
+  'courses.lpkc_stage.slide': 'Slaid LPKC',
 
   // --- Bil (/courses/:id/billing), pentadbir sahaja -------------------------
   'courses.billing.title': 'Bil',

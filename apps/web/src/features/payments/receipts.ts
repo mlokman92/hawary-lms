@@ -1,6 +1,7 @@
 import { useCallback, useRef, type ChangeEvent } from 'react'
 import {
   keepPreviousData,
+  useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
@@ -54,37 +55,135 @@ export type BankTransferRow = {
 
 export const RECEIPT_PAGE_SIZE = 50
 
-const pageKey = (
-  academyId: string | null,
-  state: ReceiptState | null,
-  search: string,
-  page: number,
-) => ['bank-transfer-receipts', academyId, state ?? '', search, page] as const
-
-/** One page of bank transfers, newest-recorded first. */
+/**
+ * Bank transfers, newest-recorded first, growing: each "Load more" appends the
+ * next page.
+ *
+ * The filters are in the key and the page is not, so a new search or the other
+ * side of the paperwork starts again from the top. The function returns rows
+ * and no total, so a full page is what says there may be another.
+ */
 export function useBankTransferReceipts(
   academyId: string | null,
   state: ReceiptState | null,
   search: string,
-  page: number,
 ) {
-  return useQuery({
-    queryKey: pageKey(academyId, state, search, page),
+  return useInfiniteQuery({
+    queryKey: ['bank-transfer-receipts', academyId, state ?? '', search] as const,
     enabled: !!academyId,
     // Without this an upload — which takes the row off the pending list —
-    // blanks the table through the empty state while the page refetches.
+    // blanks the table through the empty state while the list refetches.
     placeholderData: keepPreviousData,
-    queryFn: async () => {
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }) => {
       const { data, error } = await supabase.rpc('bank_transfer_receipts_page', {
         _academy: academyId!,
         ...(state ? { _state: state } : {}),
         ...(search.trim() ? { _search: search.trim() } : {}),
         _limit: RECEIPT_PAGE_SIZE,
-        _offset: (page - 1) * RECEIPT_PAGE_SIZE,
+        _offset: (pageParam - 1) * RECEIPT_PAGE_SIZE,
       })
       if (error) throw error
       return (data ?? []) as unknown as BankTransferRow[]
     },
+    getNextPageParam: (last, pages) =>
+      last.length === RECEIPT_PAGE_SIZE ? pages.length + 1 : undefined,
+  })
+}
+
+/** What `useBankTransfer` reads before it is flattened to a `BankTransferRow`. */
+type BankTransferEmbed = {
+  id: string
+  amount_sen: number
+  paid_at: string | null
+  created_at: string
+  note: string | null
+  invoice_id: string | null
+  student_id: string | null
+  invoice: { invoice_no: string; course: { title: string } | null } | null
+  student: { full_name: string | null; student_no: string | null } | null
+  recorder: { full_name: string | null } | null
+  receipt: {
+    file_name: string
+    mime_type: string
+    created_at: string
+    uploaded_by_name: string | null
+  } | null
+}
+
+/**
+ * One bank transfer by its id — what `/payments/receipts?payment=<id>` opens.
+ *
+ * Its own read rather than a lookup in the list: the address is something a
+ * colleague is sent, and the row it names may be on the other side of the
+ * paperwork, past the pages loaded, or outside the search. A plain PostgREST
+ * read is enough for one row — the page function exists for its search — and
+ * the tables' own policies scope it, `payment_receipts` to admins.
+ *
+ * `null` is "no such bank transfer", which is also what a payment of another
+ * method or another academy reads as.
+ */
+export function useBankTransfer(
+  academyId: string | null,
+  paymentId: string | null,
+) {
+  return useQuery({
+    queryKey: ['bank-transfer-receipts', 'one', academyId, paymentId] as const,
+    enabled: !!academyId && !!paymentId,
+    queryFn: async (): Promise<BankTransferRow | null> => {
+      const { data, error } = await supabase
+        .from('payments')
+        .select(
+          'id, amount_sen, paid_at, created_at, note, invoice_id, student_id, invoice:invoices(invoice_no, course:courses(title)), student:students(full_name, student_no), recorder:profiles(full_name), receipt:payment_receipts(file_name, mime_type, created_at, uploaded_by_name)',
+        )
+        .eq('academy_id', academyId!)
+        .eq('id', paymentId!)
+        .eq('method', 'bank_transfer')
+        .eq('status', 'succeeded')
+        .maybeSingle()
+      if (error) throw error
+      if (!data) return null
+      const p = data as unknown as BankTransferEmbed
+      return {
+        id: p.id,
+        amount_sen: p.amount_sen,
+        paid_at: p.paid_at,
+        created_at: p.created_at,
+        note: p.note,
+        invoice_id: p.invoice_id,
+        invoice_no: p.invoice?.invoice_no ?? null,
+        course_title: p.invoice?.course?.title ?? null,
+        student_id: p.student_id,
+        student_full_name: p.student?.full_name ?? null,
+        student_no: p.student?.student_no ?? null,
+        recorded_by_name: p.recorder?.full_name ?? null,
+        receipt_file_name: p.receipt?.file_name ?? null,
+        receipt_mime_type: p.receipt?.mime_type ?? null,
+        receipt_uploaded_at: p.receipt?.created_at ?? null,
+        receipt_uploaded_by_name: p.receipt?.uploaded_by_name ?? null,
+      }
+    },
+  })
+}
+
+/**
+ * A signed URL to draw a receipt in the page, rather than open it in a tab.
+ *
+ * `version` is the receipt's upload time, so a replaced receipt is a new key
+ * and a new URL. The URL lives 60 seconds and the file is fetched once, when
+ * it is first drawn — so the query never goes stale while the panel is open,
+ * and is dropped the moment it closes: a cached one is mostly an expired one.
+ */
+export function useReceiptPreviewUrl(
+  paymentId: string | null,
+  version: string | null,
+) {
+  return useQuery({
+    queryKey: ['payment-receipt-url', paymentId, version] as const,
+    enabled: !!paymentId && !!version,
+    staleTime: Infinity,
+    gcTime: 0,
+    queryFn: () => paymentReceiptUrl(paymentId!),
   })
 }
 
@@ -98,8 +197,8 @@ type CountsRow = {
 /**
  * How many are pending and uploaded, and how much money each side is.
  *
- * Both at once, whatever the list is filtered to: the filter shows each count
- * beside its name, and the pager needs the size of whichever side is on
+ * Both at once, whatever the list is filtered to: each side is a card that
+ * filters to it, and "50 of 2,000" needs the size of whichever side is on
  * screen. Its own call for the reason `usePaymentLogTotals` is — a page of 50
  * cannot count the other 2,000.
  */

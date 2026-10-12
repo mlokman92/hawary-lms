@@ -1,9 +1,5 @@
 {
   "mcpServers": {
-    "supabase": {
-      "type": "http",
-      "url": "https://mcp.supabase.com/mcp?project_ref=vpklztxqkvqmmzsxfqgp"
-    },
     "resend": {
       "type": "http",
       "url": "https://mcp.resend.com/mcp"
@@ -11,6 +7,10 @@
     "Expo": {
       "type": "http",
       "url": "https://mcp.expo.dev/mcp"
+    },
+    "hawary-supabase": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp?project_ref=vpklztxqkvqmmzsxfqgp&features=docs%2Caccount%2Cdatabase%2Cdebugging%2Cdevelopment%2Cfunctions%2Cbranching%2Cstorage"
     }
   }
 }

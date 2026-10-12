@@ -14,18 +14,22 @@ import { EmptyState } from '@/components/patterns/EmptyState'
 import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
 import { SubmitReportDialog } from '@/features/reports/SubmitReportDialog'
 import {
+  LPKC_STAGE_LABEL,
   REPORT_STATUS,
+  reportTargets,
   useMyReports,
-  type MyReportRow,
+  type ReportTarget,
 } from '@/features/reports/api'
 
 /**
- * The student's reports: one row per course they are on.
+ * The student's reports: one row per part of the LPKC their course is taking.
  *
- * Keyed on ENROLMENTS, not on reports, so a course with nothing sent yet is a
- * row with a Send button rather than an absence to interpret. That is the same
- * argument `/courses/:id/billing` makes about students who were never invoiced:
- * the thing you cannot see is the thing you came to find out about.
+ * Keyed on ENROLMENTS and the course's parts, not on reports, so a part with
+ * nothing sent yet is a row with a Send button rather than an absence to
+ * interpret. That is the same argument `/courses/:id/billing` makes about
+ * students who were never invoiced: the thing you cannot see is the thing you
+ * came to find out about. Each part is its own thread, checked and approved for
+ * itself, so the report and its slides sit here as two rows.
  *
  * When the academy has nobody in the checking rota the page says so and offers
  * nothing — the pool is the switch, so there is no separate setting to read and
@@ -37,7 +41,7 @@ export function LearnReportsPage() {
   const { academyId } = useStudentAcademy()
   const { data, isLoading, error } = useMyReports(academyId)
 
-  const [submitFor, setSubmitFor] = useState<MyReportRow | null>(null)
+  const [submitFor, setSubmitFor] = useState<ReportTarget | null>(null)
 
   const header = (
     <PageHeader
@@ -64,7 +68,7 @@ export function LearnReportsPage() {
     )
   }
 
-  const rows = data?.courses ?? []
+  const rows = reportTargets(data?.courses ?? [])
 
   return (
     <div className="mx-auto w-full max-w-4xl">
@@ -90,11 +94,15 @@ export function LearnReportsPage() {
               {rows.map((row) => {
                 const r = row.report
                 const meta = r ? REPORT_STATUS[r.status] : null
+                const part = t(LPKC_STAGE_LABEL[row.stage])
                 return (
                   <li
-                    key={row.course_id}
+                    key={`${row.courseId}:${row.stage}`}
                     className="flex items-center gap-3 px-4 py-3"
                   >
+                    {/* Sent: the student's own title, with the part under it.
+                        Not sent: the part IS the row, since it is the thing
+                        there is to send. */}
                     <div className="min-w-0 flex-1">
                       {r ? (
                         <Link
@@ -104,14 +112,13 @@ export function LearnReportsPage() {
                           {r.title}
                         </Link>
                       ) : (
-                        <p className="truncate text-sm font-medium">
-                          {row.course_title}
-                        </p>
+                        <p className="truncate text-sm font-medium">{part}</p>
                       )}
                       <p className="text-muted-foreground truncate text-xs">
-                        {r
+                        {(r
                           ? [
-                              row.course_title,
+                              part,
+                              row.courseTitle,
                               r.instructor_name
                                 ? t('report.checked_by', {
                                     name: r.instructor_name,
@@ -119,9 +126,10 @@ export function LearnReportsPage() {
                                 : null,
                               fmtDateTime(r.last_at),
                             ]
-                              .filter(Boolean)
-                              .join(' · ')
-                          : t('report.learn.nothing_sent')}
+                          : [row.courseTitle, t('report.learn.nothing_sent')]
+                        )
+                          .filter(Boolean)
+                          .join(' · ')}
                       </p>
                     </div>
 
@@ -159,7 +167,7 @@ export function LearnReportsPage() {
       {academyId ? (
         <SubmitReportDialog
           academyId={academyId}
-          row={submitFor}
+          target={submitFor}
           open={!!submitFor}
           onOpenChange={(o) => !o && setSubmitFor(null)}
           onDone={(id) => navigate(`/learn/reports/${id}`)}

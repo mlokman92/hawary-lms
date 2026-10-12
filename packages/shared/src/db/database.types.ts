@@ -1318,6 +1318,7 @@ export type Database = {
           description: string | null
           end_date: string | null
           id: string
+          lpkc_stages: Database["public"]["Enums"]["lpkc_stage"][]
           price_sen: number
           start_date: string | null
           status: Database["public"]["Enums"]["course_status"]
@@ -1334,6 +1335,7 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           id?: string
+          lpkc_stages?: Database["public"]["Enums"]["lpkc_stage"][]
           price_sen?: number
           start_date?: string | null
           status?: Database["public"]["Enums"]["course_status"]
@@ -1350,6 +1352,7 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           id?: string
+          lpkc_stages?: Database["public"]["Enums"]["lpkc_stage"][]
           price_sen?: number
           start_date?: string | null
           status?: Database["public"]["Enums"]["course_status"]
@@ -2466,6 +2469,7 @@ export type Database = {
           id: string
           instructor_id: string | null
           introduction: string | null
+          lpkc_stage: Database["public"]["Enums"]["lpkc_stage"]
           objectives: string | null
           problem_statement: string | null
           reviewed_at: string | null
@@ -2486,6 +2490,7 @@ export type Database = {
           id?: string
           instructor_id?: string | null
           introduction?: string | null
+          lpkc_stage: Database["public"]["Enums"]["lpkc_stage"]
           objectives?: string | null
           problem_statement?: string | null
           reviewed_at?: string | null
@@ -2506,6 +2511,7 @@ export type Database = {
           id?: string
           instructor_id?: string | null
           introduction?: string | null
+          lpkc_stage?: Database["public"]["Enums"]["lpkc_stage"]
           objectives?: string | null
           problem_statement?: string | null
           reviewed_at?: string | null
@@ -3376,9 +3382,7 @@ export type Database = {
         }[]
       }
       report_stage: {
-        Args: {
-          _r: Database["public"]["Tables"]["report_submissions"]["Row"]
-        }
+        Args: { _r: Database["public"]["Tables"]["report_submissions"]["Row"] }
         Returns: string
       }
       report_stage_counts: {
@@ -3445,6 +3449,19 @@ export type Database = {
       }
       submit_attempt: { Args: { _attempt_id: string }; Returns: Json }
       submit_report:
+        | {
+            Args: {
+              _academy_id: string
+              _course_id: string
+              _files: Json
+              _introduction: string
+              _objectives: string
+              _problem_statement: string
+              _stage: Database["public"]["Enums"]["lpkc_stage"]
+              _title: string
+            }
+            Returns: Json
+          }
         | {
             Args: {
               _academy_id: string
@@ -3606,6 +3623,7 @@ export type Database = {
         | "overdue"
         | "void"
         | "cancelled"
+      lpkc_stage: "summary" | "report" | "slide"
       member_status: "active" | "invited" | "suspended"
       notification_kind:
         | "appointment_booked"
@@ -3812,6 +3830,7 @@ export const Constants = {
         "void",
         "cancelled",
       ],
+      lpkc_stage: ["summary", "report", "slide"],
       member_status: ["active", "invited", "suspended"],
       notification_kind: [
         "appointment_booked",

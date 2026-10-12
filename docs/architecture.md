@@ -119,7 +119,9 @@ it.
 
 Columns clients must **never** write, because a trigger or generated column
 owns them: `invoices.amount_paid_sen`, `invoices.balance_sen`,
-`assessments.total_points`. Columns only the owner writes, in SQL:
+`assessments.total_points`. A column only an **admin** writes, on a table every
+staff member can update: `courses.lpkc_stages` (`app.guard_course_lpkc_stage`,
+see [report-checks.md](report-checks.md)). Columns only the owner writes, in SQL:
 `academy_members.is_director` (trigger-guarded) and the non-letterhead columns
 of `academies` — `slug`, `created_by`, `status`, `timezone`, `currency` — which
 have no UPDATE grant.

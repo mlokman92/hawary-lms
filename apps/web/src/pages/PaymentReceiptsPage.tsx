@@ -1,6 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { MoreHorizontal, Search, Upload } from 'lucide-react'
+import {
+  CheckCircle2,
+  Clock,
+  MoreHorizontal,
+  Search,
+  Upload,
+} from 'lucide-react'
 import { formatMYR } from '@hawary/shared'
 import { useAcademy } from '@/lib/academy'
 import { errorMessage } from '@/lib/errors'
@@ -10,7 +16,7 @@ import { useDebounced } from '@/lib/useDebounced'
 import { PageHeader } from '@/components/patterns/PageHeader'
 import { BackLink } from '@/components/patterns/BackLink'
 import { EmptyState } from '@/components/patterns/EmptyState'
-import { Pager } from '@/components/patterns/Pager'
+import { FilterStatCard } from '@/components/patterns/FilterStatCard'
 import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -22,13 +28,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   Table,
   TableBody,
   TableCell,
@@ -36,12 +35,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { ReceiptSheet } from '@/features/payments/ReceiptSheet'
 import {
-  RECEIPT_PAGE_SIZE,
   useBankTransferReceiptCounts,
   useBankTransferReceipts,
   useOpenPaymentReceipt,
   useReceiptPicker,
+  type BankTransferRow,
   type ReceiptState,
 } from '@/features/payments/receipts'
 
@@ -57,9 +57,11 @@ function readState(raw: string | null): StateFilter {
   return raw === 'uploaded' || raw === ALL ? raw : 'pending'
 }
 
-function readPage(raw: string | null): number {
-  const n = Number(raw)
-  return Number.isInteger(n) && n >= 1 ? n : 1
+const UUID = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
+
+/** Anything that is not an id reads as "no payment open", not a failed cast. */
+function readPayment(raw: string | null): string | null {
+  return raw && UUID.test(raw) ? raw : null
 }
 
 /**
@@ -70,18 +72,25 @@ function readPage(raw: string | null): number {
  * the proof is kept beside the claim. One without a receipt is **pending** —
  * a fact about the paperwork only: nothing here changes what was collected.
  *
- * The page opens on the pending list because clearing it is the job. Each row
- * has one action: upload when there is nothing, view when there is. Replacing
- * a receipt is occasional, so it sits behind the row's menu.
+ * The page opens on the pending list because clearing it is the job. The two
+ * cards are the filter — each is the count and the money on its side of the
+ * paperwork, and pressing the pressed one shows both sides. Each row has one
+ * action: upload when there is nothing, view when there is. Replacing a
+ * receipt is occasional, so it sits behind the row's menu.
+ *
+ * A row opens that transfer in a panel on the right, receipt drawn, and puts
+ * its id in the address (`?payment=`). The address is then the record: an
+ * invoice carries several transfers, often of the same amount, and this is the
+ * one link a colleague can be sent that means exactly this one.
  */
 export function PaymentReceiptsPage() {
-  const { t, tn } = useT()
+  const { t } = useT()
   const { activeAcademyId } = useAcademy()
   const [params, setParams] = useSearchParams()
 
   const state = readState(params.get('state'))
   const search = params.get('q')?.trim() ?? ''
-  const page = readPage(params.get('page'))
+  const paymentId = readPayment(params.get('payment'))
 
   // `replace`: a filter is not a place you navigate back through.
   const commit = useCallback(
@@ -109,7 +118,7 @@ export function PaymentReceiptsPage() {
     const needle = debounced.trim()
     if (needle === search) return
     committed.current = needle
-    commit({ q: needle || null, page: null })
+    commit({ q: needle || null })
   }, [debounced, search, commit])
   useEffect(() => {
     if (search === committed.current) return
@@ -121,7 +130,6 @@ export function PaymentReceiptsPage() {
     activeAcademyId,
     state === ALL ? null : state,
     search,
-    page,
   )
   const counts = useBankTransferReceiptCounts(activeAcademyId, search)
   // One file input for the whole table; a row's button says which payment
@@ -129,7 +137,20 @@ export function PaymentReceiptsPage() {
   const picker = useReceiptPicker()
   const open = useOpenPaymentReceipt()
 
-  const list = rows.data ?? []
+  // Pages are cut by OFFSET, so a transfer recorded between two loads pushes
+  // every row down one and the next page starts with a row already on screen.
+  // Keeping the first sighting of each id is what stops it appearing twice.
+  const list = useMemo(() => {
+    const seen = new Set<string>()
+    const out: BankTransferRow[] = []
+    for (const page of rows.data?.pages ?? [])
+      for (const row of page)
+        if (!seen.has(row.id)) {
+          seen.add(row.id)
+          out.push(row)
+        }
+    return out
+  }, [rows.data])
   const total =
     state === 'pending'
       ? (counts.data?.pending ?? 0)
@@ -149,48 +170,43 @@ export function PaymentReceiptsPage() {
 
       <input {...picker.inputProps} />
 
-      <div className="mt-6 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-56 flex-1">
-          <Search
-            className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
-            aria-hidden
-          />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t('payments.receipts.search_placeholder')}
-            aria-label={t('payments.receipts.search_placeholder')}
-            className="pl-8"
-          />
-        </div>
-        <Select
-          value={state}
-          onValueChange={(v) =>
-            commit({ state: v === 'pending' ? null : v, page: null })
+      {/* The filter. Pressing the pressed card shows both sides, so the cards
+          are also the way back out of the filter they applied. */}
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FilterStatCard
+          label={t('payments.pstatus.pending')}
+          value={formatMYR(counts.data?.pendingSen ?? 0)}
+          count={counts.data?.pending}
+          icon={Clock}
+          tone="warning"
+          active={state === 'pending'}
+          onClick={() => commit({ state: state === 'pending' ? ALL : null })}
+        />
+        <FilterStatCard
+          label={t('payments.receipts.uploaded')}
+          value={formatMYR(counts.data?.uploadedSen ?? 0)}
+          count={counts.data?.uploaded}
+          icon={CheckCircle2}
+          tone="positive"
+          active={state === 'uploaded'}
+          onClick={() =>
+            commit({ state: state === 'uploaded' ? ALL : 'uploaded' })
           }
-        >
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="pending">
-              {t('payments.pstatus.pending')}
-              {counts.data ? ` (${counts.data.pending})` : ''}
-            </SelectItem>
-            <SelectItem value="uploaded">
-              {t('payments.receipts.uploaded')}
-              {counts.data ? ` (${counts.data.uploaded})` : ''}
-            </SelectItem>
-            <SelectItem value={ALL}>{t('common.all')}</SelectItem>
-          </SelectContent>
-        </Select>
-        <p className="text-muted-foreground ml-auto text-sm tabular-nums">
-          {counts.data === undefined
-            ? '—'
-            : tn('payments.receipts.summary', counts.data.pending, {
-                amount: formatMYR(counts.data.pendingSen),
-              })}
-        </p>
+        />
+      </div>
+
+      <div className="relative mt-4">
+        <Search
+          className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
+          aria-hidden
+        />
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t('payments.receipts.search_placeholder')}
+          aria-label={t('payments.receipts.search_placeholder')}
+          className="pl-8"
+        />
       </div>
 
       {failure ? (
@@ -232,9 +248,18 @@ export function PaymentReceiptsPage() {
               </TableHeader>
               <TableBody>
                 {list.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="whitespace-nowrap">
-                      <div>{fmtDateTime(p.created_at)}</div>
+                  <TableRow
+                    key={p.id}
+                    className="cursor-pointer"
+                    onClick={() => commit({ payment: p.id })}
+                  >
+                    {/* Names wrap rather than widen: every text cell here is
+                        somebody's name or a course's, and one long one
+                        otherwise pushes the actions off the screen. */}
+                    <TableCell className="whitespace-normal">
+                      <div className="whitespace-nowrap">
+                        {fmtDateTime(p.created_at)}
+                      </div>
                       {/* The day the money moved — what the receipt itself is
                           dated, and so what it gets matched against. */}
                       <div className="text-muted-foreground text-xs">
@@ -244,11 +269,12 @@ export function PaymentReceiptsPage() {
                         {p.recorded_by_name ? ` · ${p.recorded_by_name}` : ''}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-normal">
                       {p.student_id ? (
                         <Link
                           to={`/students/${p.student_id}`}
                           className="hover:underline"
+                          onClick={(e) => e.stopPropagation()}
                         >
                           {p.student_full_name ?? t('common.unnamed')}
                         </Link>
@@ -261,11 +287,12 @@ export function PaymentReceiptsPage() {
                         </div>
                       ) : null}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-normal">
                       {p.invoice_id ? (
                         <Link
                           to={`/payments/${p.invoice_id}`}
                           className="font-medium hover:underline"
+                          onClick={(e) => e.stopPropagation()}
                         >
                           {p.invoice_no}
                         </Link>
@@ -281,10 +308,10 @@ export function PaymentReceiptsPage() {
                     <TableCell className="text-right tabular-nums">
                       {formatMYR(p.amount_sen)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-normal">
                       {p.receipt_uploaded_at ? (
                         <>
-                          <div className="max-w-56 truncate text-sm">
+                          <div className="max-w-48 truncate text-sm">
                             {p.receipt_file_name}
                           </div>
                           <div className="text-muted-foreground text-xs">
@@ -300,7 +327,12 @@ export function PaymentReceiptsPage() {
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-right whitespace-nowrap">
+                    {/* The menu's items are portalled but still bubble through
+                        React to the row, so the cell is where they stop. */}
+                    <TableCell
+                      className="text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {picker.uploadingId === p.id ? (
                         <Button variant="outline" size="sm" disabled>
                           {t('common.uploading')}
@@ -351,13 +383,32 @@ export function PaymentReceiptsPage() {
           </div>
         )}
 
-        <Pager
-          page={page}
-          total={total}
-          pageSize={RECEIPT_PAGE_SIZE}
-          onPageChange={(n) => commit({ page: n > 1 ? String(n) : null })}
-        />
+        {rows.hasNextPage ? (
+          <div className="mt-4 flex items-center justify-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={rows.isFetchingNextPage}
+              onClick={() => void rows.fetchNextPage()}
+            >
+              {rows.isFetchingNextPage
+                ? t('common.loading')
+                : t('common.load_more')}
+            </Button>
+            <span className="text-muted-foreground text-sm tabular-nums">
+              {t('common.shown_of', { shown: list.length, total })}
+            </span>
+          </div>
+        ) : null}
       </div>
+
+      <ReceiptSheet
+        academyId={activeAcademyId}
+        paymentId={paymentId}
+        hint={list.find((row) => row.id === paymentId)}
+        picker={picker}
+        onClose={() => commit({ payment: null })}
+      />
     </div>
   )
 }

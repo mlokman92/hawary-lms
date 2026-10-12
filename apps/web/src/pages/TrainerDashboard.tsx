@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { useMyInstructorRecord } from '@/features/profile/api'
 import { useAcademyQueue, useMyGradableCourses, type QueueRow } from '@/features/grading/api'
 import {
+  LPKC_STAGE_LABEL,
   REPORT_STATUS,
   stageOf,
   useMyReportQueue,
@@ -164,7 +165,9 @@ function ReportRowItem({ row }: { row: ReportRow }) {
             {personName(row.students?.full_name) ?? t('common.unnamed')}
           </span>
           <span className="text-muted-foreground block truncate text-xs">
-            {[row.title, row.courses?.title].filter(Boolean).join(' · ')}
+            {[t(LPKC_STAGE_LABEL[row.lpkc_stage]), row.title, row.courses?.title]
+              .filter(Boolean)
+              .join(' · ')}
           </span>
         </span>
         <Badge variant="outline" className="shrink-0">

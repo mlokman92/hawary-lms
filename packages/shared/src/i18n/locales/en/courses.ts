@@ -108,6 +108,12 @@ export const courses = {
   'courses.form.title_required': 'Title is required.',
   'courses.form.save_changes': 'Save changes',
   'courses.form.create': 'Create course',
+  // Which parts of the LPKC the intake is sending. An admin's field; the
+  // labels are also what a report's part is called on the LPKC screens.
+  'courses.form.lpkc_stages': 'LPKC stages',
+  'courses.lpkc_stage.summary': 'LPKC summary',
+  'courses.lpkc_stage.report': 'LPKC report',
+  'courses.lpkc_stage.slide': 'LPKC slides',
 
   // --- Billing (/courses/:id/billing), admin-only ---------------------------
   // The one money question the invoice book cannot answer: a student nobody

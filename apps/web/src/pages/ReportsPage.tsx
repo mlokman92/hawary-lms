@@ -32,6 +32,7 @@ import { EmptyState } from '@/components/patterns/EmptyState'
 import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
 import { ReportPoolDialog } from '@/features/reports/ReportPoolDialog'
 import {
+  LPKC_STAGE_LABEL,
   REPORT_PAGE_SIZE,
   REPORT_STATUS,
   stageOf,
@@ -186,8 +187,11 @@ export function ReportsPage() {
                           {personName(r.students?.full_name) ??
                             t('common.unnamed')}
                         </span>
+                        {/* The part first: a student now has a row here for
+                            each one, and it is what tells them apart. */}
                         <span className="text-muted-foreground block truncate text-xs">
-                          {r.title}
+                          {t(LPKC_STAGE_LABEL[r.lpkc_stage])}
+                          {` · ${r.title}`}
                           {r.courses?.title ? ` · ${r.courses.title}` : ''}
                           {r.version > 1
                             ? ` · ${t('report.version', { version: r.version })}`

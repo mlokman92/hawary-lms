@@ -5,7 +5,7 @@ import { useT } from '@/lib/i18n'
 import { BackLink } from '@/components/patterns/BackLink'
 import { ReportThreadView } from '@/features/reports/ReportThreadView'
 import { SubmitReportDialog } from '@/features/reports/SubmitReportDialog'
-import { useMyReports } from '@/features/reports/api'
+import { reportTargets, useMyReports } from '@/features/reports/api'
 
 /**
  * The student's side of one thread.
@@ -15,9 +15,9 @@ import { useMyReports } from '@/features/reports/api'
  * thing only this side can do is send the next version, so that is passed in as
  * `onResubmit`.
  *
- * The dialog needs the course row, not just the report, because `submit_report`
- * is keyed on (student, course); `my_reports` already holds it, and it is
- * cached from the list this page was reached from.
+ * The dialog needs the course and the part, not just the report, because
+ * `submit_report` is keyed on (student, course, part); `my_reports` already
+ * holds both, and it is cached from the list this page was reached from.
  */
 export function LearnReportPage() {
   const { id } = useParams<{ id: string }>()
@@ -28,7 +28,8 @@ export function LearnReportPage() {
 
   if (!id) return null
 
-  const row = (data?.courses ?? []).find((c) => c.report?.id === id) ?? null
+  const target =
+    reportTargets(data?.courses ?? []).find((x) => x.report?.id === id) ?? null
 
   return (
     <div className="mx-auto w-full max-w-4xl">
@@ -36,12 +37,12 @@ export function LearnReportPage() {
       <ReportThreadView
         academyId={academyId}
         reportId={id}
-        onResubmit={row ? () => setResubmit(true) : undefined}
+        onResubmit={target ? () => setResubmit(true) : undefined}
       />
       {academyId ? (
         <SubmitReportDialog
           academyId={academyId}
-          row={row}
+          target={target}
           open={resubmit}
           onOpenChange={setResubmit}
         />

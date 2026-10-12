@@ -59,12 +59,15 @@ The rota is edited from a dialog behind the `⋯` menu on `/lpkc`, admin-only.
 Not a settings page: `/appointments/settings` earned one by having three cards
 on it, and this has one switch per instructor.
 
-### 3. One report per (student, course)
+### 3. One report per (student, course, part)
 
-Not one per document. A student's LPKC, slide and portfolio are checked
-together — the appointment notes name those three in one breath — so they are
-**versions and files on one thread** with one status and one checker.
-`report_submissions_one_per_course` says so.
+This began as one thread per (student, course): a student's LPKC, slide and
+portfolio were checked together — the appointment notes name those three in one
+breath — as versions and files on one thread with one status and one checker.
+It is now one thread per **part** of the LPKC (summary, report, slides; see
+"The parts of an LPKC"), because each is approved for itself.
+`report_submissions_one_per_stage` says so. Within a part the rest holds: not
+one thread per document.
 
 Sending again does not open a second thread: `submit_report` bumps `version`,
 files the new documents under a `submitted` event carrying that number, sets the
@@ -75,7 +78,7 @@ for the changes is the person who should see them.
 
 | table                | holds                                                        |
 | -------------------- | ------------------------------------------------------------ |
-| `report_submissions` | one thread per (student, course): title, status, version, checker |
+| `report_submissions` | one thread per (student, course, part): title, status, version, checker |
 | `report_events`      | the history — uploads, comments, verdicts, handovers           |
 | `report_files`       | one document, pinned to the event it arrived with              |
 
@@ -165,6 +168,92 @@ and nobody is ever "moderating".
   `pending_approval` when its version already has the entry.
 - The status is not stored, so it moves nothing and notifies nobody; the
   entries and notices are exactly as in the section above.
+
+## The parts of an LPKC (Oct 2026)
+
+The LPKC is produced in three parts, and each is sent, checked and approved for
+itself:
+
+| `lpkc_stage` | the part            | what a send is made of                                  |
+| ------------ | ------------------- | ------------------------------------------------------- |
+| `summary`    | LPKC summary        | title, introduction, objectives, problem statement; **no documents** |
+| `report`     | LPKC report         | title and at least one document                         |
+| `slide`      | LPKC slides         | title and at least one document                         |
+
+`20261013100000_course_lpkc_stage.sql`, `20261013110000_lpkc_stages_per_report.sql`.
+
+- **The summary takes no documents** (the owner, the day parts arrived). The
+  stage-naming `submit_report` refuses a file on a summary; the web send dialog
+  has no picker for it, and the summary's student gets none in the thread's
+  reply box either. Staff still attach on a summary thread — the checker's copy
+  arrives that way. Two things are left as they were until the mobile apps
+  learn about parts: the two older `submit_report` doors and
+  `comment_on_report` still accept a student's file on a summary, because the
+  installed apps send through them. Files already on a summary stay.
+
+- **A course says which parts it is taking** — `courses.lpkc_stages`, a set.
+  More than one can be open at once: an intake sends its report and its slides
+  side by side. Empty means the course takes no LPKC yet. Seeded from where the
+  intakes were on the day: Siri 1 and Siri 2 `{report, slide}`, Siri 3
+  `{summary}`. A new course — and a duplicated one, since `duplicate_course`
+  names its columns — starts at `{summary}`.
+- **A thread is one part** — `report_submissions.lpkc_stage`, and the unique
+  key is now (student, course, part). The first cut of this gave a course ONE
+  stage and kept one thread per course; the owner corrected it the same day: a
+  student submits the LPKC and/or its slides, so they cannot share a status.
+- **An admin sets a course's parts**, with three checkboxes in the Edit course
+  dialog (`CourseFormDialog`). `courses` is writable by every staff member,
+  because a trainer builds the course they teach, so the column has its own
+  guard: `app.guard_course_lpkc_stage` refuses a change from a JWT that is not
+  an admin of the academy, and anything but `{summary}` on a trainer's insert.
+  It also keeps the set in order with no repeats. A trainer is not shown the
+  field and their save does not carry the column.
+- **Starting a part needs the course to be taking it; carrying on does not.**
+  Unticking a part stops new threads on it, but a student halfway through their
+  corrections can still send the next version, and the row stays on their list
+  (`my_reports` lists every open part plus any part they have a thread on).
+- **The same checker follows the student.** A new part goes to whoever holds
+  the student's other part on that course, while that person is still in the
+  rota; only otherwise does the rota choose. The reason is the one for keeping
+  a checker across versions — they already know the project.
+- **What was sent before this** was backfilled by course: Siri 3's 29 threads
+  are `summary`; Siri 1 and 2's six are `report`. Most of those six carry the
+  slides on the same thread — they stay where they are, and slides sent from
+  now on get their own.
+- **Not the same word as "Stages staff see" above.** `report_stage` /
+  `ReportStage` is where one thread sits in the checking queue; `lpkc_stage` /
+  `LpkcStage` is which part of the work it is. The owner calls both "stage", so
+  the code keeps them apart by name.
+
+### The doors, and the builds that do not name a part
+
+`submit_report` has a third overload that takes `_stage` and asks for what that
+part is made of (the table above). The web sends through it. Nothing else about
+a thread changed: status, versions, the timeline, the notices and the two
+checking stages all work per thread as before, and the queue tiles count
+threads.
+
+The two older overloads are untouched in what they ask for, because the mobile
+apps in people's hands still call them and still list one report per course.
+They do not name a part, so `app.lpkc_legacy_stage` picks one: the earliest
+part the student has unfinished; failing that, the first part the course is
+taking that they have not started; failing that, the latest part they finished.
+`my_reports` keeps its `report` key on the same rule, beside the new `stages`
+list. By part and not by date, so the one report an older build shows does not
+change under the student each time they send the other one. The cost is that
+an older build reaches only one part at a time — the rest is on the web until
+the mobile apps learn about parts.
+
+On the screens: `/learn/reports` is one row per (course, part); the send dialog
+is titled with the part and shows the summary's three fields only for the
+summary; the queue, the trainer dashboard card and the thread header name the
+part in their second line. `set_report_brief` is unchanged, and the thread
+offers its fill-in boxes on a summary only.
+
+`app.submit_report_impl` has a seven-argument predecessor that nothing calls.
+The MCP tool declines a `drop function`, and the CLI could not connect, so it
+is still there: no client role can execute it. Remove it with
+`drop function app.submit_report_impl(uuid, uuid, text, text, text, text, jsonb);`.
 
 ## What a report says (Oct 2026)
 
@@ -281,7 +370,7 @@ the only doors:
 
 | RPC | who | what |
 | --- | --- | --- |
-| `submit_report` | the student | create or bump a version; assigns on creation; title, introduction, objectives and problem statement required |
+| `submit_report` | the student | create or bump a version of one part; assigns on creation; asks for what the part is made of |
 | `comment_on_report` | student, checker, admin | say something — the status follows; staff may also approve or reopen |
 | `reassign_report` | the checker holding it, or an admin | hand it on |
 | `get_report` | anybody the policy admits | the whole thread, projected |
@@ -421,8 +510,8 @@ narrows a trainer to their own reports, so a picker could not change the result
 — the same conclusion `/appointments/list` reached. The "who holds it" column is
 drawn for an admin only; for a trainer the answer is always "you".
 
-Paged from the start rather than when it hurts. One report per (student, course)
-means the ceiling is the enrolment count — already 677 here — and PostgREST
+Paged from the start rather than when it hurts. One report per (student, course,
+part) means the ceiling is three times the enrolment count — already 677 here — and PostgREST
 silently caps a request at the project maximum.
 
 **`/lpkc/:id`** and **`/learn/reports/:id`** mount the same
@@ -479,8 +568,9 @@ that question.
   is a document going back and forth until it is right. A due date would want a
   late policy, and there is no evidence anybody wants one.
 - **No grade.** A report is approved or it is not. Marks live on assignments.
-- **No document-type entity.** "LPKC, slide dan portfolio" lives in the title,
-  the same way a course intake lives in its title and there is no cohort table.
+- **No document-type entity beyond the three parts.** A thread is the summary,
+  the report or the slides; anything finer ("portfolio") still lives in the
+  title and the file names.
 - **No academy-wide on/off setting.** The pool is the switch.
 - **Nothing tells the outgoing checker on a handover** — the same gap
   `cancel_appointment` has, and for the same reason: `instructor_id` is

@@ -190,8 +190,6 @@ export const payments = {
   'payments.receipts.uploaded': 'Uploaded',
   'payments.receipts.search_placeholder':
     'Search student, phone number, invoice or note',
-  'payments.receipts.summary_one': '{count} pending · {amount}',
-  'payments.receipts.summary_other': '{count} pending · {amount}',
   'payments.receipts.empty_pending': 'Every bank transfer has its receipt.',
   'payments.receipts.empty_match': 'No bank transfers match.',
   'payments.receipts.recorded': 'Recorded',

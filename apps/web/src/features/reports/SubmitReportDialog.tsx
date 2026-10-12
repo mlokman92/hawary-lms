@@ -14,33 +14,38 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { FilePicker } from './FilePicker'
-import { useSubmitReport, type MyReportRow, type PendingFile } from './api'
+import {
+  LPKC_STAGE_LABEL,
+  useSubmitReport,
+  type PendingFile,
+  type ReportTarget,
+} from './api'
 
 /**
- * Send documents for checking, or send the next version of them.
+ * Send one part of the LPKC for checking, or send the next version of it.
  *
  * One dialog for both because the server has one RPC for both: a resubmission
- * is the next version of the same thread, keeps the same checker, and carries
- * the same two fields. Only the wording changes, which is what `row.report`
- * decides.
+ * is the next version of the same thread and keeps the same checker. Only the
+ * wording changes, which is what `target.report` decides.
  *
- * The title is free text and deliberately so — "LPKC, slide dan portfolio" is
- * how this academy actually describes a batch, and a document-type picker would
- * be an entity invented to hold three words.
+ * What it asks for is what the part is made of. The summary IS its
+ * introduction, objectives and problem statement — required on every send, and
+ * seeded from the thread so a new version starts from what is there — and
+ * takes no documents at all. The report and the slides are a document, so
+ * those ask for one and for nothing else. The server makes the same split.
  *
- * The introduction, objectives and problem statement are required on every
- * send, not only the first: they sit on the thread, so a new version starts from
- * what is there and the student edits it.
+ * The title is the project's, so a new part starts from the title the student
+ * gave another one.
  */
 export function SubmitReportDialog({
   academyId,
-  row,
+  target,
   open,
   onOpenChange,
   onDone,
 }: {
   academyId: string
-  row: MyReportRow | null
+  target: ReportTarget | null
   open: boolean
   onOpenChange: (open: boolean) => void
   onDone?: (reportId: string) => void
@@ -55,16 +60,18 @@ export function SubmitReportDialog({
   const [files, setFiles] = useState<PendingFile[]>([])
   const [error, setError] = useState<string | null>(null)
 
-  const existing = row?.report ?? null
+  const existing = target?.report ?? null
+  const isSummary = target?.stage === 'summary'
+  const titleHint = target?.titleHint ?? ''
 
   // Reset per opening, and seed the text from the thread being added to: a
   // resubmission is nearly always the same work again, so making somebody
-  // retype "LPKC, slide dan portfolio" — or their introduction — would be
-  // asking a question whose answer is already on screen. A report sent before
-  // these were asked for seeds them empty, and so must be filled in.
+  // retype their title — or their introduction — would be asking a question
+  // whose answer is already on screen. A summary sent before the three fields
+  // were asked for seeds them empty, and so must be filled in.
   useEffect(() => {
     if (!open) return
-    setTitle(existing?.title ?? '')
+    setTitle(existing?.title ?? titleHint)
     setIntroduction(existing?.introduction ?? '')
     setObjectives(existing?.objectives ?? '')
     setProblem(existing?.problem_statement ?? '')
@@ -72,6 +79,7 @@ export function SubmitReportDialog({
     setError(null)
   }, [
     open,
+    titleHint,
     existing?.title,
     existing?.introduction,
     existing?.objectives,
@@ -79,11 +87,12 @@ export function SubmitReportDialog({
   ])
 
   async function save() {
-    if (!row) return
+    if (!target) return
     setError(null)
     try {
       const res = await submit.mutateAsync({
-        courseId: row.course_id,
+        courseId: target.courseId,
+        stage: target.stage,
         title,
         introduction,
         objectives,
@@ -101,15 +110,17 @@ export function SubmitReportDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
+          {/* Which part this is, in the academy's own words — the one thing
+              the student has to be sure of before attaching anything. */}
           <DialogTitle>
-            {existing ? t('report.submit.title_again') : t('report.submit.title')}
+            {target ? t(LPKC_STAGE_LABEL[target.stage]) : null}
           </DialogTitle>
           <DialogDescription>
             {existing
               ? t('report.submit.desc_again', {
                   version: existing.version + 1,
                 })
-              : t('report.submit.desc', { course: row?.course_title ?? '' })}
+              : t('report.submit.desc', { course: target?.courseTitle ?? '' })}
           </DialogDescription>
         </DialogHeader>
 
@@ -120,60 +131,65 @@ export function SubmitReportDialog({
               id="report-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={t('report.submit.what_hint')}
               disabled={submit.isPending}
             />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="report-introduction">
-              {t('report.submit.introduction')}
-            </Label>
-            <Textarea
-              id="report-introduction"
-              value={introduction}
-              onChange={(e) => setIntroduction(e.target.value)}
-              rows={4}
-              maxLength={5000}
-              disabled={submit.isPending}
-            />
-          </div>
+          {isSummary ? (
+            <>
+              <div className="grid gap-2">
+                <Label htmlFor="report-introduction">
+                  {t('report.submit.introduction')}
+                </Label>
+                <Textarea
+                  id="report-introduction"
+                  value={introduction}
+                  onChange={(e) => setIntroduction(e.target.value)}
+                  rows={4}
+                  maxLength={5000}
+                  disabled={submit.isPending}
+                />
+              </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="report-objectives">
-              {t('report.submit.objectives')}
-            </Label>
-            <Textarea
-              id="report-objectives"
-              value={objectives}
-              onChange={(e) => setObjectives(e.target.value)}
-              rows={4}
-              maxLength={5000}
-              disabled={submit.isPending}
-            />
-          </div>
+              <div className="grid gap-2">
+                <Label htmlFor="report-objectives">
+                  {t('report.submit.objectives')}
+                </Label>
+                <Textarea
+                  id="report-objectives"
+                  value={objectives}
+                  onChange={(e) => setObjectives(e.target.value)}
+                  rows={4}
+                  maxLength={5000}
+                  disabled={submit.isPending}
+                />
+              </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="report-problem">{t('report.submit.problem')}</Label>
-            <Textarea
-              id="report-problem"
-              value={problem}
-              onChange={(e) => setProblem(e.target.value)}
-              rows={4}
-              maxLength={5000}
-              disabled={submit.isPending}
-            />
-          </div>
+              <div className="grid gap-2">
+                <Label htmlFor="report-problem">{t('report.submit.problem')}</Label>
+                <Textarea
+                  id="report-problem"
+                  value={problem}
+                  onChange={(e) => setProblem(e.target.value)}
+                  rows={4}
+                  maxLength={5000}
+                  disabled={submit.isPending}
+                />
+              </div>
+            </>
+          ) : null}
 
-          <div className="grid gap-2">
-            <Label>{t('report.submit.files')}</Label>
-            <FilePicker
-              academyId={academyId}
-              files={files}
-              onChange={setFiles}
-              disabled={submit.isPending}
-            />
-          </div>
+          {isSummary ? null : (
+            <div className="grid gap-2">
+              <Label>{t('report.submit.files')}</Label>
+              <FilePicker
+                academyId={academyId}
+                files={files}
+                onChange={setFiles}
+                disabled={submit.isPending}
+              />
+            </div>
+          )}
 
           {error ? (
             <p className="text-destructive text-sm">{error}</p>
@@ -190,14 +206,17 @@ export function SubmitReportDialog({
           </Button>
           <Button
             onClick={() => void save()}
-            // All of these are required by the RPC, so refusing here says
-            // the same thing a round trip would, sooner. Documents are not.
+            // The RPC requires the same things, so refusing here says what a
+            // round trip would, sooner: the summary's three fields, or — for
+            // the report and the slides — a document.
             disabled={
               submit.isPending ||
               title.trim() === '' ||
-              introduction.trim() === '' ||
-              objectives.trim() === '' ||
-              problem.trim() === ''
+              (isSummary
+                ? introduction.trim() === '' ||
+                  objectives.trim() === '' ||
+                  problem.trim() === ''
+                : files.length === 0)
             }
           >
             {submit.isPending ? t('report.submit.sending') : t('report.submit.send')}

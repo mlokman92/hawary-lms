@@ -194,8 +194,6 @@ export const payments: PaymentsDict = {
   'payments.receipts.uploaded': 'Dimuat naik',
   'payments.receipts.search_placeholder':
     'Cari pelajar, nombor telefon, invois atau nota',
-  'payments.receipts.summary_one': '{count} menunggu · {amount}',
-  'payments.receipts.summary_other': '{count} menunggu · {amount}',
   'payments.receipts.empty_pending': 'Semua pindahan bank sudah ada resit.',
   'payments.receipts.empty_match': 'Tiada pindahan bank yang sepadan.',
   'payments.receipts.recorded': 'Direkodkan',

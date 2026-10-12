@@ -1,8 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { senToRinggit, ringgitToSen } from '@hawary/shared'
+import { useAcademy } from '@/lib/academy'
 import { useAuth } from '@/lib/auth'
 import { useT } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -21,6 +23,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  LPKC_STAGES,
+  LPKC_STAGE_LABEL,
+  type LpkcStage,
+} from '@/features/reports/api'
 import {
   useCreateCourse,
   useUpdateCourse,
@@ -42,7 +49,11 @@ export function CourseFormDialog({
 }) {
   const isEdit = !!course
   const { user } = useAuth()
+  const { active } = useAcademy()
   const { t } = useT()
+  // Which parts of the LPKC an intake is sending is an admin's call, and the
+  // database refuses it from a trainer — so a trainer is not shown the field.
+  const isAdmin = active?.role === 'admin'
   const createCourse = useCreateCourse(academyId)
   const updateCourse = useUpdateCourse(academyId)
 
@@ -53,6 +64,7 @@ export function CourseFormDialog({
   const [price, setPrice] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [lpkcStages, setLpkcStages] = useState<LpkcStage[]>(['summary'])
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -64,6 +76,7 @@ export function CourseFormDialog({
     setPrice(course ? senToRinggit(course.price_sen) : '')
     setStartDate(course?.start_date ?? '')
     setEndDate(course?.end_date ?? '')
+    setLpkcStages(course?.lpkc_stages ?? ['summary'])
     setError(null)
   }, [open, course])
 
@@ -92,6 +105,11 @@ export function CourseFormDialog({
       currency: 'MYR',
       start_date: startDate || null,
       end_date: endDate || null,
+      // Left out of a trainer's save altogether, so it cannot carry a stale
+      // set back over one an admin has just changed.
+      ...(isAdmin
+        ? { lpkc_stages: LPKC_STAGES.filter((s) => lpkcStages.includes(s)) }
+        : {}),
     }
     try {
       if (isEdit && course) {
@@ -206,6 +224,30 @@ export function CourseFormDialog({
               </SelectContent>
             </Select>
           </div>
+          {/* More than one can be ticked: an intake sends its report and its
+              slides side by side. None ticked takes no LPKC at all. */}
+          {isAdmin ? (
+            <div className="grid gap-2">
+              <Label>{t('courses.form.lpkc_stages')}</Label>
+              <div className="flex flex-wrap gap-x-6 gap-y-2">
+                {LPKC_STAGES.map((s) => (
+                  <label key={s} className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={lpkcStages.includes(s)}
+                      onCheckedChange={(on) =>
+                        setLpkcStages((cur) =>
+                          on === true
+                            ? [...cur, s]
+                            : cur.filter((x) => x !== s),
+                        )
+                      }
+                    />
+                    {t(LPKC_STAGE_LABEL[s])}
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : null}
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
         </form>
 

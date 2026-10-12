@@ -188,7 +188,7 @@ export function LearnDashboardPage() {
   // /learn/reports, where the Send button is; here it would be a line reporting
   // an absence.
   const myReports = (reports?.courses ?? [])
-    .map((c) => c.report)
+    .flatMap((c) => c.stages.map((s) => s.report))
     .filter((r): r is NonNullable<typeof r> => r !== null)
     .sort((a, b) => b.last_at.localeCompare(a.last_at))
     .slice(0, 4)

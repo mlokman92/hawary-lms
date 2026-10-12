@@ -33,6 +33,21 @@ export type ReportStatus = Enums<'report_status'>
 export type ReportEventKind = Enums<'report_event_kind'>
 
 /**
+ * A part of the LPKC, in the order they are produced. A course says which
+ * parts it is taking (`courses.lpkc_stages`, an admin's setting) and every
+ * thread is one of them, so a student can have a report and its slides being
+ * checked side by side. Not `ReportStage` below, which is where one thread sits
+ * in the checking queue (docs/report-checks.md → "The parts of an LPKC").
+ */
+export type LpkcStage = Enums<'lpkc_stage'>
+export const LPKC_STAGES: LpkcStage[] = ['summary', 'report', 'slide']
+export const LPKC_STAGE_LABEL: Record<LpkcStage, TKey> = {
+  summary: 'courses.lpkc_stage.summary',
+  report: 'courses.lpkc_stage.report',
+  slide: 'courses.lpkc_stage.slide',
+}
+
+/**
  * What staff read a report as. The stored status plus two stages inside "being
  * checked": `moderating` until a system admin has added something, then
  * `pending_approval` — the trainer's turn. A reading, not a column: the
@@ -133,8 +148,9 @@ export type ReportFile = {
 export type ReportThread = {
   id: string
   academy_id: string
+  lpkc_stage: LpkcStage
   title: string
-  /** Null on reports sent before these were asked for. */
+  /** Asked for on the summary only; null on every other part. */
   introduction: string | null
   objectives: string | null
   problem_statement: string | null
@@ -165,24 +181,68 @@ export type ReportThread = {
   events: ReportEvent[]
 }
 
-/** One row of the learner's list: a course, and its report if there is one. */
+/** One of the student's own threads, as the learner's list carries it. */
+export type MyReport = {
+  id: string
+  lpkc_stage: LpkcStage
+  title: string
+  introduction: string | null
+  objectives: string | null
+  problem_statement: string | null
+  status: ReportStatus
+  version: number
+  submitted_at: string
+  reviewed_at: string | null
+  instructor_name: string | null
+  last_at: string
+}
+
+/**
+ * One part of the LPKC on one course: what the student has sent for it, if
+ * anything. `is_open` is whether the course is taking it — a part that has
+ * since been closed stays listed while the student has a thread on it.
+ */
+export type MyReportStage = {
+  stage: LpkcStage
+  is_open: boolean
+  report: MyReport | null
+}
+
+/** One course on the learner's list, and the parts of the LPKC under it. */
 export type MyReportRow = {
   course_id: string
   course_title: string
   course_code: string | null
-  report: {
-    id: string
-    title: string
-    introduction: string | null
-    objectives: string | null
-    problem_statement: string | null
-    status: ReportStatus
-    version: number
-    submitted_at: string
-    reviewed_at: string | null
-    instructor_name: string | null
-    last_at: string
-  } | null
+  /**
+   * The single report a course had before there were parts. Kept for the
+   * mobile screens, which still list one per course; the web reads `stages`.
+   */
+  report: MyReport | null
+  stages: MyReportStage[]
+}
+
+/** What a send is aimed at: one part of the LPKC on one course. */
+export type ReportTarget = {
+  courseId: string
+  courseTitle: string
+  stage: LpkcStage
+  report: MyReport | null
+  /** The project's title from another part, to start a new one from. */
+  titleHint: string
+}
+
+/** Every (course, part) a student can see, in list order. */
+export function reportTargets(courses: MyReportRow[]): ReportTarget[] {
+  return courses.flatMap((c) => {
+    const titleHint = c.stages.find((s) => s.report)?.report?.title ?? ''
+    return c.stages.map((s) => ({
+      courseId: c.course_id,
+      courseTitle: c.course_title,
+      stage: s.stage,
+      report: s.report,
+      titleHint,
+    }))
+  })
 }
 
 export type MyReports = { is_open: boolean; courses: MyReportRow[] }
@@ -516,13 +576,19 @@ export function useSubmitReport(academyId: string | null) {
   return useMutation({
     mutationFn: async (input: {
       courseId: string
+      /**
+       * Which part this is. Left out by a screen that does not know about
+       * parts yet, and the server then carries on with whatever the student
+       * has open — and asks for the summary's fields, as it always did.
+       */
+      stage?: LpkcStage
       title: string
       introduction: string
       objectives: string
       problemStatement: string
       files: PendingFile[]
     }) => {
-      const { data, error } = await supabase.rpc('submit_report', {
+      const args = {
         _academy_id: academyId!,
         _course_id: input.courseId,
         _title: input.title,
@@ -530,7 +596,11 @@ export function useSubmitReport(academyId: string | null) {
         _objectives: input.objectives,
         _problem_statement: input.problemStatement,
         _files: input.files,
-      })
+      }
+      const { data, error } = await supabase.rpc(
+        'submit_report',
+        input.stage ? { ...args, _stage: input.stage } : args,
+      )
       if (error) throw error
       const res = data as unknown as {
         id: string

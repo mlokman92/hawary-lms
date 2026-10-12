@@ -371,10 +371,56 @@ on the day the page shipped started as pending.
 
 The page opens on the pending list, because clearing it is the job. Each row
 has one action — **Upload** when there is nothing, **View** when there is — and
-replacing a receipt, which is occasional, is behind the row's `⋯`. State,
-search and page are in the URL (`?state=uploaded|all`, `?q=`, `?page=`), with
-pending the unwritten default. It keeps a pager rather than Load more: the
-list is worked from the top and refills as rows leave it.
+replacing a receipt, which is occasional, is behind the row's `⋯`. State and
+search are in the URL (`?state=uploaded|all`, `?q=`), with pending the unwritten
+default.
+
+**The filter is two cards**, Pending and Uploaded — each the money and the
+count on its side, from `bank_transfer_receipt_counts`, so they follow the
+search. One is pressed; pressing the pressed one shows both sides
+(`?state=all`). A picker stood here first, with a "N pending · RM x" line
+beside it that the cards now say.
+
+**Load more, not a pager** — it had a pager first, on the argument that the
+list refills as rows leave it. In use it is read top-down like `/payments`, and
+a page turn forgot the rows above. `useBankTransferReceipts` is an
+`useInfiniteQuery`; the function returns rows and no total, so a full page of
+50 is what says there may be another, and the "50 of 2,281" beside the button
+comes from the counts. The first sighting of each id is kept, for the reason
+`/payments` gives. How far the list is loaded is not in the URL.
+
+**Names wrap.** Every text cell is somebody's name, a course title or a file
+name, and `TableCell` is `whitespace-nowrap` by default — one long name pushed
+the actions off a laptop screen. The cells are `whitespace-normal`; only the
+recorded timestamp and the amount hold their line.
+
+### A row opens the transfer, and the address is the record
+
+Clicking a row opens a panel on the right (`ReceiptSheet`) with the transfer and
+its receipt drawn — an image as an image, a PDF in a frame — and writes
+`?payment=<payment id>` to the address. The panel is open **exactly while the
+address names a payment**, so the address is what staff send each other: an
+invoice carries several transfers, often of the same amount on the same day,
+and "the first of the two 7 March ones" is not a thing to spell out in a
+message.
+
+The panel reads its transfer **by id, not from the list** (`useBankTransfer`):
+a pasted link may name a row on the other side of the paperwork, beyond the
+pages loaded, or outside the search. It is a plain PostgREST read — one row
+needs no search function — narrowed to succeeded bank transfers of the active
+academy, so anything else reads as "no such transfer". The clicked row is shown
+while that read is in flight. A `payment` that is not a uuid is ignored rather
+than sent to PostgREST as a failed cast.
+
+The receipt is drawn from a signed URL (`useReceiptPreviewUrl`), keyed on the
+receipt's upload time so a replacement is a new URL, never stale while the panel
+is open and dropped when it closes — the URL lives 60 seconds and the file is
+fetched once. Upload, View and Replace in the panel are the row's own, through
+the page's one file input.
+
+The student's name and the invoice number in a row are still links to their own
+pages, and the action cell is still its buttons; only the rest of the row opens
+the panel. Web only — the Academy mobile app has no receipts screen yet.
 
 ### Searching by phone number
 

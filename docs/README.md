@@ -61,8 +61,8 @@ row to the table in `CLAUDE.md` if it is a new area.
 - [appointments.md](appointments.md) — derived slots, the round-robin rota, the
   overlap constraint that makes double-booking impossible, cover on
   cancellation, blocked dates, and who sees whose sessions.
-- [report-checks.md](report-checks.md) — one thread per (student, course), the
-  checker rota, and why it is not built on booking slots.
+- [report-checks.md](report-checks.md) — one thread per (student, course, part of
+  the LPKC), which parts a course takes, the checker rota, and why it is not built on booking slots.
 - [notifications.md](notifications.md) — the bell in both shells, why a row is
   an event rather than a sentence, and the academy-id-as-a-prop bug.
 

@@ -22,6 +22,7 @@ import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
 import { FilePicker } from './FilePicker'
 import { ReportTimeline } from './ReportTimeline'
 import {
+  LPKC_STAGE_LABEL,
   REPORT_STATUS,
   useCommentOnReport,
   useReassignReport,
@@ -89,8 +90,13 @@ export function ReportThreadView({
   ] as const
   const brief = fields.filter((b) => b.text?.trim())
   // Only the student whose report it is can fill a blank, and only a blank: to
-  // change what is written they send a new version, as before.
-  const missing = isStudent ? fields.filter((b) => !b.text?.trim()) : []
+  // change what is written they send a new version, as before. And only on the
+  // summary — the report and the slides are a document, and have no such
+  // fields to be missing.
+  const missing =
+    isStudent && report.lpkc_stage === 'summary'
+      ? fields.filter((b) => !b.text?.trim())
+      : []
 
   async function saveBrief() {
     setBriefFailure(null)
@@ -132,6 +138,10 @@ export function ReportThreadView({
     }
   }
 
+  // A summary is text: its student sends no documents with it, on the first
+  // send or in a reply. Staff still attach — the checker's copy arrives here.
+  const canAttach = !(isStudent && report.lpkc_stage === 'summary')
+
   const busy = comment.isPending || reassign.isPending
   const nothingToSay = body.trim() === '' && files.length === 0
 
@@ -157,6 +167,8 @@ export function ReportThreadView({
                 checker's name is the only fact they cannot get anywhere else —
                 `instructors` is staff-only, so this projection is their one
                 sight of it. */}
+            {t(LPKC_STAGE_LABEL[report.lpkc_stage])}
+            {' · '}
             {report.course.title}
             {' · '}
             {isStudent
@@ -304,7 +316,7 @@ export function ReportThreadView({
               checked" when the student sends and to "changes needed" when the
               academy does, so there is nothing else to press. */}
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-            {academyId ? (
+            {academyId && canAttach ? (
               <FilePicker
                 academyId={academyId}
                 files={files}
