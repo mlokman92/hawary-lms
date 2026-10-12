@@ -144,7 +144,7 @@ Inside `in_review`, staff read two stages
 
 | stage              | when                                                       | label (EN)                |
 | ------------------ | ---------------------------------------------------------- | ------------------------- |
-| `moderating`       | `in_review`, no staff-only entry on the current version    | Moderating                |
+| `moderating`       | `in_review`, no staff-only entry on the current version (never a summary) | Moderating |
 | `pending_approval` | `in_review`, a staff-only entry on the current version     | Pending trainer approval  |
 
 `changes_requested` and `approved` are read as they are. An academy with no
@@ -331,6 +331,41 @@ report and hearing from their checker. On the staff side there is the copy and
 nothing about where it came from: no badge, no "pre-checked", no name on the
 entry, no line in an email or a push. Do not add one.
 
+### A summary is received by itself (Oct 2026)
+
+`20261013120000_summary_received.sql`. A summary is four fields of text and
+takes no documents, so there is no copy to prepare. Every summary sent — the
+first time or as a new version, through any of the three `submit_report` doors
+— gets its staff-only entry in the same statement as the send: body
+`Diterima.`, no name, `actor_role = 'system'`, `actor_id` null.
+
+What follows is what follows a system admin adding one, because it is the same
+entry (the owner asked for exactly that, after asking what such a reply
+affects):
+
+- the report stays `in_review` and `reviewed_at` is untouched;
+- the student is not told and cannot read it — verified as a signed-in student:
+  `get_report` and a direct read of `report_events` both leave it out;
+- the checker is told at once, in the app and on their phone, and staff read
+  the report as `pending_approval` — a summary is never `moderating`;
+- the system admins are **not** told about a summary. Their notice exists to
+  ask for the entry, and it is already there.
+
+Three details:
+
+- **`actor_id` is null**, where a system admin's own entry carries theirs.
+  Nobody did this, and `send-report-notice` skips a recipient who is the actor
+  — a system admin who is also the checker must still be told.
+- **`created_at` is `clock_timestamp()`**, so it sorts after the `submitted`
+  entry it answers; `now()` is the same instant for both in one transaction.
+- **The email.** The client sends its notice for the `submitted` entry, as
+  always — it never holds the other entry's id. So `send-report-notice` reads a
+  `submitted` entry whose version already has a staff-only entry with no actor
+  as the checker's notice, and mails the checker instead of the system admins.
+
+The report and the slides still wait for a system admin, and an academy with no
+system admin is unchanged (no entry; the checker was already told at once).
+
 Three edges:
 
 - **No system admin, no extra step.** `submit_report` tells the checker at once
@@ -458,7 +493,7 @@ the comment they just wrote is noise, not a receipt. So:
 
 | event | told |
 | --- | --- |
-| `submitted` | the academy's system admins — or the checker, when it has none |
+| `submitted` | the academy's system admins — or the checker, when it has none, or when it is a summary (received by itself) |
 | a staff-only entry | the checker |
 | `comment` | whichever side did not write it |
 | `status` | the student |

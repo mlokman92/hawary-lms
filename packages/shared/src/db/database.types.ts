@@ -2143,9 +2143,16 @@ export type Database = {
       payment_receipts: {
         Row: {
           academy_id: string
+          confirmed_at: string | null
+          confirmed_by: string | null
+          confirmed_by_name: string | null
           created_at: string
           file_name: string
           file_path: string
+          flag_reasons: string[]
+          flagged_at: string | null
+          flagged_by: string | null
+          flagged_by_name: string | null
           mime_type: string
           payment_id: string
           size_bytes: number
@@ -2154,9 +2161,16 @@ export type Database = {
         }
         Insert: {
           academy_id: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          confirmed_by_name?: string | null
           created_at?: string
           file_name: string
           file_path: string
+          flag_reasons?: string[]
+          flagged_at?: string | null
+          flagged_by?: string | null
+          flagged_by_name?: string | null
           mime_type: string
           payment_id: string
           size_bytes: number
@@ -2165,9 +2179,16 @@ export type Database = {
         }
         Update: {
           academy_id?: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          confirmed_by_name?: string | null
           created_at?: string
           file_name?: string
           file_path?: string
+          flag_reasons?: string[]
+          flagged_at?: string | null
+          flagged_by?: string | null
+          flagged_by_name?: string | null
           mime_type?: string
           payment_id?: string
           size_bytes?: number
@@ -2961,6 +2982,10 @@ export type Database = {
         }
         Returns: Json
       }
+      confirm_payment_receipt: {
+        Args: { _payment: string }
+        Returns: undefined
+      }
       course_billing_roster: {
         Args: {
           _academy: string
@@ -3028,6 +3053,10 @@ export type Database = {
         Returns: string
       }
       ensure_pay_token: { Args: { _invoice: string }; Returns: string }
+      flag_payment_receipt: {
+        Args: { _payment: string; _reasons: string[] }
+        Returns: undefined
+      }
       get_academy_availability: {
         Args: { _academy_id: string; _from: string; _to: string }
         Returns: Json
@@ -3330,6 +3359,124 @@ export type Database = {
       reassign_report: {
         Args: { _instructor_id?: string; _report_id: string }
         Returns: Json
+      }
+      receipt_queue_counts: {
+        Args: { _academy: string; _search?: string }
+        Returns: {
+          confirmed_count: number
+          confirmed_sen: number
+          flagged_count: number
+          flagged_sen: number
+          pending_count: number
+          pending_sen: number
+          uploaded_count: number
+          uploaded_sen: number
+        }[]
+      }
+      receipt_queue_counts_v1: {
+        Args: { _academy: string; _search?: string }
+        Returns: {
+          confirmed_count: number
+          confirmed_sen: number
+          pending_count: number
+          pending_sen: number
+          uploaded_count: number
+          uploaded_sen: number
+        }[]
+      }
+      receipt_queue_page: {
+        Args: {
+          _academy: string
+          _limit?: number
+          _offset?: number
+          _search?: string
+          _sort?: string
+          _state?: string
+        }
+        Returns: {
+          amount_sen: number
+          course_title: string
+          created_at: string
+          id: string
+          invoice_id: string
+          invoice_no: string
+          note: string
+          paid_at: string
+          receipt_confirmed_at: string
+          receipt_confirmed_by_name: string
+          receipt_file_name: string
+          receipt_flag_reasons: string[]
+          receipt_flagged_at: string
+          receipt_flagged_by_name: string
+          receipt_mime_type: string
+          receipt_uploaded_at: string
+          receipt_uploaded_by_name: string
+          recorded_by_name: string
+          student_full_name: string
+          student_id: string
+          student_no: string
+        }[]
+      }
+      receipt_queue_page_v1: {
+        Args: {
+          _academy: string
+          _limit?: number
+          _offset?: number
+          _search?: string
+          _state?: string
+        }
+        Returns: {
+          amount_sen: number
+          course_title: string
+          created_at: string
+          id: string
+          invoice_id: string
+          invoice_no: string
+          note: string
+          paid_at: string
+          receipt_confirmed_at: string
+          receipt_confirmed_by_name: string
+          receipt_file_name: string
+          receipt_mime_type: string
+          receipt_uploaded_at: string
+          receipt_uploaded_by_name: string
+          recorded_by_name: string
+          student_full_name: string
+          student_id: string
+          student_no: string
+        }[]
+      }
+      receipt_queue_page_v2: {
+        Args: {
+          _academy: string
+          _limit?: number
+          _offset?: number
+          _search?: string
+          _state?: string
+        }
+        Returns: {
+          amount_sen: number
+          course_title: string
+          created_at: string
+          id: string
+          invoice_id: string
+          invoice_no: string
+          note: string
+          paid_at: string
+          receipt_confirmed_at: string
+          receipt_confirmed_by_name: string
+          receipt_file_name: string
+          receipt_flag_reasons: string[]
+          receipt_flagged_at: string
+          receipt_flagged_by_name: string
+          receipt_mime_type: string
+          receipt_uploaded_at: string
+          receipt_uploaded_by_name: string
+          recorded_by_name: string
+          student_full_name: string
+          student_id: string
+          student_no: string
+        }[]
       }
       record_gateway_payment: {
         Args: {

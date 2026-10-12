@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
+  ArrowDown,
+  ArrowUp,
   CheckCircle2,
   Clock,
+  FileCheck,
+  Flag,
   MoreHorizontal,
   Search,
   Upload,
@@ -37,11 +41,12 @@ import {
 } from '@/components/ui/table'
 import { ReceiptSheet } from '@/features/payments/ReceiptSheet'
 import {
+  FLAG_REASON_LABEL,
   useBankTransferReceiptCounts,
   useBankTransferReceipts,
-  useOpenPaymentReceipt,
   useReceiptPicker,
   type BankTransferRow,
+  type ReceiptSort,
   type ReceiptState,
 } from '@/features/payments/receipts'
 
@@ -54,7 +59,17 @@ type StateFilter = ReceiptState | typeof ALL
  * page exists to clear that list, and the bare address should open on it.
  */
 function readState(raw: string | null): StateFilter {
-  return raw === 'uploaded' || raw === ALL ? raw : 'pending'
+  return raw === 'uploaded' ||
+    raw === 'flagged' ||
+    raw === 'confirmed' ||
+    raw === ALL
+    ? raw
+    : 'pending'
+}
+
+/** Newest first is the default and, like pending, is never written. */
+function readSort(raw: string | null): ReceiptSort {
+  return raw === 'oldest' ? 'oldest' : 'newest'
 }
 
 const UUID = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
@@ -69,12 +84,13 @@ function readPayment(raw: string | null): string | null {
  * receipt it was recorded from has been uploaded.
  *
  * A transfer is the one payment the system takes on a staff member's word, so
- * the proof is kept beside the claim. One without a receipt is **pending** —
- * a fact about the paperwork only: nothing here changes what was collected.
+ * the proof is kept beside the claim. One without a receipt is **pending**;
+ * one with a receipt is **uploaded** until a Director has looked at it, and
+ * then **checked**, or **flagged** with what is wrong.
  *
- * The page opens on the pending list because clearing it is the job. The two
- * cards are the filter — each is the count and the money on its side of the
- * paperwork, and pressing the pressed one shows both sides. Each row has one
+ * The page opens on the pending list because clearing it is the job. The four
+ * cards are the filter — each is the count and the money in that state, and
+ * pressing the pressed one shows all four. Each row has one
  * action: upload when there is nothing, view when there is. Replacing a
  * receipt is occasional, so it sits behind the row's menu.
  *
@@ -85,12 +101,13 @@ function readPayment(raw: string | null): string | null {
  */
 export function PaymentReceiptsPage() {
   const { t } = useT()
-  const { activeAcademyId } = useAcademy()
+  const { activeAcademyId, active } = useAcademy()
   const [params, setParams] = useSearchParams()
 
   const state = readState(params.get('state'))
   const search = params.get('q')?.trim() ?? ''
   const paymentId = readPayment(params.get('payment'))
+  const sort = readSort(params.get('sort'))
 
   // `replace`: a filter is not a place you navigate back through.
   const commit = useCallback(
@@ -130,12 +147,12 @@ export function PaymentReceiptsPage() {
     activeAcademyId,
     state === ALL ? null : state,
     search,
+    sort,
   )
   const counts = useBankTransferReceiptCounts(activeAcademyId, search)
   // One file input for the whole table; a row's button says which payment
   // the next chosen file belongs to.
   const picker = useReceiptPicker()
-  const open = useOpenPaymentReceipt()
 
   // Pages are cut by OFFSET, so a transfer recorded between two loads pushes
   // every row down one and the next page starts with a row already on screen.
@@ -156,9 +173,24 @@ export function PaymentReceiptsPage() {
       ? (counts.data?.pending ?? 0)
       : state === 'uploaded'
         ? (counts.data?.uploaded ?? 0)
-        : (counts.data?.pending ?? 0) + (counts.data?.uploaded ?? 0)
+        : state === 'flagged'
+          ? (counts.data?.flagged ?? 0)
+          : state === 'confirmed'
+            ? (counts.data?.confirmed ?? 0)
+            : (counts.data?.pending ?? 0) +
+              (counts.data?.uploaded ?? 0) +
+              (counts.data?.flagged ?? 0) +
+              (counts.data?.confirmed ?? 0)
 
-  const failure = picker.error ?? open.error
+  const failure = picker.error
+
+  const [scrolled, setScrolled] = useState(false)
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 400)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   return (
     <div className="mx-auto w-full max-w-6xl">
@@ -170,9 +202,9 @@ export function PaymentReceiptsPage() {
 
       <input {...picker.inputProps} />
 
-      {/* The filter. Pressing the pressed card shows both sides, so the cards
+      {/* The filter. Pressing the pressed card shows all four, so the cards
           are also the way back out of the filter they applied. */}
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <FilterStatCard
           label={t('payments.pstatus.pending')}
           value={formatMYR(counts.data?.pendingSen ?? 0)}
@@ -186,11 +218,33 @@ export function PaymentReceiptsPage() {
           label={t('payments.receipts.uploaded')}
           value={formatMYR(counts.data?.uploadedSen ?? 0)}
           count={counts.data?.uploaded}
-          icon={CheckCircle2}
-          tone="positive"
+          icon={FileCheck}
+          tone="info"
           active={state === 'uploaded'}
           onClick={() =>
             commit({ state: state === 'uploaded' ? ALL : 'uploaded' })
+          }
+        />
+        <FilterStatCard
+          label={t('payments.receipts.flagged')}
+          value={formatMYR(counts.data?.flaggedSen ?? 0)}
+          count={counts.data?.flagged}
+          icon={Flag}
+          tone="danger"
+          active={state === 'flagged'}
+          onClick={() =>
+            commit({ state: state === 'flagged' ? ALL : 'flagged' })
+          }
+        />
+        <FilterStatCard
+          label={t('payments.receipts.checked')}
+          value={formatMYR(counts.data?.confirmedSen ?? 0)}
+          count={counts.data?.confirmed}
+          icon={CheckCircle2}
+          tone="positive"
+          active={state === 'confirmed'}
+          onClick={() =>
+            commit({ state: state === 'confirmed' ? ALL : 'confirmed' })
           }
         />
       </div>
@@ -234,7 +288,21 @@ export function PaymentReceiptsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('payments.receipts.recorded')}</TableHead>
+                  {/* The one sortable column: which end of the queue is
+                      at the top. */}
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="-ml-2.5"
+                      onClick={() =>
+                        commit({ sort: sort === 'newest' ? 'oldest' : null })
+                      }
+                    >
+                      {t('payments.receipts.recorded')}
+                      {sort === 'newest' ? <ArrowDown /> : <ArrowUp />}
+                    </Button>
+                  </TableHead>
                   <TableHead>{t('common.student')}</TableHead>
                   <TableHead>{t('payments.table.invoice')}</TableHead>
                   <TableHead className="text-right">
@@ -320,6 +388,25 @@ export function PaymentReceiptsPage() {
                               ? ` · ${p.receipt_uploaded_by_name}`
                               : ''}
                           </div>
+                          {p.receipt_flag_reasons?.length ? (
+                            <div className="text-destructive text-xs">
+                              {t('payments.receipts.flagged_as', {
+                                reasons: p.receipt_flag_reasons
+                                  .map((r) => t(FLAG_REASON_LABEL[r]))
+                                  .join(', '),
+                              })}
+                            </div>
+                          ) : null}
+                          {p.receipt_confirmed_at ? (
+                            <div className="text-muted-foreground text-xs">
+                              {t('payments.receipts.checked_on', {
+                                date: fmtDateTime(p.receipt_confirmed_at),
+                              })}
+                              {p.receipt_confirmed_by_name
+                                ? ` · ${p.receipt_confirmed_by_name}`
+                                : ''}
+                            </div>
+                          ) : null}
                         </>
                       ) : (
                         <Badge variant="secondary">
@@ -342,8 +429,7 @@ export function PaymentReceiptsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            disabled={open.isPending}
-                            onClick={() => open.mutate(p.id)}
+                            onClick={() => commit({ payment: p.id })}
                           >
                             {t('common.view')}
                           </Button>
@@ -402,11 +488,25 @@ export function PaymentReceiptsPage() {
         ) : null}
       </div>
 
+      {/* A loaded-more list is a long way down from its cards and search. */}
+      {scrolled ? (
+        <Button
+          variant="outline"
+          size="icon"
+          className="fixed right-6 bottom-6 z-40 rounded-full shadow-md"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        >
+          <ArrowUp />
+          <span className="sr-only">{t('common.back_to_top')}</span>
+        </Button>
+      ) : null}
+
       <ReceiptSheet
         academyId={activeAcademyId}
         paymentId={paymentId}
         hint={list.find((row) => row.id === paymentId)}
         picker={picker}
+        isDirector={active?.isDirector === true}
         onClose={() => commit({ payment: null })}
       />
     </div>

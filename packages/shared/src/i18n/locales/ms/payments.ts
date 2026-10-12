@@ -192,6 +192,14 @@ export const payments: PaymentsDict = {
   'payments.receipts.subtitle':
     'Setiap pindahan bank memerlukan resit asalnya. Selagi resit belum dimuat naik, ia menunggu.',
   'payments.receipts.uploaded': 'Dimuat naik',
+  'payments.receipts.checked': 'Disemak',
+  'payments.receipts.checked_on': 'Disemak {date}',
+  'payments.receipts.mark_checked': 'Tandakan disemak',
+  'payments.receipts.flag': 'Tandakan perlu semakan',
+  'payments.receipts.flagged': 'Perlu semakan',
+  'payments.receipts.flagged_as': 'Perlu semakan: {reasons}',
+  'payments.receipts.flag.wrong_date': 'Tarikh salah',
+  'payments.receipts.flag.wrong_amount': 'Jumlah salah',
   'payments.receipts.search_placeholder':
     'Cari pelajar, nombor telefon, invois atau nota',
   'payments.receipts.empty_pending': 'Semua pindahan bank sudah ada resit.',

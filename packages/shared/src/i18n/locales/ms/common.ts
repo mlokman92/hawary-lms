@@ -43,6 +43,7 @@ export const common: CommonDict = {
   'common.next': 'Seterusnya',
   'common.page_of': 'Halaman {page} daripada {pages}',
   'common.load_more': 'Muat lagi',
+  'common.back_to_top': 'Kembali ke atas',
   'common.shown_of': '{shown} daripada {total}',
 
   // Keadaan

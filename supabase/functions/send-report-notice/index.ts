@@ -15,7 +15,8 @@
 // misreport who acted in order to redirect the mail.
 //
 // WHO IS TOLD: the other party, never the actor.
-//   submitted  → the academy's system admins; the checker when there are none
+//   submitted  → the academy's system admins; the checker when there are none,
+//                or when the staff-only entry was added with it (a summary)
 //   staff-only → the checker            (the copy they start from has arrived)
 //   comment    → the other side         (either may act)
 //   status     → the student            (staff decided)
@@ -365,7 +366,7 @@ Deno.serve(async (req) => {
   const { data: event, error: evErr } = await admin
     .from('report_events')
     .select(
-      'id, report_id, kind, body, to_status, actor_id, actor_name, actor_role, staff_only',
+      'id, report_id, kind, body, to_status, version, actor_id, actor_name, actor_role, staff_only',
     )
     .eq('id', eventId)
     .eq('report_id', reportId)
@@ -452,14 +453,34 @@ Deno.serve(async (req) => {
     }))
   }
 
+  /**
+   * A summary's staff-only entry is added by the server in the same statement
+   * as the send, with nobody behind it. No client ever holds that entry's id to
+   * send a notice for, so the send itself is the checker's notice.
+   */
+  async function receivedAlready(): Promise<boolean> {
+    if (event!.version === null) return false
+    const { data } = await admin
+      .from('report_events')
+      .select('id')
+      .eq('report_id', reportId)
+      .eq('version', event!.version)
+      .eq('staff_only', true)
+      .is('actor_id', null)
+      .limit(1)
+    return (data ?? []).length > 0
+  }
+
   let recipients: Recipient[]
   if (staffOnly) {
     recipients = [checker]
   } else if (kind === 'submitted') {
-    // The checker is told later, by the staff-only entry. An academy with no
-    // system admin has no such step, so there the checker is told now.
+    // The checker is told later, by the staff-only entry — unless it is there
+    // already. An academy with no system admin has no such step, so there the
+    // checker is told now too.
     const admins = await systemAdmins()
-    recipients = admins.length > 0 ? admins : [checker]
+    recipients =
+      admins.length === 0 || (await receivedAlready()) ? [checker] : admins
   } else if (kind === 'assigned') {
     recipients = [checker, learner]
   } else {

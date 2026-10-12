@@ -188,6 +188,14 @@ export const payments = {
   'payments.receipts.subtitle':
     'Every bank transfer needs the receipt it was recorded from. Until one is uploaded, it is pending.',
   'payments.receipts.uploaded': 'Uploaded',
+  'payments.receipts.checked': 'Checked',
+  'payments.receipts.checked_on': 'Checked {date}',
+  'payments.receipts.mark_checked': 'Mark as checked',
+  'payments.receipts.flag': 'Flag',
+  'payments.receipts.flagged': 'Flagged',
+  'payments.receipts.flagged_as': 'Flagged: {reasons}',
+  'payments.receipts.flag.wrong_date': 'Wrong date',
+  'payments.receipts.flag.wrong_amount': 'Wrong amount',
   'payments.receipts.search_placeholder':
     'Search student, phone number, invoice or note',
   'payments.receipts.empty_pending': 'Every bank transfer has its receipt.',

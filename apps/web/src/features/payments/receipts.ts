@@ -6,6 +6,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
+import type { TKey } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
 import { paymentReceiptUrl, uploadPaymentReceipt } from '@/lib/storage'
 
@@ -15,7 +16,12 @@ import { paymentReceiptUrl, uploadPaymentReceipt } from '@/lib/storage'
  * A bank transfer is the one way money arrives that the system takes on trust:
  * FPX is confirmed by the gateway, a transfer is a row somebody typed. So every
  * succeeded bank transfer is expected to carry the receipt it was recorded
- * from, and one that does not is **pending**.
+ * from, and one that does not is **pending**. An uploaded receipt is then
+ * looked at by a Director, who either marks it **checked** (`confirmed` in the
+ * database, the name it was built under) or **flags** what is wrong with it.
+ * So a transfer is in exactly one of four places: pending, uploaded (nobody
+ * has ruled on it), flagged or checked. All of that is about the paperwork
+ * only; it is the upload that makes a transfer collected.
  *
  * Pending is a fact about the paperwork, not the money — it changes no status
  * and no total. A payment is pending exactly when it has no `payment_receipts`
@@ -23,16 +29,36 @@ import { paymentReceiptUrl, uploadPaymentReceipt } from '@/lib/storage'
  */
 
 /** Which side of the paperwork to list. `all` is the page's own sentinel. */
-export const RECEIPT_STATES = ['pending', 'uploaded'] as const
+export const RECEIPT_STATES = [
+  'pending',
+  'uploaded',
+  'flagged',
+  'confirmed',
+] as const
 export type ReceiptState = (typeof RECEIPT_STATES)[number]
+
+/** Which end of the queue is at the top, by when a payment was recorded. */
+export const RECEIPT_SORTS = ['newest', 'oldest'] as const
+export type ReceiptSort = (typeof RECEIPT_SORTS)[number]
+
+/** What a Director can say is wrong with a receipt. And/or. */
+export const FLAG_REASONS = ['wrong_date', 'wrong_amount'] as const
+export type FlagReason = (typeof FLAG_REASONS)[number]
+
+export const FLAG_REASON_LABEL: Record<FlagReason, TKey> = {
+  wrong_date: 'payments.receipts.flag.wrong_date',
+  wrong_amount: 'payments.receipts.flag.wrong_amount',
+}
 
 /**
  * One bank transfer, with its receipt if it has one.
  *
- * A hand-written mirror of `bank_transfer_receipts_page`: the generated
- * `Returns` type marks every column non-null, because Supabase cannot infer
- * nullability from a RETURNS TABLE. The four `receipt_*` fields are null
- * together — that is what pending looks like.
+ * A hand-written mirror of `receipt_queue_page`: the generated `Returns` type
+ * marks every column non-null, because Supabase cannot infer nullability from
+ * a RETURNS TABLE. The first four `receipt_*` fields are null together — that
+ * is what pending looks like — and the two `receipt_confirmed_*` are null
+ * until a Director checks it. `receipt_flag_reasons` is null with no receipt
+ * and empty when there is one and it is not flagged.
  */
 export type BankTransferRow = {
   id: string
@@ -51,6 +77,11 @@ export type BankTransferRow = {
   receipt_mime_type: string | null
   receipt_uploaded_at: string | null
   receipt_uploaded_by_name: string | null
+  receipt_confirmed_at: string | null
+  receipt_confirmed_by_name: string | null
+  receipt_flag_reasons: FlagReason[] | null
+  receipt_flagged_at: string | null
+  receipt_flagged_by_name: string | null
 }
 
 export const RECEIPT_PAGE_SIZE = 50
@@ -59,29 +90,37 @@ export const RECEIPT_PAGE_SIZE = 50
  * Bank transfers, newest-recorded first, growing: each "Load more" appends the
  * next page.
  *
- * The filters are in the key and the page is not, so a new search or the other
- * side of the paperwork starts again from the top. The function returns rows
+ * The filters and the order are in the key and the page is not, so a new
+ * search, another state or the other order starts again from the top. The function returns rows
  * and no total, so a full page is what says there may be another.
  */
 export function useBankTransferReceipts(
   academyId: string | null,
   state: ReceiptState | null,
   search: string,
+  sort: ReceiptSort,
 ) {
   return useInfiniteQuery({
-    queryKey: ['bank-transfer-receipts', academyId, state ?? '', search] as const,
+    queryKey: [
+      'bank-transfer-receipts',
+      academyId,
+      state ?? '',
+      search,
+      sort,
+    ] as const,
     enabled: !!academyId,
     // Without this an upload — which takes the row off the pending list —
     // blanks the table through the empty state while the list refetches.
     placeholderData: keepPreviousData,
     initialPageParam: 1,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await supabase.rpc('bank_transfer_receipts_page', {
+      const { data, error } = await supabase.rpc('receipt_queue_page', {
         _academy: academyId!,
         ...(state ? { _state: state } : {}),
         ...(search.trim() ? { _search: search.trim() } : {}),
         _limit: RECEIPT_PAGE_SIZE,
         _offset: (pageParam - 1) * RECEIPT_PAGE_SIZE,
+        _sort: sort,
       })
       if (error) throw error
       return (data ?? []) as unknown as BankTransferRow[]
@@ -108,6 +147,11 @@ type BankTransferEmbed = {
     mime_type: string
     created_at: string
     uploaded_by_name: string | null
+    confirmed_at: string | null
+    confirmed_by_name: string | null
+    flag_reasons: FlagReason[]
+    flagged_at: string | null
+    flagged_by_name: string | null
   } | null
 }
 
@@ -134,7 +178,7 @@ export function useBankTransfer(
       const { data, error } = await supabase
         .from('payments')
         .select(
-          'id, amount_sen, paid_at, created_at, note, invoice_id, student_id, invoice:invoices(invoice_no, course:courses(title)), student:students(full_name, student_no), recorder:profiles(full_name), receipt:payment_receipts(file_name, mime_type, created_at, uploaded_by_name)',
+          'id, amount_sen, paid_at, created_at, note, invoice_id, student_id, invoice:invoices(invoice_no, course:courses(title)), student:students(full_name, student_no), recorder:profiles(full_name), receipt:payment_receipts(file_name, mime_type, created_at, uploaded_by_name, confirmed_at, confirmed_by_name, flag_reasons, flagged_at, flagged_by_name)',
         )
         .eq('academy_id', academyId!)
         .eq('id', paymentId!)
@@ -161,6 +205,11 @@ export function useBankTransfer(
         receipt_mime_type: p.receipt?.mime_type ?? null,
         receipt_uploaded_at: p.receipt?.created_at ?? null,
         receipt_uploaded_by_name: p.receipt?.uploaded_by_name ?? null,
+        receipt_confirmed_at: p.receipt?.confirmed_at ?? null,
+        receipt_confirmed_by_name: p.receipt?.confirmed_by_name ?? null,
+        receipt_flag_reasons: p.receipt?.flag_reasons ?? null,
+        receipt_flagged_at: p.receipt?.flagged_at ?? null,
+        receipt_flagged_by_name: p.receipt?.flagged_by_name ?? null,
       }
     },
   })
@@ -192,14 +241,19 @@ type CountsRow = {
   pending_sen: number
   uploaded_count: number
   uploaded_sen: number
+  confirmed_count: number
+  confirmed_sen: number
+  flagged_count: number
+  flagged_sen: number
 }
 
 /**
- * How many are pending and uploaded, and how much money each side is.
+ * How many are pending, uploaded, flagged and checked, and how much money
+ * each is.
  *
- * Both at once, whatever the list is filtered to: each side is a card that
- * filters to it, and "50 of 2,000" needs the size of whichever side is on
- * screen. Its own call for the reason `usePaymentLogTotals` is — a page of 50
+ * All four at once, whatever the list is filtered to: each is a card that
+ * filters to it, and "50 of 2,000" needs the size of whichever is on screen.
+ * The four are slices — uploaded here means neither flagged nor checked. Its own call for the reason `usePaymentLogTotals` is — a page of 50
  * cannot count the other 2,000.
  */
 export function useBankTransferReceiptCounts(
@@ -211,7 +265,7 @@ export function useBankTransferReceiptCounts(
     enabled: !!academyId,
     placeholderData: keepPreviousData,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('bank_transfer_receipt_counts', {
+      const { data, error } = await supabase.rpc('receipt_queue_counts', {
         _academy: academyId!,
         ...(search.trim() ? { _search: search.trim() } : {}),
       })
@@ -222,6 +276,10 @@ export function useBankTransferReceiptCounts(
         pendingSen: Number(row?.pending_sen ?? 0),
         uploaded: Number(row?.uploaded_count ?? 0),
         uploadedSen: Number(row?.uploaded_sen ?? 0),
+        confirmed: Number(row?.confirmed_count ?? 0),
+        confirmedSen: Number(row?.confirmed_sen ?? 0),
+        flagged: Number(row?.flagged_count ?? 0),
+        flaggedSen: Number(row?.flagged_sen ?? 0),
       }
     },
   })
@@ -244,6 +302,59 @@ export function useUploadPaymentReceipt() {
     // key left off that list would be a stale total on a money screen.
     onSuccess: () => {
       void qc.invalidateQueries()
+    },
+  })
+}
+
+/**
+ * Confirm a receipt — a Director's second look at what an admin uploaded.
+ *
+ * `confirm_payment_receipt` refuses everyone else, so the button is hidden
+ * for them rather than left to fail. It moves the row from uploaded to
+ * confirmed and no money with it, so only the queue's own reads are refetched.
+ */
+export function useConfirmPaymentReceipt() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (paymentId: string) => {
+      const { error } = await supabase.rpc('confirm_payment_receipt', {
+        _payment: paymentId,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['bank-transfer-receipts'] })
+      void qc.invalidateQueries({ queryKey: ['bank-transfer-receipt-counts'] })
+    },
+  })
+}
+
+/**
+ * Say what is wrong with a receipt, or — with no reasons — that nothing is.
+ *
+ * The whole set goes each time, not a reason to add: the control is two tick
+ * boxes, and "what is ticked now" is the one message that cannot go wrong when
+ * two Directors have the same receipt open. Directors only, as above.
+ */
+export function useFlagPaymentReceipt() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      paymentId,
+      reasons,
+    }: {
+      paymentId: string
+      reasons: FlagReason[]
+    }) => {
+      const { error } = await supabase.rpc('flag_payment_receipt', {
+        _payment: paymentId,
+        _reasons: reasons,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['bank-transfer-receipts'] })
+      void qc.invalidateQueries({ queryKey: ['bank-transfer-receipt-counts'] })
     },
   })
 }

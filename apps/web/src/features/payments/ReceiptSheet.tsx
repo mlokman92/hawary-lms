@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { MoreHorizontal, Upload } from 'lucide-react'
+import { Flag, MoreHorizontal, Upload } from 'lucide-react'
 import { formatMYR } from '@hawary/shared'
 import { errorMessage } from '@/lib/errors'
 import { fmtDate, fmtDateTime } from '@/lib/format'
@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
@@ -21,7 +22,11 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import {
+  FLAG_REASONS,
+  FLAG_REASON_LABEL,
   useBankTransfer,
+  useConfirmPaymentReceipt,
+  useFlagPaymentReceipt,
   useOpenPaymentReceipt,
   useReceiptPreviewUrl,
   type BankTransferRow,
@@ -42,6 +47,7 @@ export function ReceiptSheet({
   paymentId,
   hint,
   picker,
+  isDirector,
   onClose,
 }: {
   academyId: string | null
@@ -49,6 +55,8 @@ export function ReceiptSheet({
   hint: BankTransferRow | undefined
   /** The page's one file input — an upload from here is the same upload. */
   picker: ReturnType<typeof useReceiptPicker>
+  /** Checking and flagging are a Director's — the functions refuse the rest. */
+  isDirector: boolean
   onClose: () => void
 }) {
   const { t } = useT()
@@ -59,7 +67,11 @@ export function ReceiptSheet({
     p?.receipt_uploaded_at ?? null,
   )
   const open = useOpenPaymentReceipt()
-  const failure = picker.error ?? open.error ?? preview.error
+  const confirm = useConfirmPaymentReceipt()
+  const flag = useFlagPaymentReceipt()
+  const flagged = p?.receipt_flag_reasons ?? []
+  const failure =
+    picker.error ?? open.error ?? preview.error ?? confirm.error ?? flag.error
 
   return (
     <Sheet open={!!paymentId} onOpenChange={(next) => !next && onClose()}>
@@ -118,7 +130,9 @@ export function ReceiptSheet({
 
             {p.receipt_uploaded_at ? (
               <>
-                <div className="flex items-center justify-between gap-3">
+                {/* Its own line under the file: four controls beside a
+                    wrapped flag line left neither room to be read. */}
+                <div className="flex flex-col gap-2">
                   <div className="min-w-0">
                     <div className="truncate">{p.receipt_file_name}</div>
                     <div className="text-muted-foreground text-xs">
@@ -127,13 +141,85 @@ export function ReceiptSheet({
                         ? ` · ${p.receipt_uploaded_by_name}`
                         : ''}
                     </div>
+                    {flagged.length ? (
+                      <div className="text-destructive text-xs">
+                        {t('payments.receipts.flagged_as', {
+                          reasons: flagged
+                            .map((r) => t(FLAG_REASON_LABEL[r]))
+                            .join(', '),
+                        })}
+                        {' · '}
+                        {fmtDateTime(p.receipt_flagged_at)}
+                        {p.receipt_flagged_by_name
+                          ? ` · ${p.receipt_flagged_by_name}`
+                          : ''}
+                      </div>
+                    ) : null}
+                    {p.receipt_confirmed_at ? (
+                      <div className="text-muted-foreground text-xs">
+                        {t('payments.receipts.checked_on', {
+                          date: fmtDateTime(p.receipt_confirmed_at),
+                        })}
+                        {p.receipt_confirmed_by_name
+                          ? ` · ${p.receipt_confirmed_by_name}`
+                          : ''}
+                      </div>
+                    ) : null}
                   </div>
                   {picker.uploadingId === p.id ? (
-                    <Button variant="outline" size="sm" disabled>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="self-start"
+                      disabled
+                    >
                       {t('common.uploading')}
                     </Button>
                   ) : (
-                    <div className="flex items-center gap-1">
+                    <div className="flex flex-wrap items-center gap-1">
+                      {/* The receipt is drawn right below, so this is
+                          pressed with it in view. Gone once confirmed. */}
+                      {isDirector && !p.receipt_confirmed_at ? (
+                        <Button
+                          size="sm"
+                          disabled={confirm.isPending}
+                          onClick={() => confirm.mutate(p.id)}
+                        >
+                          {t('payments.receipts.mark_checked')}
+                        </Button>
+                      ) : null}
+                      {/* Two tick boxes, and/or. Each tick saves the set as
+                          it now stands; the menu stays open for the second.
+                          Unticking both takes the flag off. */}
+                      {isDirector ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <Flag /> {t('payments.receipts.flag')}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {FLAG_REASONS.map((reason) => (
+                              <DropdownMenuCheckboxItem
+                                key={reason}
+                                checked={flagged.includes(reason)}
+                                disabled={flag.isPending}
+                                onSelect={(e) => e.preventDefault()}
+                                onCheckedChange={(on) =>
+                                  flag.mutate({
+                                    paymentId: p.id,
+                                    reasons: FLAG_REASONS.filter((r) =>
+                                      r === reason ? on : flagged.includes(r),
+                                    ),
+                                  })
+                                }
+                              >
+                                {t(FLAG_REASON_LABEL[reason])}
+                              </DropdownMenuCheckboxItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : null}
                       <Button
                         variant="outline"
                         size="sm"

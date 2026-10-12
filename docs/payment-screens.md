@@ -375,19 +375,32 @@ replacing a receipt, which is occasional, is behind the row's `⋯`. State and
 search are in the URL (`?state=uploaded|all`, `?q=`), with pending the unwritten
 default.
 
-**The filter is two cards**, Pending and Uploaded — each the money and the
-count on its side, from `bank_transfer_receipt_counts`, so they follow the
-search. One is pressed; pressing the pressed one shows both sides
+**The filter is four cards**, Pending, Uploaded, Flagged and Checked — each the
+money and the count in that state, from `receipt_queue_counts`, so they follow
+the search. One is pressed; pressing the pressed one shows all four
 (`?state=all`). A picker stood here first, with a "N pending · RM x" line
 beside it that the cards now say.
 
 **Load more, not a pager** — it had a pager first, on the argument that the
 list refills as rows leave it. In use it is read top-down like `/payments`, and
 a page turn forgot the rows above. `useBankTransferReceipts` is an
-`useInfiniteQuery`; the function returns rows and no total, so a full page of
+`useInfiniteQuery` over `receipt_queue_page`; the function returns rows and no
+total, so a full page of
 50 is what says there may be another, and the "50 of 2,281" beside the button
 comes from the counts. The first sighting of each id is kept, for the reason
 `/payments` gives. How far the list is loaded is not in the URL.
+
+**The Recorded column sorts.** Its header is a button: newest first (the
+default, unwritten) or oldest first (`?sort=oldest`), both by when the payment
+was recorded — a Director clearing a backlog starts from the far end. It is
+`_sort` on `receipt_queue_page`, in the list's query key so a change starts
+again from the top. The ORDER BY is a CASE, which no index serves; neither
+does the search beside it, and this is a few thousand rows. `receipt_queue_page_v2`
+is the five-argument version renamed aside: left as an overload, a call
+without `_sort` would match both.
+
+**Back to top** is a round button at the bottom right, shown once the page has
+scrolled — a loaded-more list is a long way from its cards and search.
 
 **Names wrap.** Every text cell is somebody's name, a course title or a file
 name, and `TableCell` is `whitespace-nowrap` by default — one long name pushed
@@ -415,8 +428,9 @@ than sent to PostgREST as a failed cast.
 The receipt is drawn from a signed URL (`useReceiptPreviewUrl`), keyed on the
 receipt's upload time so a replacement is a new URL, never stale while the panel
 is open and dropped when it closes — the URL lives 60 seconds and the file is
-fetched once. Upload, View and Replace in the panel are the row's own, through
-the page's one file input.
+fetched once. Upload and Replace in the panel are the row's own, through the
+page's one file input. **View on a row opens the panel too**; opening the file
+in a new tab, for its full size, is the View inside the panel.
 
 The student's name and the invoice number in a row are still links to their own
 pages, and the action cell is still its buttons; only the rest of the row opens
@@ -436,6 +450,70 @@ four digits once the leading `60` or `0` is dropped. The guard is the point —
 without it "siri 2" would match every student with a 2 in their number — and
 dropping the prefix is what lets `0123…` find a number stored as `60123…`.
 A partial number works: the last six digits are enough.
+
+### Checked — a Director's second look
+
+An uploaded receipt is only what an admin attached. A **Director** (so also a
+system admin) opens it and presses **Mark as checked**, and the transfer moves
+from Uploaded to Checked. The states are slices: *uploaded* means a receipt
+nobody has ruled on — neither checked nor flagged (below) — so the cards add up
+to every bank transfer.
+
+The owner's word is **Checked** — "Confirmed" was the first label and reads as
+if the bank had confirmed the money. The database was built under the first
+name and keeps it: `payment_receipts.confirmed_at / confirmed_by /
+confirmed_by_name`, `confirm_payment_receipt`, and `?state=confirmed`.
+
+- **It moves no money.** A transfer is collected from the upload
+  (`payments.has_receipt`); checking is about the paperwork. The UPDATE does
+  fire `app.sync_payment_receipt`, whose write to `payments` is guarded by
+  `not has_receipt` and matches nothing.
+- **The button is in the panel only**, beside the receipt it is about, and only
+  a Director is shown it. `confirm_payment_receipt` is SECURITY DEFINER (clients
+  have no DML on the table), reads the academy from the receipt and checks
+  `app.is_director` — an admin calling it directly gets "No such receipt", the
+  same answer as a receipt that does not exist.
+- **Checking twice keeps the first check**, name and time.
+- **Replacing the file clears the check.** The Edge Function replaces by
+  upserting, which leaves unnamed columns alone, so a
+  `payment_receipts_reset_confirmation` trigger nulls the three columns whenever
+  `file_path` changes — a new file is one nobody has looked at. That is also the
+  only way to undo a check; there is no un-check control.
+
+### Flagged — what the Director found wrong
+
+The other thing a Director can do with a receipt: **Flag**, a menu of two tick
+boxes, **Wrong date** and **Wrong amount** — and/or. In Malay the state is
+**Perlu semakan** (the owner's wording; "Dibenderakan" was the first). A flagged transfer is the
+admins' list of things to put right, so every admin sees the Flagged card and
+the reasons on the row; only a Director is shown the control.
+
+- `payment_receipts.flag_reasons text[]`, empty for "not flagged", with
+  `flagged_at / flagged_by / flagged_by_name`. An array, so the next reason is a
+  value in a list and not a column; a check constraint holds it to the known
+  ones.
+- **Each tick saves the whole set** (`flag_payment_receipt(_payment,
+  _reasons)`), not "add this one" — the one message that cannot go wrong when
+  two Directors have the receipt open. The menu stays open for the second tick.
+  **Unticking both takes the flag off**; there is no separate un-flag.
+- **Flagged and checked exclude each other**, by a constraint and by both
+  functions: flagging a checked receipt takes the check off, and Mark as checked
+  on a flagged one takes the flag off — that is how a flag is settled once the
+  record is right.
+- Replacing the file clears a flag as it clears a check.
+- Same rules as checking otherwise: Directors only, the academy read from the
+  receipt, and no money moves.
+
+Nothing in the app corrects a payment's date or amount; a flagged transfer is
+put right by replacing the receipt, or by the owner in SQL.
+
+`receipt_queue_page` / `receipt_queue_counts` replaced
+`bank_transfer_receipts_page` / `bank_transfer_receipt_counts` because they
+return more columns, which CREATE OR REPLACE cannot change. The old pair are
+still in the database for a web build deployed before this one, and are dead
+once the new one is live. `receipt_queue_page_v1` / `receipt_queue_counts_v1`
+are the hour-old versions from before flags, renamed aside for the same reason;
+nothing ever deployed calls them.
 
 ### One table, one function, no client writes
 
@@ -467,7 +545,7 @@ academy is read from the payment, never from the request, so the object and the
 row can only land in the payment's tenant. "No such payment" and "not yours"
 return the same 404.
 
-`bank_transfer_receipts_page` and `bank_transfer_receipt_counts` are SECURITY
+`receipt_queue_page` and `receipt_queue_counts` are SECURITY
 INVOKER with `app.is_admin(_academy)` in the WHERE, not only in the policies:
 `payments` lets a student read their own rows, and without it a student calling
 the function would get their own transfers back, every one "pending". The two
