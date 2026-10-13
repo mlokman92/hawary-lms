@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Pencil } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
@@ -21,6 +22,10 @@ import {
   PAYMENT_STATUS_VARIANT,
   type PaymentLogRow,
 } from './api'
+import {
+  EditBankTransferDialog,
+  type TransferTarget,
+} from './EditBankTransferDialog'
 import type { NoteTarget } from './EditPaymentNoteDialog'
 import { sourceLine } from './sourceLine'
 
@@ -40,7 +45,15 @@ type PaymentEmbed = Omit<
   } | null
   student: { full_name: string | null; student_no: string | null } | null
   recorder: { full_name: string | null } | null
+  receipt: { confirmed_at: string | null } | null
 }
+
+/**
+ * The payment as its own read returns it: the ledger's row, and whether a
+ * Director has checked its receipt — which is what closes a bank transfer's
+ * amount and date to correction. Always null for anything but a transfer.
+ */
+type PaymentOne = PaymentLogRow & { receipt_confirmed_at: string | null }
 
 /**
  * One payment by its id — what `/payments/log?payment=<id>` opens.
@@ -55,18 +68,18 @@ function usePayment(academyId: string | null, paymentId: string | null) {
   return useQuery({
     queryKey: ['payment-log', 'one', academyId, paymentId] as const,
     enabled: !!academyId && !!paymentId,
-    queryFn: async (): Promise<PaymentLogRow | null> => {
+    queryFn: async (): Promise<PaymentOne | null> => {
       const { data, error } = await supabase
         .from('payments')
         .select(
-          'id, amount_sen, method, provider, provider_ref, status, paid_at, created_at, note, invoice_id, student_id, invoice:invoices(invoice_no, course:courses(id, title)), student:students(full_name, student_no), recorder:profiles(full_name)',
+          'id, amount_sen, method, provider, provider_ref, status, paid_at, created_at, note, invoice_id, student_id, invoice:invoices(invoice_no, course:courses(id, title)), student:students(full_name, student_no), recorder:profiles(full_name), receipt:payment_receipts(confirmed_at)',
         )
         .eq('academy_id', academyId!)
         .eq('id', paymentId!)
         .maybeSingle()
       if (error) throw error
       if (!data) return null
-      const { invoice, student, recorder, ...p } =
+      const { invoice, student, recorder, receipt, ...p } =
         data as unknown as PaymentEmbed
       return {
         ...p,
@@ -76,6 +89,7 @@ function usePayment(academyId: string | null, paymentId: string | null) {
         student_full_name: student?.full_name ?? null,
         student_no: student?.student_no ?? null,
         recorded_by_name: recorder?.full_name ?? null,
+        receipt_confirmed_at: receipt?.confirmed_at ?? null,
       }
     },
   })
@@ -108,6 +122,14 @@ export function PaymentSheet({
   const { t } = useT()
   const one = usePayment(academyId, paymentId)
   const p = one.data ?? (one.data === undefined ? hint : undefined)
+  const [editing, setEditing] = useState<TransferTarget | null>(null)
+  // A bank transfer's amount and date can be corrected until a Director has
+  // checked them against the receipt. Only the payment's own read knows that,
+  // so the clicked row alone never offers it.
+  const editable =
+    one.data?.method === 'bank_transfer' &&
+    one.data.status === 'succeeded' &&
+    !one.data.receipt_confirmed_at
 
   return (
     <Sheet open={!!paymentId} onOpenChange={(next) => !next && onClose()}>
@@ -141,8 +163,28 @@ export function PaymentSheet({
           <div className="flex flex-col gap-4 px-6 pb-6">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-lg font-semibold tabular-nums">
-                  {formatMYR(p.amount_sen)}
+                <div className="flex items-center gap-1">
+                  <div className="text-lg font-semibold tabular-nums">
+                    {formatMYR(p.amount_sen)}
+                  </div>
+                  {editable ? (
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() =>
+                        setEditing({
+                          id: p.id,
+                          amountSen: p.amount_sen,
+                          paidAt: p.paid_at ?? p.created_at,
+                        })
+                      }
+                    >
+                      <Pencil />
+                      <span className="sr-only">
+                        {t('payments.transfer.edit')}
+                      </span>
+                    </Button>
+                  ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span>{t(PAYMENT_METHOD_LABEL[p.method])}</span>
@@ -222,6 +264,11 @@ export function PaymentSheet({
           </div>
         )}
       </SheetContent>
+      <EditBankTransferDialog
+        academyId={academyId}
+        target={editing}
+        onOpenChange={(next) => !next && setEditing(null)}
+      />
     </Sheet>
   )
 }

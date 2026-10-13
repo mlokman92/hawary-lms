@@ -536,8 +536,41 @@ the reasons on the row; only a Director is shown the control.
 - Same rules as checking otherwise: Directors only, the academy read from the
   receipt, and no money moves.
 
-Nothing in the app corrects a payment's date or amount; a flagged transfer is
-put right by replacing the receipt, or by the owner in SQL.
+A flagged transfer is put right by correcting the payment (below) or by
+replacing the receipt; the Director then marks it checked, which takes the flag
+off. Correcting it does not clear the flag — that is the Director's to settle.
+
+### Correcting a transfer's amount and date
+
+The two figures on a bank transfer are typed in from a receipt, and they are
+the two a Director flags. An admin can change either from the transfer's panel
+— a pencil beside the amount, on `/payments/log?payment=` and
+`/payments/receipts?payment=` alike (`EditBankTransferDialog`).
+
+- **Bank transfers only.** Cash is counted on the spot, FPX is the gateway's
+  own figure, KWSP is the withdrawal's.
+- **Not once it is checked.** A check is a Director saying the amount and date
+  match the receipt; a change afterwards would leave the check standing over
+  figures nobody checked. The pencil is not drawn on a checked transfer.
+  Replacing the receipt clears the check and is the way back in.
+- **The database holds both rules**, not the panel:
+  `app.guard_payment_amount_date`, a BEFORE UPDATE OF `amount_sen, paid_at`
+  trigger on `payments`. `payments: admin update` admits an admin to any column
+  of any payment, so without it the rule would be a hidden button. It binds
+  signed-in callers only — the owner in SQL and the gateway's callback carry no
+  user. It takes a share lock on the receipt row, so a Director pressing Mark as
+  checked at the same moment either lands first and is seen, or waits.
+- **The write is a plain update** (`useUpdateBankTransfer`), for the reason the
+  note's is: `app.sync_invoice_paid` re-files the invoice from the new amount.
+  Only what changed is sent, so correcting an amount leaves `paid_at` alone; a
+  changed date is stored at Malaysian midday, as `RecordPaymentDialog` stores
+  it. Success refetches everything, as an upload does.
+- The log's panel reads the check with its payment (`receipt:payment_receipts`)
+  and offers the pencil only once that read has answered — the clicked row does
+  not know.
+
+Nothing records who changed a figure or what it was before; `updated_at` moves
+and that is all.
 
 `receipt_queue_page` / `receipt_queue_counts` replaced
 `bank_transfer_receipts_page` / `bank_transfer_receipt_counts` because they

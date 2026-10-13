@@ -359,6 +359,56 @@ export function useFlagPaymentReceipt() {
   })
 }
 
+/**
+ * Correct a bank transfer's amount, its date, or both.
+ *
+ * The two figures on a transfer are typed in from a receipt, and they are the
+ * two a Director flags as wrong. A plain PostgREST update, like the note:
+ * `payments: admin update` already admits an admin, and `app.sync_invoice_paid`
+ * re-files the invoice from the new amount.
+ *
+ * Which payments, and until when, is `app.guard_payment_amount_date`'s to say:
+ * a bank transfer only, and not once its receipt has been checked. The panels
+ * hide the control in those cases; the trigger is what refuses.
+ *
+ * Only what changed is sent, so correcting an amount leaves `paid_at` — and
+ * whatever time of day it carries — alone. `.select('id').single()` because an
+ * UPDATE that matches nothing answers 200 with zero rows, and that must not
+ * read as saved.
+ */
+export function useUpdateBankTransfer(academyId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      paymentId,
+      amountSen,
+      paidAt,
+    }: {
+      paymentId: string
+      amountSen?: number
+      paidAt?: string
+    }) => {
+      const { error } = await supabase
+        .from('payments')
+        .update({
+          ...(amountSen === undefined ? {} : { amount_sen: amountSen }),
+          ...(paidAt === undefined ? {} : { paid_at: paidAt }),
+        })
+        .eq('id', paymentId)
+        .eq('academy_id', academyId!)
+        .eq('method', 'bank_transfer')
+        .select('id')
+        .single()
+      if (error) throw error
+    },
+    // Everything, as an upload does: an amount moves the invoice, and with it
+    // every figure in the money section.
+    onSuccess: () => {
+      void qc.invalidateQueries()
+    },
+  })
+}
+
 /** What the file picker offers. The function and the bucket both re-check. */
 export const RECEIPT_ACCEPT = 'application/pdf,image/jpeg,image/png,image/webp'
 

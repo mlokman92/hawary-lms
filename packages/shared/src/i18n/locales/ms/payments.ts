@@ -210,6 +210,7 @@ export const payments: PaymentsDict = {
   'payments.receipts.replace': 'Ganti resit',
   'payments.receipts.view': 'Lihat resit',
   'payments.receipts.pending': 'Resit menunggu',
+  'payments.transfer.edit': 'Sunting jumlah dan tarikh',
 
   // Kaedah bayaran
   'payments.method.cash': 'Tunai',

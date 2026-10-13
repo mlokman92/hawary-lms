@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Flag, MoreHorizontal, Upload } from 'lucide-react'
+import { Flag, MoreHorizontal, Pencil, Upload } from 'lucide-react'
 import { formatMYR } from '@hawary/shared'
 import { errorMessage } from '@/lib/errors'
 import { fmtDate, fmtDateTime } from '@/lib/format'
@@ -23,6 +23,10 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import {
+  EditBankTransferDialog,
+  type TransferTarget,
+} from './EditBankTransferDialog'
 import {
   FLAG_REASONS,
   FLAG_REASON_LABEL,
@@ -122,6 +126,7 @@ export function ReceiptSheet({
   const confirm = useConfirmPaymentReceipt()
   const flag = useFlagPaymentReceipt()
   const flagged = p?.receipt_flag_reasons ?? []
+  const [editing, setEditing] = useState<TransferTarget | null>(null)
   const failure =
     picker.error ?? open.error ?? preview.error ?? confirm.error ?? flag.error
 
@@ -157,8 +162,31 @@ export function ReceiptSheet({
           <div className="flex min-h-0 flex-1 flex-col gap-4 px-6 pb-6">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-lg font-semibold tabular-nums">
-                  {formatMYR(p.amount_sen)}
+                <div className="flex items-center gap-1">
+                  <div className="text-lg font-semibold tabular-nums">
+                    {formatMYR(p.amount_sen)}
+                  </div>
+                  {/* The amount and the date are typed in from the receipt,
+                      and can be corrected until a Director has checked them
+                      against it. */}
+                  {p.receipt_confirmed_at ? null : (
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() =>
+                        setEditing({
+                          id: p.id,
+                          amountSen: p.amount_sen,
+                          paidAt: p.paid_at ?? p.created_at,
+                        })
+                      }
+                    >
+                      <Pencil />
+                      <span className="sr-only">
+                        {t('payments.transfer.edit')}
+                      </span>
+                    </Button>
+                  )}
                 </div>
                 <div className="text-muted-foreground text-xs">
                   {t('payments.receipts.paid_on', {
@@ -332,6 +360,11 @@ export function ReceiptSheet({
           </div>
         )}
       </SheetContent>
+      <EditBankTransferDialog
+        academyId={academyId}
+        target={editing}
+        onOpenChange={(next) => !next && setEditing(null)}
+      />
     </Sheet>
   )
 }
