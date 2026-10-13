@@ -11,7 +11,6 @@ import {
   ArrowLeftRight,
   Banknote,
   Download,
-  Pencil,
   Search,
   Wallet,
   Zap,
@@ -221,9 +220,9 @@ export function PaymentLogPage() {
   const { activeAcademyId } = useAcademy()
   const [params, setParams] = useSearchParams()
   const [exporting, setExporting] = useState(false)
-  // The row whose note is being edited, or null. Held here rather than
-  // mounting a dialog per row: 50 dialogs is 50 subscriptions to the same
-  // mutation, and only one of them can ever be open.
+  // The payment whose note is being edited, or null. The note is edited from
+  // the payment's panel only; the dialog is the page's, so it outlives a
+  // refetch of the panel underneath it.
   const [noteTarget, setNoteTarget] = useState<NoteTarget | null>(null)
 
   const search = params.get('q')?.trim() ?? ''
@@ -546,36 +545,11 @@ export function PaymentLogPage() {
                       </div>
                     </TableCell>
                     {/* The sentence a person typed when banking it — the one
-                        thing in this row no other column can reconstruct, and
-                        the only one that is routinely wrong when first typed.
-                        The whole cell is the button: an em dash is too small a
-                        target on a touch screen, and the pencil only shows on
-                        hover so fifty rows do not read as fifty controls. */}
-                    <TableCell className="max-w-[18rem] whitespace-normal">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setNoteTarget({
-                            id: p.id,
-                            invoiceId: p.invoice_id,
-                            invoiceNo: p.invoice_no,
-                            amountSen: p.amount_sen,
-                            date: p.paid_at ?? p.created_at,
-                            note: p.note,
-                          })
-                        }}
-                        aria-label={t('payments.log.note_edit')}
-                        className="group text-muted-foreground hover:text-foreground focus-visible:ring-ring flex w-full items-start gap-1.5 rounded-sm text-left text-xs focus-visible:ring-2 focus-visible:outline-none"
-                      >
-                        <span className="break-words whitespace-pre-wrap">
-                          {p.note ?? '—'}
-                        </span>
-                        <Pencil
-                          className="mt-px size-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
-                          aria-hidden
-                        />
-                      </button>
+                        thing in this row no other column can reconstruct.
+                        Read here; edited in the payment's panel, which the
+                        row opens. */}
+                    <TableCell className="text-muted-foreground max-w-[18rem] text-xs break-words whitespace-pre-wrap">
+                      {p.note ?? '—'}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatMYR(p.amount_sen)}

@@ -76,11 +76,13 @@ Two details are load-bearing:
 `EditPaymentNoteDialog` is a dialog rather than an editable cell because a note
 is a sentence, and a sentence typed into a table cell either wraps the row open
 or is clipped to a width nobody can write in. One dialog is mounted for the
-page, not one per row, and the row it is editing lives in the page's state — 50
-rows is 50 subscriptions to the same mutation otherwise, and only one can be
-open. The trigger is the **whole cell**: an em dash is too small a target on a
-touch screen, and the pencil shows on hover and focus only, so a page of fifty
-rows does not read as fifty controls.
+page, and the payment it is editing lives in the page's state.
+
+**The note is edited from the payment's panel only.** The Note cell in a row
+was once the trigger — the whole cell a button, a pencil on hover. The owner had
+it removed: the row opens the panel, the panel has the note and its pencil, and
+a second way in from the list was one more control per row. The cell is plain
+text now, and a click on it opens the panel like the rest of the row.
 
 The invoice detail page still *prints* the note read-only under its payment row;
 `invalidateMoney` plus the invoice key means an edit on the log reaches it.
@@ -160,8 +162,8 @@ RM500 on 6 May" should be a link, not a description. The panel reads its
 payment by id (a plain PostgREST read, keyed under `payment-log` so a money
 write refreshes it), so a pasted link works for a row on another page or
 outside the filter. A bank transfer's panel links to its receipt at
-`/payments/receipts?payment=<id>`. The student and invoice links and the note
-cell in a row keep their own behaviour.
+`/payments/receipts?payment=<id>`. The student and invoice links in a row keep
+their own behaviour.
 
 **A student's name and an invoice number open panels too** (`?student=<id>`,
 `?invoice=<id>`), here and on the receipts queue, instead of leaving for their
