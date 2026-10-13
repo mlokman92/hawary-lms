@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+} from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   ArrowDown,
@@ -39,7 +46,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { InvoiceSheet } from '@/features/payments/InvoiceSheet'
 import { ReceiptSheet } from '@/features/payments/ReceiptSheet'
+import { StudentSheet } from '@/features/students/StudentSheet'
 import {
   FLAG_REASON_LABEL,
   useBankTransferReceiptCounts,
@@ -74,8 +83,8 @@ function readSort(raw: string | null): ReceiptSort {
 
 const UUID = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
 
-/** Anything that is not an id reads as "no payment open", not a failed cast. */
-function readPayment(raw: string | null): string | null {
+/** Anything that is not an id reads as "nothing open", not a failed cast. */
+function readId(raw: string | null): string | null {
   return raw && UUID.test(raw) ? raw : null
 }
 
@@ -106,7 +115,9 @@ export function PaymentReceiptsPage() {
 
   const state = readState(params.get('state'))
   const search = params.get('q')?.trim() ?? ''
-  const paymentId = readPayment(params.get('payment'))
+  const paymentId = readId(params.get('payment'))
+  const studentId = readId(params.get('student'))
+  const invoiceId = readId(params.get('invoice'))
   const sort = readSort(params.get('sort'))
 
   // `replace`: a filter is not a place you navigate back through.
@@ -125,6 +136,18 @@ export function PaymentReceiptsPage() {
       ),
     [setParams],
   )
+
+  // A name or an invoice number opens that record in a panel here, not its
+  // page: the question is asked from the middle of this list. Still a real
+  // link, so a modified click opens the page itself in another tab. One panel
+  // at a time — opening one closes whichever was open.
+  const openIn =
+    (key: 'student' | 'invoice', id: string) => (e: MouseEvent) => {
+      e.stopPropagation()
+      if (e.metaKey || e.ctrlKey || e.shiftKey) return
+      e.preventDefault()
+      commit({ payment: null, student: null, invoice: null, [key]: id })
+    }
 
   // The box keeps its own text so typing stays instant; the URL — and so the
   // server — only hears about it once typing settles. Same pattern as the log.
@@ -319,7 +342,9 @@ export function PaymentReceiptsPage() {
                   <TableRow
                     key={p.id}
                     className="cursor-pointer"
-                    onClick={() => commit({ payment: p.id })}
+                    onClick={() =>
+                      commit({ payment: p.id, student: null, invoice: null })
+                    }
                   >
                     {/* Names wrap rather than widen: every text cell here is
                         somebody's name or a course's, and one long one
@@ -342,7 +367,7 @@ export function PaymentReceiptsPage() {
                         <Link
                           to={`/students/${p.student_id}`}
                           className="hover:underline"
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={openIn('student', p.student_id)}
                         >
                           {p.student_full_name ?? t('common.unnamed')}
                         </Link>
@@ -360,7 +385,7 @@ export function PaymentReceiptsPage() {
                         <Link
                           to={`/payments/${p.invoice_id}`}
                           className="font-medium hover:underline"
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={openIn('invoice', p.invoice_id)}
                         >
                           {p.invoice_no}
                         </Link>
@@ -429,7 +454,13 @@ export function PaymentReceiptsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => commit({ payment: p.id })}
+                            onClick={() =>
+                              commit({
+                                payment: p.id,
+                                student: null,
+                                invoice: null,
+                              })
+                            }
                           >
                             {t('common.view')}
                           </Button>
@@ -500,6 +531,15 @@ export function PaymentReceiptsPage() {
           <span className="sr-only">{t('common.back_to_top')}</span>
         </Button>
       ) : null}
+
+      <StudentSheet
+        studentId={studentId}
+        onClose={() => commit({ student: null })}
+      />
+      <InvoiceSheet
+        invoiceId={invoiceId}
+        onClose={() => commit({ invoice: null })}
+      />
 
       <ReceiptSheet
         academyId={activeAcademyId}

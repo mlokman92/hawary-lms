@@ -539,11 +539,11 @@ there and must stay: emails already sent link to the old address, and
 tie-break. It has been through three shapes in a week; this is the one the owner
 settled on (Oct 2026):
 
-- **The three cards are the parts of the LPKC** — summary, report, slides —
-  and they are the page's only filter, each with its count. A checker works
-  through one kind at a time, so the kind is what they pick. **It opens on
-  every kind, with no card pressed** (it opened on the summaries for a day);
-  pressing the pressed card goes back to that. Every row carries its part as a
+- **The cards are All and the three parts of the LPKC** — summary, report,
+  slides — and they are the page's only filter, each with its count. A checker
+  works through one kind at a time, so the kind is what they pick. **It opens
+  on All** (it opened on the summaries for a day); pressing the pressed kind
+  goes back to All. Every row carries its part as a
   filled, coloured badge beside the student's name (sky, violet, pink — colours
   no status uses, so it is not read for the outlined status badge). A row does
   not show the report's title — the student's own wording is read on the

@@ -163,6 +163,18 @@ outside the filter. A bank transfer's panel links to its receipt at
 `/payments/receipts?payment=<id>`. The student and invoice links and the note
 cell in a row keep their own behaviour.
 
+**A student's name and an invoice number open panels too** (`?student=<id>`,
+`?invoice=<id>`), here and on the receipts queue, instead of leaving for their
+pages: the question — whose payment is this, what does the invoice stand at —
+is asked from the middle of a list. `StudentSheet` and `InvoiceSheet` are
+**read-only**; everything that changes either record is on its own page, behind
+the panel's Open button. They are still real links, so a Ctrl/Shift/⌘-click
+opens the page in another tab. One panel at a time: opening one clears the
+other two params. The invoice panel shows the invoice page's own figures (Paid
+is `collectedSen`), so the two cannot disagree. The student's phone number
+copies when pressed (`CopyText`, also on `/students/:id`) — it is the thing
+read off this screen to find a WhatsApp chat.
+
 **Export CSV** reuses `lib/csv.ts`'s `downloadCsv` and writes ISO dates +
 ringgit decimals, because the file's job is reconciliation in a spreadsheet.
 
@@ -446,7 +458,9 @@ than sent to PostgREST as a failed cast.
 The receipt is drawn from a signed URL (`useReceiptPreviewUrl`), keyed on the
 receipt's upload time so a replacement is a new URL, never stale while the panel
 is open and dropped when it closes — the URL lives 60 seconds and the file is
-fetched once. Upload and Replace in the panel are the row's own, through the
+fetched once. Two waits stack up before it is on screen (minting the URL, then
+fetching the file), so the frame shows a skeleton until the image or PDF has
+actually loaded; an empty box for those seconds read as "no receipt". Upload and Replace in the panel are the row's own, through the
 page's one file input. **View on a row opens the panel too**; opening the file
 in a new tab, for its full size, is the View inside the panel.
 

@@ -3,6 +3,7 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import {
   ClipboardCheck,
   FileText,
+  Layers,
   MoreHorizontal,
   NotebookText,
   Presentation,
@@ -55,10 +56,10 @@ import {
  * `/appointments/list` reached: a control that cannot change the result is
  * worse than no control.
  *
- * The three cards are the parts of the LPKC, and they are the page's one
- * filter: a checker works through one kind at a time — the summaries, then the
- * reports — so the kind is what they pick. It opens on every kind, with no card
- * pressed; pressing the pressed card goes back to that.
+ * The cards are the page's one filter: All, then one per part of the LPKC. A
+ * checker works through one kind at a time — the summaries, then the reports —
+ * so the kind is what they pick. It opens on All; pressing the pressed kind
+ * goes back to it.
  *
  * There is no filter by status. The list is sorted by it instead — moderating,
  * pending trainer approval, changes needed, approved — so what needs somebody
@@ -148,11 +149,12 @@ export function ReportsPage() {
 
   const rows = queue.data?.rows ?? []
   const total = queue.data?.total ?? 0
-  const anyAtAll = LPKC_STAGES.some(
-    (p) => countOf(counts, p, hideModerating) > 0,
+  const everyKind = LPKC_STAGES.reduce(
+    (n, p) => n + countOf(counts, p, hideModerating),
+    0,
   )
 
-  /** A card both filters and un-filters: pressing the pressed one clears. */
+  /** A kind both filters and un-filters: pressing the pressed one is All. */
   function toggle(next: LpkcStage) {
     setParams(part === next ? {} : { type: next }, { replace: true })
     setPage(0)
@@ -185,7 +187,18 @@ export function ReportsPage() {
         ) : null}
       </PageHeader>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <FilterStatCard
+          label={t('common.all')}
+          value={everyKind}
+          icon={Layers}
+          tone="info"
+          active={part === 'all'}
+          onClick={() => {
+            setParams({}, { replace: true })
+            setPage(0)
+          }}
+        />
         {LPKC_STAGES.map((p) => (
           <FilterStatCard
             key={p}
@@ -231,7 +244,7 @@ export function ReportsPage() {
             // set the rota would point at a control that is not on their screen
             // and is not theirs to change.
             body={
-              isAdmin && !anyAtAll && !debounced
+              isAdmin && everyKind === 0 && !debounced
                 ? t('report.queue.empty_hint')
                 : undefined
             }

@@ -5,6 +5,7 @@ import { formatMYR, type Enums } from '@hawary/shared'
 import { useAcademy } from '@/lib/academy'
 import { getLang, useT, type TFn, type TKey } from '@/lib/i18n'
 import { fmtDateTime, localeFor, personName } from '@/lib/format'
+import { CopyText } from '@/components/patterns/CopyText'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -388,7 +389,10 @@ export function StudentDetailPage() {
                 year: 'numeric',
               })}
             />
-            <Field label={t('common.phone')} value={student.phone} />
+            <Field
+              label={t('common.phone')}
+              value={student.phone ? <CopyText value={student.phone} /> : null}
+            />
             <Field label={t('common.email')} value={student.email} />
             <Field
               label={t('students.field.organization')}

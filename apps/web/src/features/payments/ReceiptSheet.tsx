@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Flag, MoreHorizontal, Upload } from 'lucide-react'
 import { formatMYR } from '@hawary/shared'
@@ -7,6 +8,7 @@ import { useT } from '@/lib/i18n'
 import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -32,6 +34,56 @@ import {
   type BankTransferRow,
   type useReceiptPicker,
 } from './receipts'
+
+/**
+ * The receipt itself, with something in its place until it has drawn.
+ *
+ * Two waits stack up before a receipt is on screen — the signed URL has to be
+ * minted, then the file fetched — and an empty box for those seconds reads as
+ * "no receipt". `url` is absent during the first; `loaded` is false during the
+ * second. Mounted with the URL as its key, so a replaced receipt starts over.
+ */
+function ReceiptPreview({
+  url,
+  pdf,
+  name,
+}: {
+  url: string | undefined
+  pdf: boolean
+  name: string
+}) {
+  const { t } = useT()
+  const [loaded, setLoaded] = useState(false)
+  return (
+    <div className="bg-muted/40 relative min-h-64 flex-1 overflow-auto rounded-lg border">
+      {loaded ? null : (
+        <div className="absolute inset-0 flex flex-col gap-3 p-4">
+          <Skeleton className="h-5 w-2/5 rounded-md" />
+          <Skeleton className="h-4 w-3/5 rounded-md" />
+          <Skeleton className="min-h-0 flex-1 rounded-md" />
+          <span className="sr-only">{t('common.loading')}</span>
+        </div>
+      )}
+      {!url ? null : pdf ? (
+        <iframe
+          src={url}
+          title={name}
+          onLoad={() => setLoaded(true)}
+          className="h-full w-full"
+        />
+      ) : (
+        <img
+          src={url}
+          alt={name}
+          onLoad={() => setLoaded(true)}
+          // A broken image is its own message; the skeleton must not sit on it.
+          onError={() => setLoaded(true)}
+          className={loaded ? 'w-full' : 'w-full opacity-0'}
+        />
+      )}
+    </div>
+  )
+}
 
 /**
  * One bank transfer and its receipt, beside the queue it was opened from.
@@ -246,23 +298,12 @@ export function ReceiptSheet({
                     </div>
                   )}
                 </div>
-                <div className="bg-muted/40 min-h-0 flex-1 overflow-auto rounded-lg border">
-                  {!preview.data ? null : p.receipt_mime_type ===
-                    'application/pdf' ? (
-                    <iframe
-                      key={preview.data}
-                      src={preview.data}
-                      title={p.receipt_file_name ?? ''}
-                      className="h-full w-full"
-                    />
-                  ) : (
-                    <img
-                      src={preview.data}
-                      alt={p.receipt_file_name ?? ''}
-                      className="w-full"
-                    />
-                  )}
-                </div>
+                <ReceiptPreview
+                  key={preview.data ?? 'pending'}
+                  url={preview.data}
+                  pdf={p.receipt_mime_type === 'application/pdf'}
+                  name={p.receipt_file_name ?? ''}
+                />
               </>
             ) : (
               <div className="flex items-center justify-between gap-3">
