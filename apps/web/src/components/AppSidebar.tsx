@@ -11,6 +11,7 @@ import {
   HandCoins,
   Briefcase,
   IdCard,
+  Landmark,
   LayoutDashboard,
   ListChecks,
   Presentation,
@@ -151,6 +152,8 @@ const adminNav = (t: TFn, isDirector: boolean): NavItem[] => [
         to: '/documents/employment-letters',
         icon: Briefcase,
       },
+      // The one the academy prepares for some students and not others.
+      { title: t('nav.kwsp_letter'), to: '/documents/kwsp-letters', icon: Landmark },
     ],
   },
   { title: t('nav.members'), to: '/members', icon: ShieldCheck },

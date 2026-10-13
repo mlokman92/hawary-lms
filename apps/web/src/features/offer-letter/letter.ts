@@ -41,7 +41,7 @@ export type OfferLetterInput = {
 
 // --- page geometry (pt, A4 portrait) ----------------------------------------
 
-const L = 85 // left text edge
+export const L = 85 // left text edge
 const R = 513.6 // right text edge
 const SIZE = 11
 const LEAD = 19 // 1.5 line spacing
@@ -125,25 +125,26 @@ function letterAddress(address: string | null): string {
 // --- text -------------------------------------------------------------------
 
 type Style = 'normal' | 'bold' | 'italic'
-type Run = string | { text: string; style: Style }
-const b = (text: string): Run => ({ text, style: 'bold' })
+/** `strike` rules the text out, for a form that offers alternatives. */
+export type Run = string | { text: string; style: Style; strike?: boolean }
+export const b = (text: string): Run => ({ text, style: 'bold' })
 
 /**
  * Width as the page will draw it. jsPDF measures with kerning pairs but writes
  * the string without them, so the default measurement runs short and a
  * justified line would overshoot the margin.
  */
-function widthOf(doc: jsPDF, text: string): number {
+export function widthOf(doc: jsPDF, text: string): number {
   return doc.getStringUnitWidth(text, { doKerning: false }) * doc.getFontSize()
 }
 
-function setFont(doc: jsPDF, style: Style, size = SIZE) {
+export function setFont(doc: jsPDF, style: Style, size = SIZE) {
   doc.setFont('helvetica', style)
   doc.setFontSize(size)
   doc.setTextColor(0)
 }
 
-type Piece = { text: string; style: Style; width: number }
+type Piece = { text: string; style: Style; width: number; strike: boolean }
 /** What sits between two spaces. Usually one piece; "Amali" + "." is two. */
 type Word = { pieces: Piece[]; width: number }
 
@@ -153,6 +154,7 @@ function wordsOf(doc: jsPDF, runs: Run[], size: number): Word[] {
   for (const run of runs) {
     const { text, style } =
       typeof run === 'string' ? { text: run, style: 'normal' as Style } : run
+    const strike = typeof run !== 'string' && !!run.strike
     setFont(doc, style, size)
     for (const part of pdfText(text).split(/(\s+)/)) {
       if (!part) continue
@@ -160,7 +162,7 @@ function wordsOf(doc: jsPDF, runs: Run[], size: number): Word[] {
         open = null
         continue
       }
-      const piece = { text: part, style, width: widthOf(doc, part) }
+      const piece = { text: part, style, width: widthOf(doc, part), strike }
       if (open) {
         open.pieces.push(piece)
         open.width += piece.width
@@ -189,7 +191,7 @@ function breakLines(words: Word[], width: number, space: number): Word[][] {
   return lines
 }
 
-type BlockOptions = {
+export type BlockOptions = {
   x?: number
   right?: number
   lead?: number
@@ -197,17 +199,33 @@ type BlockOptions = {
   /** Stretch every line but the last to the right edge. On by default. */
   justify?: boolean
   maxLines?: number
+  /** Rule under every line, as far as its text runs. */
+  underline?: boolean
+}
+
+function rule(doc: jsPDF, from: number, to: number, y: number) {
+  doc.setDrawColor(0)
+  doc.setLineWidth(0.5)
+  doc.line(from, y, to, y)
 }
 
 /**
  * Draw a paragraph of mixed weights from baseline `y`; returns the baseline of
  * its last line, so the caller steps on from where the text actually ended.
  */
-function block(
+export function block(
   doc: jsPDF,
   y: number,
   runs: Run[],
-  { x = L, right = R, lead = LEAD, size = SIZE, justify = true, maxLines }: BlockOptions = {},
+  {
+    x = L,
+    right = R,
+    lead = LEAD,
+    size = SIZE,
+    justify = true,
+    maxLines,
+    underline,
+  }: BlockOptions = {},
 ): number {
   const width = right - x
   setFont(doc, 'normal', size)
@@ -220,15 +238,26 @@ function block(
     const natural = line.reduce((sum, word) => sum + word.width, 0)
     const gaps = line.length - 1
     const gap = justify && !last && gaps > 0 ? (width - natural) / gaps : space
+    const base = y + i * lead
+    const through = base - size * 0.3
     let cursor = x
-    for (const word of line) {
+    line.forEach((word, w) => {
       for (const piece of word.pieces) {
         setFont(doc, piece.style, size)
-        doc.text(piece.text, cursor, y + i * lead)
+        doc.text(piece.text, cursor, base)
+        if (piece.strike) rule(doc, cursor, cursor + piece.width, through)
         cursor += piece.width
       }
+      // A run ruled out is ruled out across its spaces too.
+      if (
+        word.pieces[word.pieces.length - 1]?.strike &&
+        line[w + 1]?.pieces[0]?.strike
+      ) {
+        rule(doc, cursor, cursor + gap, through)
+      }
       cursor += gap
-    }
+    })
+    if (underline) rule(doc, x, cursor - gap, base + size * 0.14)
   })
   return y + Math.max(0, lines.length - 1) * lead
 }
@@ -269,7 +298,7 @@ function rightAligned(doc: jsPDF, y: number, text: string) {
 
 // --- letterhead -------------------------------------------------------------
 
-type Images = { emblem: string; wordmark: string; signature: string }
+export type Images = { emblem: string; wordmark: string; signature: string }
 
 async function dataUrl(url: string): Promise<string> {
   const res = await fetch(url)
@@ -288,7 +317,7 @@ async function dataUrl(url: string): Promise<string> {
  * silently lost its letterhead or its signature is a wrong document, and these
  * three ship with the app, so the only way to fail is to be offline.
  */
-async function loadImages(): Promise<Images> {
+export async function loadImages(): Promise<Images> {
   const [emblem, wordmark, signature] = await Promise.all([
     dataUrl(emblemUrl),
     dataUrl(wordmarkUrl),
@@ -297,7 +326,7 @@ async function loadImages(): Promise<Images> {
   return { emblem, wordmark, signature }
 }
 
-function letterhead(doc: jsPDF, images: Images) {
+export function letterhead(doc: jsPDF, images: Images) {
   // Side by side. The emblem is a JPEG on white; laid over the wordmark's edge
   // it would blank the first letter.
   doc.addImage(images.emblem, 'JPEG', 85.4, 41.6, 72.7, 55.8)
@@ -605,14 +634,14 @@ function pageSix(doc: jsPDF, input: OfferLetterInput) {
 // --- entry points -----------------------------------------------------------
 
 /** `Surat Tawaran - NUR AISYAH.pdf`, or just `Surat Tawaran.pdf` for a blank. */
-function fileName(fullName: string | null): string {
+export function letterFileName(title: string, fullName: string | null): string {
   const name = (fullName ?? '')
     .trim()
     .toUpperCase()
     .replace(/[\\/:*?"<>|]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-  return name ? `Surat Tawaran - ${name}.pdf` : 'Surat Tawaran.pdf'
+  return name ? `${title} - ${name}.pdf` : `${title}.pdf`
 }
 
 /** Building and delivering are separate steps, as in features/payments/pdf.ts. */
@@ -637,7 +666,7 @@ export async function buildOfferLetter(input: OfferLetterInput) {
     letterhead(doc, images)
     draw()
   })
-  return { doc, fileName: fileName(input.fullName) }
+  return { doc, fileName: letterFileName('Surat Tawaran', input.fullName) }
 }
 
 export async function downloadOfferLetter(input: OfferLetterInput) {

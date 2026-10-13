@@ -6,10 +6,9 @@ import { PageHeader } from '@/components/patterns/PageHeader'
 import { Button } from '@/components/ui/button'
 import { DocumentStudentList } from '@/features/documents/DocumentStudentList'
 import {
-  fetchOfferAcceptance,
+  downloadStudentOfferLetter,
   type DocumentStudent,
 } from '@/features/documents/api'
-import { downloadOfferLetter } from '@/features/offer-letter/letter'
 
 /**
  * Every student's offer letter, for an admin to download — and who has signed
@@ -30,18 +29,7 @@ export function OfferLettersPage() {
     setBusy(s.id)
     setError(null)
     try {
-      // The list carries only the date; the signature is read for this click.
-      const signed = s.offerAcceptedAt
-        ? await fetchOfferAcceptance(s.id)
-        : null
-      await downloadOfferLetter({
-        fullName: s.full_name,
-        icNumber: s.ic_number,
-        address: s.personal_address,
-        startDate: s.course?.start_date ?? null,
-        signature: signed?.signature,
-        agreedAt: signed?.accepted_at,
-      })
+      await downloadStudentOfferLetter(s)
     } catch {
       setError(t('sdoc.download_failed'))
     } finally {

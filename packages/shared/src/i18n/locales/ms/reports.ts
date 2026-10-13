@@ -15,8 +15,7 @@ export const reports: ReportsDict = {
 
   // --- the staff queue ------------------------------------------------------
   'report.queue.desc':
-    'Laporan yang dihantar untuk semakan, yang paling lama menunggu di atas.',
-  'report.queue.all_parts': 'Semua',
+    'Laporan yang dihantar untuk semakan, mengikut status, yang paling lama menunggu di atas.',
   'report.queue.search': 'Cari mengikut nama pelajar',
   'report.queue.empty': 'Tiada yang menunggu.',
   'report.queue.empty_hint':

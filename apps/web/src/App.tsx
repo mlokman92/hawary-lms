@@ -81,6 +81,7 @@ import { IncentiveBatchPage } from './pages/IncentiveBatchPage'
 import { OfferLettersPage } from './pages/OfferLettersPage'
 import { IcCopiesPage } from './pages/IcCopiesPage'
 import { EmploymentLettersPage } from './pages/EmploymentLettersPage'
+import { KwspLettersPage } from './pages/KwspLettersPage'
 
 function LegacyReportRedirect() {
   const { id } = useParams<{ id: string }>()
@@ -313,6 +314,10 @@ export default function App() {
                       <Route
                         path="/documents/employment-letters"
                         element={<EmploymentLettersPage />}
+                      />
+                      <Route
+                        path="/documents/kwsp-letters"
+                        element={<KwspLettersPage />}
                       />
                       {/* The roster RPC is admin-only too. No /members/:id: a
                           member's page *is* their instructor or student record,

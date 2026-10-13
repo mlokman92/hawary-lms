@@ -223,7 +223,7 @@ function MarkingList({
 
 export function TrainerDashboard() {
   const { t, tn, lang } = useT()
-  const { activeAcademyId } = useAcademy()
+  const { activeAcademyId, active } = useAcademy()
   const locale = localeFor(lang)
   const { data: tz = DEFAULT_TZ } = useAcademyTimezone(activeAcademyId)
 
@@ -246,8 +246,14 @@ export function TrainerDashboard() {
   const gradable = useMyGradableCourses(activeAcademyId, false)
   // Reports sitting on this trainer's desk. Narrowed by instructor for the same
   // reason the session queries are: RLS already limits a trainer to their own,
-  // and this makes the card answer "mine" for an admin who also checks.
-  const reports = useMyReportQueue(activeAcademyId, instructorId, MARKING_LIMIT)
+  // and this makes the card answer "mine" for an admin who also checks. A
+  // trainer is not shown what is still being moderated, the same as on /lpkc.
+  const reports = useMyReportQueue(
+    activeAcademyId,
+    instructorId,
+    MARKING_LIMIT,
+    active?.role === 'trainer',
+  )
 
   const [openAppointment, setOpenAppointment] = useState<AppointmentRow | null>(
     null,

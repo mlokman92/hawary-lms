@@ -2715,6 +2715,39 @@ export type Database = {
           },
         ]
       }
+      student_kwsp_letters: {
+        Row: {
+          academy_id: string
+          created_at: string
+          student_id: string
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          student_id: string
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_kwsp_letters_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_kwsp_letters_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_offer_acceptances: {
         Row: {
           academy_id: string
@@ -3045,6 +3078,7 @@ export type Database = {
         Returns: Json
       }
       create_invitation: { Args: { _student_id: string }; Returns: Json }
+      create_kwsp_letters: { Args: { _student_ids: string[] }; Returns: number }
       delete_announcement: { Args: { _id: string }; Returns: undefined }
       delete_incentive_batch: { Args: { _batch: string }; Returns: undefined }
       delete_my_account: { Args: never; Returns: undefined }
@@ -3428,6 +3462,7 @@ export type Database = {
         Args: { _academy: string }
         Returns: undefined
       }
+      remove_kwsp_letters: { Args: { _student_ids: string[] }; Returns: number }
       remove_submission_file: { Args: { _file_id: string }; Returns: undefined }
       remove_toyyibpay_credentials: {
         Args: { _academy: string }

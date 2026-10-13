@@ -48,7 +48,8 @@ row to the table in `CLAUDE.md` if it is a new area.
   the token flow that survives beside it, and how names cross the gap.
 - [student-instructor-roles.md](student-instructor-roles.md) — the two role
   axes and the attempt/submission write guards.
-- [documents.md](documents.md) — the offer letter (drawn on demand from the
+- [documents.md](documents.md) — the KWSP letter (created per student, admin
+  only); the offer letter (drawn on demand from the
   record; the student's signature and agreement to its terms, and what they
   need before they may download theirs), and the IC copy and the employment
   letter (a private bucket and one Edge Function each, admin-or-own).

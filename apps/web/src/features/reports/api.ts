@@ -266,6 +266,18 @@ export type ReportFilters = {
   status: ReportStage | 'all'
   /** Which part of the LPKC. Left out, or 'all', is every part. */
   part?: LpkcStage | 'all'
+  /**
+   * Leave out the reports still being moderated. What `/lpkc` lists for a
+   * trainer, whose turn those have not reached — a choice of what to show, not
+   * a boundary: the rows are theirs under RLS either way.
+   */
+  hideModerating?: boolean
+  /**
+   * 'waiting' (the default): longest since it was sent first. 'stage': by
+   * stage — moderating, pending trainer approval, changes needed, approved —
+   * and within one, longest since anything changed first.
+   */
+  order?: 'waiting' | 'stage'
   /** Matched against the student's name, through an inner embed. */
   search: string
 }
@@ -275,7 +287,17 @@ export type ReportFilters = {
 // ---------------------------------------------------------------------------
 
 const queueKey = (a: string | null, f: ReportFilters, page: number) =>
-  ['reports', a, 'queue', f.status, f.part ?? 'all', f.search, page] as const
+  [
+    'reports',
+    a,
+    'queue',
+    f.status,
+    f.part ?? 'all',
+    f.hideModerating ?? false,
+    f.order ?? 'waiting',
+    f.search,
+    page,
+  ] as const
 const countsKey = (a: string | null) => ['reports', a, 'counts'] as const
 const partCountsKey = (a: string | null) =>
   ['reports', a, 'part-counts'] as const
@@ -351,12 +373,23 @@ export function useReportQueue(
       if (filters.part && filters.part !== 'all') {
         q = q.eq('lpkc_stage', filters.part)
       }
+      if (filters.hideModerating) {
+        q = q.filter('report_stage', 'neq', 'moderating')
+      }
       if (search) q = q.ilike('students.full_name', `%${search}%`)
 
+      // Oldest first either way: a queue is answered from the top. By stage,
+      // `report_stage_rank` is a computed column like `report_stage`, so the
+      // server sorts and pages on it; `updated_at` moves whenever the report
+      // itself does (a send, a reply, a decision, a handover).
+      q =
+        filters.order === 'stage'
+          ? q
+              .order('report_stage_rank', { ascending: true })
+              .order('updated_at', { ascending: true })
+          : q.order('submitted_at', { ascending: true })
+
       const { data, error, count } = await q
-        // Oldest first: a queue is answered from the top, and the report that
-        // has waited longest is the one that has waited longest.
-        .order('submitted_at', { ascending: true })
         .order('id', { ascending: true })
         .range(from, from + REPORT_PAGE_SIZE - 1)
 
@@ -448,12 +481,21 @@ export function useMyReportQueue(
   academyId: string | null,
   instructorId: string | null,
   limit = 5,
+  /** Leave out what is still being moderated — see `ReportFilters`. */
+  hideModerating = false,
 ) {
   return useQuery({
-    queryKey: ['reports', academyId, 'mine-to-check', instructorId, limit] as const,
+    queryKey: [
+      'reports',
+      academyId,
+      'mine-to-check',
+      instructorId,
+      limit,
+      hideModerating,
+    ] as const,
     enabled: !!academyId && !!instructorId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('report_submissions')
         .select(
           `*,
@@ -465,6 +507,9 @@ export function useMyReportQueue(
         .eq('academy_id', academyId!)
         .eq('instructor_id', instructorId!)
         .in('status', AWAITING_CHECKER)
+      if (hideModerating) q = q.filter('report_stage', 'neq', 'moderating')
+
+      const { data, error } = await q
         .order('submitted_at', { ascending: true })
         .order('id', { ascending: true })
         .limit(limit)

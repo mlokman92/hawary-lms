@@ -35,6 +35,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { BankAccountCard } from '@/features/bank/BankAccountCard'
+import { StudentDocumentsCard } from '@/features/documents/StudentDocumentsCard'
 import { StudentFormDialog } from '@/features/students/StudentFormDialog'
 import { EnrollCourseDialog } from '@/features/students/EnrollCourseDialog'
 import { LinkAccountDialog } from '@/features/invitations/LinkAccountDialog'
@@ -497,6 +498,10 @@ export function StudentDetailPage() {
           ) : null}
         </CardContent>
       </Card>
+
+      {/* Documents — admin only, as /documents is: the copies and the
+          signature are `app.is_admin OR app.owns_student`. */}
+      {isAdmin ? <StudentDocumentsCard studentId={student.id} /> : null}
 
       {/* 4. Billing — admin only. Not just the three totals: every row of
           the list beneath them carries an invoice number, a total and an

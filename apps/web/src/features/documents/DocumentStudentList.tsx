@@ -1,10 +1,12 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Search } from 'lucide-react'
 import { useAcademy } from '@/lib/academy'
 import { fmtDay, personName } from '@/lib/format'
 import { useT } from '@/lib/i18n'
+import { cn } from '@/lib/utils'
 import { EmptyState } from '@/components/patterns/EmptyState'
 import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -24,7 +26,7 @@ import {
 import { useDocumentStudents, type DocumentStudent } from './api'
 
 /**
- * The roster both Documents pages are: every student, narrowed by search and
+ * The roster every Documents page is: every student, narrowed by search and
  * by course, with one cell at the end that is the page's own business — the
  * letter's download, or the IC copy.
  *
@@ -36,10 +38,16 @@ export function DocumentStudentList({
   lastCell,
   statusFilter,
   newestCourseFirst,
+  selection,
+  actions,
+  only,
+  emptyLabel,
+  className,
+  tableClassName,
 }: {
-  /** Header of the trailing column. */
-  lastHead: ReactNode
-  lastCell: (student: DocumentStudent) => ReactNode
+  /** Header of the trailing column. Left out, the roster has none. */
+  lastHead?: ReactNode
+  lastCell?: (student: DocumentStudent) => ReactNode
   /**
    * A third narrowing, for a page whose document has a state worth filtering
    * on. `allLabel` is the option that filters nothing; `matches` is asked only
@@ -58,14 +66,36 @@ export function DocumentStudentList({
    * student on a course with no start date goes last.
    */
   newestCourseFirst?: boolean
+  /**
+   * A checkbox on every row, for a page that acts on many students at once.
+   * The selection never holds a student who is not in view: narrowing the
+   * roster drops whoever it hides, so nothing is acted on out of sight.
+   */
+  selection?: {
+    selected: ReadonlySet<string>
+    onChange: (next: Set<string>) => void
+  }
+  /** The page's own buttons, at the end of the filter row. */
+  actions?: ReactNode
+  /**
+   * Who the roster is about at all, before any filter — the students who have
+   * a KWSP letter, say. The others are not offered, counted or searched. Pass
+   * a stable function: it is a dependency of the rows.
+   */
+  only?: (student: DocumentStudent) => boolean
+  /** What to say when `only` leaves nobody. */
+  emptyLabel?: string
+  className?: string
+  /** On the table's frame — a height and a scroll, inside a dialog. */
+  tableClassName?: string
 }) {
   const { t } = useT()
   const { activeAcademyId } = useAcademy()
-  const {
-    data: students,
-    isLoading,
-    error,
-  } = useDocumentStudents(activeAcademyId)
+  const { data, isLoading, error } = useDocumentStudents(activeAcademyId)
+  const students = useMemo(
+    () => (only ? data?.filter(only) : data),
+    [data, only],
+  )
   const [search, setSearch] = useState('')
   const [course, setCourse] = useState('all')
   const [status, setStatus] = useState(statusFilter?.defaultValue ?? 'all')
@@ -101,8 +131,19 @@ export function DocumentStudentList({
     })
   }, [students, search, course, status, statusFilter, newestCourseFirst])
 
+  const selected = selection?.selected
+  const onSelect = selection?.onChange
+  useEffect(() => {
+    if (!selected || !onSelect) return
+    const inView = new Set(rows.map((s) => s.id))
+    const kept = [...selected].filter((id) => inView.has(id))
+    if (kept.length !== selected.size) onSelect(new Set(kept))
+  }, [rows, selected, onSelect])
+  const allSelected =
+    !!selected && rows.length > 0 && rows.every((s) => selected.has(s.id))
+
   return (
-    <div className="mt-6">
+    <div className={cn('mt-6', className)}>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="relative min-w-56 flex-1">
           <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
@@ -141,6 +182,7 @@ export function DocumentStudentList({
             </SelectContent>
           </Select>
         ) : null}
+        {actions}
       </div>
 
       {isLoading ? (
@@ -152,24 +194,55 @@ export function DocumentStudentList({
           title={
             students && students.length > 0
               ? t('sdoc.empty.no_match')
-              : t('sdoc.empty.none')
+              : (emptyLabel ?? t('sdoc.empty.none'))
           }
         />
       ) : (
-        <div className="rounded-xl border">
+        <div className={cn('rounded-xl border', tableClassName)}>
           <Table>
             <TableHeader>
               <TableRow>
+                {selected && onSelect ? (
+                  <TableHead className="w-8">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={() =>
+                        onSelect(
+                          new Set(allSelected ? [] : rows.map((s) => s.id)),
+                        )
+                      }
+                      aria-label={t('sdoc.select_all')}
+                    />
+                  </TableHead>
+                ) : null}
                 <TableHead>{t('common.student')}</TableHead>
                 <TableHead>{t('sdoc.col.ic')}</TableHead>
                 <TableHead>{t('common.course')}</TableHead>
                 <TableHead>{t('sdoc.col.start_date')}</TableHead>
-                <TableHead className="text-right">{lastHead}</TableHead>
+                {lastCell ? (
+                  <TableHead className="text-right">{lastHead}</TableHead>
+                ) : null}
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((s) => (
                 <TableRow key={s.id}>
+                  {selected && onSelect ? (
+                    <TableCell>
+                      <Checkbox
+                        checked={selected.has(s.id)}
+                        onCheckedChange={(on) => {
+                          const next = new Set(selected)
+                          if (on === true) next.add(s.id)
+                          else next.delete(s.id)
+                          onSelect(next)
+                        }}
+                        aria-label={
+                          personName(s.full_name, s.email) ?? s.student_no
+                        }
+                      />
+                    </TableCell>
+                  ) : null}
                   <TableCell>
                     <div className="font-medium">
                       {personName(s.full_name, s.email) ?? t('common.unnamed')}
@@ -183,7 +256,9 @@ export function DocumentStudentList({
                   </TableCell>
                   <TableCell>{s.course?.title ?? '—'}</TableCell>
                   <TableCell>{fmtDay(s.course?.start_date)}</TableCell>
-                  <TableCell className="text-right">{lastCell(s)}</TableCell>
+                  {lastCell ? (
+                    <TableCell className="text-right">{lastCell(s)}</TableCell>
+                  ) : null}
                 </TableRow>
               ))}
             </TableBody>

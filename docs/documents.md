@@ -1,15 +1,18 @@
-# Documents — the offer letter, the IC copy and the employment letter
+# Documents — the offer letter, the IC copy, the employment letter and the KWSP letter
 
-One parent in both rails, **Documents**, over three pages: the **offer letter**
-(surat tawaran) the academy issues to a student, and the **IC copy** (salinan
-kad pengenalan) and the **employment letter** (Surat Pengesahan Tempoh Bekerja)
-it collects from one. Web only for now; the mobile apps come later.
+One parent in both rails, **Documents**: the **offer letter** (surat tawaran)
+the academy issues to a student, the **IC copy** (salinan kad pengenalan) and
+the **employment letter** (Surat Pengesahan Tempoh Bekerja) it collects from
+one, and — on the staff rail only — the **KWSP letter** (Surat Pengesahan
+Pendaftaran Pelajar) it prepares for some. Web only for now; the mobile apps
+come later.
 
 | | staff (admin only) | student |
 | --- | --- | --- |
 | offer letter | `/documents/offer-letters` — every student, who has signed, download any | `/learn/documents/offer-letter` — sign, agree, download their own |
 | IC copy | `/documents/ic-copies` — every student, view the copy | `/learn/documents/ic-copy` — upload, replace, view |
 | employment letter | `/documents/employment-letters` — as the IC copy | `/learn/documents/employment-letter` — as the IC copy |
+| KWSP letter | `/documents/kwsp-letters` — who has one, download; create for many in a dialog | — the student never sees it |
 
 `/documents` and `/learn/documents` redirect to the letter: the parent is a
 heading in the rail, not a page. The staff pages are one roster
@@ -24,6 +27,18 @@ one click away; the choice is not remembered between visits. The two uploaded
 documents also list the newest course first (`newestCourseFirst`: latest
 `start_date` first, no start date last, names alphabetical within a course); the
 offer letter stays alphabetical.
+
+**One student's row is also on `/students/:id`**, as a *Documents* card
+(`features/documents/StudentDocumentsCard.tsx`) under the enrolment: the
+documents, the date each was signed, uploaded or created, and the roster's own
+actions — *Download* for a letter, *View* for a file that is there, and
+*Create* for a KWSP letter the student does not have yet. It is the
+roster's read narrowed to one id (`useStudentDocuments`), keyed under the
+roster's so one invalidation refreshes both, and it is shown to an admin only,
+for the reason the pages are. Two differences from the roster: an archived
+student still has a card, and the letter's download reads the row again first —
+the profile and the course are edited on that same page, and neither edit
+invalidates this read.
 
 A student's **course** here is their one enrolment that is not cancelled —
 `enrollments_one_course_per_student` allows exactly one — whatever state it is
@@ -238,7 +253,105 @@ second branch in the function and a button on the staff page.
 Deleting a student takes the row with it; the object stays in the bucket,
 orphaned, as a deleted payment's receipt does. Nothing sweeps either yet.
 
+## The KWSP letter
+
+Surat Pengesahan Pendaftaran Pelajar: the academy's confirmation to KWSP that
+somebody is its student, which a student paying through a KWSP withdrawal has to
+hand in. **Not every student has one**, and it is **the academy's alone** — it
+is created, downloaded, printed, signed and handed over by an admin. There is no
+learner page and the student cannot read the row.
+
+### Created, then drawn
+
+Two separate things:
+
+- **Created** is a row in `student_kwsp_letters` (`student_id` primary key,
+  `academy_id`, `created_at`) — the fact that this student has one, and since
+  when. Migrations `20261013160000_student_kwsp_letters.sql` and
+  `20261013160100_remove_kwsp_letters.sql`.
+- **Drawn** is `features/kwsp-letter/letter.ts`, on every download, from the
+  record as it reads that day. Nothing of the letter is stored, as with the
+  offer letter, and it borrows that letter's letterhead, footer and text
+  drawing (`block`, which learned to rule text out and to underline for this).
+
+Creating does not download and downloading does not create: a letter can only
+be downloaded for a student who has the row.
+
+**The page lists only the students who have one.** `/documents/kwsp-letters`
+is the roster narrowed to them (`DocumentStudentList`'s `only`), with search,
+the course filter and a checkbox on every row (`selection`). Ticking rows
+brings up *Download (n)* — one file, a letter to a page — and *Remove (n)*
+behind `⋯`. A student without a letter is not on the page at all; there is no
+"not created" row and no status filter.
+
+**Where it is created.** For one student, the *Create* button on their
+Documents card on `/students/:id`. For many, the page's *Create* button opens
+a dialog (`features/documents/KwspCreateDialog.tsx`): the same roster, turned
+round to everyone who has **no** letter, with its own search and course filter,
+so a course and *select all* make a course's worth one click, and the button
+says how many it will create.
+
+**A selection never holds a student who is not in view**, on the page or in
+the dialog: narrowing the roster drops whoever it hides, so nothing is created
+or removed out of sight.
+
+### Who may do what
+
+- **Read**: `app.is_admin(academy_id)` and nothing else. Narrower than the IC
+  copy on purpose — not the student, and not a trainer.
+- **Written** only by two SECURITY DEFINER RPCs; clients have no DML.
+  `create_kwsp_letters(_student_ids uuid[])` wants every id to be a live
+  student of an academy the caller administers, or it writes nothing — a partial
+  bulk would leave the admin guessing which rows took. A student who already has
+  one is passed over, so an existing date does not move.
+  `remove_kwsp_letters(_student_ids uuid[])` takes rows back; it exists because
+  a bulk create is one click and needs an undo, and it loses nothing but the
+  date.
+
+### What the letter says
+
+One A4 page. Four values come from the record; everything else is the form.
+
+| on the letter | from |
+| --- | --- |
+| (a) Nama Pelajar | `students.full_name`, upper-cased |
+| (b) No.Kad Pengenalan | `students.ic_number`, dashes restored |
+| (c) No.Pendaftaran/Matrix Pelajar | the IC number again, as on the academy's form — **not** `student_no` |
+| (g) the two dates | `courses.start_date` *sehingga* `courses.end_date` of the student's course |
+| (i) Tahun Pengajian Semasa | the year of the start date |
+
+**Fixed text, as in the offer letter and for the same reason**: the programme
+(*Pengajaran Prasekolah*, *Tahap 4*, `P851-002-4:2025`), the institution's
+registration `PD6238`, *6 Bulan*, the fee `RM 2,500.00`, and the payee. None
+follows `price_sen` or the course's length. A second programme needs its own
+letter.
+
+**The payee line is the form's, and it does not match the offer letter**: this
+letter says `5515 9112 8510`, *Maybank Berhad*; the offer letter says
+`5511 9112 8510`, *Maybank Islamic Berhad*. Each prints what the document it
+was built from says. One of the two is wrong and only the academy knows which —
+it is one string in `PAYEE`.
+
+**The signature and the date are left blank**, to be given by hand with the
+academy's stamp, as on the form supplied. The offer letter's signature picture
+is not laid on it.
+
+**What was changed from the supplied form:** four misspellings in the running
+text — `diddaftarkan`, `insitusi` (three times), `pembiayaaan`,
+`peruntukkan` — and the letterhead and footer, which are the offer letter's
+(the form's own footer was black and carried a *Dimiliki oleh* line). The
+labels of the lettered rows are left exactly as the form has them, including
+*Dokument* and *Semesta*, and so are the alternatives the form rules out in
+rows (k) and (l).
+
+**A long name** wraps to a second line and the signature line gives up that
+much room, never the footer's.
+
 ## Not done
+
+- The KWSP letter has no learner page and no mobile page, on purpose.
+- The KWSP letter records that it was created, not who created it, nor each
+  download.
 
 - Mobile. The Student app has neither page.
 - No record of who downloaded a letter, or when.

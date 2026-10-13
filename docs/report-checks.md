@@ -535,28 +535,43 @@ there and must stay: emails already sent link to the old address, and
 `send-report-notice` still writes it. The learner side is unchanged at
 `/learn/reports`.
 
-**`/lpkc`** (staff) — the queue, oldest first, paged 50 server-side with `id`
-as the final tie-break. Three `FilterStatCard`s — being checked, changes needed,
-approved — because a tile is a sum over a set and pressing it should show that
-set. There is no "Waiting" tile: nothing is ever in that state now.
+**`/lpkc`** (staff) — the queue, paged 50 server-side with `id` as the final
+tie-break. It has been through three shapes in a week; this is the one the owner
+settled on (Oct 2026):
 
-**It opens on the reader's own stage** (Oct 2026, `deskStage`): "Moderating"
-for an admin — Directors and the system admin are admins — and "Pending trainer
-approval" for a trainer, with that tile pressed. Pressing it again shows
-everything. The sidebar badge counts the same stage, where it used to count
-everything waiting on the checking side. Both numbers come through RLS, so a
-trainer's is of the reports assigned to them and an admin's is of the academy's.
-The mobile Academy app's tab badge still counts everything waiting.
+- **The three cards are the parts of the LPKC** — summary, report, slides —
+  and they are the page's only filter, each with its count. A checker works
+  through one kind at a time, so the kind is what they pick. **It opens on
+  every kind, with no card pressed** (it opened on the summaries for a day);
+  pressing the pressed card goes back to that. Every row carries its part as a
+  filled, coloured badge beside the student's name (sky, violet, pink — colours
+  no status uses, so it is not read for the outlined status badge). A row does
+  not show the report's title — the student's own wording is read on the
+  thread.
+- **No filter by status; the list is sorted by it instead**: moderating,
+  pending trainer approval, changes needed, approved — what needs somebody at
+  the top, what is finished at the bottom. Within a status the oldest
+  `updated_at` comes first, and that is the date the row shows.
+  `public.report_stage_rank` is a computed column like `report_stage`, so the
+  server sorts and pages on it.
+- **A trainer is not shown what is still being moderated** — here or on their
+  dashboard card — and the card counts leave it out for them. Their three
+  statuses are pending trainer approval, changes needed and approved. This is
+  what the screens list, **not a boundary**: the report is assigned from the
+  moment it is sent and is the trainer's under RLS, so the thread still opens
+  from a direct link, and the mobile Academy app still lists it. Making it a
+  boundary would mean a stage test inside the `reports` SELECT policy.
+- **The part is in the address** (`?type=report`; absent means every kind).
+  Opening the page from the menu therefore lands on every kind, while a row
+  hands its query string to the thread page as
+  `state.back`, so Back returns to the kind being worked through.
+- **The counts** are `report_part_counts`, one grid of part × stage, summed per
+  card.
 
-**A button per part of the LPKC, above the tiles** (Oct 2026): All · LPKC
-summary · LPKC report · LPKC slides. A checker works through one kind at a time,
-and the owner asked for that to be one press and not a menu — so they are
-buttons that are always on screen, each with its count. The part and the stage
-count within each other (`report_part_counts`, one grid of part × stage): a
-tile is of the part that is picked, a part is of the tile that is pressed, so
-neither number can disagree with the list under it. The part is kept in
-`sessionStorage` (`hawary.lpkc.part`) so it survives opening a report and
-coming back; the stage is not, and falls back to the reader's own each time.
+The sidebar badge is separate and unchanged: it counts the reader's own stage
+(`deskStage`) — moderating for an admin, pending trainer approval for a trainer
+— across every part, through RLS. The mobile Academy app's tab badge and queue
+are as they were (everything waiting, longest since sent first).
 
 There is **no instructor filter**, and that is not an omission: RLS already
 narrows a trainer to their own reports, so a picker could not change the result

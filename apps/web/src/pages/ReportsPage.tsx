@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import {
-  CheckCircle2,
   ClipboardCheck,
-  Eye,
-  FileWarning,
+  FileText,
   MoreHorizontal,
-  UserCheck,
+  NotebookText,
+  Presentation,
   Users,
+  type LucideIcon,
 } from 'lucide-react'
 import { useAcademy } from '@/lib/academy'
 import { useT } from '@/lib/i18n'
@@ -36,7 +36,6 @@ import {
   LPKC_STAGE_LABEL,
   REPORT_PAGE_SIZE,
   REPORT_STATUS,
-  deskStage,
   stageOf,
   useReportPartCounts,
   useReportQueue,
@@ -56,65 +55,61 @@ import {
  * `/appointments/list` reached: a control that cannot change the result is
  * worse than no control.
  *
- * Oldest first, which is the only order a queue has. The four tiles are a sum
- * over a set, so pressing one shows that set — the `/payments` rule. There is
- * no "Waiting" tile: a report is "moderating" from the moment it is sent, and
- * "pending trainer approval" once a system admin has added to it.
+ * The three cards are the parts of the LPKC, and they are the page's one
+ * filter: a checker works through one kind at a time — the summaries, then the
+ * reports — so the kind is what they pick. It opens on every kind, with no card
+ * pressed; pressing the pressed card goes back to that.
  *
- * It opens on the reader's own stage — "moderating" for an admin, "pending
- * trainer approval" for a trainer — because that is the pile they came to work
- * through. Pressing the pressed tile still clears it to everything.
+ * There is no filter by status. The list is sorted by it instead — moderating,
+ * pending trainer approval, changes needed, approved — so what needs somebody
+ * is at the top and what is finished sinks, and within a status the report
+ * that has gone longest without anything happening comes first.
  *
- * Above the tiles, one button per part of the LPKC. A checker works through one
- * kind at a time — the summaries, then the reports — so the part is a single
- * press, always on screen, and not a menu to open. The two filters count
- * within each other: a tile is of the part that is picked, a part is of the
- * tile that is pressed.
+ * A trainer is not shown a report that is still being moderated: it has not
+ * reached them yet, and the three statuses they act on are the ones they see.
+ * That is this page's choice of what to list, not a boundary — the report is
+ * theirs under RLS from the moment it is sent.
  */
 
-const TILES: {
-  status: ReportStage
-  icon: typeof Eye
-}[] = [
-  { status: 'moderating', icon: Eye },
-  { status: 'pending_approval', icon: UserCheck },
-  { status: 'changes_requested', icon: FileWarning },
-  { status: 'approved', icon: CheckCircle2 },
-]
-
-type Part = LpkcStage | 'all'
-const PARTS: Part[] = ['all', ...LPKC_STAGES]
-
-/**
- * The part somebody is working through outlives the trip into a report and
- * back — picking it again after every one would undo the point of the button.
- * The session only: it is where a person was, not a setting.
- */
-const PART_KEY = 'hawary.lpkc.part'
-
-function readPart(): Part {
-  try {
-    const raw = sessionStorage.getItem(PART_KEY)
-    if (PARTS.includes(raw as Part)) return raw as Part
-  } catch {
-    // Private mode. The buttons still work for this visit.
-  }
-  return 'all'
+const PART_ICON: Record<LpkcStage, LucideIcon> = {
+  summary: NotebookText,
+  report: FileText,
+  slide: Presentation,
 }
 
-/** Reports at `stage` ('all': any) within `part` ('all': any). */
+/**
+ * One colour per part, for the badge on each row. Filled, where the status
+ * badge beside it is an outline, and in colours no status uses (those are
+ * blue, amber, red and green) — so the two badges cannot be read for each
+ * other. Both halves of every pair are spelled out for Tailwind's scanner.
+ */
+const PART_BADGE: Record<LpkcStage, string> = {
+  summary:
+    'border-transparent bg-sky-100 text-sky-800 dark:bg-sky-500/20 dark:text-sky-300',
+  report:
+    'border-transparent bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-300',
+  slide:
+    'border-transparent bg-pink-100 text-pink-800 dark:bg-pink-500/20 dark:text-pink-300',
+}
+
+type Part = LpkcStage | 'all'
+
+/** `?type=` — absent means every kind, which is what the page opens on. */
+function partOf(raw: string | null): Part {
+  return LPKC_STAGES.includes(raw as LpkcStage) ? (raw as LpkcStage) : 'all'
+}
+
+/** Reports of one part that this reader is shown. */
 function countOf(
   counts: ReportPartCounts | undefined,
-  part: Part,
-  stage: ReportStage | 'all',
+  part: LpkcStage,
+  hideModerating: boolean,
 ): number {
   if (!counts) return 0
   let n = 0
-  for (const p of LPKC_STAGES) {
-    if (part !== 'all' && part !== p) continue
-    for (const s of Object.keys(counts[p]) as ReportStage[]) {
-      if (stage === 'all' || stage === s) n += counts[p][s]
-    }
+  for (const s of Object.keys(counts[part]) as ReportStage[]) {
+    if (hideModerating && s === 'moderating') continue
+    n += counts[part][s]
   }
   return n
 }
@@ -122,21 +117,30 @@ function countOf(
 export function ReportsPage() {
   const { t } = useT()
   const { activeAcademyId, active } = useAcademy()
+  const location = useLocation()
   const isAdmin = active?.role === 'admin'
+  const hideModerating = active?.role === 'trainer'
 
-  // Null until a tile is pressed: the opening filter follows the role, and the
-  // role can arrive a render after this page does.
-  const [picked, setPicked] = useState<ReportStage | 'all' | null>(null)
-  const status = picked ?? deskStage(active?.role)
-  const [part, setPartState] = useState<Part>(readPart)
+  // In the address, not in state: opening the page from the menu lands on
+  // every kind, while Back from a report returns to the kind being worked
+  // through (the row passes this page's query string along as `state.back`).
+  const [params, setParams] = useSearchParams()
+  const part = partOf(params.get('type'))
+
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
   const [poolOpen, setPoolOpen] = useState(false)
 
   const debounced = useDebounced(search)
   const filters = useMemo<ReportFilters>(
-    () => ({ status, part, search: debounced }),
-    [status, part, debounced],
+    () => ({
+      status: 'all',
+      part,
+      search: debounced,
+      hideModerating,
+      order: 'stage',
+    }),
+    [part, debounced, hideModerating],
   )
 
   const queue = useReportQueue(activeAcademyId, filters, page)
@@ -144,21 +148,14 @@ export function ReportsPage() {
 
   const rows = queue.data?.rows ?? []
   const total = queue.data?.total ?? 0
+  const anyAtAll = LPKC_STAGES.some(
+    (p) => countOf(counts, p, hideModerating) > 0,
+  )
 
-  /** A tile both filters and un-filters: pressing the pressed one clears. */
-  function toggle(next: ReportStage) {
-    setPicked(status === next ? 'all' : next)
+  /** A card both filters and un-filters: pressing the pressed one clears. */
+  function toggle(next: LpkcStage) {
+    setParams(part === next ? {} : { type: next }, { replace: true })
     setPage(0)
-  }
-
-  function setPart(next: Part) {
-    setPartState(next)
-    setPage(0)
-    try {
-      sessionStorage.setItem(PART_KEY, next)
-    } catch {
-      // Private mode / quota. The choice still holds for this visit.
-    }
   }
 
   return (
@@ -188,34 +185,16 @@ export function ReportsPage() {
         ) : null}
       </PageHeader>
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        {PARTS.map((p) => (
-          <Button
-            key={p}
-            type="button"
-            size="sm"
-            variant={part === p ? 'default' : 'outline'}
-            aria-pressed={part === p}
-            onClick={() => setPart(p)}
-          >
-            {p === 'all' ? t('report.queue.all_parts') : t(LPKC_STAGE_LABEL[p])}
-            <span className="tabular-nums opacity-70">
-              {countOf(counts, p, status)}
-            </span>
-          </Button>
-        ))}
-      </div>
-
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {TILES.map(({ status: s, icon }) => (
+      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        {LPKC_STAGES.map((p) => (
           <FilterStatCard
-            key={s}
-            label={t(REPORT_STATUS[s].labelKey)}
-            value={countOf(counts, part, s)}
-            icon={icon}
-            tone={REPORT_STATUS[s].tone}
-            active={status === s}
-            onClick={() => toggle(s)}
+            key={p}
+            label={t(LPKC_STAGE_LABEL[p])}
+            value={countOf(counts, p, hideModerating)}
+            icon={PART_ICON[p]}
+            tone="info"
+            active={part === p}
+            onClick={() => toggle(p)}
           />
         ))}
       </div>
@@ -240,20 +219,19 @@ export function ReportsPage() {
         ) : rows.length === 0 ? (
           <EmptyState
             icon={ClipboardCheck}
-            // The page opens filtered, so an empty opening pile is "nothing
-            // waiting", not a search that found nothing.
+            // A kind with nothing in it is "nothing waiting", not a search
+            // that found nothing.
             title={
-              (status === 'all' || picked === null) &&
-              part === 'all' &&
-              !debounced
-                ? t('report.queue.empty')
-                : t('report.queue.empty_filtered')
+              debounced
+                ? t('report.queue.empty_filtered')
+                : t('report.queue.empty')
             }
-            // The hint names the ⋯ menu, which only an admin is drawn. Telling
-            // a trainer to go and set the rota would point at a control that is
-            // not on their screen and is not theirs to change.
+            // Only when there is nothing of any kind — and the hint names the ⋯
+            // menu, which only an admin is drawn. Telling a trainer to go and
+            // set the rota would point at a control that is not on their screen
+            // and is not theirs to change.
             body={
-              isAdmin && status === 'all' && part === 'all' && !debounced
+              isAdmin && !anyAtAll && !debounced
                 ? t('report.queue.empty_hint')
                 : undefined
             }
@@ -267,22 +245,38 @@ export function ReportsPage() {
                   <li key={r.id}>
                     <Link
                       to={`/lpkc/${r.id}`}
+                      state={{ back: location.search }}
                       className="hover:bg-muted/50 flex items-center gap-3 px-4 py-3 transition-colors"
                     >
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium">
-                          {personName(r.students?.full_name) ??
-                            t('common.unnamed')}
+                        {/* Which part it is, beside the name and on every row:
+                            a student has a row here for each part they send,
+                            and the colour is what tells them apart at a
+                            glance. */}
+                        <span className="flex items-center gap-2">
+                          <span className="truncate text-sm font-medium">
+                            {personName(r.students?.full_name) ??
+                              t('common.unnamed')}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className={cn('shrink-0', PART_BADGE[r.lpkc_stage])}
+                          >
+                            {t(LPKC_STAGE_LABEL[r.lpkc_stage])}
+                          </Badge>
                         </span>
-                        {/* The part first: a student now has a row here for
-                            each one, and it is what tells them apart. */}
+                        {/* No title: it is the student's own wording, long
+                            and different on every row, and the thread is where
+                            it is read. */}
                         <span className="text-muted-foreground block truncate text-xs">
-                          {t(LPKC_STAGE_LABEL[r.lpkc_stage])}
-                          {` · ${r.title}`}
-                          {r.courses?.title ? ` · ${r.courses.title}` : ''}
-                          {r.version > 1
-                            ? ` · ${t('report.version', { version: r.version })}`
-                            : ''}
+                          {[
+                            r.courses?.title,
+                            r.version > 1
+                              ? t('report.version', { version: r.version })
+                              : null,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
                         </span>
                       </span>
 
@@ -296,8 +290,10 @@ export function ReportsPage() {
                         </span>
                       ) : null}
 
+                      {/* When it last changed — the date the list is ordered
+                          by within a status. */}
                       <span className="text-muted-foreground hidden shrink-0 text-xs tabular-nums md:block">
-                        {fmtDateTime(r.submitted_at)}
+                        {fmtDateTime(r.updated_at)}
                       </span>
 
                       <Badge

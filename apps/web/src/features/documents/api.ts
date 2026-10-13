@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Enums, Tables } from '@hawary/shared'
 import { supabase } from '@/lib/supabase'
+import { downloadKwspLetters } from '@/features/kwsp-letter/letter'
+import { downloadOfferLetter } from '@/features/offer-letter/letter'
 import {
   employmentLetterUrl,
   icCopyUrl,
@@ -9,8 +11,8 @@ import {
 } from '@/lib/storage'
 
 /**
- * Documents — the offer letter, the IC copy and the employment letter. See
- * docs/documents.md.
+ * Documents — the offer letter, the IC copy, the employment letter and the
+ * KWSP letter. See docs/documents.md.
  *
  * The staff pages list the same people, so they share one read: every live
  * student, the course they are on and which of their documents are on file.
@@ -22,6 +24,7 @@ export type DocumentCourse = {
   id: string
   title: string
   start_date: string | null
+  end_date: string | null
 }
 
 /** A student's own PDF on file — an IC copy or an employment letter. */
@@ -39,6 +42,8 @@ export type DocumentStudent = Pick<
   employmentLetter: UploadedPdf | null
   /** When the student signed and agreed to the letter's terms; null if not. */
   offerAcceptedAt: string | null
+  /** When the academy prepared a KWSP letter for them; null if it has not. */
+  kwspCreatedAt: string | null
 }
 
 /** A student's signature on the offer letter, and when they gave it. */
@@ -61,6 +66,38 @@ function courseOf(enrollments: EnrollmentEmbed[] | null): DocumentCourse | null 
   return (enrollments ?? []).find((e) => e.status !== 'cancelled')?.courses ?? null
 }
 
+const DOCUMENT_STUDENT_SELECT =
+  'id, student_no, full_name, email, ic_number, personal_address, enrollments(status, courses(id, title, start_date, end_date)), ic_copy:student_ic_copies(created_at, file_name), employment_letter:student_employment_letters(created_at, file_name), offer_acceptance:student_offer_acceptances(accepted_at), kwsp_letter:student_kwsp_letters(created_at)'
+
+type DocumentStudentRow = Omit<
+  DocumentStudent,
+  'course' | 'icCopy' | 'employmentLetter' | 'offerAcceptedAt' | 'kwspCreatedAt'
+> & {
+  enrollments: EnrollmentEmbed[] | null
+  ic_copy: UploadedPdf | null
+  employment_letter: UploadedPdf | null
+  offer_acceptance: { accepted_at: string } | null
+  kwsp_letter: { created_at: string } | null
+}
+
+function toDocumentStudent({
+  enrollments,
+  ic_copy,
+  employment_letter,
+  offer_acceptance,
+  kwsp_letter,
+  ...student
+}: DocumentStudentRow): DocumentStudent {
+  return {
+    ...student,
+    course: courseOf(enrollments),
+    icCopy: ic_copy,
+    employmentLetter: employment_letter,
+    offerAcceptedAt: offer_acceptance?.accepted_at ?? null,
+    kwspCreatedAt: kwsp_letter?.created_at ?? null,
+  }
+}
+
 export function useDocumentStudents(academyId: string | null) {
   return useQuery({
     queryKey: ['document-students', academyId] as const,
@@ -68,40 +105,86 @@ export function useDocumentStudents(academyId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('students')
-        .select(
-          'id, student_no, full_name, email, ic_number, personal_address, enrollments(status, courses(id, title, start_date)), ic_copy:student_ic_copies(created_at, file_name), employment_letter:student_employment_letters(created_at, file_name), offer_acceptance:student_offer_acceptances(accepted_at)',
-        )
+        .select(DOCUMENT_STUDENT_SELECT)
         .eq('academy_id', academyId!)
         .is('archived_at', null)
         .order('full_name', { ascending: true })
       if (error) throw error
-      type Row = Omit<
-        DocumentStudent,
-        'course' | 'icCopy' | 'employmentLetter' | 'offerAcceptedAt'
-      > & {
-        enrollments: EnrollmentEmbed[] | null
-        ic_copy: UploadedPdf | null
-        employment_letter: UploadedPdf | null
-        offer_acceptance: { accepted_at: string } | null
-      }
-      return ((data ?? []) as unknown as Row[]).map<DocumentStudent>(
-        ({
-          enrollments,
-          ic_copy,
-          employment_letter,
-          offer_acceptance,
-          ...student
-        }) => ({
-          ...student,
-          course: courseOf(enrollments),
-          icCopy: ic_copy,
-          employmentLetter: employment_letter,
-          offerAcceptedAt: offer_acceptance?.accepted_at ?? null,
-        }),
+      return ((data ?? []) as unknown as DocumentStudentRow[]).map(
+        toDocumentStudent,
       )
     },
   })
 }
+
+/**
+ * One student's row of the roster, for the card on `/students/:id`. The key
+ * sits under the roster's, so whatever refreshes the roster refreshes this.
+ */
+export function useStudentDocuments(studentId: string | undefined) {
+  return useQuery({
+    queryKey: ['document-students', 'student', studentId] as const,
+    enabled: !!studentId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('students')
+        .select(DOCUMENT_STUDENT_SELECT)
+        .eq('id', studentId!)
+        .single()
+      if (error) throw error
+      return toDocumentStudent(data as unknown as DocumentStudentRow)
+    },
+  })
+}
+
+/**
+ * Draw a student's offer letter and hand it to the browser. The roster carries
+ * only the date of a signature; the picture is read for this click.
+ */
+export async function downloadStudentOfferLetter(s: DocumentStudent) {
+  const signed = s.offerAcceptedAt ? await fetchOfferAcceptance(s.id) : null
+  await downloadOfferLetter({
+    fullName: s.full_name,
+    icNumber: s.ic_number,
+    address: s.personal_address,
+    startDate: s.course?.start_date ?? null,
+    signature: signed?.signature,
+    agreedAt: signed?.accepted_at,
+  })
+}
+
+/**
+ * The KWSP letters of these students, one to a page in one file. Drawn from
+ * the rows in hand: nothing of a letter is stored.
+ */
+export async function downloadStudentKwspLetters(students: DocumentStudent[]) {
+  await downloadKwspLetters(
+    students.map((s) => ({
+      fullName: s.full_name,
+      icNumber: s.ic_number,
+      startDate: s.course?.start_date ?? null,
+      endDate: s.course?.end_date ?? null,
+    })),
+  )
+}
+
+/**
+ * Prepare a KWSP letter for these students, or take it back. Admin only, and
+ * the functions say so; a student who already has one keeps its date.
+ */
+function useKwspLetters(fn: 'create_kwsp_letters' | 'remove_kwsp_letters') {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (studentIds: string[]) => {
+      const { error } = await supabase.rpc(fn, { _student_ids: studentIds })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['document-students'] }),
+  })
+}
+
+export const useCreateKwspLetters = () => useKwspLetters('create_kwsp_letters')
+export const useRemoveKwspLetters = () => useKwspLetters('remove_kwsp_letters')
 
 /**
  * The course the signed-in student's letter is about. Null when they are on
@@ -117,7 +200,7 @@ export function useMyDocumentCourse(
     queryFn: async () => {
       const { data, error } = await supabase
         .from('enrollments')
-        .select('status, courses(id, title, start_date)')
+        .select('status, courses(id, title, start_date, end_date)')
         .eq('academy_id', academyId!)
         .eq('student_id', studentId!)
       if (error) throw error

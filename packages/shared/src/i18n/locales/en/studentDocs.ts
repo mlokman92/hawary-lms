@@ -1,4 +1,4 @@
-/** Documents: the offer letter, the IC copy and the employment letter, on both shells. */
+/** Documents: the offer letter, the IC copy, the employment letter and the KWSP letter. */
 export const studentDocs = {
   // Offer letter — staff list
   'sdoc.offer.title': 'Offer letter',
@@ -45,6 +45,17 @@ export const studentDocs = {
   'sdoc.employment.title': 'Employment duration letter',
   'sdoc.employment.pdf_only':
     'Upload your employment duration letter as a PDF file.',
+
+  // KWSP letter (Surat Pengesahan Pendaftaran Pelajar) — staff only
+  'sdoc.kwsp.title': 'KWSP letter',
+  'sdoc.kwsp.not_created': 'Not created',
+  'sdoc.kwsp.created_on': 'Created {date}',
+  'sdoc.kwsp.empty': 'No KWSP letters yet.',
+  'sdoc.kwsp.create_title': 'Create KWSP letters',
+  'sdoc.kwsp.create_count': 'Create ({count})',
+  'sdoc.kwsp.download_count': 'Download ({count})',
+  'sdoc.kwsp.remove_count': 'Remove ({count})',
+  'sdoc.select_all': 'Select all',
 } as const
 
 export type StudentDocsDict = Record<keyof typeof studentDocs, string>
