@@ -14,6 +14,7 @@ import { AuthProvider } from './lib/auth'
 import { AcademyProvider } from './lib/academy'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { PendingInviteRedirect } from './components/PendingInviteRedirect'
+import { BuildRefresh } from './components/BuildRefresh'
 import { AppShell } from './components/AppShell'
 import { AdminRoute } from './components/AdminRoute'
 import { DirectorRoute } from './components/DirectorRoute'
@@ -103,6 +104,7 @@ export default function App() {
             <AcademyProvider>
               <BrowserRouter>
                 <PendingInviteRedirect />
+                <BuildRefresh />
                 <Routes>
                   <Route path="/signin" element={<SignIn />} />
                   <Route path="/signup" element={<SignUp />} />

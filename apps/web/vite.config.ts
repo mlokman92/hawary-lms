@@ -1,11 +1,33 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath } from 'node:url'
 
+// One id per build: baked into the bundle as __BUILD_ID__ and published beside
+// it as /version.json, so an open tab can tell that a newer build is deployed
+// (src/lib/build.ts).
+const buildId = Date.now().toString(36)
+
+function buildIdFile(): Plugin {
+  return {
+    name: 'build-id-file',
+    apply: 'build',
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'version.json',
+        source: JSON.stringify({ id: buildId }),
+      })
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), buildIdFile()],
+  define: {
+    __BUILD_ID__: JSON.stringify(buildId),
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

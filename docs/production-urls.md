@@ -124,6 +124,19 @@ because RLS bounds it. Build config is in `netlify.toml`, including the SPA
 fallback (`/* → /index.html`, 200) that `/auth/callback` and `/reset-password`
 need to resolve at all.
 
+**Open tabs pick up a deploy by themselves.** Nobody reloads a web app, so a
+tab left open ran the build it was loaded on until someone hard-refreshed. Each
+build now carries an id (`__BUILD_ID__`) and publishes the same id as
+`/version.json`; the app re-reads that file on every route change and whenever
+the tab becomes visible again (at most once a minute), and when the ids differ
+it does a full page load **on the next route change** (`src/lib/build.ts`,
+`BuildRefresh`). Only then, never on tab focus: the page being left is already
+gone, so a half-written form is never thrown away. A lazy chunk that 404s into
+the SPA fallback after a deploy (`vite:preloadError`) reloads the same way. Both
+reload at most once per build per tab, so a reload that fixes nothing cannot
+loop. Netlify already serves `index.html` and `version.json` with
+`max-age=0, must-revalidate`, so no header rule is needed.
+
 **Deploy previews** get a random `*.netlify.app` origin, which is *not* in the
 auth allow list — so email confirmation and password reset will fall back to
 `https://app.hawary.my` on a preview build. Test those two flows on production or
