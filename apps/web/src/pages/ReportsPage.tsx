@@ -32,13 +32,17 @@ import { EmptyState } from '@/components/patterns/EmptyState'
 import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
 import { ReportPoolDialog } from '@/features/reports/ReportPoolDialog'
 import {
+  LPKC_STAGES,
   LPKC_STAGE_LABEL,
   REPORT_PAGE_SIZE,
   REPORT_STATUS,
+  deskStage,
   stageOf,
-  useReportCounts,
+  useReportPartCounts,
   useReportQueue,
+  type LpkcStage,
   type ReportFilters,
+  type ReportPartCounts,
   type ReportStage,
 } from '@/features/reports/api'
 
@@ -56,6 +60,16 @@ import {
  * over a set, so pressing one shows that set — the `/payments` rule. There is
  * no "Waiting" tile: a report is "moderating" from the moment it is sent, and
  * "pending trainer approval" once a system admin has added to it.
+ *
+ * It opens on the reader's own stage — "moderating" for an admin, "pending
+ * trainer approval" for a trainer — because that is the pile they came to work
+ * through. Pressing the pressed tile still clears it to everything.
+ *
+ * Above the tiles, one button per part of the LPKC. A checker works through one
+ * kind at a time — the summaries, then the reports — so the part is a single
+ * press, always on screen, and not a menu to open. The two filters count
+ * within each other: a tile is of the part that is picked, a part is of the
+ * tile that is pressed.
  */
 
 const TILES: {
@@ -68,32 +82,83 @@ const TILES: {
   { status: 'approved', icon: CheckCircle2 },
 ]
 
+type Part = LpkcStage | 'all'
+const PARTS: Part[] = ['all', ...LPKC_STAGES]
+
+/**
+ * The part somebody is working through outlives the trip into a report and
+ * back — picking it again after every one would undo the point of the button.
+ * The session only: it is where a person was, not a setting.
+ */
+const PART_KEY = 'hawary.lpkc.part'
+
+function readPart(): Part {
+  try {
+    const raw = sessionStorage.getItem(PART_KEY)
+    if (PARTS.includes(raw as Part)) return raw as Part
+  } catch {
+    // Private mode. The buttons still work for this visit.
+  }
+  return 'all'
+}
+
+/** Reports at `stage` ('all': any) within `part` ('all': any). */
+function countOf(
+  counts: ReportPartCounts | undefined,
+  part: Part,
+  stage: ReportStage | 'all',
+): number {
+  if (!counts) return 0
+  let n = 0
+  for (const p of LPKC_STAGES) {
+    if (part !== 'all' && part !== p) continue
+    for (const s of Object.keys(counts[p]) as ReportStage[]) {
+      if (stage === 'all' || stage === s) n += counts[p][s]
+    }
+  }
+  return n
+}
+
 export function ReportsPage() {
   const { t } = useT()
   const { activeAcademyId, active } = useAcademy()
   const isAdmin = active?.role === 'admin'
 
-  const [status, setStatus] = useState<ReportStage | 'all'>('all')
+  // Null until a tile is pressed: the opening filter follows the role, and the
+  // role can arrive a render after this page does.
+  const [picked, setPicked] = useState<ReportStage | 'all' | null>(null)
+  const status = picked ?? deskStage(active?.role)
+  const [part, setPartState] = useState<Part>(readPart)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
   const [poolOpen, setPoolOpen] = useState(false)
 
   const debounced = useDebounced(search)
   const filters = useMemo<ReportFilters>(
-    () => ({ status, search: debounced }),
-    [status, debounced],
+    () => ({ status, part, search: debounced }),
+    [status, part, debounced],
   )
 
   const queue = useReportQueue(activeAcademyId, filters, page)
-  const { data: counts } = useReportCounts(activeAcademyId)
+  const { data: counts } = useReportPartCounts(activeAcademyId)
 
   const rows = queue.data?.rows ?? []
   const total = queue.data?.total ?? 0
 
   /** A tile both filters and un-filters: pressing the pressed one clears. */
   function toggle(next: ReportStage) {
-    setStatus((cur) => (cur === next ? 'all' : next))
+    setPicked(status === next ? 'all' : next)
     setPage(0)
+  }
+
+  function setPart(next: Part) {
+    setPartState(next)
+    setPage(0)
+    try {
+      sessionStorage.setItem(PART_KEY, next)
+    } catch {
+      // Private mode / quota. The choice still holds for this visit.
+    }
   }
 
   return (
@@ -123,12 +188,30 @@ export function ReportsPage() {
         ) : null}
       </PageHeader>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-6 flex flex-wrap gap-2">
+        {PARTS.map((p) => (
+          <Button
+            key={p}
+            type="button"
+            size="sm"
+            variant={part === p ? 'default' : 'outline'}
+            aria-pressed={part === p}
+            onClick={() => setPart(p)}
+          >
+            {p === 'all' ? t('report.queue.all_parts') : t(LPKC_STAGE_LABEL[p])}
+            <span className="tabular-nums opacity-70">
+              {countOf(counts, p, status)}
+            </span>
+          </Button>
+        ))}
+      </div>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {TILES.map(({ status: s, icon }) => (
           <FilterStatCard
             key={s}
             label={t(REPORT_STATUS[s].labelKey)}
-            value={counts?.[s] ?? 0}
+            value={countOf(counts, part, s)}
             icon={icon}
             tone={REPORT_STATUS[s].tone}
             active={status === s}
@@ -157,8 +240,12 @@ export function ReportsPage() {
         ) : rows.length === 0 ? (
           <EmptyState
             icon={ClipboardCheck}
+            // The page opens filtered, so an empty opening pile is "nothing
+            // waiting", not a search that found nothing.
             title={
-              status === 'all' && !debounced
+              (status === 'all' || picked === null) &&
+              part === 'all' &&
+              !debounced
                 ? t('report.queue.empty')
                 : t('report.queue.empty_filtered')
             }
@@ -166,7 +253,7 @@ export function ReportsPage() {
             // a trainer to go and set the rota would point at a control that is
             // not on their screen and is not theirs to change.
             body={
-              isAdmin && status === 'all' && !debounced
+              isAdmin && status === 'all' && part === 'all' && !debounced
                 ? t('report.queue.empty_hint')
                 : undefined
             }

@@ -3373,17 +3373,6 @@ export type Database = {
           uploaded_sen: number
         }[]
       }
-      receipt_queue_counts_v1: {
-        Args: { _academy: string; _search?: string }
-        Returns: {
-          confirmed_count: number
-          confirmed_sen: number
-          pending_count: number
-          pending_sen: number
-          uploaded_count: number
-          uploaded_sen: number
-        }[]
-      }
       receipt_queue_page: {
         Args: {
           _academy: string
@@ -3391,67 +3380,6 @@ export type Database = {
           _offset?: number
           _search?: string
           _sort?: string
-          _state?: string
-        }
-        Returns: {
-          amount_sen: number
-          course_title: string
-          created_at: string
-          id: string
-          invoice_id: string
-          invoice_no: string
-          note: string
-          paid_at: string
-          receipt_confirmed_at: string
-          receipt_confirmed_by_name: string
-          receipt_file_name: string
-          receipt_flag_reasons: string[]
-          receipt_flagged_at: string
-          receipt_flagged_by_name: string
-          receipt_mime_type: string
-          receipt_uploaded_at: string
-          receipt_uploaded_by_name: string
-          recorded_by_name: string
-          student_full_name: string
-          student_id: string
-          student_no: string
-        }[]
-      }
-      receipt_queue_page_v1: {
-        Args: {
-          _academy: string
-          _limit?: number
-          _offset?: number
-          _search?: string
-          _state?: string
-        }
-        Returns: {
-          amount_sen: number
-          course_title: string
-          created_at: string
-          id: string
-          invoice_id: string
-          invoice_no: string
-          note: string
-          paid_at: string
-          receipt_confirmed_at: string
-          receipt_confirmed_by_name: string
-          receipt_file_name: string
-          receipt_mime_type: string
-          receipt_uploaded_at: string
-          receipt_uploaded_by_name: string
-          recorded_by_name: string
-          student_full_name: string
-          student_id: string
-          student_no: string
-        }[]
-      }
-      receipt_queue_page_v2: {
-        Args: {
-          _academy: string
-          _limit?: number
-          _offset?: number
-          _search?: string
           _state?: string
         }
         Returns: {
@@ -3526,6 +3454,14 @@ export type Database = {
           file_name: string
           file_path: string
           mime_type: string
+        }[]
+      }
+      report_part_counts: {
+        Args: { _academy_id: string }
+        Returns: {
+          n: number
+          part: Database["public"]["Enums"]["lpkc_stage"]
+          stage: string
         }[]
       }
       report_stage: {

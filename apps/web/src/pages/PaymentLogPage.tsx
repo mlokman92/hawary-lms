@@ -15,6 +15,7 @@ import { downloadCsv } from '@/lib/csv'
 import { fmtDate, fmtDateTime } from '@/lib/format'
 import { useT, type TFn } from '@/lib/i18n'
 import { useDebounced } from '@/lib/useDebounced'
+import { useCourses } from '@/features/courses/api'
 import { PageHeader } from '@/components/patterns/PageHeader'
 import { BackLink } from '@/components/patterns/BackLink'
 import { EmptyState } from '@/components/patterns/EmptyState'
@@ -44,7 +45,9 @@ import {
   type NoteTarget,
 } from '@/features/payments/EditPaymentNoteDialog'
 import {
+  ALL_COURSES,
   fetchPaymentLogAll,
+  NO_COURSE,
   PAGE_SIZE,
   PAYMENT_METHOD_LABEL,
   PAYMENT_METHODS,
@@ -58,6 +61,8 @@ import {
   type PaymentLogSort,
   type PaymentMethod,
 } from '@/features/payments/api'
+import { PaymentSheet } from '@/features/payments/PaymentSheet'
+import { sourceLine } from '@/features/payments/sourceLine'
 
 const ALL = '__all__'
 
@@ -103,6 +108,24 @@ function readMethod(raw: string | null): PaymentMethod | typeof ALL {
     : ALL
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * `?c=` — a course id, or `__none__` for payments against an invoice with no
+ * course. The name and the values are `/payments`' own, so a course carries
+ * from the invoice book to the ledger by its link. Anything else reads as "all
+ * courses" rather than reaching the RPC as a failed uuid cast.
+ */
+function readCourse(raw: string | null): string {
+  if (raw === NO_COURSE) return NO_COURSE
+  return raw && UUID.test(raw) ? raw : ALL_COURSES
+}
+
+/** Anything that is not an id reads as "no payment open", not a failed cast. */
+function readPayment(raw: string | null): string | null {
+  return raw && UUID.test(raw) ? raw : null
+}
+
 function readPage(raw: string | null): number {
   const n = Number(raw)
   return Number.isInteger(n) && n >= 1 ? n : 1
@@ -129,23 +152,6 @@ const MY_DAY = new Intl.DateTimeFormat('en-CA', {
 function backDated(p: PaymentLogRow): boolean {
   if (!p.paid_at) return false
   return MY_DAY.format(new Date(p.paid_at)) !== MY_DAY.format(new Date(p.created_at))
-}
-
-/**
- * Where the row came from, in one line.
- *
- * A gateway names itself and its reference; a manual entry names the person who
- * typed it, because that is the only accountability a cash payment has. Falls
- * back to "Recorded manually" when nobody is named — true of every gateway row
- * (a callback wrote it) and of any manual row banked before the column existed.
- */
-function sourceLine(p: PaymentLogRow, t: TFn): string {
-  const gateway = PAYMENT_PROVIDER_LABEL[p.provider]
-  if (gateway) return p.provider_ref ? `${gateway} · ${p.provider_ref}` : gateway
-  const who = p.recorded_by_name?.trim()
-  return who
-    ? t('payments.log.recorded_by', { name: who })
-    : t('payments.log.recorded_manually')
 }
 
 function csvRows(rows: PaymentLogRow[], t: TFn) {
@@ -213,8 +219,11 @@ export function PaymentLogPage() {
 
   const search = params.get('q')?.trim() ?? ''
   const method = readMethod(params.get('method'))
+  const course = readCourse(params.get('c'))
+  const { data: courses } = useCourses(activeAcademyId)
   const sort: PaymentLogSort = params.get('sort') === 'paid' ? 'paid' : 'recorded'
   const page = readPage(params.get('page'))
+  const paymentId = readPayment(params.get('payment'))
 
   // `replace`, not push: a filter is not a place you navigate back through, and
   // a history entry per settled keystroke would bury the page you arrived from.
@@ -252,8 +261,16 @@ export function PaymentLogPage() {
       search,
       status: null,
       method: method === ALL ? null : method,
+      // Absent, not an empty scope, when every course is on offer: the two
+      // functions take no argument for "all".
+      ...(course === ALL_COURSES
+        ? {}
+        : {
+            scope:
+              course === NO_COURSE ? { noCourse: true } : { courseId: course },
+          }),
     }),
-    [search, method],
+    [search, method, course],
   )
 
   const rows = usePaymentLogPage(activeAcademyId, filters, sort, page)
@@ -267,7 +284,8 @@ export function PaymentLogPage() {
     sen === undefined ? '—' : formatMYR(sen)
   const paymentCount = (n: number | undefined) =>
     n === undefined ? undefined : tn('payments.log.card.count', n)
-  const filtering = search.trim() !== '' || method !== ALL
+  const filtering =
+    search.trim() !== '' || method !== ALL || course !== ALL_COURSES
 
   async function exportCsv() {
     if (!activeAcademyId) return
@@ -349,6 +367,36 @@ export function PaymentLogPage() {
           />
         </div>
         <Select
+          value={course}
+          onValueChange={(v) =>
+            commit({ c: v === ALL_COURSES ? null : v, page: null })
+          }
+        >
+          <SelectTrigger className="w-56">
+            <SelectValue placeholder={t('payments.filter.all_courses')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_COURSES}>
+              {t('payments.filter.all_courses')}
+            </SelectItem>
+            <SelectItem value={NO_COURSE}>
+              {t('payments.filter.no_course')}
+            </SelectItem>
+            {(courses ?? []).map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.title}
+                {c.status !== 'published'
+                  ? ` · ${t(
+                      c.status === 'draft'
+                        ? 'common.draft'
+                        : 'payments.course_status.archived',
+                    )}`
+                  : ''}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
           value={method}
           onValueChange={(v) => commit({ method: v === ALL ? null : v, page: null })}
         >
@@ -409,7 +457,14 @@ export function PaymentLogPage() {
               </TableHeader>
               <TableBody>
                 {list.map((p) => (
-                  <TableRow key={p.id}>
+                  // The row opens this payment in a panel and puts its id in
+                  // the address — the one link that means this row, not the
+                  // invoice it shares with four others.
+                  <TableRow
+                    key={p.id}
+                    className="cursor-pointer"
+                    onClick={() => commit({ payment: p.id })}
+                  >
                     <TableCell className="whitespace-nowrap">
                       {fmtDate(p.paid_at ?? p.created_at)}
                       {backDated(p) ? (
@@ -425,6 +480,7 @@ export function PaymentLogPage() {
                         <Link
                           to={`/students/${p.student_id}`}
                           className="hover:underline"
+                          onClick={(e) => e.stopPropagation()}
                         >
                           {p.student_full_name ?? t('common.unnamed')}
                         </Link>
@@ -442,6 +498,7 @@ export function PaymentLogPage() {
                         <Link
                           to={`/payments/${p.invoice_id}`}
                           className="font-medium hover:underline"
+                          onClick={(e) => e.stopPropagation()}
                         >
                           {p.invoice_no}
                         </Link>
@@ -472,7 +529,8 @@ export function PaymentLogPage() {
                     <TableCell className="max-w-[18rem] whitespace-normal">
                       <button
                         type="button"
-                        onClick={() =>
+                        onClick={(e) => {
+                          e.stopPropagation()
                           setNoteTarget({
                             id: p.id,
                             invoiceId: p.invoice_id,
@@ -481,7 +539,7 @@ export function PaymentLogPage() {
                             date: p.paid_at ?? p.created_at,
                             note: p.note,
                           })
-                        }
+                        }}
                         aria-label={t('payments.log.note_edit')}
                         className="group text-muted-foreground hover:text-foreground focus-visible:ring-ring flex w-full items-start gap-1.5 rounded-sm text-left text-xs focus-visible:ring-2 focus-visible:outline-none"
                       >
@@ -511,6 +569,14 @@ export function PaymentLogPage() {
           onPageChange={(n) => commit({ page: n > 1 ? String(n) : null })}
         />
       </div>
+
+      <PaymentSheet
+        academyId={activeAcademyId}
+        paymentId={paymentId}
+        hint={list.find((row) => row.id === paymentId)}
+        onEditNote={setNoteTarget}
+        onClose={() => commit({ payment: null })}
+      />
 
       {activeAcademyId ? (
         <EditPaymentNoteDialog

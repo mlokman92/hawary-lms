@@ -26,6 +26,7 @@ export const reports = {
   // --- the staff queue ------------------------------------------------------
   'report.queue.desc': 'Reports sent in for checking, longest wait first.',
   'report.queue.search': 'Search by student name',
+  'report.queue.all_parts': 'All',
   'report.queue.empty': 'Nothing waiting.',
   'report.queue.empty_hint':
     'Students send reports from their own page. Set who checks them from the menu above.',

@@ -145,6 +145,24 @@ that exists. `?status=` on an old link is ignored.
 The method narrows the cards too, since they share the filter: pick FPX and
 Total collections *is* the FPX total, and the Bank transfer card reads zero.
 
+**A course filter sits beside it** (`?c=<course id | __none__>`), the same
+name and values `/payments` uses, so a course carries from the invoice book to
+the ledger. Both log functions already took `_course` / `_no_course` — the
+report's drill passes them — so this was a picker and nothing in the database.
+It narrows the cards and the CSV too, since they share the filter.
+
+**A row opens its payment, and the address is the record** — `?payment=<id>`
+opens a panel on the right (`PaymentSheet`) with the payment: amount, method,
+invoice, when it was paid and recorded, by whom or by which gateway, and its
+note (which opens the same note dialog). It is the receipts queue's pattern,
+for the same reason: an invoice link means five payments, and "the second
+RM500 on 6 May" should be a link, not a description. The panel reads its
+payment by id (a plain PostgREST read, keyed under `payment-log` so a money
+write refreshes it), so a pasted link works for a row on another page or
+outside the filter. A bank transfer's panel links to its receipt at
+`/payments/receipts?payment=<id>`. The student and invoice links and the note
+cell in a row keep their own behaviour.
+
 **Export CSV** reuses `lib/csv.ts`'s `downloadCsv` and writes ISO dates +
 ringgit decimals, because the file's job is reconciliation in a spreadsheet.
 

@@ -540,6 +540,24 @@ as the final tie-break. Three `FilterStatCard`s — being checked, changes neede
 approved — because a tile is a sum over a set and pressing it should show that
 set. There is no "Waiting" tile: nothing is ever in that state now.
 
+**It opens on the reader's own stage** (Oct 2026, `deskStage`): "Moderating"
+for an admin — Directors and the system admin are admins — and "Pending trainer
+approval" for a trainer, with that tile pressed. Pressing it again shows
+everything. The sidebar badge counts the same stage, where it used to count
+everything waiting on the checking side. Both numbers come through RLS, so a
+trainer's is of the reports assigned to them and an admin's is of the academy's.
+The mobile Academy app's tab badge still counts everything waiting.
+
+**A button per part of the LPKC, above the tiles** (Oct 2026): All · LPKC
+summary · LPKC report · LPKC slides. A checker works through one kind at a time,
+and the owner asked for that to be one press and not a menu — so they are
+buttons that are always on screen, each with its count. The part and the stage
+count within each other (`report_part_counts`, one grid of part × stage): a
+tile is of the part that is picked, a part is of the tile that is pressed, so
+neither number can disagree with the list under it. The part is kept in
+`sessionStorage` (`hawary.lpkc.part`) so it survives opening a report and
+coming back; the stage is not, and falls back to the reader's own each time.
+
 There is **no instructor filter**, and that is not an omission: RLS already
 narrows a trainer to their own reports, so a picker could not change the result
 — the same conclusion `/appointments/list` reached. The "who holds it" column is

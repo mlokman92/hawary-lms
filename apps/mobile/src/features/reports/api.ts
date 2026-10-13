@@ -96,6 +96,17 @@ export function awaitingChecker(
   )
 }
 
+/**
+ * The stage that is this reader's to act on: an admin's (a Director's and the
+ * system admin's with them) is the reports still being moderated; a trainer's
+ * is the ones waiting for their approval. It is what `/lpkc` opens on and what
+ * the sidebar counts. The counts themselves come through RLS, so a trainer's is
+ * of the reports assigned to them and an admin's is of the academy's.
+ */
+export function deskStage(role: string | null | undefined): ReportStage {
+  return role === 'admin' ? 'moderating' : 'pending_approval'
+}
+
 /** The stage a row is read as; the plain status where the server gave none. */
 export function stageOf(r: {
   status: ReportStatus
@@ -259,6 +270,8 @@ export const REPORT_PAGE_SIZE = 50
 
 export type ReportFilters = {
   status: ReportStage | 'all'
+  /** Which part of the LPKC. Left out, or 'all', is every part. */
+  part?: LpkcStage | 'all'
   /** Matched against the student's name, through an inner embed. */
   search: string
 }
@@ -268,8 +281,10 @@ export type ReportFilters = {
 // ---------------------------------------------------------------------------
 
 const queueKey = (a: string | null, f: ReportFilters, page: number) =>
-  ['reports', a, 'queue', f.status, f.search, page] as const
+  ['reports', a, 'queue', f.status, f.part ?? 'all', f.search, page] as const
 const countsKey = (a: string | null) => ['reports', a, 'counts'] as const
+const partCountsKey = (a: string | null) =>
+  ['reports', a, 'part-counts'] as const
 const threadKey = (id: string | null) => ['report', id] as const
 const mineKey = (a: string | null) => ['reports', a, 'mine'] as const
 const poolKey = (a: string | null) => ['report-pool', a] as const
@@ -339,6 +354,9 @@ export function useReportQueue(
       } else if (filters.status !== 'all') {
         q = q.eq('status', filters.status)
       }
+      if (filters.part && filters.part !== 'all') {
+        q = q.eq('lpkc_stage', filters.part)
+      }
       if (search) q = q.ilike('students.full_name', `%${search}%`)
 
       const { data, error, count } = await q
@@ -381,6 +399,46 @@ export function useReportCounts(academyId: string | null) {
       }
       for (const r of data ?? []) {
         if (r.stage in out) out[r.stage as ReportStage] = Number(r.n)
+      }
+      return out
+    },
+  })
+}
+
+/** How many reports sit at each stage, for each part of the LPKC. */
+export type ReportPartCounts = Record<LpkcStage, Record<ReportStage, number>>
+
+/**
+ * The same counts as the tiles', split by part. `/lpkc` filters on a part and a
+ * stage at once, so a tile has to count within the part that is picked and a
+ * part within the tile that is pressed — one grid answers both, and neither
+ * number can then disagree with the list under it.
+ */
+export function useReportPartCounts(academyId: string | null) {
+  return useQuery({
+    queryKey: partCountsKey(academyId),
+    enabled: !!academyId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('report_part_counts', {
+        _academy_id: academyId!,
+      })
+      if (error) throw error
+      const none = (): Record<ReportStage, number> => ({
+        submitted: 0,
+        in_review: 0,
+        moderating: 0,
+        pending_approval: 0,
+        changes_requested: 0,
+        approved: 0,
+      })
+      const out: ReportPartCounts = {
+        summary: none(),
+        report: none(),
+        slide: none(),
+      }
+      for (const r of data ?? []) {
+        const row = out[r.part]
+        if (row && r.stage in row) row[r.stage as ReportStage] = Number(r.n)
       }
       return out
     },
