@@ -591,6 +591,16 @@ it needs no Vault secret and there is one copy of the settle logic. Older intent
 are left alone so an abandoned bill stops costing a gateway call a quarter-hour; a
 late payment on one still reconciles from the staff button.
 
+**The window is not the age of the attempt.** `create-bill` returns a live
+intent unchanged whenever the payer reopens the link at the same amount, so a
+bill minted weeks ago can be paid today. INV-D3X2PP's RM2,500 bill was minted
+16 Sep, paid 8 Oct with a callback that did not settle, and skipped by the sweep
+as too old — found only when the payer sent the bank's confirmation SMS on 14 Oct.
+`20261014120000_payment_intent_sweep_daily.sql` adds `payment-intent-sweep-daily`
+(03:30 MYT): the same call for every live intent **older** than the window. An
+abandoned bill now costs one gateway call a day, and no paid bill waits longer
+than that.
+
 The callback now logs `callback_not_settled` (with the gateway's transaction
 statuses) and `callback_settle_failed` (RPC error or an outcome other than
 `recorded`/`duplicate`), so the next miss says why.
