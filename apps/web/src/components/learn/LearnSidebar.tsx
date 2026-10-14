@@ -7,6 +7,7 @@ import {
   FileText,
   Briefcase,
   IdCard,
+  Landmark,
   LayoutDashboard,
   ListTodo,
   Receipt,
@@ -29,6 +30,7 @@ import { LearnAcademySwitcher } from './LearnAcademySwitcher'
  * Every item is backed by something RLS actually admits for a student:
  *   Dashboard/My courses/My work — enrollments + published content
  *   Billing   — invoices/invoice_items/payments all admit app.owns_student
+ *   KWSP      — the application and the letter both admit app.owns_student
  *   Profile   — profiles UPDATE is `id = auth.uid()`
  */
 export function LearnSidebar() {
@@ -102,6 +104,7 @@ export function LearnSidebar() {
       label: t('nav.group.account'),
       items: [
         { title: t('nav.learn.billing'), to: '/learn/billing', icon: Receipt },
+        { title: t('nav.learn.kwsp'), to: '/learn/kwsp', icon: Landmark },
         { title: t('nav.learn.profile'), to: '/learn/profile', icon: UserRound },
       ],
     },

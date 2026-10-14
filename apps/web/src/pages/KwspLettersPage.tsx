@@ -16,28 +16,40 @@ import { DocumentStudentList } from '@/features/documents/DocumentStudentList'
 import { KwspCreateDialog } from '@/features/documents/KwspCreateDialog'
 import {
   downloadStudentKwspLetters,
+  kwspState,
+  useCreateKwspLetters,
   useDocumentStudents,
+  useRemoveKwspApplications,
   useRemoveKwspLetters,
   type DocumentStudent,
 } from '@/features/documents/api'
 
-const hasLetter = (s: DocumentStudent) => !!s.kwspCreatedAt
+const hasLetter = (s: DocumentStudent) => kwspState(s) === 'created'
+const isWaiting = (s: DocumentStudent) => kwspState(s) === 'applied'
+const onPage = (s: DocumentStudent) => kwspState(s) !== 'none'
+const idOf = (s: DocumentStudent) => s.id
 
 /**
  * The KWSP letter — Surat Pengesahan Pendaftaran Pelajar — for the students
- * the academy has prepared one for, and only them: a student without a letter
- * is not on this page. *Create* opens the roster of everyone else, to prepare
- * it for many at once. See docs/documents.md.
+ * who have asked for one and the students the academy has prepared one for,
+ * and only them: anybody else is not on this page. See docs/documents.md.
  *
- * Academy side only. A student never sees this letter; the academy prints,
- * signs and hands it over.
+ * An application is reviewed here. It is listed ahead of the letters, and
+ * *Create* on its row is the answer; *Remove* turns it away. The page's own
+ * *Create* opens the roster of everyone without a letter, to prepare it for
+ * many at once, asked for or not.
+ *
+ * The student sees where their application stands and never the letter: the
+ * academy prints, signs and hands it over.
  */
 export function KwspLettersPage() {
   const { t } = useT()
   const { activeAcademyId } = useAcademy()
   // The roster's own read, already in the cache: the ticked ids become rows.
   const { data: students } = useDocumentStudents(activeAcademyId)
-  const remove = useRemoveKwspLetters()
+  const create = useCreateKwspLetters()
+  const removeLetters = useRemoveKwspLetters()
+  const removeApplications = useRemoveKwspApplications()
   const [creating, setCreating] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(() => new Set())
   // A student's id while their one letter is drawn, 'selected' for the batch.
@@ -45,9 +57,13 @@ export function KwspLettersPage() {
   const [error, setError] = useState<string | null>(null)
 
   const chosen = useMemo(
-    () => (students ?? []).filter((s) => selected.has(s.id) && hasLetter(s)),
+    () => (students ?? []).filter((s) => selected.has(s.id) && onPage(s)),
     [students, selected],
   )
+  const waiting = chosen.filter(isWaiting)
+  const created = chosen.filter(hasLetter)
+
+  const failed = (e: unknown) => setError(errorMessage(e, t('common.error')))
 
   async function download(key: string, of: DocumentStudent[]) {
     setDrawing(key)
@@ -61,6 +77,23 @@ export function KwspLettersPage() {
     }
   }
 
+  function createFor(of: DocumentStudent[]) {
+    setError(null)
+    create.mutate(of.map(idOf), { onError: failed })
+  }
+
+  // A letter is taken back, which leaves an application waiting again; an
+  // application with no letter is turned away.
+  function removeChosen() {
+    setError(null)
+    if (created.length > 0) {
+      removeLetters.mutate(created.map(idOf), { onError: failed })
+    }
+    if (waiting.length > 0) {
+      removeApplications.mutate(waiting.map(idOf), { onError: failed })
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-6xl">
       <PageHeader title={t('sdoc.kwsp.title')}>
@@ -70,20 +103,41 @@ export function KwspLettersPage() {
       </PageHeader>
       {error ? <p className="text-destructive mt-4 text-sm">{error}</p> : null}
       <DocumentStudentList
-        only={hasLetter}
+        only={onPage}
+        first={isWaiting}
         emptyLabel={t('sdoc.kwsp.empty')}
+        statusFilter={{
+          label: t('common.status'),
+          allLabel: t('sdoc.offer.all_statuses'),
+          options: [
+            { value: 'applied', label: t('sdoc.kwsp.applied') },
+            { value: 'created', label: t('sdoc.kwsp.created') },
+          ],
+          matches: (s, value) => kwspState(s) === value,
+        }}
         selection={{ selected, onChange: setSelected }}
         actions={
           chosen.length > 0 ? (
             <>
-              <Button
-                variant="outline"
-                disabled={drawing === 'selected'}
-                onClick={() => void download('selected', chosen)}
-              >
-                <Download />{' '}
-                {t('sdoc.kwsp.download_count', { count: chosen.length })}
-              </Button>
+              {waiting.length > 0 ? (
+                <Button
+                  disabled={create.isPending}
+                  onClick={() => createFor(waiting)}
+                >
+                  <Plus />{' '}
+                  {t('sdoc.kwsp.create_count', { count: waiting.length })}
+                </Button>
+              ) : null}
+              {created.length > 0 ? (
+                <Button
+                  variant="outline"
+                  disabled={drawing === 'selected'}
+                  onClick={() => void download('selected', created)}
+                >
+                  <Download />{' '}
+                  {t('sdoc.kwsp.download_count', { count: created.length })}
+                </Button>
+              ) : null}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -97,17 +151,10 @@ export function KwspLettersPage() {
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
                     variant="destructive"
-                    disabled={remove.isPending}
-                    onClick={() => {
-                      setError(null)
-                      remove.mutate(
-                        chosen.map((s) => s.id),
-                        {
-                          onError: (e) =>
-                            setError(errorMessage(e, t('common.error'))),
-                        },
-                      )
-                    }}
+                    disabled={
+                      removeLetters.isPending || removeApplications.isPending
+                    }
+                    onClick={removeChosen}
                   >
                     {t('sdoc.kwsp.remove_count', { count: chosen.length })}
                   </DropdownMenuItem>
@@ -117,21 +164,38 @@ export function KwspLettersPage() {
           ) : null
         }
         lastHead={t('sdoc.kwsp.title')}
-        lastCell={(s) => (
-          <div className="flex items-center justify-end gap-3">
-            <span className="text-muted-foreground text-xs">
-              {fmtDate(s.kwspCreatedAt)}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={drawing === s.id}
-              onClick={() => void download(s.id, [s])}
-            >
-              <Download /> {t('common.download')}
-            </Button>
-          </div>
-        )}
+        lastCell={(s) =>
+          hasLetter(s) ? (
+            <div className="flex items-center justify-end gap-3">
+              <span className="text-muted-foreground text-xs">
+                {fmtDate(s.kwspCreatedAt)}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={drawing === s.id}
+                onClick={() => void download(s.id, [s])}
+              >
+                <Download /> {t('common.download')}
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-end gap-3">
+              <span className="text-muted-foreground text-xs">
+                {t('sdoc.kwsp.applied_on', {
+                  date: fmtDate(s.kwspAppliedAt),
+                })}
+              </span>
+              <Button
+                size="sm"
+                disabled={create.isPending}
+                onClick={() => createFor([s])}
+              >
+                <Plus /> {t('common.create')}
+              </Button>
+            </div>
+          )
+        }
       />
       <KwspCreateDialog open={creating} onOpenChange={setCreating} />
     </div>

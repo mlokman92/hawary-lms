@@ -154,7 +154,8 @@ export function StudentDocumentsCard({ studentId }: { studentId: string }) {
                 openEmployment,
               )}
               {/* Not every student has one: it is created here, or for many
-                  at once on /documents/kwsp-letters. */}
+                  at once on /documents/kwsp-letters. A student who has asked
+                  for it reads as applied until it is. */}
               <Row
                 title={t('sdoc.kwsp.title')}
                 status={
@@ -162,7 +163,11 @@ export function StudentDocumentsCard({ studentId }: { studentId: string }) {
                     ? t('sdoc.kwsp.created_on', {
                         date: fmtDate(docs.data.kwspCreatedAt),
                       })
-                    : t('sdoc.kwsp.not_created')
+                    : docs.data.kwspAppliedAt
+                      ? t('sdoc.kwsp.applied_on', {
+                          date: fmtDate(docs.data.kwspAppliedAt),
+                        })
+                      : t('sdoc.kwsp.not_created')
                 }
                 action={
                   docs.data.kwspCreatedAt ? (

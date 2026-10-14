@@ -47,14 +47,26 @@ export const studentDocs: StudentDocsDict = {
   'sdoc.employment.pdf_only':
     'Muat naik Surat Pengesahan Tempoh Bekerja anda sebagai fail PDF.',
 
-  // Surat KWSP (Surat Pengesahan Pendaftaran Pelajar) — staf sahaja
+  // Surat KWSP (Surat Pengesahan Pendaftaran Pelajar) — bahagian staf
   'sdoc.kwsp.title': 'Surat KWSP',
   'sdoc.kwsp.not_created': 'Belum dicipta',
+  'sdoc.kwsp.created': 'Dicipta',
   'sdoc.kwsp.created_on': 'Dicipta pada {date}',
-  'sdoc.kwsp.empty': 'Belum ada surat KWSP.',
+  'sdoc.kwsp.applied': 'Telah memohon',
+  'sdoc.kwsp.applied_on': 'Dimohon pada {date}',
+  'sdoc.kwsp.empty': 'Belum ada permohonan atau surat KWSP.',
   'sdoc.kwsp.create_title': 'Cipta surat KWSP',
   'sdoc.kwsp.create_count': 'Cipta ({count})',
   'sdoc.kwsp.download_count': 'Muat turun ({count})',
   'sdoc.kwsp.remove_count': 'Buang ({count})',
   'sdoc.select_all': 'Pilih semua',
+
+  // Permohonan KWSP — pelajar memohon surat; tajuknya ialah tajuk navigasi
+  'sdoc.kwsp_app.description':
+    'Mohon surat pengesahan pendaftaran daripada akademi untuk pengeluaran KWSP anda.',
+  'sdoc.kwsp_app.apply': 'Mohon',
+  'sdoc.kwsp_app.applying': 'Memohon…',
+  'sdoc.kwsp_app.not_applied': 'Belum memohon',
+  'sdoc.kwsp_app.in_review': 'Dalam semakan',
+  'sdoc.kwsp_app.approved': 'Diluluskan',
 }

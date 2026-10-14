@@ -2,8 +2,6 @@
 export const learn = {
   // Page subtitles. The titles themselves reuse `nav.learn.*` — the sidebar
   // destination and the h1 are deliberately the same words.
-  'learn.dashboard.subtitle':
-    'What’s due, what’s been marked, and where you left off.',
   'learn.courses.subtitle': 'Course material, assignments and assessments.',
   'learn.work.subtitle':
     'Assignments and assessments across all your courses.',
@@ -22,29 +20,18 @@ export const learn = {
   'learn.due.tomorrow': 'Due tomorrow',
   'learn.due.in_days': 'Due in {days}d',
 
-  // Dashboard tiles / My work filter cards. "Overdue", "To do" and "Marked"
-  // come from `common.overdue` and the `status.task.*` block.
+  // My work filter cards, and the Student app's home tiles. "Overdue", "To do"
+  // and "Marked" come from `common.overdue` and the `status.task.*` block.
   'learn.stat.due_week': 'Due this week',
   'learn.stat.awaiting': 'Awaiting marks',
-  'learn.stat.overdue.hint_zero': 'Nothing late',
-  'learn.stat.overdue.hint': 'Hand in as soon as you can',
-  'learn.stat.outstanding_one': '{count} outstanding in total',
-  'learn.stat.outstanding_other': '{count} outstanding in total',
-  'learn.stat.awaiting.hint': 'Handed in, not marked yet',
-  'learn.stat.marked.hint_zero': 'Nothing marked yet',
-  'learn.stat.marked.hint_one':
-    '{earned} of {possible} points across {count} task',
-  'learn.stat.marked.hint_other':
-    '{earned} of {possible} points across {count} tasks',
 
-  // Dashboard sections
+  // The Student app's home sections. The web dashboard is a launcher and
+  // carries none of them.
   'learn.up_next': 'Up next',
-  'learn.recent_marks': 'Recent marks',
   'learn.all_work': 'All work',
   'learn.all_courses': 'All courses',
   'learn.view_all': 'View all',
   'learn.empty.outstanding': 'Nothing outstanding. Everything is handed in.',
-  'learn.empty.marked': 'Nothing has been marked yet.',
   'learn.empty.courses_short': 'You haven’t been enrolled in a course yet.',
 
   // Counts and progress

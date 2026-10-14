@@ -46,16 +46,28 @@ export const studentDocs = {
   'sdoc.employment.pdf_only':
     'Upload your employment duration letter as a PDF file.',
 
-  // KWSP letter (Surat Pengesahan Pendaftaran Pelajar) — staff only
+  // KWSP letter (Surat Pengesahan Pendaftaran Pelajar) — the staff side
   'sdoc.kwsp.title': 'KWSP letter',
   'sdoc.kwsp.not_created': 'Not created',
+  'sdoc.kwsp.created': 'Created',
   'sdoc.kwsp.created_on': 'Created {date}',
-  'sdoc.kwsp.empty': 'No KWSP letters yet.',
+  'sdoc.kwsp.applied': 'Applied',
+  'sdoc.kwsp.applied_on': 'Applied {date}',
+  'sdoc.kwsp.empty': 'No KWSP applications or letters yet.',
   'sdoc.kwsp.create_title': 'Create KWSP letters',
   'sdoc.kwsp.create_count': 'Create ({count})',
   'sdoc.kwsp.download_count': 'Download ({count})',
   'sdoc.kwsp.remove_count': 'Remove ({count})',
   'sdoc.select_all': 'Select all',
+
+  // KWSP application — the student asks for the letter; its title is the nav's
+  'sdoc.kwsp_app.description':
+    'Ask the academy for the letter confirming your registration, for your KWSP withdrawal.',
+  'sdoc.kwsp_app.apply': 'Apply',
+  'sdoc.kwsp_app.applying': 'Applying…',
+  'sdoc.kwsp_app.not_applied': 'Not applied',
+  'sdoc.kwsp_app.in_review': 'Under review',
+  'sdoc.kwsp_app.approved': 'Approved',
 } as const
 
 export type StudentDocsDict = Record<keyof typeof studentDocs, string>

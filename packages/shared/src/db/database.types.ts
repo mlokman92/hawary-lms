@@ -2715,6 +2715,39 @@ export type Database = {
           },
         ]
       }
+      student_kwsp_applications: {
+        Row: {
+          academy_id: string
+          created_at: string
+          student_id: string
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          student_id: string
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_kwsp_applications_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_kwsp_applications_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_kwsp_letters: {
         Row: {
           academy_id: string
@@ -2904,6 +2937,7 @@ export type Database = {
         Args: { _kind: string; _record_id: string }
         Returns: Json
       }
+      apply_for_kwsp_letter: { Args: { _student_id: string }; Returns: string }
       appointment_reminders_due: {
         Args: { _at?: string }
         Returns: {
@@ -3462,6 +3496,10 @@ export type Database = {
         Args: { _academy: string }
         Returns: undefined
       }
+      remove_kwsp_applications: {
+        Args: { _student_ids: string[] }
+        Returns: number
+      }
       remove_kwsp_letters: { Args: { _student_ids: string[] }; Returns: number }
       remove_submission_file: { Args: { _file_id: string }; Returns: undefined }
       remove_toyyibpay_credentials: {
@@ -3509,6 +3547,10 @@ export type Database = {
           n: number
           stage: string
         }[]
+      }
+      report_stage_rank: {
+        Args: { _r: Database["public"]["Tables"]["report_submissions"]["Row"] }
+        Returns: number
       }
       resend_invitation: { Args: { _invitation_id: string }; Returns: Json }
       revoke_invitation: {

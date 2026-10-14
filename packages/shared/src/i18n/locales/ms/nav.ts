@@ -39,6 +39,7 @@ export const nav: NavDict = {
   'nav.learn.reports': 'LPKC',
   'nav.learn.work': 'Tugasan saya',
   'nav.learn.billing': 'Bil',
+  'nav.learn.kwsp': 'Permohonan KWSP',
   'nav.learn.profile': 'Profil saya',
 
   // Carian pengepala

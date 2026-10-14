@@ -145,11 +145,36 @@ course"**, which is the real case: `course_instructors` is nearly empty, and
 `useMyGradableCourses` returns `linked: true` there so the existing
 no-instructor-record message does not fire.
 
-The **learner dashboard** (`pages/learn/LearnDashboardPage.tsx`) carries a
-sessions card beside a reports one, cut on **`ends_at` not `starts_at`** (a
-session being taught right now is still today's). `Dashboard.tsx` (admin) has
-no appointments card on purpose — it answers "how is the academy doing", and a
-diary is not that.
+The **learner dashboard** (`pages/learn/LearnDashboardPage.tsx`) is a
+**launcher, not a report** (Oct 2026, the owner's list and order): My courses,
+Appointments, LPKC, Documents, Billing, KWSP application, My profile — one card
+each, every row a full-width link, because it is read on a phone more than
+anywhere else.
+
+- **It says only what saves a trip.** The course's title (and the card opens
+  that course directly — one student, one course); the next session, cut on
+  **`ends_at` not `starts_at`** (a session being taught right now is still
+  today's); the status of each part of the LPKC; whether each document is
+  signed or uploaded; where the KWSP application stands. Billing and the
+  profile are plain links.
+- **The LPKC card lists only the parts that apply** — what `my_reports`
+  returns: the parts the student's course is taking, plus any they have a
+  thread on. A part with a thread opens it; one with nothing sent opens
+  `/learn/reports`, where its Send button is. A course taking no part has no
+  LPKC card.
+- **A status sits under its title, never beside it.** The Malay labels are long
+  ("Surat Pengesahan Tempoh Bekerja", "Ditandatangani dan dipersetujui") and a
+  phone has room for one of the two on a line.
+- **Nothing is drawn until every status is in.** The rows are tap targets, and
+  a row that grows a line as its status arrives moves the one under a thumb.
+- **Two columns from `lg`**, in reading order, so the seven keep their order.
+- **The coursework tiles, Up next and Recent marks are gone from it.** They are
+  My work's (`/learn/work`), which the rail still links. The documents and KWSP
+  statuses are one read — the student's own row of the documents roster
+  ([documents.md](documents.md)).
+
+`Dashboard.tsx` (admin) has no appointments card on purpose — it answers "how
+is the academy doing", and a diary is not that.
 
 ## Learner surface
 

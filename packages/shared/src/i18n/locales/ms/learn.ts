@@ -1,8 +1,6 @@
 import type { LearnDict } from '../en/learn'
 
 export const learn: LearnDict = {
-  'learn.dashboard.subtitle':
-    'Apa yang perlu dihantar, apa yang sudah diberi markah, dan di mana anda berhenti.',
   'learn.courses.subtitle': 'Bahan kursus, tugasan dan penilaian.',
   'learn.work.subtitle': 'Tugasan dan penilaian daripada semua kursus anda.',
 
@@ -20,24 +18,12 @@ export const learn: LearnDict = {
 
   'learn.stat.due_week': 'Perlu dihantar minggu ini',
   'learn.stat.awaiting': 'Menunggu markah',
-  'learn.stat.overdue.hint_zero': 'Tiada yang lewat',
-  'learn.stat.overdue.hint': 'Hantar secepat mungkin',
-  'learn.stat.outstanding_one': 'Jumlah {count} belum selesai',
-  'learn.stat.outstanding_other': 'Jumlah {count} belum selesai',
-  'learn.stat.awaiting.hint': 'Sudah dihantar, belum diberi markah',
-  'learn.stat.marked.hint_zero': 'Belum ada markah',
-  'learn.stat.marked.hint_one':
-    '{earned} daripada {possible} markah bagi {count} tugasan',
-  'learn.stat.marked.hint_other':
-    '{earned} daripada {possible} markah bagi {count} tugasan',
 
   'learn.up_next': 'Seterusnya',
-  'learn.recent_marks': 'Markah terkini',
   'learn.all_work': 'Semua kerja',
   'learn.all_courses': 'Semua kursus',
   'learn.view_all': 'Lihat semua',
   'learn.empty.outstanding': 'Tiada yang tertunggak. Semuanya sudah dihantar.',
-  'learn.empty.marked': 'Belum ada apa-apa yang diberi markah.',
   'learn.empty.courses_short':
     'Anda belum didaftarkan dalam mana-mana kursus.',
 

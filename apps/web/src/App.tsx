@@ -37,6 +37,7 @@ import { LearnReportPage } from './pages/learn/LearnReportPage'
 import { LearnOfferLetterPage } from './pages/learn/LearnOfferLetterPage'
 import { LearnIcCopyPage } from './pages/learn/LearnIcCopyPage'
 import { LearnEmploymentLetterPage } from './pages/learn/LearnEmploymentLetterPage'
+import { LearnKwspPage } from './pages/learn/LearnKwspPage'
 import { SignIn } from './pages/SignIn'
 import { SignUp } from './pages/SignUp'
 import { ForgotPassword } from './pages/ForgotPassword'
@@ -192,6 +193,10 @@ export default function App() {
                       path="/learn/documents/employment-letter"
                       element={<LearnEmploymentLetterPage />}
                     />
+                    {/* Asking the academy for its letter to KWSP. Not under
+                        Documents: the student applies and reads a status,
+                        and never holds the letter. */}
+                    <Route path="/learn/kwsp" element={<LearnKwspPage />} />
                     <Route path="/learn/profile" element={<LearnProfilePage />} />
                     {/* In-tree catch-all. Without it an unknown /learn/* URL hits
                         the global '*' below, which sends it to '/' — and AppShell

@@ -4,15 +4,16 @@ One parent in both rails, **Documents**: the **offer letter** (surat tawaran)
 the academy issues to a student, the **IC copy** (salinan kad pengenalan) and
 the **employment letter** (Surat Pengesahan Tempoh Bekerja) it collects from
 one, and — on the staff rail only — the **KWSP letter** (Surat Pengesahan
-Pendaftaran Pelajar) it prepares for some. Web only for now; the mobile apps
-come later.
+Pendaftaran Pelajar) it prepares for some. A student asks for that last one
+from **KWSP application**, a page of its own in their rail. Web only for now;
+the mobile apps come later.
 
 | | staff (admin only) | student |
 | --- | --- | --- |
 | offer letter | `/documents/offer-letters` — every student, who has signed, download any | `/learn/documents/offer-letter` — sign, agree, download their own |
 | IC copy | `/documents/ic-copies` — every student, view the copy | `/learn/documents/ic-copy` — upload, replace, view |
 | employment letter | `/documents/employment-letters` — as the IC copy | `/learn/documents/employment-letter` — as the IC copy |
-| KWSP letter | `/documents/kwsp-letters` — who has one, download; create for many in a dialog | — the student never sees it |
+| KWSP letter | `/documents/kwsp-letters` — who has applied, who has one, download; create for many in a dialog | `/learn/kwsp` — apply, and read where it stands; never the letter |
 
 `/documents` and `/learn/documents` redirect to the letter: the parent is a
 heading in the rail, not a page. The staff pages are one roster
@@ -32,10 +33,13 @@ offer letter stays alphabetical.
 (`features/documents/StudentDocumentsCard.tsx`) under the enrolment: the
 documents, the date each was signed, uploaded or created, and the roster's own
 actions — *Download* for a letter, *View* for a file that is there, and
-*Create* for a KWSP letter the student does not have yet. It is the
+*Create* for a KWSP letter the student does not have yet (a student who has
+asked for one reads *Applied*, with the date). It is the
 roster's read narrowed to one id (`useStudentDocuments`), keyed under the
 roster's so one invalidation refreshes both, and it is shown to an admin only,
-for the reason the pages are. Two differences from the roster: an archived
+for the reason the pages are. The student's own dashboard and KWSP page run the
+same read on their own id: RLS hands a student their row and what is theirs on
+it, so the statuses there are one request and need no second copy of the rule. Two differences from the roster: an archived
 student still has a card, and the letter's download reads the row again first —
 the profile and the course are edited on that same page, and neither edit
 invalidates this read.
@@ -257,9 +261,10 @@ orphaned, as a deleted payment's receipt does. Nothing sweeps either yet.
 
 Surat Pengesahan Pendaftaran Pelajar: the academy's confirmation to KWSP that
 somebody is its student, which a student paying through a KWSP withdrawal has to
-hand in. **Not every student has one**, and it is **the academy's alone** — it
-is created, downloaded, printed, signed and handed over by an admin. There is no
-learner page and the student cannot read the row.
+hand in. **Not every student has one**, and the letter is **the academy's
+alone** — it is created, downloaded, printed, signed and handed over by an
+admin. A student can **ask for it** and see where the request stands
+([below](#the-application)); they never hold the file.
 
 ### Created, then drawn
 
@@ -277,29 +282,74 @@ Two separate things:
 Creating does not download and downloading does not create: a letter can only
 be downloaded for a student who has the row.
 
-**The page lists only the students who have one.** `/documents/kwsp-letters`
-is the roster narrowed to them (`DocumentStudentList`'s `only`), with search,
-the course filter and a checkbox on every row (`selection`). Ticking rows
-brings up *Download (n)* — one file, a letter to a page — and *Remove (n)*
-behind `⋯`. A student without a letter is not on the page at all; there is no
-"not created" row and no status filter.
+**The page lists the students who have applied and the students who have
+one.** `/documents/kwsp-letters` is the roster narrowed to them
+(`DocumentStudentList`'s `only`), with search, the course filter, a status
+filter (*Applied* / *Created*) and a checkbox on every row (`selection`).
+Anybody else is not on the page at all; there is no "not created" row.
 
-**Where it is created.** For one student, the *Create* button on their
-Documents card on `/students/:id`. For many, the page's *Create* button opens
-a dialog (`features/documents/KwspCreateDialog.tsx`): the same roster, turned
-round to everyone who has **no** letter, with its own search and course filter,
-so a course and *select all* make a course's worth one click, and the button
-says how many it will create.
+- **Applications come first** (`first`): they are what is waiting on somebody.
+  The page opens on *All statuses* rather than on *Applied*, so a day with no
+  applications still opens on the letters and not on an empty list.
+- An application's row says when it was sent and carries **Create** — the
+  review is reading the row, and creating the letter is the answer. A letter's
+  row carries its date and **Download**, as before.
+- Ticking rows brings up *Create (n)* for the applications among them,
+  *Download (n)* for the letters — one file, a letter to a page — and
+  *Remove (n)* behind `⋯`.
+
+**Where it is created.** On an application's row. For one student who has not
+applied, the *Create* button on their Documents card on `/students/:id`. For
+many, the page's *Create* button opens a dialog
+(`features/documents/KwspCreateDialog.tsx`): the same roster, turned round to
+everyone who has **no** letter — applicants included — with its own search and
+course filter, so a course and *select all* make a course's worth one click,
+and the button says how many it will create.
 
 **A selection never holds a student who is not in view**, on the page or in
 the dialog: narrowing the roster drops whoever it hides, so nothing is created
 or removed out of sight.
 
+### The application
+
+The student asks; an admin answers by creating the letter. Migrations
+`20261014090000_student_kwsp_applications.sql` and
+`20261014090100_remove_kwsp_applications.sql`.
+
+- **`student_kwsp_applications`** (`student_id` primary key, `academy_id`,
+  `created_at`) — the fact that this student asked, and when. **A table of its
+  own, not a state on `student_kwsp_letters`**: a row there keeps meaning "the
+  academy has prepared one", so `create_kwsp_letters` and `remove_kwsp_letters`
+  were not touched and the build deployed before this kept working unchanged.
+- **Three states, none stored** (`kwspState` in `features/documents/api.ts`):
+  no row in either table is *not applied*; an application with no letter is
+  *under review*; a letter is *approved*, asked for or not. The student reads
+  those three words; staff read *Applied {date}* and *Created {date}*.
+- **Applying is one button** on `/learn/kwsp`. The letter is drawn from the
+  record, so there is nothing to fill in — except an **IC number** when the
+  record has none (or holds one the save would refuse), since the letter is two
+  lines of it. It is asked for there and saved through
+  `update_my_student_details` on the way, as on the offer letter's page; the
+  function refuses an application from a record with no IC number, so the rule
+  does not rest on the page.
+- **What comes back is a status, never the file.** The signature and the stamp
+  are given by hand, so a download would hand the student an unsigned letter.
+- **Taking a letter back leaves the application waiting again** — the
+  application row is still there. *Remove* on an application that has no letter
+  turns it away: the row goes, the student reads *not applied* and may ask
+  again. There is no "declined" state and no reason given; if the academy wants
+  to say why, that is a conversation.
+- **Nobody is notified** — not the admins when one arrives, not the student
+  when it is answered. The page lists applications first, and the student's
+  dashboard shows where theirs stands.
+
 ### Who may do what
 
-- **Read**: `app.is_admin(academy_id)` and nothing else. Narrower than the IC
-  copy on purpose — not the student, and not a trainer.
-- **Written** only by two SECURITY DEFINER RPCs; clients have no DML.
+- **Read**, both tables: **`app.is_admin OR app.owns_student`**, as an IC copy
+  is — not a trainer. The letter's row was admin-only while the student had no
+  part in it; having applied, they need the answer. The row says only that a
+  letter exists and since when.
+- **Written** only by SECURITY DEFINER RPCs; clients have no DML on either.
   `create_kwsp_letters(_student_ids uuid[])` wants every id to be a live
   student of an academy the caller administers, or it writes nothing — a partial
   bulk would leave the admin guessing which rows took. A student who already has
@@ -307,6 +357,12 @@ or removed out of sight.
   `remove_kwsp_letters(_student_ids uuid[])` takes rows back; it exists because
   a bulk create is one click and needs an undo, and it loses nothing but the
   date.
+  `apply_for_kwsp_letter(_student_id uuid)` is the student's: the caller must be
+  the account the record is linked to, as in `sign_offer_letter`, and applying
+  twice keeps the first date. Staff do not apply for a student — an admin who
+  wants one to have a letter creates it.
+  `remove_kwsp_applications(_student_ids uuid[])` is an admin's, and passes over
+  rows of an academy the caller does not administer.
 
 ### What the letter says
 
@@ -349,7 +405,11 @@ much room, never the footer's.
 
 ## Not done
 
-- The KWSP letter has no learner page and no mobile page, on purpose.
+- The student cannot download the KWSP letter, on purpose, and the KWSP
+  application has no mobile page yet.
+- No notification when a KWSP application arrives or is answered, and no count
+  on the staff rail.
+- A student cannot withdraw a KWSP application; an admin removes it.
 - The KWSP letter records that it was created, not who created it, nor each
   download.
 

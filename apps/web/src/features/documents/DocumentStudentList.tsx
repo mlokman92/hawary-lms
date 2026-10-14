@@ -38,6 +38,7 @@ export function DocumentStudentList({
   lastCell,
   statusFilter,
   newestCourseFirst,
+  first,
   selection,
   actions,
   only,
@@ -66,6 +67,12 @@ export function DocumentStudentList({
    * student on a course with no start date goes last.
    */
   newestCourseFirst?: boolean
+  /**
+   * Students to list ahead of everybody else — the applications still waiting,
+   * on the KWSP page. Each half keeps its own order. Pass a stable function:
+   * it is a dependency of the rows.
+   */
+  first?: (student: DocumentStudent) => boolean
   /**
    * A checkbox on every row, for a page that acts on many students at once.
    * The selection never holds a student who is not in view: narrowing the
@@ -121,15 +128,18 @@ export function DocumentStudentList({
             v?.toLowerCase().includes(q),
           )),
     )
-    if (!newestCourseFirst) return matching
     // The read is ordered by name and sort is stable, so students on one
-    // course stay alphabetical.
-    return matching.sort((a, b) => {
-      const x = a.course?.start_date ?? ''
-      const y = b.course?.start_date ?? ''
-      return x === y ? 0 : x === '' ? 1 : y === '' ? -1 : x < y ? 1 : -1
-    })
-  }, [students, search, course, status, statusFilter, newestCourseFirst])
+    // course — and in each half of `first` — stay alphabetical.
+    if (newestCourseFirst) {
+      matching.sort((a, b) => {
+        const x = a.course?.start_date ?? ''
+        const y = b.course?.start_date ?? ''
+        return x === y ? 0 : x === '' ? 1 : y === '' ? -1 : x < y ? 1 : -1
+      })
+    }
+    if (first) matching.sort((a, b) => Number(first(b)) - Number(first(a)))
+    return matching
+  }, [students, search, course, status, statusFilter, newestCourseFirst, first])
 
   const selected = selection?.selected
   const onSelect = selection?.onChange

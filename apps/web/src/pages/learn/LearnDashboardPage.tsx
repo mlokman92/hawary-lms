@@ -1,495 +1,330 @@
-import { useMemo } from 'react'
+import { Children, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  AlertTriangle,
+  BookOpen,
   CalendarClock,
   ChevronRight,
-  ClipboardList,
-  FileCheck2,
+  ClipboardCheck,
   FileText,
-  Hourglass,
-  Trophy,
+  Landmark,
+  Receipt,
+  UserRound,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { getLang, useT, type TFn } from '@/lib/i18n'
+import { getLang, useT } from '@/lib/i18n'
 import { localeFor } from '@/lib/format'
-import { TONE_CLASS } from '@/lib/tone'
+import { TONE_CLASS, type Tone } from '@/lib/tone'
 import { useStudentAcademy } from '@/lib/studentAcademy'
 import { useMyCourses, useMyStudent } from '@/features/learn/api'
-import {
-  isDueSoon,
-  isOverdue,
-  useLearnDashboard,
-  type LearnTask,
-} from '@/features/learn/dashboard'
-import { TASK_STATE_META } from '@/features/learn/status'
 import {
   DEFAULT_TZ,
   useAcademyTimezone,
   useMyAppointments,
 } from '@/features/appointments/api'
 import { fmtWhen } from '@/features/appointments/calendar'
-import { REPORT_STATUS, useMyReports } from '@/features/reports/api'
+import {
+  LPKC_STAGE_LABEL,
+  REPORT_STATUS,
+  reportTargets,
+  useMyReports,
+} from '@/features/reports/api'
+import {
+  KWSP_APPLICATION_STATUS,
+  kwspState,
+  useStudentDocuments,
+  type UploadedPdf,
+} from '@/features/documents/api'
 import { PageHeader } from '@/components/patterns/PageHeader'
-import { StatTile } from '@/components/patterns/StatTile'
-import { ListCard } from '@/components/patterns/ListCard'
 import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
 import { NoStudentRecord } from '@/components/learn/NoStudentRecord'
 import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
+import { Card } from '@/components/ui/card'
 
-// `t` already means "the task" everywhere in this file, so the translator is
-// aliased to `tr` rather than renamed row variables.
-function dueLabel(task: LearnTask, tr: TFn) {
-  if (!task.due_at) return tr('learn.due.none')
-  const diff = new Date(task.due_at).getTime() - Date.now()
-  const days = Math.round(diff / 86_400_000)
-  if (diff < 0) return tr('learn.due.overdue_by', { days: Math.abs(days) || 1 })
-  if (days === 0) return tr('learn.due.today')
-  if (days === 1) return tr('learn.due.tomorrow')
-  return tr('learn.due.in_days', { days })
-}
+/** Where a row stands, and how that should read at a glance. */
+type Status = { label: string; tone: Tone }
 
-const taskHref = (t: LearnTask) =>
-  t.kind === 'assignment'
-    ? `/learn/assignments/${t.id}`
-    : `/learn/assessments/${t.id}`
-
-const KIND_ICON: Record<LearnTask['kind'], LucideIcon> = {
-  assignment: FileCheck2,
-  assessment: ClipboardList,
-}
-
-function TaskRow({ t }: { t: LearnTask }) {
-  const { t: tr } = useT()
-  const Icon = KIND_ICON[t.kind]
-  const over = isOverdue(t)
+// Under the title, never beside it: the Malay labels are long ("Surat
+// Pengesahan Tempoh Bekerja", "Ditandatangani dan dipersetujui") and a phone
+// has room for one of the two on a line.
+function StatusBadge({ status }: { status: Status }) {
   return (
-    <li className="hover:bg-muted/50 flex items-center gap-3 px-4 py-2.5 transition-colors">
-      <Icon className="text-muted-foreground size-4 shrink-0" aria-hidden />
-      <Link to={taskHref(t)} className="min-w-0 flex-1 hover:underline">
-        <span className="block truncate text-sm font-medium">{t.title}</span>
-        <span className="text-muted-foreground block truncate text-xs">
-          {tr(
-            t.kind === 'assignment'
-              ? 'learn.kind.assignment'
-              : 'learn.kind.assessment',
-          )}{' '}
-          · {tr('learn.points', { points: t.total_points })}
-        </span>
-      </Link>
-      {t.state === 'in_progress' ? (
-        <Badge variant={TASK_STATE_META.in_progress.variant} className="shrink-0">
-          {tr(TASK_STATE_META.in_progress.labelKey)}
-        </Badge>
+    <Badge
+      variant="outline"
+      className={cn('mt-1.5 flex', TONE_CLASS[status.tone])}
+    >
+      {status.label}
+    </Badge>
+  )
+}
+
+/**
+ * One of the places a student goes, as a card. The heading is the way in; a
+ * place with parts — the LPKC, the documents — lists them under it, each its
+ * own way in.
+ */
+function Section({
+  icon: Icon,
+  title,
+  to,
+  detail,
+  status,
+  children,
+}: {
+  icon: LucideIcon
+  title: string
+  /** Where the heading leads. Left out, it is only a heading over its rows. */
+  to?: string
+  detail?: string | null
+  status?: Status
+  children?: ReactNode
+}) {
+  const heading = (
+    <>
+      <Icon className="text-muted-foreground size-5 shrink-0" aria-hidden />
+      <div className="min-w-0 flex-1">
+        <h2 className="text-base font-medium">{title}</h2>
+        {detail ? (
+          <p className="text-muted-foreground truncate">{detail}</p>
+        ) : null}
+        {status ? <StatusBadge status={status} /> : null}
+      </div>
+      {to ? (
+        <ChevronRight
+          className="text-muted-foreground size-4 shrink-0"
+          aria-hidden
+        />
       ) : null}
-      <span
-        className={cn(
-          'shrink-0 text-xs tabular-nums',
-          over ? 'text-destructive font-medium' : 'text-muted-foreground',
-        )}
+    </>
+  )
+  const frame = 'flex items-center gap-3 px-5 py-4'
+  return (
+    <Card className="gap-0 py-0">
+      {to ? (
+        <Link
+          to={to}
+          className={cn(frame, 'hover:bg-muted/50 transition-colors')}
+        >
+          {heading}
+        </Link>
+      ) : (
+        <div className={frame}>{heading}</div>
+      )}
+      {Children.count(children) > 0 ? (
+        <ul className="divide-y border-t">{children}</ul>
+      ) : null}
+    </Card>
+  )
+}
+
+/** A part of a section. Indented to sit under the heading's title. */
+function Item({
+  to,
+  title,
+  status,
+}: {
+  to: string
+  title: string
+  status?: Status
+}) {
+  return (
+    <li>
+      <Link
+        to={to}
+        className="hover:bg-muted/50 flex items-center gap-3 py-3 pr-5 pl-13 transition-colors"
       >
-        {dueLabel(t, tr)}
-      </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium">{title}</p>
+          {status ? <StatusBadge status={status} /> : null}
+        </div>
+        <ChevronRight
+          className="text-muted-foreground size-4 shrink-0"
+          aria-hidden
+        />
+      </Link>
     </li>
   )
 }
 
+/**
+ * The student's way in to everything, in the order they need it: the course,
+ * sessions, the LPKC, documents, billing, the KWSP application, the profile.
+ *
+ * A launcher, not a report. It is read on a phone more than anywhere else, so
+ * every row is a full-width link, and it says only what saves a trip: which
+ * course, when the next session is, where each part of the LPKC and each
+ * document stands. Coursework deadlines are My work's, one tap from the rail.
+ */
 export function LearnDashboardPage() {
-  const { t: tr, tn } = useT()
+  const { t } = useT()
   const { academyId } = useStudentAcademy()
   const {
     data: student,
     isLoading: studentLoading,
     error: studentError,
   } = useMyStudent(academyId)
-  const { data: courses } = useMyCourses(academyId, student?.id ?? null)
-  const { data, isLoading, error } = useLearnDashboard(
-    academyId,
-    student?.id ?? null,
-  )
-  // The two things a student comes here to check that are not coursework: when
-  // they are expected in person, and what became of the documents they sent.
+  const courses = useMyCourses(academyId, student?.id ?? null)
   const { data: tz = DEFAULT_TZ } = useAcademyTimezone(academyId)
-  const { data: sessions } = useMyAppointments(academyId)
-  const { data: reports } = useMyReports(academyId)
-  const locale = localeFor(getLang())
+  const sessions = useMyAppointments(academyId)
+  const reports = useMyReports(academyId)
+  // The student's own row of the documents roster: one read for the three
+  // documents and the KWSP application.
+  const docs = useStudentDocuments(student?.id)
 
-  const groups = useMemo(() => {
-    const tasks = data?.tasks ?? []
-    const outstanding = tasks.filter(
-      (t) => t.state === 'todo' || t.state === 'in_progress',
-    )
-    return {
-      overdue: outstanding.filter((t) => isOverdue(t)),
-      soon: outstanding
-        .filter((t) => !isOverdue(t) && isDueSoon(t))
-        .sort((a, b) => (a.due_at ?? '').localeCompare(b.due_at ?? '')),
-      rest: outstanding.filter((t) => !isOverdue(t) && !isDueSoon(t)),
-      awaiting: tasks.filter((t) => t.state === 'awaiting'),
-      marked: tasks
-        .filter((t) => t.state === 'marked')
-        .sort((a, b) => (b.submittedAt ?? '').localeCompare(a.submittedAt ?? '')),
-    }
-  }, [data])
-
-  // Kept above the guards and rendered in every branch: the back-office does
-  // the same, so the h1 is present from the first paint instead of popping in
-  // and shifting the layout once the queries resolve.
-  const header = (
-    <PageHeader
-      title={tr('nav.learn.dashboard')}
-      description={tr('learn.dashboard.subtitle')}
-    />
-  )
-
+  let body: ReactNode
   if (studentLoading) {
-    return (
-      <div className="mx-auto w-full max-w-6xl">
-        {header}
-        <LoadingBlock className="mt-6" />
+    body = <LoadingBlock className="mt-6" />
+  } else if (studentError) {
+    body = <ErrorBlock error={studentError} className="mt-6" />
+  } else if (!student) {
+    // Accepting an invitation creates the membership but never the record, so
+    // this is reachable by the very first student who ever joins.
+    body = (
+      <div className="mt-6">
+        <NoStudentRecord />
+      </div>
+    )
+  } else if (
+    courses.isLoading ||
+    sessions.isLoading ||
+    reports.isLoading ||
+    docs.isLoading
+  ) {
+    // Held until every status is in: the rows are tap targets, and one that
+    // grows a line as its status arrives moves the row under a thumb.
+    body = <LoadingBlock className="mt-6" />
+  } else {
+    // One student, one course: with exactly one there is no list to pick from.
+    const course = courses.data?.length === 1 ? courses.data[0] : null
+
+    // Still going ahead, and not yet over. Cut on `ends_at`, the rule the
+    // register uses: a session being taught right now is still today's.
+    const next = (sessions.data ?? [])
+      .filter(
+        (a) => a.status === 'booked' && Date.parse(a.ends_at) >= Date.now(),
+      )
+      .sort((a, b) => a.starts_at.localeCompare(b.starts_at))[0]
+
+    // Only the parts the student's course is taking, or that they have already
+    // sent — `my_reports` decides. A course taking none has no LPKC card.
+    const parts = reports.data?.is_open
+      ? reportTargets(reports.data.courses)
+      : []
+
+    const uploaded = (file: UploadedPdf | null): Status =>
+      file
+        ? { label: t('sdoc.file.uploaded'), tone: 'positive' }
+        : { label: t('sdoc.file.not_uploaded'), tone: 'muted' }
+    const kwsp = docs.data
+      ? KWSP_APPLICATION_STATUS[kwspState(docs.data)]
+      : null
+
+    body = (
+      <div className="mt-6 grid items-start gap-4 lg:grid-cols-2">
+        <Section
+          icon={BookOpen}
+          title={t('nav.learn.courses')}
+          to={course ? `/learn/courses/${course.id}` : '/learn/courses'}
+          detail={course?.title}
+        />
+
+        <Section
+          icon={CalendarClock}
+          title={t('nav.learn.appointments')}
+          to="/learn/appointments"
+          detail={
+            next
+              ? [
+                  fmtWhen(next.starts_at, tz, localeFor(getLang())),
+                  next.instructor.full_name,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
+              : null
+          }
+        />
+
+        {parts.length > 0 || reports.isError ? (
+          <Section
+            icon={ClipboardCheck}
+            title={t('nav.learn.reports')}
+            to="/learn/reports"
+          >
+            {parts.map((p) => {
+              const meta = p.report ? REPORT_STATUS[p.report.status] : null
+              return (
+                <Item
+                  key={`${p.courseId}:${p.stage}`}
+                  title={t(LPKC_STAGE_LABEL[p.stage])}
+                  // A part with nothing sent leads to the list, where its
+                  // Send button is.
+                  to={
+                    p.report ? `/learn/reports/${p.report.id}` : '/learn/reports'
+                  }
+                  status={
+                    meta
+                      ? { label: t(meta.labelKey), tone: meta.tone }
+                      : { label: t('report.learn.nothing_sent'), tone: 'muted' }
+                  }
+                />
+              )
+            })}
+          </Section>
+        ) : null}
+
+        {/* No page of its own, as in the rail: a heading over the three. */}
+        <Section icon={FileText} title={t('nav.documents')}>
+          <Item
+            title={t('nav.offer_letter')}
+            to="/learn/documents/offer-letter"
+            status={
+              docs.data
+                ? docs.data.offerAcceptedAt
+                  ? { label: t('sdoc.offer.signed'), tone: 'positive' }
+                  : { label: t('sdoc.offer.not_signed'), tone: 'muted' }
+                : undefined
+            }
+          />
+          <Item
+            title={t('nav.ic_copy')}
+            to="/learn/documents/ic-copy"
+            status={docs.data ? uploaded(docs.data.icCopy) : undefined}
+          />
+          <Item
+            title={t('nav.employment_letter')}
+            to="/learn/documents/employment-letter"
+            status={
+              docs.data ? uploaded(docs.data.employmentLetter) : undefined
+            }
+          />
+        </Section>
+
+        <Section
+          icon={Receipt}
+          title={t('nav.learn.billing')}
+          to="/learn/billing"
+        />
+
+        <Section
+          icon={Landmark}
+          title={t('nav.learn.kwsp')}
+          to="/learn/kwsp"
+          status={kwsp ? { label: t(kwsp.labelKey), tone: kwsp.tone } : undefined}
+        />
+
+        <Section
+          icon={UserRound}
+          title={t('nav.learn.profile')}
+          to="/learn/profile"
+        />
       </div>
     )
   }
-
-  if (studentError) {
-    return (
-      <div className="mx-auto w-full max-w-6xl">
-        {header}
-        <ErrorBlock error={studentError} className="mt-6" />
-      </div>
-    )
-  }
-
-  // Accepting an invitation creates the membership but never an enrolment, and
-  // enrolments are staff-created — so this state is reachable by the very first
-  // student who ever joins. Name the missing step instead of showing a blank.
-  if (!student) {
-    return (
-      <div className="mx-auto w-full max-w-6xl">
-        {header}
-        <div className="mt-6">
-          <NoStudentRecord />
-        </div>
-      </div>
-    )
-  }
-
-  // Still going ahead, and not yet over. Cut on `ends_at` rather than
-  // `starts_at`, the same rule the register uses: a session being taught right
-  // now is still today's session, not history.
-  const upcoming = (sessions ?? [])
-    .filter((a) => a.status === 'booked' && Date.parse(a.ends_at) >= Date.now())
-    .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
-    .slice(0, 4)
-
-  // Only threads that exist. A course with nothing sent is a row on
-  // /learn/reports, where the Send button is; here it would be a line reporting
-  // an absence.
-  const myReports = (reports?.courses ?? [])
-    .flatMap((c) => c.stages.map((s) => s.report))
-    .filter((r): r is NonNullable<typeof r> => r !== null)
-    .sort((a, b) => b.last_at.localeCompare(a.last_at))
-    .slice(0, 4)
-
-  const outstanding =
-    groups.overdue.length + groups.soon.length + groups.rest.length
-  const marked = groups.marked
-  const earned = marked.reduce((s, t) => s + (t.score ?? 0), 0)
-  const possible = marked.reduce((s, t) => s + (t.outOf ?? 0), 0)
 
   return (
-    <div className="mx-auto w-full max-w-6xl">
-      {header}
-
-      {/* Each tile deep-links into the matching filter on My work. */}
-      <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatTile
-          label={tr('common.overdue')}
-          value={String(groups.overdue.length)}
-          hint={
-            groups.overdue.length === 0
-              ? tr('learn.stat.overdue.hint_zero')
-              : tr('learn.stat.overdue.hint')
-          }
-          icon={AlertTriangle}
-          tone={groups.overdue.length > 0 ? 'danger' : 'muted'}
-          to="/learn/work?state=overdue"
-        />
-        <StatTile
-          label={tr('learn.stat.due_week')}
-          value={String(groups.soon.length)}
-          hint={tn('learn.stat.outstanding', outstanding)}
-          icon={CalendarClock}
-          tone={groups.soon.length > 0 ? 'warning' : 'muted'}
-          to="/learn/work?state=todo"
-        />
-        <StatTile
-          label={tr('learn.stat.awaiting')}
-          value={String(groups.awaiting.length)}
-          hint={tr('learn.stat.awaiting.hint')}
-          icon={Hourglass}
-          tone="accent"
-          to="/learn/work?state=awaiting"
-        />
-        <StatTile
-          label={tr('status.task.marked')}
-          value={
-            possible > 0
-              ? `${Math.round((earned / possible) * 100)}%`
-              : String(marked.length)
-          }
-          hint={
-            possible > 0
-              ? tn('learn.stat.marked.hint', marked.length, {
-                  earned,
-                  possible,
-                })
-              : tr('learn.stat.marked.hint_zero')
-          }
-          icon={Trophy}
-          tone="positive"
-          to="/learn/work?state=marked"
-        />
-      </div>
-
-      {isLoading ? (
-        <LoadingBlock className="mt-8" />
-      ) : error ? (
-        <ErrorBlock error={error} className="mt-8" />
-      ) : (
-        <>
-          <div className="mt-8">
-            <ListCard
-              title={tr('learn.up_next')}
-              action={{
-                to: '/learn/work',
-                label: (
-                  <>
-                    {tr('learn.all_work')} <ChevronRight />
-                  </>
-                ),
-              }}
-            >
-              {outstanding === 0 ? (
-                <p className="text-muted-foreground px-4 py-8 text-center text-sm">
-                  {tr('learn.empty.outstanding')}
-                </p>
-              ) : (
-                <ul className="divide-y">
-                  {[...groups.overdue, ...groups.soon, ...groups.rest]
-                    .slice(0, 6)
-                    .map((t) => (
-                      <TaskRow key={`${t.kind}-${t.id}`} t={t} />
-                    ))}
-                </ul>
-              )}
-            </ListCard>
-          </div>
-
-          {/* Sessions and reports, side by side. Both answer "what is
-              happening with me", which is a different question from the
-              coursework above — and neither was reachable from this page
-              before. */}
-          <div className="mt-8 grid gap-4 lg:grid-cols-2">
-            <ListCard
-              title={tr('appt.learn.mine')}
-              action={{
-                to: '/learn/appointments',
-                label: (
-                  <>
-                    {tr('learn.view_all')} <ChevronRight />
-                  </>
-                ),
-              }}
-            >
-              {upcoming.length === 0 ? (
-                <p className="text-muted-foreground px-4 py-8 text-center text-sm">
-                  {tr('appt.dash.none')}
-                </p>
-              ) : (
-                <ul className="divide-y">
-                  {upcoming.map((a) => (
-                    <li
-                      key={a.id}
-                      className="flex items-center gap-3 px-4 py-2.5"
-                    >
-                      <CalendarClock
-                        className="text-muted-foreground size-4 shrink-0"
-                        aria-hidden
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium">
-                          {fmtWhen(a.starts_at, tz, locale)}
-                        </span>
-                        <span className="text-muted-foreground block truncate text-xs">
-                          {/* The instructor's name is the one fact a student
-                              cannot get anywhere else — `instructors` is
-                              staff-only, so this RPC's projection is their
-                              only sight of it. */}
-                          {a.instructor.full_name ?? tr('common.unnamed')}
-                        </span>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </ListCard>
-
-            <ListCard
-              title={tr('report.dash.learn.title')}
-              action={{
-                to: '/learn/reports',
-                label: (
-                  <>
-                    {tr('learn.view_all')} <ChevronRight />
-                  </>
-                ),
-              }}
-            >
-              {myReports.length === 0 ? (
-                <p className="text-muted-foreground px-4 py-8 text-center text-sm">
-                  {tr('report.dash.learn.empty')}
-                </p>
-              ) : (
-                <ul className="divide-y">
-                  {myReports.map((r) => {
-                    const meta = REPORT_STATUS[r.status]
-                    return (
-                      <li
-                        key={r.id}
-                        className="hover:bg-muted/50 flex items-center gap-3 px-4 py-2.5 transition-colors"
-                      >
-                        <Link
-                          to={`/learn/reports/${r.id}`}
-                          className="min-w-0 flex-1 hover:underline"
-                        >
-                          <span className="block truncate text-sm font-medium">
-                            {r.title}
-                          </span>
-                          <span className="text-muted-foreground block truncate text-xs">
-                            {r.instructor_name
-                              ? tr('report.checked_by', {
-                                  name: r.instructor_name,
-                                })
-                              : tr('report.unassigned')}
-                          </span>
-                        </Link>
-                        <Badge
-                          variant="outline"
-                          className={cn('shrink-0', TONE_CLASS[meta.tone])}
-                        >
-                          {tr(meta.labelKey)}
-                        </Badge>
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
-            </ListCard>
-          </div>
-
-          <div className="mt-8 grid gap-4 lg:grid-cols-2">
-            <ListCard
-              title={tr('learn.recent_marks')}
-              action={{
-                to: '/learn/work?state=marked',
-                label: tr('learn.view_all'),
-              }}
-            >
-              {marked.length === 0 ? (
-                <p className="text-muted-foreground px-4 py-8 text-center text-sm">
-                  {tr('learn.empty.marked')}
-                </p>
-              ) : (
-                <ul className="divide-y">
-                  {marked.slice(0, 5).map((t) => {
-                    const Icon = KIND_ICON[t.kind]
-                    return (
-                      <li
-                        key={`${t.kind}-${t.id}`}
-                        className="hover:bg-muted/50 flex items-center gap-3 px-4 py-2.5 transition-colors"
-                      >
-                        <Icon
-                          className="text-muted-foreground size-4 shrink-0"
-                          aria-hidden
-                        />
-                        <Link
-                          to={taskHref(t)}
-                          className="min-w-0 flex-1 truncate text-sm hover:underline"
-                        >
-                          {t.title}
-                        </Link>
-                        <span className="shrink-0 text-sm font-medium tabular-nums">
-                          {t.score ?? '—'}
-                          <span className="text-muted-foreground font-normal">
-                            {' '}
-                            / {t.outOf ?? '—'}
-                          </span>
-                        </span>
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
-            </ListCard>
-
-            <ListCard
-              title={tr('nav.learn.courses')}
-              action={{
-                to: '/learn/courses',
-                label: (
-                  <>
-                    {tr('learn.all_courses')} <ChevronRight />
-                  </>
-                ),
-              }}
-            >
-              {!courses || courses.length === 0 ? (
-                <p className="text-muted-foreground px-4 py-8 text-center text-sm">
-                  {tr('learn.empty.courses_short')}
-                </p>
-              ) : (
-                <ul className="divide-y">
-                  {courses.slice(0, 5).map((c) => {
-                    const s = data?.byCourse.get(c.id)
-                    const total = s?.total ?? 0
-                    const pct =
-                      total === 0 ? 0 : Math.round(((s?.done ?? 0) / total) * 100)
-                    return (
-                      <li
-                        key={c.id}
-                        className="hover:bg-muted/50 px-4 py-3 transition-colors"
-                      >
-                        <Link to={`/learn/courses/${c.id}`} className="block">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="truncate text-sm font-medium hover:underline">
-                              {c.title}
-                            </span>
-                            <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-                              {total === 0 ? '—' : `${pct}%`}
-                            </span>
-                          </div>
-                          <Progress value={pct} className="mt-2 h-1.5" />
-                          <p className="text-muted-foreground mt-1.5 flex items-center gap-2 text-xs">
-                            <FileText className="size-3.5" aria-hidden />
-                            {tn('learn.count.notes', s?.notes ?? 0)} ·{' '}
-                            {tr('learn.progress.tasks_done', {
-                              done: s?.done ?? 0,
-                              total,
-                            })}
-                          </p>
-                        </Link>
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
-            </ListCard>
-          </div>
-        </>
-      )}
+    <div className="mx-auto w-full max-w-4xl">
+      <PageHeader title={t('nav.learn.dashboard')} />
+      {body}
     </div>
   )
 }

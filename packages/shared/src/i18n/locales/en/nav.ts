@@ -41,6 +41,7 @@ export const nav = {
   'nav.learn.appointments': 'Appointments',
   'nav.learn.reports': 'LPKC',
   'nav.learn.billing': 'Billing',
+  'nav.learn.kwsp': 'KWSP application',
   'nav.learn.profile': 'My profile',
 
   // Header search. It looks across the people records in the active academy —

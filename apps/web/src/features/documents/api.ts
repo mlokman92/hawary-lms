@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Enums, Tables } from '@hawary/shared'
 import { supabase } from '@/lib/supabase'
+import type { TKey } from '@/lib/i18n'
+import type { Tone } from '@/lib/tone'
 import { downloadKwspLetters } from '@/features/kwsp-letter/letter'
 import { downloadOfferLetter } from '@/features/offer-letter/letter'
 import {
@@ -44,6 +46,31 @@ export type DocumentStudent = Pick<
   offerAcceptedAt: string | null
   /** When the academy prepared a KWSP letter for them; null if it has not. */
   kwspCreatedAt: string | null
+  /** When the student asked for a KWSP letter; null if they have not. */
+  kwspAppliedAt: string | null
+}
+
+/**
+ * Where a student's KWSP letter stands. An application is `applied` until the
+ * academy creates the letter, which is its answer; a letter the academy
+ * prepared unasked is `created` all the same.
+ */
+export type KwspState = 'none' | 'applied' | 'created'
+
+export function kwspState(
+  s: Pick<DocumentStudent, 'kwspAppliedAt' | 'kwspCreatedAt'>,
+): KwspState {
+  return s.kwspCreatedAt ? 'created' : s.kwspAppliedAt ? 'applied' : 'none'
+}
+
+/** What the student reads each state as, on their dashboard and their page. */
+export const KWSP_APPLICATION_STATUS: Record<
+  KwspState,
+  { labelKey: TKey; tone: Tone }
+> = {
+  none: { labelKey: 'sdoc.kwsp_app.not_applied', tone: 'muted' },
+  applied: { labelKey: 'sdoc.kwsp_app.in_review', tone: 'warning' },
+  created: { labelKey: 'sdoc.kwsp_app.approved', tone: 'positive' },
 }
 
 /** A student's signature on the offer letter, and when they gave it. */
@@ -67,17 +94,23 @@ function courseOf(enrollments: EnrollmentEmbed[] | null): DocumentCourse | null 
 }
 
 const DOCUMENT_STUDENT_SELECT =
-  'id, student_no, full_name, email, ic_number, personal_address, enrollments(status, courses(id, title, start_date, end_date)), ic_copy:student_ic_copies(created_at, file_name), employment_letter:student_employment_letters(created_at, file_name), offer_acceptance:student_offer_acceptances(accepted_at), kwsp_letter:student_kwsp_letters(created_at)'
+  'id, student_no, full_name, email, ic_number, personal_address, enrollments(status, courses(id, title, start_date, end_date)), ic_copy:student_ic_copies(created_at, file_name), employment_letter:student_employment_letters(created_at, file_name), offer_acceptance:student_offer_acceptances(accepted_at), kwsp_letter:student_kwsp_letters(created_at), kwsp_application:student_kwsp_applications(created_at)'
 
 type DocumentStudentRow = Omit<
   DocumentStudent,
-  'course' | 'icCopy' | 'employmentLetter' | 'offerAcceptedAt' | 'kwspCreatedAt'
+  | 'course'
+  | 'icCopy'
+  | 'employmentLetter'
+  | 'offerAcceptedAt'
+  | 'kwspCreatedAt'
+  | 'kwspAppliedAt'
 > & {
   enrollments: EnrollmentEmbed[] | null
   ic_copy: UploadedPdf | null
   employment_letter: UploadedPdf | null
   offer_acceptance: { accepted_at: string } | null
   kwsp_letter: { created_at: string } | null
+  kwsp_application: { created_at: string } | null
 }
 
 function toDocumentStudent({
@@ -86,6 +119,7 @@ function toDocumentStudent({
   employment_letter,
   offer_acceptance,
   kwsp_letter,
+  kwsp_application,
   ...student
 }: DocumentStudentRow): DocumentStudent {
   return {
@@ -95,6 +129,7 @@ function toDocumentStudent({
     employmentLetter: employment_letter,
     offerAcceptedAt: offer_acceptance?.accepted_at ?? null,
     kwspCreatedAt: kwsp_letter?.created_at ?? null,
+    kwspAppliedAt: kwsp_application?.created_at ?? null,
   }
 }
 
@@ -118,8 +153,10 @@ export function useDocumentStudents(academyId: string | null) {
 }
 
 /**
- * One student's row of the roster, for the card on `/students/:id`. The key
- * sits under the roster's, so whatever refreshes the roster refreshes this.
+ * One student's row of the roster: for the card on `/students/:id`, and for
+ * the student's own dashboard and KWSP page, where RLS hands back the same
+ * row with only what is theirs. The key sits under the roster's, so whatever
+ * refreshes the roster refreshes this.
  */
 export function useStudentDocuments(studentId: string | undefined) {
   return useQuery({
@@ -169,10 +206,13 @@ export async function downloadStudentKwspLetters(students: DocumentStudent[]) {
 }
 
 /**
- * Prepare a KWSP letter for these students, or take it back. Admin only, and
- * the functions say so; a student who already has one keeps its date.
+ * Prepare a KWSP letter for these students, take it back, or turn their
+ * application away. Admin only, and the functions say so; a student who
+ * already has a letter keeps its date.
  */
-function useKwspLetters(fn: 'create_kwsp_letters' | 'remove_kwsp_letters') {
+function useKwspLetters(
+  fn: 'create_kwsp_letters' | 'remove_kwsp_letters' | 'remove_kwsp_applications',
+) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (studentIds: string[]) => {
@@ -185,6 +225,25 @@ function useKwspLetters(fn: 'create_kwsp_letters' | 'remove_kwsp_letters') {
 
 export const useCreateKwspLetters = () => useKwspLetters('create_kwsp_letters')
 export const useRemoveKwspLetters = () => useKwspLetters('remove_kwsp_letters')
+export const useRemoveKwspApplications = () =>
+  useKwspLetters('remove_kwsp_applications')
+
+/**
+ * Ask the academy for a KWSP letter. The student's own act, on their own
+ * record; an admin answers it by creating the letter.
+ */
+export function useApplyForKwspLetter(studentId: string | undefined) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.rpc('apply_for_kwsp_letter', {
+        _student_id: studentId!,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['document-students'] }),
+  })
+}
 
 /**
  * The course the signed-in student's letter is about. Null when they are on

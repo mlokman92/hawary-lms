@@ -613,7 +613,8 @@ button rather than an absence to interpret. Same argument
 
 **Both dashboards** carry it: the trainer's gets a "Reports to check" card
 showing how long each has **waited** (not when it arrived), beside the marking
-queues; the learner's gets "Your reports" beside their sessions.
+queues; the learner's lists the parts of the LPKC that apply to them, each with
+its status ([web-surface.md](web-surface.md) → "Two dashboards").
 
 ## Appointments on the dashboards
 
@@ -622,9 +623,9 @@ Fixed alongside, because it was the same gap: the trainer dashboard already had
 appointments at all** — a student's only sight of their own sessions was
 `/learn/appointments`.
 
-It now carries a sessions card beside the reports one, cut on **`ends_at`, not
-`starts_at`**, the same rule the register uses: a session being taught right now
-is still today's session, not history.
+It now names the next session on its Appointments card, cut on **`ends_at`,
+not `starts_at`**, the same rule the register uses: a session being taught right
+now is still today's session, not history.
 
 The admin dashboard (`Dashboard.tsx`) still has no appointments card. Left
 alone deliberately — it answers "how is the academy doing", and a diary is not
