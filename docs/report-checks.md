@@ -253,10 +253,24 @@ document on it, so a student's file has to be that part's kind:
   its student gets no picker there.
 
 Found when this was built: 7 slides on report threads, 6 of them sent from the
-reply box. The 5 belonging to the 3 students who have no slides thread are to
-move onto a new one each (same checker, version 1, read as moderating) once the
-owner confirms the rewrite. The other 2 are byte-for-byte copies of files
-already on that student's slides thread and stay where they are.
+reply box. The 5 belonging to the 3 students who had no slides thread were
+moved onto a new one each on 15 Oct 2026 (same checker, version 1, read as
+moderating, nobody notified) — the entry and its files re-pointed, nothing
+deleted. The other 2 are byte-for-byte copies of files already on that
+student's slides thread and stay where they are.
+
+### The reset of 15 Oct 2026
+
+At the owner's request every thread was put back to its first submission:
+each keeps only its earliest `submitted` entry and that entry's files, at
+version 1, `in_review`, `reviewed_at` / `approved_at` cleared and
+`submitted_at` the first send — so all 142 read as moderating, summaries
+included (their "Diterima." entry went too). 122 entries and 26 file rows were
+removed. They, and every thread as it was, are kept in
+`app.report_events_reset_20261015`, `app.report_files_reset_20261015` and
+`app.report_submissions_reset_20261015` (no client access;
+`20261015120000_report_thread_reset_backup.sql`). The storage objects were not
+touched, so anything can be put back. Nobody was notified.
 
 ### The doors, and the builds that do not name a part
 
