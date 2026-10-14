@@ -24,10 +24,15 @@ cell that is the page's own business.
 **The roster opens on the interesting half.** Each page's third filter has a
 default (`statusFilter.defaultValue`): the offer letter opens on *Signed and
 agreed*, the IC copy and the employment letter on *Uploaded*. *All statuses* is
-one click away; the choice is not remembered between visits. The two uploaded
-documents also list the newest course first (`newestCourseFirst`: latest
-`start_date` first, no start date last, names alphabetical within a course); the
-offer letter stays alphabetical.
+one click away; the choice is not remembered between visits. Each page also
+orders latest first (`latestFirst`, no date last, names alphabetical within a
+date): the offer letter by when it was signed, the two uploaded documents by
+the course's `start_date`.
+
+**50 rows, then *Load more*.** The roster is one read and filters in the
+browser, so the limit is only on what is drawn; changing a filter or the
+search starts again at 50. A roster with checkboxes (the KWSP pages) shows
+everyone, because *select all* has to reach everything the filters left.
 
 **One student's row is also on `/students/:id`**, as a *Documents* card
 (`features/documents/StudentDocumentsCard.tsx`) under the enrolment: the

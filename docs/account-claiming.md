@@ -206,9 +206,18 @@ anything raised would fail account creation.
 
 Three rules hold both triggers together:
 
-- **Fill blanks, never rename.** `coalesce(btrim(x), '') = ''` — NULL, empty and
-  whitespace alike. A name staff typed outranks a self-service profile, and a
-  later rename must not retitle someone's record in a different academy.
+- **Fill blanks — except a student renaming themselves.** `coalesce(btrim(x),
+  '') = ''` — NULL, empty and whitespace alike. A name staff typed outranks a
+  self-service profile, *until the person changes their own name*: when
+  `profiles.full_name` moves to a non-blank value, every `students` row linked
+  to that account takes it (`20261014150000_student_name_follows_profile`).
+  It was fill-only before, and a student who corrected their name on
+  `/learn/profile` saw it there and nowhere else — the offer letter kept
+  printing the name staff had typed. It is their legal name on a letter they
+  sign; they are the authority on it. Only a *change* of the profile name
+  moves it, so a phone-only save never overwrites a name staff typed since,
+  and a staff rename stays until the student renames again. Instructors are
+  still fill-only: an instructor's record name is the Director's to keep.
 - **Match on `user_id`, never on a matching email.** Two of the four blank rows
   in this database have an auth account with the same address and are left
   alone. Guessing at a record nobody has claimed is a different decision, and a

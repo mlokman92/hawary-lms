@@ -6,6 +6,7 @@ import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { EmptyState } from '@/components/patterns/EmptyState'
 import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
+import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import {
@@ -25,6 +26,9 @@ import {
 } from '@/components/ui/table'
 import { useDocumentStudents, type DocumentStudent } from './api'
 
+/** Rows shown at first, and added by each "Load more". */
+const ROSTER_STEP = 50
+
 /**
  * The roster every Documents page is: every student, narrowed by search and
  * by course, with one cell at the end that is the page's own business — the
@@ -37,7 +41,7 @@ export function DocumentStudentList({
   lastHead,
   lastCell,
   statusFilter,
-  newestCourseFirst,
+  latestFirst,
   first,
   selection,
   actions,
@@ -63,10 +67,11 @@ export function DocumentStudentList({
     matches: (student: DocumentStudent, value: string) => boolean
   }
   /**
-   * Order by the course's start date, latest first, instead of by name. A
-   * student on a course with no start date goes last.
+   * Order by this date, latest first, instead of by name — the course's start,
+   * or when the letter was signed. A student without one goes last. Pass a
+   * stable function: it is a dependency of the rows.
    */
-  newestCourseFirst?: boolean
+  latestFirst?: (student: DocumentStudent) => string | null | undefined
   /**
    * Students to list ahead of everybody else — the applications still waiting,
    * on the KWSP page. Each half keeps its own order. Pass a stable function:
@@ -128,18 +133,25 @@ export function DocumentStudentList({
             v?.toLowerCase().includes(q),
           )),
     )
-    // The read is ordered by name and sort is stable, so students on one
-    // course — and in each half of `first` — stay alphabetical.
-    if (newestCourseFirst) {
+    // The read is ordered by name and sort is stable, so students with one
+    // date — and in each half of `first` — stay alphabetical.
+    if (latestFirst) {
       matching.sort((a, b) => {
-        const x = a.course?.start_date ?? ''
-        const y = b.course?.start_date ?? ''
+        const x = latestFirst(a) ?? ''
+        const y = latestFirst(b) ?? ''
         return x === y ? 0 : x === '' ? 1 : y === '' ? -1 : x < y ? 1 : -1
       })
     }
     if (first) matching.sort((a, b) => Number(first(b)) - Number(first(a)))
     return matching
-  }, [students, search, course, status, statusFilter, newestCourseFirst, first])
+  }, [students, search, course, status, statusFilter, latestFirst, first])
+
+  // A roster you tick boxes on shows everyone: "select all" has to reach the
+  // whole of what the filters left, and nothing is acted on out of sight.
+  // Narrowing starts the count again from the top.
+  const [limit, setLimit] = useState(ROSTER_STEP)
+  useEffect(() => setLimit(ROSTER_STEP), [search, course, status])
+  const shown = selection ? rows : rows.slice(0, limit)
 
   const selected = selection?.selected
   const onSelect = selection?.onChange
@@ -235,7 +247,7 @@ export function DocumentStudentList({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((s) => (
+              {shown.map((s) => (
                 <TableRow key={s.id}>
                   {selected && onSelect ? (
                     <TableCell>
@@ -275,6 +287,21 @@ export function DocumentStudentList({
           </Table>
         </div>
       )}
+
+      {shown.length < rows.length ? (
+        <div className="mt-4 flex items-center justify-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setLimit((n) => n + ROSTER_STEP)}
+          >
+            {t('common.load_more')}
+          </Button>
+          <span className="text-muted-foreground text-sm tabular-nums">
+            {t('common.shown_of', { shown: shown.length, total: rows.length })}
+          </span>
+        </div>
+      ) : null}
     </div>
   )
 }

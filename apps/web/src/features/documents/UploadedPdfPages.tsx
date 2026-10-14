@@ -33,6 +33,9 @@ const onFile: Record<UploadedPdfKind, (s: DocumentStudent) => UploadedPdf | null
     employment: (s) => s.employmentLetter,
   }
 
+/** The latest intake at the top. */
+const courseStart = (s: DocumentStudent) => s.course?.start_date
+
 /**
  * Who has sent theirs, and the file itself. Read-only for staff: the student
  * uploads their own. Opening one mints a link for that click — the bucket is
@@ -58,7 +61,7 @@ export function UploadedPdfRoster({
       <PageHeader title={title} />
       {error ? <p className="text-destructive mt-4 text-sm">{error}</p> : null}
       <DocumentStudentList
-        newestCourseFirst
+        latestFirst={courseStart}
         statusFilter={{
           label: t('common.status'),
           allLabel: t('sdoc.offer.all_statuses'),

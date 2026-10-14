@@ -10,6 +10,9 @@ import {
   type DocumentStudent,
 } from '@/features/documents/api'
 
+/** Latest signature at the top; the unsigned go last. */
+const signedAt = (s: DocumentStudent) => s.offerAcceptedAt
+
 /**
  * Every student's offer letter, for an admin to download — and who has signed
  * it and agreed to its terms, and when.
@@ -42,6 +45,7 @@ export function OfferLettersPage() {
       <PageHeader title={t('sdoc.offer.title')} />
       {error ? <p className="text-destructive mt-4 text-sm">{error}</p> : null}
       <DocumentStudentList
+        latestFirst={signedAt}
         statusFilter={{
           label: t('sdoc.offer.signed'),
           allLabel: t('sdoc.offer.all_statuses'),
