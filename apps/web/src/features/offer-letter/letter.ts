@@ -92,7 +92,7 @@ export function letterDate(day: string | null): string {
  * daylight saving — so the date a student signed does not depend on where the
  * letter is downloaded.
  */
-export function letterDateOf(moment: string | null | undefined): string {
+function letterDateOf(moment: string | null | undefined): string {
   const t = moment ? new Date(moment) : null
   if (!t || Number.isNaN(t.getTime())) return ''
   const day = new Intl.DateTimeFormat('en-CA', {

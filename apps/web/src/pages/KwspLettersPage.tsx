@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { DocumentStudentList } from '@/features/documents/DocumentStudentList'
 import { KwspCreateDialog } from '@/features/documents/KwspCreateDialog'
+import { KwspDateDialog } from '@/features/documents/KwspDateDialog'
 import {
   downloadStudentKwspLetters,
   kwspState,
@@ -40,7 +41,8 @@ const idOf = (s: DocumentStudent) => s.id
  * many at once, asked for or not.
  *
  * The student sees where their application stands and never the letter: the
- * academy prints, signs and hands it over.
+ * academy prints and hands it over. A letter is signed on the day it is
+ * downloaded; *Download with date…* behind `⋯` picks another day.
  */
 export function KwspLettersPage() {
   const { t } = useT()
@@ -51,6 +53,7 @@ export function KwspLettersPage() {
   const removeLetters = useRemoveKwspLetters()
   const removeApplications = useRemoveKwspApplications()
   const [creating, setCreating] = useState(false)
+  const [dating, setDating] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(() => new Set())
   // A student's id while their one letter is drawn, 'selected' for the batch.
   const [drawing, setDrawing] = useState<string | null>(null)
@@ -65,11 +68,11 @@ export function KwspLettersPage() {
 
   const failed = (e: unknown) => setError(errorMessage(e, t('common.error')))
 
-  async function download(key: string, of: DocumentStudent[]) {
+  async function download(key: string, of: DocumentStudent[], date?: string) {
     setDrawing(key)
     setError(null)
     try {
-      await downloadStudentKwspLetters(of)
+      await downloadStudentKwspLetters(of, date)
     } catch {
       setError(t('sdoc.download_failed'))
     } finally {
@@ -149,6 +152,14 @@ export function KwspLettersPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  {created.length > 0 ? (
+                    <DropdownMenuItem
+                      disabled={drawing === 'selected'}
+                      onClick={() => setDating(true)}
+                    >
+                      {t('sdoc.kwsp.download_dated')}
+                    </DropdownMenuItem>
+                  ) : null}
                   <DropdownMenuItem
                     variant="destructive"
                     disabled={
@@ -198,6 +209,11 @@ export function KwspLettersPage() {
         }
       />
       <KwspCreateDialog open={creating} onOpenChange={setCreating} />
+      <KwspDateDialog
+        open={dating}
+        onOpenChange={setDating}
+        onDownload={(date) => download('selected', created, date)}
+      />
     </div>
   )
 }

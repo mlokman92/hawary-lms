@@ -58,6 +58,8 @@ export const studentDocs = {
   'sdoc.kwsp.create_count': 'Create ({count})',
   'sdoc.kwsp.download_count': 'Download ({count})',
   'sdoc.kwsp.remove_count': 'Remove ({count})',
+  'sdoc.kwsp.download_dated': 'Download with date…',
+  'sdoc.kwsp.letter_date': 'Letter date',
   'sdoc.select_all': 'Select all',
 
   // KWSP application — the student asks for the letter; its title is the nav's

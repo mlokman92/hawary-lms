@@ -367,7 +367,8 @@ The student asks; an admin answers by creating the letter. Migrations
 
 ### What the letter says
 
-One A4 page. Five values come from the record; everything else is the form.
+One A4 page. Four values come from the record and one from the admin who
+downloads it; everything else is the form.
 
 | on the letter | from |
 | --- | --- |
@@ -376,7 +377,7 @@ One A4 page. Five values come from the record; everything else is the form.
 | (c) No.Pendaftaran/Matrix Pelajar | the IC number again, as on the academy's form — **not** `student_no` |
 | (g) the two dates | `courses.start_date` *sehingga* `courses.end_date` of the student's course |
 | (i) Tahun Pengajian Semasa | the year of the start date |
-| Tarikh, beside the signature | `student_kwsp_letters.created_at`, the day on the **Malaysian** calendar |
+| Tarikh, beside the signature | the day it is **downloaded** on the Malaysian calendar, or a day the admin picks |
 
 **Fixed text, as in the offer letter and for the same reason**: the programme
 (*Pengajaran Prasekolah*, *Tahap 4*, `P851-002-4:2025`), the institution's
@@ -393,10 +394,15 @@ letter says *Maybank Islamic Berhad*. It is one string in `PAYEE`.
 letter's picture (`offer-letter/assets/signature.png`), laid across the line
 and drawn before it. The stamp is the signatory's name stamp as the academy
 applies it by hand — *ROSZLINDA BINTI SHAM / Pengurus Pusat Latihan / Hawary
-Academy*, in blue, centred under the line — typed in `STAMP`, not a scan. The
-date is the day the letter was **created**, read in `Asia/Kuala_Lumpur` as the
-offer letter's acceptance date is: downloading again does not move it, and
-taking the letter back and creating it again does.
+Academy*, in blue, centred under the line — typed in `STAMP`, not a scan.
+
+**The date is the day of the download**, today in `Asia/Kuala_Lumpur`
+(`todayInMalaysia`), so a letter printed for KWSP reads as current. *Download*
+uses it with no question asked. *Download with date…*, behind `⋯` on the
+student's Documents card and on the page's selection bar, opens a date field
+that starts on today (`KwspDateDialog`); every letter in that file is signed on
+the day chosen. The day is not stored: the next download is today again. A
+single row on the page has no `⋯` of its own — tick it and use the bar's.
 
 **What was changed from the supplied form:** four misspellings in the running
 text — `diddaftarkan`, `insitusi` (three times), `pembiayaaan`,

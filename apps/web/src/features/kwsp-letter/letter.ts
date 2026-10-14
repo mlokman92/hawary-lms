@@ -4,7 +4,6 @@ import {
   b,
   block,
   letterDate,
-  letterDateOf,
   letterFileName,
   letterIc,
   letterhead,
@@ -25,9 +24,10 @@ import {
  * letterhead and footer, built on demand from what the record says today,
  * nothing stored. The wording and the order are the academy's own form.
  *
- * The name, the IC number, the course's two dates and the day the letter was
- * created come from the record. Everything else — the programme, its code, the
- * fee, the payee, the signature and the stamp — is the form.
+ * The name, the IC number and the course's two dates come from the record, and
+ * the date beside the signature from whoever downloads it — today, unless they
+ * chose another. Everything else — the programme, its code, the fee, the payee,
+ * the signature and the stamp — is the form.
  */
 
 export type KwspLetterInput = {
@@ -38,8 +38,8 @@ export type KwspLetterInput = {
   /** `courses.start_date` and `end_date` of the student's course, 'YYYY-MM-DD'. */
   startDate: string | null
   endDate: string | null
-  /** `student_kwsp_letters.created_at` — the day the letter is signed on. */
-  createdAt: string | null
+  /** The day the letter is signed on, 'YYYY-MM-DD'. */
+  date: string
 }
 
 // --- page geometry (pt, A4 portrait) ----------------------------------------
@@ -286,11 +286,24 @@ function page(doc: jsPDF, input: KwspLetterInput, images: Images) {
   text(y, [label], { x: DATE_X })
   setFont(doc, 'normal', SIZE)
   const from = DATE_X + widthOf(doc, label) + 2
-  text(y - 2, [letterDateOf(input.createdAt)], { x: from + 6 })
+  text(y - 2, [letterDate(input.date)], { x: from + 6 })
   rule(doc, from, R, y)
 }
 
 // --- entry points -----------------------------------------------------------
+
+/**
+ * Today on the academy's calendar — Malaysia, UTC+8 — as 'YYYY-MM-DD', the
+ * letter's date unless the admin picks another.
+ */
+export function todayInMalaysia(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kuala_Lumpur',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date())
+}
 
 const TITLE = 'Surat Pengesahan KWSP'
 

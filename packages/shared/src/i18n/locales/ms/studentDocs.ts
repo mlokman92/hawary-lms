@@ -59,6 +59,8 @@ export const studentDocs: StudentDocsDict = {
   'sdoc.kwsp.create_count': 'Cipta ({count})',
   'sdoc.kwsp.download_count': 'Muat turun ({count})',
   'sdoc.kwsp.remove_count': 'Buang ({count})',
+  'sdoc.kwsp.download_dated': 'Muat turun dengan tarikh…',
+  'sdoc.kwsp.letter_date': 'Tarikh surat',
   'sdoc.select_all': 'Pilih semua',
 
   // Permohonan KWSP — pelajar memohon surat; tajuknya ialah tajuk navigasi

@@ -22,6 +22,7 @@ import {
   type DocumentStudent,
   type UploadedPdf,
 } from './api'
+import { KwspDateDialog } from './KwspDateDialog'
 
 function Row({
   title,
@@ -57,6 +58,7 @@ export function StudentDocumentsCard({ studentId }: { studentId: string }) {
   const createKwsp = useCreateKwspLetters()
   const removeKwsp = useRemoveKwspLetters()
   const [drawing, setDrawing] = useState<'offer' | 'kwsp' | null>(null)
+  const [dating, setDating] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
   async function download(
@@ -196,6 +198,12 @@ export function StudentDocumentsCard({ studentId }: { studentId: string }) {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
+                            disabled={drawing === 'kwsp'}
+                            onClick={() => setDating(true)}
+                          >
+                            {t('sdoc.kwsp.download_dated')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             variant="destructive"
                             disabled={removeKwsp.isPending}
                             onClick={() => {
@@ -225,6 +233,15 @@ export function StudentDocumentsCard({ studentId }: { studentId: string }) {
               />
             </ul>
             {err ? <p className="text-destructive mt-3 text-sm">{err}</p> : null}
+            <KwspDateDialog
+              open={dating}
+              onOpenChange={setDating}
+              onDownload={(date) =>
+                download('kwsp', (student) =>
+                  downloadStudentKwspLetters([student], date),
+                )
+              }
+            />
           </>
         )}
       </CardContent>

@@ -3,7 +3,10 @@ import type { Enums, Tables } from '@hawary/shared'
 import { supabase } from '@/lib/supabase'
 import type { TKey } from '@/lib/i18n'
 import type { Tone } from '@/lib/tone'
-import { downloadKwspLetters } from '@/features/kwsp-letter/letter'
+import {
+  downloadKwspLetters,
+  todayInMalaysia,
+} from '@/features/kwsp-letter/letter'
 import { downloadOfferLetter } from '@/features/offer-letter/letter'
 import {
   employmentLetterUrl,
@@ -191,17 +194,21 @@ export async function downloadStudentOfferLetter(s: DocumentStudent) {
 }
 
 /**
- * The KWSP letters of these students, one to a page in one file. Drawn from
- * the rows in hand: nothing of a letter is stored.
+ * The KWSP letters of these students, one to a page in one file, all signed on
+ * `date` ('YYYY-MM-DD', today by default). Drawn from the rows in hand: nothing
+ * of a letter is stored.
  */
-export async function downloadStudentKwspLetters(students: DocumentStudent[]) {
+export async function downloadStudentKwspLetters(
+  students: DocumentStudent[],
+  date = todayInMalaysia(),
+) {
   await downloadKwspLetters(
     students.map((s) => ({
       fullName: s.full_name,
       icNumber: s.ic_number,
       startDate: s.course?.start_date ?? null,
       endDate: s.course?.end_date ?? null,
-      createdAt: s.kwspCreatedAt,
+      date,
     })),
   )
 }
