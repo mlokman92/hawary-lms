@@ -16,11 +16,17 @@ const raw = JSON.parse(readFileSync(path.join(dir, 'worklist_raw.json'), 'utf8')
 const rows = raw.rows[0].rows
 const EXT = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
 
+// `npx` spends seconds resolving the package on every file. Point SUPABASE_BIN
+// at the CLI binary npx already cached (…/npm-cache/_npx/<hash>/node_modules/
+// @supabase/cli-windows-x64/bin/supabase.exe) to skip that.
+const BIN = process.env.SUPABASE_BIN
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
 function cp(src, dst) {
   return new Promise((resolve) => {
     const p = spawn(
-      'npx',
-      ['-y', 'supabase@latest', 'storage', 'cp', '--linked', '--project-ref',
+      BIN ? `"${BIN}"` : 'npx',
+      [...(BIN ? [] : ['-y', 'supabase@latest']), 'storage', 'cp', '--linked', '--project-ref',
         PROJECT, '--experimental', src, dst],
       // cwd is the work dir so the destination can be relative: the CLI reads
       // an absolute Windows path ("C:/…") as a URL scheme and refuses it.
@@ -39,8 +45,11 @@ const jobs = rows.map((r) => {
   return { r, local: path.join(d, `receipt.${EXT[r.mime_type] ?? 'bin'}`) }
 })
 
-// `storage cp -r` cannot download a folder, so it is one call per file, six at
-// a time. A file already here at the right size is not fetched again.
+// `storage cp -r` cannot download a folder, so it is one call per file, three
+// at a time: with the direct binary, ten at a time drew "ThrottlerException:
+// Too Many Requests" on a third of the files (2026-10-14). A throttled file is
+// retried after a pause; a file already here at the right size is not fetched
+// again, so re-running picks up whatever still failed.
 let next = 0
 let failed = 0
 async function worker() {
@@ -48,7 +57,12 @@ async function worker() {
     const { r, local } = jobs[next++]
     if (existsSync(local) && statSync(local).size === Number(r.size_bytes)) continue
     const rel = './' + path.relative(dir, local).split(path.sep).join('/')
-    const res = await cp(`"ss:///payment-receipts/${r.file_path}"`, `"${rel}"`)
+    let res
+    for (let attempt = 0; attempt < 4; attempt++) {
+      res = await cp(`"ss:///payment-receipts/${r.file_path}"`, `"${rel}"`)
+      if (!res.out.includes('Too Many Requests')) break
+      await sleep(5000 * (attempt + 1))
+    }
     const ok = existsSync(local) && statSync(local).size === Number(r.size_bytes)
     if (!ok) {
       failed++
@@ -56,7 +70,7 @@ async function worker() {
     }
   }
 }
-await Promise.all(Array.from({ length: 6 }, worker))
+await Promise.all(Array.from({ length: 3 }, worker))
 
 writeFileSync(
   path.join(dir, 'worklist.json'),

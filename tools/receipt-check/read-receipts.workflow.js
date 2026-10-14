@@ -56,11 +56,11 @@ function prompt(indexes) {
   return `You are transcribing bank transfer receipts for a Malaysian academy's bookkeeping check. Accuracy matters more than speed: a wrong digit will mark a correct payment as wrong, or a wrong one as correct.
 
 1. Read the JSON file ${FILE}. It is an array of objects {id, path, kind}. Take ONLY the entries at these 0-based array indexes: ${JSON.stringify(indexes)}.
-2. For each of those entries, open the file at its "path" with the Read tool. kind "image" is a photo or screenshot; kind "pdf" is a PDF — read it with pages "1-5", and if it has more pages read the rest too. Look at every page.
+2. For each of those entries, open the file at its "path" with the Read tool. kind "image" is a photo or screenshot; kind "pdf" is a PDF — read it WITHOUT a pages parameter (page rendering needs pdftoppm, which is not installed here, so a pages read fails; a plain read gives the text layer). Look at every page.
 3. For each file, list EVERY separate funds transfer it shows. Most files show one. Some are several receipts in one file, or one screenshot of several transfers — list each one separately. Do not list the same transfer twice if it merely appears on two pages.
 
 For each transfer record:
-- date: the date the transfer was made (labels such as "Date", "Transaction date", "Tarikh", "Date & time", "Effective date"). NOT the date the PDF was printed or the phone's clock in a screenshot status bar. Malaysian receipts print day before month: 06/05/2026 is 6 May 2026. Give it as YYYY-MM-DD and also copy the text exactly as printed. Some corporate-banking slips print two dates for one transfer — "Value / Placement Date" and "Application Date": give the VALUE date as date and list the other under other_dates.
+- date: the date the transfer was made (labels such as "Date", "Transaction date", "Tarikh", "Date & time", "Effective date"). NOT the date the PDF was printed or the phone's clock in a screenshot status bar. Malaysian receipts print day before month: 06/05/2026 is 6 May 2026. Give it as YYYY-MM-DD and also copy the text exactly as printed. Some corporate-banking slips print two dates for one transfer — "Value / Placement Date" and "Application Date": give the VALUE date as date and list the other under other_dates, as YYYY-MM-DD only (no label).
 - amount_rm: the amount transferred (labels such as "Amount", "Jumlah", "Transfer amount"), not a balance, fee or limit. Also copy it exactly as printed.
 - status: successful / pending / failed / unknown, from what the receipt says ("Successful", "Berjaya", "Accepted", "Pending", "Unsuccessful"...).
 - reference: the recipient reference or payment details the payer typed, if shown. Never include account numbers.

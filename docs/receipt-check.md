@@ -19,8 +19,21 @@ compare the **date** and the **amount** it shows with what staff recorded:
 It never touches a receipt that is already Checked or Flagged, a payment, an
 invoice or a file. Checking and flagging move no money.
 
-First run: 2026-10-13, 86 receipts → 52 checked, 28 flagged (5 wrong date, 23
-wrong amount), 6 left for a person.
+| run | receipts | checked | flagged | left for a person |
+| --- | --- | --- | --- | --- |
+| 2026-10-13 | 86 | 52 | 28 (5 wrong date, 23 wrong amount) | 6 |
+| 2026-10-14 | 325 (144 distinct files) | 215 | 88 (4 wrong date, 84 wrong amount) | 22 |
+
+The second run's flags were almost all lump sums from three kindergartens
+whose students carry the organisation spelled several ways — Sri Kamariah
+about eleven ("SRI KAMARIAH KINDERGARTEN", "…ADDA HEIGHTS", "SRI MAMARIAH…"),
+Kastil Gaya three, Merpati Scientex two. Correcting the spelling does not
+clear a flag; a Director still un-ticks it. Two of the slips also disagree
+on headcount (RM13,000 = 26 students attached to 27 payments; RM11,500
+names 23 attached to 22), and three wrong-date flags were one student's
+earlier slip attached to a later payment. Its 22 left for a person: 16
+cropped screenshots with no date, 5 slips saying Processing, 1 recorded on
+the application date.
 
 ## The rules, and who decided them
 
@@ -77,15 +90,33 @@ into the repo, and the copies are deleted when the run is done.
    a folder), with a *relative* destination, because the CLI reads `C:/…` as a
    URL scheme. If the CLI answers 403 or an IPv6 error, the owner has to run
    `supabase login` again; there is no other route to the files, and making one
-   (a public bucket, a temporary function) is not an option.
+   (a public bucket, a temporary function) is not an option. Through `npx` each
+   file takes several seconds; set `SUPABASE_BIN` to the binary npx cached
+   (`%LOCALAPPDATA%/npm-cache/_npx/<hash>/node_modules/@supabase/cli-windows-x64/bin/supabase.exe`,
+   check `--version`) to skip that. Three at a time is the ceiling — ten drew
+   `ThrottlerException: Too Many Requests` on a third of the files. The script
+   retries a throttled file, and re-running it fetches only what is missing.
+   Without a fresh login the CLI fails both ways at once (storage 403, database
+   IPv6 error), as it did at the start of the second run; the MCP
+   `execute_sql` still reads, but cannot reach the files, so it does not
+   replace the login.
 3. **Units** — `node units.mjs <work>`. Identical files are grouped by content
    hash, so a receipt attached to four payments is read once.
 4. **Read** — `read-receipts.workflow.js` through the Workflow tool, with
    `args: { unitsFile: "<work>/units.json", count: <units> }`. Each file is
    read **twice, by separate agents in different batches**, and a third time if
    the two disagree. A workflow needs the owner's say-so ("use a workflow");
-   without it, give the same prompt to Agent calls. Save the result's `result`
-   array as `<work>/readings.json`.
+   without it, give the same prompt to Agent calls (the second run did): twelve
+   files per agent, pass A in order and pass B in the workflow's permuted order,
+   each agent writing its `{units: […]}` to `<work>/reads/A_NN.json` /
+   `B_NN.json` and replying only with the path, so 144 readings never pass
+   through the conversation. A session runs at most 20 agents at once; start
+   the rest as slots free. Then `node merge-reads.mjs <work> --disagree` names
+   the files for a third reading (one agent each, to `reads/C_<id>.json`), and
+   `node merge-reads.mjs <work>` writes `readings.json`. Through the workflow,
+   save the result's `result` array as `<work>/readings.json` instead.
+   PDFs are read without a `pages` parameter: page rendering needs
+   `pdftoppm`, which is not installed, and a `pages` read fails.
 5. **Decide** — `node decide.mjs <work>` applies the table above and writes
    `decisions.json`. It writes nothing to the database.
 6. **Verify the flags before writing any** — look at each flagged file, and
@@ -93,7 +124,14 @@ into the repo, and the copies are deleted when the run is done.
    digits, one hunting for any other date on the slip). Change a decision by
    adding it to `<work>/overrides.json`, not by editing the output. On the
    first run this caught one of six: the "wrong" date was the slip's own
-   application date.
+   application date. On the second, the same kind of slip was caught before
+   this step, by reading the decisions: readers had written `other_dates` as
+   "Application Date 08/03/2026", which the application-date rule could not
+   match; `decide.mjs` now turns those into YYYY-MM-DD itself. With fifteen
+   flagged files, the refuters went four files to an agent — four re-reading
+   digits, four hunting dates — and refuted nothing. Refuters tend to argue
+   that an unreconciled lump sum is "probably fine, one student's share";
+   that is the owner's rule to make, not theirs, and it stays flagged.
 7. **Apply** — `node apply.mjs <work>` writes `apply.sql`; run it with the same
    `db query` command and read back the counts it returns. Then confirm the
    cards with `receipt_queue_counts` **as a signed-in Director**, and delete

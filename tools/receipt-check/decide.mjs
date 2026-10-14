@@ -27,6 +27,25 @@ const readings = load('readings.json')
 const ledgerRaw = load('ledger_raw.json')
 const ledger = ledgerRaw.rows[0].rows
 
+// Readers are asked for other_dates as YYYY-MM-DD but sometimes copy the label
+// with it ("Application Date 08/03/2026", "04-Jun-2026 (Transfer Date)"). Left
+// as text, the application-date rule below never matches and a two-date slip is
+// flagged wrong_date — the second run (2026-10-14) did exactly that once.
+const MON = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 }
+const pad = (n) => String(n).padStart(2, '0')
+function iso(s) {
+  if (/^\d{4}-\d\d-\d\d$/.test(s)) return s
+  let m = s.match(/(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})/)
+  if (m) return `${m[3]}-${pad(m[2])}-${pad(m[1])}`
+  m = s.match(/(\d{1,2})[\s-]([A-Za-z]{3})[A-Za-z]*[\s-](\d{4})/)
+  if (m && MON[m[2].toLowerCase()]) return `${m[3]}-${pad(MON[m[2].toLowerCase()])}-${pad(m[1])}`
+  console.error('other_date not understood, left as is:', JSON.stringify(s))
+  return s
+}
+for (const r of readings)
+  for (const t of [...(r.transactions ?? []), ...(r.all ?? []).flatMap((x) => x.transactions ?? [])])
+    t.other_dates = (t.other_dates ?? []).map(iso)
+
 const byUnit = Object.fromEntries(readings.map((r) => [r.id, r]))
 const led = Object.fromEntries(ledger.map((l) => [l.payment_id, l]))
 const sen = (rm) => Math.round(Number(rm) * 100)
