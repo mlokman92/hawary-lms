@@ -185,7 +185,8 @@ itself:
 - **The summary takes no documents** (the owner, the day parts arrived). Every
   door refuses a student's file on a summary — see "What each part takes"
   below. Staff still attach on a summary thread — the checker's copy arrives
-  that way. Files already on a summary stay.
+  that way. The 9 documents students had sent with a summary before this
+  were removed on 15 Oct 2026 (see "The reset of 15 Oct 2026").
 
 - **A course says which parts it is taking** — `courses.lpkc_stages`, a set.
   More than one can be open at once: an intake sends its report and its slides
@@ -271,6 +272,10 @@ removed. They, and every thread as it was, are kept in
 `app.report_submissions_reset_20261015` (no client access;
 `20261015120000_report_thread_reset_backup.sql`). The storage objects were not
 touched, so anything can be put back. Nobody was notified.
+
+The same day the 9 documents still attached to summary submissions were
+removed as well — a summary takes none — leaving each summary its text only.
+Their rows are in the same `app.report_files_reset_20261015`.
 
 ### The doors, and the builds that do not name a part
 
