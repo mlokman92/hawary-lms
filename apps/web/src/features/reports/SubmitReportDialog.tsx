@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { FilePicker } from './FilePicker'
 import {
+  LPKC_FILE_TYPES,
   LPKC_STAGE_LABEL,
   useSubmitReport,
   type PendingFile,
@@ -187,6 +188,7 @@ export function SubmitReportDialog({
                 files={files}
                 onChange={setFiles}
                 disabled={submit.isPending}
+                accept={target ? LPKC_FILE_TYPES[target.stage] : undefined}
               />
             </div>
           )}

@@ -23,11 +23,18 @@ export function FilePicker({
   files,
   onChange,
   disabled,
+  accept,
 }: {
   academyId: string
   files: PendingFile[]
   onChange: (files: PendingFile[]) => void
   disabled?: boolean
+  /**
+   * The part's file types, for a student. Absent for staff, who attach
+   * anything. The server refuses the rest too; this only says so before a
+   * 40 MB upload rather than after.
+   */
+  accept?: { exts: readonly string[]; label: string }
 }) {
   const { t } = useT()
   const input = useRef<HTMLInputElement>(null)
@@ -36,8 +43,22 @@ export function FilePicker({
 
   async function pick(list: FileList | null) {
     if (!list || list.length === 0) return
-    setBusy(true)
     setError(null)
+
+    if (accept) {
+      const wrong = Array.from(list).find(
+        (f) => !accept.exts.includes(f.name.split('.').pop()?.toLowerCase() ?? ''),
+      )
+      if (wrong) {
+        setError(
+          t('report.file.wrong_type', { name: wrong.name, types: accept.label }),
+        )
+        if (input.current) input.current.value = ''
+        return
+      }
+    }
+
+    setBusy(true)
     const added: PendingFile[] = []
     try {
       // Sequential, not Promise.all: these are big, and a browser firing six
@@ -63,6 +84,7 @@ export function FilePicker({
         ref={input}
         type="file"
         multiple
+        accept={accept?.exts.map((e) => `.${e}`).join(',')}
         className="hidden"
         onChange={(e) => void pick(e.target.files)}
       />

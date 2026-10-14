@@ -18,7 +18,10 @@
 //   submitted  → the academy's system admins; the checker when there are none,
 //                or when the staff-only entry was added with it (a summary)
 //   staff-only → the checker            (the copy they start from has arrived)
-//   comment    → the other side         (either may act)
+//   comment    → the other side         (either may act) - except a student's
+//                reply before the copy is there, which goes to the system
+//                admins like the version it follows
+//   A student's file always arrives as `submitted` (a new version).
 //   status     → the student            (staff decided)
 //   assigned   → the incoming checker AND the student, minus whoever acted
 //
@@ -366,7 +369,7 @@ Deno.serve(async (req) => {
   const { data: event, error: evErr } = await admin
     .from('report_events')
     .select(
-      'id, report_id, kind, body, to_status, version, actor_id, actor_name, actor_role, staff_only',
+      'id, report_id, kind, body, to_status, version, actor_id, actor_name, actor_role, staff_only, created_at',
     )
     .eq('id', eventId)
     .eq('report_id', reportId)
@@ -471,6 +474,25 @@ Deno.serve(async (req) => {
     return (data ?? []).length > 0
   }
 
+  /**
+   * A student's reply while the report still waits for the system admins'
+   * copy: it was being checked before the reply (the reply moved nothing), and
+   * nothing staff-only was on this version when it was written. The same test
+   * `comment_on_report` makes, read back from the stored rows.
+   */
+  async function waitingForCopy(): Promise<boolean> {
+    if (event!.to_status !== null || report!.status !== 'in_review') return false
+    const { data } = await admin
+      .from('report_events')
+      .select('id')
+      .eq('report_id', reportId)
+      .eq('version', event!.version)
+      .eq('staff_only', true)
+      .lt('created_at', event!.created_at)
+      .limit(1)
+    return (data ?? []).length === 0
+  }
+
   let recipients: Recipient[]
   if (staffOnly) {
     recipients = [checker]
@@ -481,6 +503,11 @@ Deno.serve(async (req) => {
     const admins = await systemAdmins()
     recipients =
       admins.length === 0 || (await receivedAlready()) ? [checker] : admins
+  } else if (kind === 'comment' && actorIsStudent && (await waitingForCopy())) {
+    // Until the copy is there the checker has not heard of this version, so
+    // what the student adds goes where the version went.
+    const admins = await systemAdmins()
+    recipients = admins.length === 0 ? [checker] : admins
   } else if (kind === 'assigned') {
     recipients = [checker, learner]
   } else {

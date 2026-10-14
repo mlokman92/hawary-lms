@@ -182,14 +182,10 @@ itself:
 
 `20261013100000_course_lpkc_stage.sql`, `20261013110000_lpkc_stages_per_report.sql`.
 
-- **The summary takes no documents** (the owner, the day parts arrived). The
-  stage-naming `submit_report` refuses a file on a summary; the web send dialog
-  has no picker for it, and the summary's student gets none in the thread's
-  reply box either. Staff still attach on a summary thread — the checker's copy
-  arrives that way. Two things are left as they were until the mobile apps
-  learn about parts: the two older `submit_report` doors and
-  `comment_on_report` still accept a student's file on a summary, because the
-  installed apps send through them. Files already on a summary stay.
+- **The summary takes no documents** (the owner, the day parts arrived). Every
+  door refuses a student's file on a summary — see "What each part takes"
+  below. Staff still attach on a summary thread — the checker's copy arrives
+  that way. Files already on a summary stay.
 
 - **A course says which parts it is taking** — `courses.lpkc_stages`, a set.
   More than one can be open at once: an intake sends its report and its slides
@@ -224,6 +220,43 @@ itself:
   `ReportStage` is where one thread sits in the checking queue; `lpkc_stage` /
   `LpkcStage` is which part of the work it is. The owner calls both "stage", so
   the code keeps them apart by name.
+
+### What each part takes (Oct 2026)
+
+`20261015090000_lpkc_file_types.sql`. A thread's part is the type of every
+document on it, so a student's file has to be that part's kind:
+
+| part    | a student may send        |
+| ------- | ------------------------- |
+| summary | nothing                   |
+| report  | `.pdf`, `.doc`, `.docx`   |
+| slides  | `.pptx`, `.ppt`, `.pdf`   |
+
+- **Checked by the file name's extension**, in `app.assert_lpkc_files`, on
+  every door a student's file comes through: all three `submit_report`
+  overloads (through `app.submit_report_impl`) and `comment_on_report`. A PDF
+  is allowed on both the report and the slides, because slides are often
+  exported to PDF — the part decides which it is.
+- **Staff are not limited.** The checker's copy and anything an admin attaches
+  go on as before.
+- **The web says so before uploading**: the picker offers only those types and
+  refuses another with `report.file.wrong_type` (`LPKC_FILE_TYPES`), because
+  the server's refusal would come after a 40 MB upload.
+- **A student's file is always the next version.** Before this, a file sent
+  from the reply box was filed as a comment on the version already there: the
+  documents of "version 2" were not everything the student had sent for it,
+  and it went to the checker instead of the system admins. `comment_on_report`
+  now files a student's reply that carries a file exactly as `submit_report`
+  files a resubmission — version + 1, a `submitted` entry (with the reply as
+  its text), `in_review`, the system admins told — leaving the title and the
+  summary's fields as they are. An approved report takes no more versions, so
+  its student gets no picker there.
+
+Found when this was built: 7 slides on report threads, 6 of them sent from the
+reply box. The 5 belonging to the 3 students who have no slides thread are to
+move onto a new one each (same checker, version 1, read as moderating) once the
+owner confirms the rewrite. The other 2 are byte-for-byte copies of files
+already on that student's slides thread and stay where they are.
 
 ### The doors, and the builds that do not name a part
 
@@ -495,13 +528,21 @@ the comment they just wrote is noise, not a receipt. So:
 | --- | --- |
 | `submitted` | the academy's system admins — or the checker, when it has none, or when it is a summary (received by itself) |
 | a staff-only entry | the checker |
-| `comment` | whichever side did not write it |
+| `comment` | whichever side did not write it — except a student's reply while the version still waits for its copy (`in_review`, nothing staff-only on it yet), which goes to the system admins |
 | `status` | the student |
 | `assigned` | the incoming checker **and** the student, minus whoever acted |
 
 `assigned` tells both for the same reason `appointment_reassigned` does: a
 student whose checker changed without being told would be waiting on the wrong
 person.
+
+The owner's chain, and the rule both the in-app notice (`comment_on_report`)
+and the email (`send-report-notice`) follow: a student's new document reaches
+the system admins only; the system admins' entry reaches the checker; the
+checker's reply reaches the student; and round again. Before Oct 2026 a
+student's reply could break it two ways — a file in a reply, and any reply
+sent before the copy — both of which told the checker early. A student's file
+is now a version, and a reply before the copy goes to the system admins.
 
 A reply that moved the status by itself is told as a **comment** — reading it is
 what the other side has to do. Only a decision (approve, reopen) is told as a

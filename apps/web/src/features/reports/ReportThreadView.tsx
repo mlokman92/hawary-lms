@@ -22,6 +22,7 @@ import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
 import { FilePicker } from './FilePicker'
 import { ReportTimeline } from './ReportTimeline'
 import {
+  LPKC_FILE_TYPES,
   LPKC_STAGE_LABEL,
   REPORT_STATUS,
   useCommentOnReport,
@@ -140,7 +141,12 @@ export function ReportThreadView({
 
   // A summary is text: its student sends no documents with it, on the first
   // send or in a reply. Staff still attach — the checker's copy arrives here.
-  const canAttach = !(isStudent && report.lpkc_stage === 'summary')
+  // A student's file is the part's kind only, and arrives as the next version
+  // — so not on an approved report, which takes no more versions.
+  const canAttach = !(
+    isStudent &&
+    (report.lpkc_stage === 'summary' || done)
+  )
 
   const busy = comment.isPending || reassign.isPending
   const nothingToSay = body.trim() === '' && files.length === 0
@@ -322,6 +328,9 @@ export function ReportThreadView({
                 files={files}
                 onChange={setFiles}
                 disabled={busy}
+                accept={
+                  isStudent ? LPKC_FILE_TYPES[report.lpkc_stage] : undefined
+                }
               />
             ) : (
               <span />
