@@ -63,6 +63,7 @@ export const reports = {
   'report.file.uploading': 'Uploading…',
   'report.file.remove': 'Remove {name}',
   'report.file.download': 'Download {name}',
+  'report.cpc': 'Competency Profile Chart',
   'report.file.wrong_type': '{name} cannot be sent here. This part takes {types} only.',
 
   // --- sending --------------------------------------------------------------

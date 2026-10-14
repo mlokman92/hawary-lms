@@ -54,6 +54,7 @@ export const reports: ReportsDict = {
   'report.file.uploading': 'Memuat naik…',
   'report.file.remove': 'Buang {name}',
   'report.file.download': 'Muat turun {name}',
+  'report.cpc': 'Carta Profil Kompetensi',
   'report.file.wrong_type': '{name} tidak boleh dihantar di sini. Bahagian ini menerima {types} sahaja.',
 
   // --- sending --------------------------------------------------------------

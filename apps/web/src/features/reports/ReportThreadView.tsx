@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
+import { CpcSheet } from './CpcSheet'
 import { FilePicker } from './FilePicker'
 import { ReportTimeline } from './ReportTimeline'
 import {
@@ -72,6 +73,7 @@ export function ReportThreadView({
     problem: '',
   })
   const [briefFailure, setBriefFailure] = useState<string | null>(null)
+  const [cpcOpen, setCpcOpen] = useState(false)
 
   if (isLoading) return <LoadingBlock className="mt-6" />
   if (error) return <ErrorBlock error={error} className="mt-6" />
@@ -215,6 +217,11 @@ export function ReportThreadView({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {/* What an LPKC is checked against: the competency units and
+                    work activities of the programme's standard. */}
+                <DropdownMenuItem onClick={() => setCpcOpen(true)}>
+                  {t('report.cpc')}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => void hand(null)}>
                   {t('report.hand_on')}
                 </DropdownMenuItem>
@@ -365,6 +372,8 @@ export function ReportThreadView({
           ) : null}
         </div>
       </Card>
+
+      {isStudent ? null : <CpcSheet open={cpcOpen} onOpenChange={setCpcOpen} />}
     </>
   )
 }
