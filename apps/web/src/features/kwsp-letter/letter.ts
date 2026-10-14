@@ -163,7 +163,7 @@ const SPONSOR_ROWS: Row[] = [
 const PAYEE: [string, string][] = [
   [
     'Nama Penerima Bayaran',
-    'Hawary Education Sdn Bhd (5515 9112 8510) Maybank Berhad',
+    'Hawary Education Sdn Bhd (5511 9112 8510) Maybank Berhad',
   ],
   [
     'Alamat Penerima Bayaran',

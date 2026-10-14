@@ -384,11 +384,10 @@ registration `PD6238`, *6 Bulan*, the fee `RM 2,500.00`, and the payee. None
 follows `price_sen` or the course's length. A second programme needs its own
 letter.
 
-**The payee line is the form's, and it does not match the offer letter**: this
-letter says `5515 9112 8510`, *Maybank Berhad*; the offer letter says
-`5511 9112 8510`, *Maybank Islamic Berhad*. Each prints what the document it
-was built from says. One of the two is wrong and only the academy knows which —
-it is one string in `PAYEE`.
+**The account number is the offer letter's, `5511 9112 8510`.** The supplied
+form printed `5515 9112 8510`; the academy confirmed 5511 is the account
+(2026-10-14). The bank is still the form's *Maybank Berhad*, where the offer
+letter says *Maybank Islamic Berhad*. It is one string in `PAYEE`.
 
 **Signed, stamped and dated on the page.** The signature is the offer
 letter's picture (`offer-letter/assets/signature.png`), laid across the line
