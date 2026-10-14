@@ -655,8 +655,10 @@ will appear.
 reply box, and the status moves by itself when it is pressed (see **Statuses**),
 so there are no status buttons to choose between.
 
-**The Competency Profile Chart is behind the same `⋯` menu**, for staff: a
-drawer showing the programme's CPC (NOSS P851-002-4:2025 — the competency
+**The Competency Profile Chart is a button pinned bottom-right**, for staff on
+a summary thread only (the owner's placement — a summary is what gets matched
+to a competency unit and work activity): it opens a drawer showing the
+programme's CPC (NOSS P851-002-4:2025 — the competency
 units and work activities an LPKC is written against), so a checker reads it
 beside the thread instead of hunting for the PDF. The PDF ships with the web
 app (`features/reports/cpc-p851-002-4-2025.pdf`), not a bucket: it is the

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { MoreHorizontal, Send, Upload } from 'lucide-react'
+import { FileText, MoreHorizontal, Send, Upload } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useT } from '@/lib/i18n'
 import { fmtDateTime, personName } from '@/lib/format'
@@ -217,11 +217,6 @@ export function ReportThreadView({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {/* What an LPKC is checked against: the competency units and
-                    work activities of the programme's standard. */}
-                <DropdownMenuItem onClick={() => setCpcOpen(true)}>
-                  {t('report.cpc')}
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => void hand(null)}>
                   {t('report.hand_on')}
                 </DropdownMenuItem>
@@ -373,7 +368,23 @@ export function ReportThreadView({
         </div>
       </Card>
 
-      {isStudent ? null : <CpcSheet open={cpcOpen} onOpenChange={setCpcOpen} />}
+      {/* A summary is checked against the programme's competency units and
+          work activities, so staff reading one get the chart a click away,
+          pinned where it does not cover the thread. */}
+      {!isStudent && report.lpkc_stage === 'summary' ? (
+        <>
+          {/* Room to scroll the reply box's Send clear of the pinned button. */}
+          <div className="h-16" aria-hidden />
+          <Button
+            className="fixed right-6 bottom-6 z-40 shadow-lg"
+            onClick={() => setCpcOpen(true)}
+          >
+            <FileText />
+            {t('report.cpc')}
+          </Button>
+          <CpcSheet open={cpcOpen} onOpenChange={setCpcOpen} />
+        </>
+      ) : null}
     </>
   )
 }
