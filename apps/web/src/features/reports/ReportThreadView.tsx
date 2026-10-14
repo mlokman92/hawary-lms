@@ -1,6 +1,13 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { FileText, MoreHorizontal, Send, Upload } from 'lucide-react'
+import {
+  Check,
+  FileText,
+  MoreHorizontal,
+  RotateCcw,
+  Send,
+  Upload,
+} from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useT } from '@/lib/i18n'
 import { fmtDateTime, personName } from '@/lib/format'
@@ -15,7 +22,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
@@ -227,19 +233,6 @@ export function ReportThreadView({
                     </Link>
                   </DropdownMenuItem>
                 ) : null}
-                {/* The one status nobody's reply sets. Approving ends the
-                    thread and happens once per report, so it is kept away from
-                    Send; reopening is its undo. */}
-                {canDecide ? (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => void post(done ? 'in_review' : 'approved')}
-                    >
-                      {done ? t('report.reopen') : t('report.approve')}
-                    </DropdownMenuItem>
-                  </>
-                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
           ) : null}
@@ -368,19 +361,42 @@ export function ReportThreadView({
         </div>
       </Card>
 
-      {/* A summary is checked against the programme's competency units and
-          work activities, so staff reading one get the chart a click away,
-          pinned where it does not cover the thread. */}
-      {!isStudent && report.lpkc_stage === 'summary' ? (
+      {/* Staff's two standing actions, pinned so they are there wherever the
+          thread is scrolled: the decision in the middle, the chart every LPKC
+          part is checked against on the right. */}
+      {canDecide ? (
         <>
-          {/* Room to scroll the reply box's Send clear of the pinned button. */}
-          <div className="h-16" aria-hidden />
+          {/* Room to scroll the reply box's Send clear of the pinned buttons. */}
+          <div className="h-20" aria-hidden />
+
+          {/* Approve is the one status nobody's reply sets. Once approved the
+              same button reads Reopen — the undo, one click away. Anything in
+              the reply box goes with either, as the note explaining it. */}
           <Button
-            className="fixed right-6 bottom-6 z-40 shadow-lg"
+            size="lg"
+            variant={done ? 'outline' : 'default'}
+            className={cn(
+              'fixed bottom-6 left-1/2 z-40 -translate-x-1/2 px-8 shadow-lg',
+              done
+                ? 'bg-background'
+                : 'bg-emerald-600 text-white hover:bg-emerald-700',
+            )}
+            disabled={busy}
+            onClick={() => void post(done ? 'in_review' : 'approved')}
+          >
+            {done ? <RotateCcw /> : <Check />}
+            {done ? t('report.reopen') : t('report.approve')}
+          </Button>
+
+          <Button
+            variant="outline"
+            className="bg-background fixed right-6 bottom-6 z-40 shadow-lg"
             onClick={() => setCpcOpen(true)}
+            aria-label={t('report.cpc')}
           >
             <FileText />
-            {t('report.cpc')}
+            {/* Icon only on a phone, where the label would run into Approve. */}
+            <span className="hidden sm:inline">{t('report.cpc')}</span>
           </Button>
           <CpcSheet open={cpcOpen} onOpenChange={setCpcOpen} />
         </>

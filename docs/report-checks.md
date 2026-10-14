@@ -651,25 +651,29 @@ conversation, and a conversation read bottom-up is a conversation you have to
 reassemble. The reply box sits at the end of it, where what you are about to add
 will appear.
 
-**Send is the only button on the thread**, for both sides. It belongs to the
-reply box, and the status moves by itself when it is pressed (see **Statuses**),
-so there are no status buttons to choose between.
+**Send is the reply box's only button**, for both sides, and the status moves
+by itself when it is pressed (see **Statuses**), so there are no "changes
+needed" / "being checked" buttons to choose between. The one decision —
+Approve, and its Reopen — has its own pinned button, below.
 
 **The Competency Profile Chart is a button pinned bottom-right**, for staff on
-a summary thread only (the owner's placement — a summary is what gets matched
-to a competency unit and work activity): it opens a drawer showing the
-programme's CPC (NOSS P851-002-4:2025 — the competency
+every part (the owner's placement; icon only at phone width, where its label
+would run into Approve): it opens a drawer showing the programme's CPC (NOSS P851-002-4:2025 — the competency
 units and work activities an LPKC is written against), so a checker reads it
 beside the thread instead of hunting for the PDF. The PDF ships with the web
 app (`features/reports/cpc-p851-002-4-2025.pdf`), not a bucket: it is the
 published standard, the same for everyone, and changes only with a new NOSS.
 
-**Approve is behind the `⋯` menu**, with handing on. It ends the thread — the
-student can no longer send a version — and happens once per report, and beside
-the reply box it was one mis-click from Send. On an approved report the same
-menu item reads **Reopen**: Approve has no confirmation step, so it needs an
-undo. Anything typed in the reply box goes with either, as the note explaining
-it. The mobile thread screen has the same shape.
+**Approve is a large button pinned bottom-centre** for staff (Oct 2026, the
+owner: "make it obvious"), filled green. It ends the thread — the student can
+no longer send a version — so it is reversible in the same place: on an
+approved report the button reads **Reopen** (outlined), one click back to being
+checked. Approve has no confirmation step; the undo is what makes that safe.
+Anything typed in the reply box goes with either, as the note explaining it.
+It sits apart from the reply box's Send, which is why it was once behind the
+`⋯` menu; the page leaves room at the bottom so Send scrolls clear of the
+pinned buttons. The `⋯` menu keeps handing on and opening the student. The
+mobile thread screen still has Approve behind its menu.
 
 A timeline entry reads "{who} commented" whenever something was said, and shows
 the status it moved to as a badge; "{who} updated the status" is kept for a
