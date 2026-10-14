@@ -332,8 +332,9 @@ The student asks; an admin answers by creating the letter. Migrations
   `update_my_student_details` on the way, as on the offer letter's page; the
   function refuses an application from a record with no IC number, so the rule
   does not rest on the page.
-- **What comes back is a status, never the file.** The signature and the stamp
-  are given by hand, so a download would hand the student an unsigned letter.
+- **What comes back is a status, never the file.** The letter carries the
+  academy's signature and stamp; it is the academy's to hand over, as it
+  always was when both were given by hand.
 - **Taking a letter back leaves the application waiting again** — the
   application row is still there. *Remove* on an application that has no letter
   turns it away: the row goes, the student reads *not applied* and may ask
@@ -366,7 +367,7 @@ The student asks; an admin answers by creating the letter. Migrations
 
 ### What the letter says
 
-One A4 page. Four values come from the record; everything else is the form.
+One A4 page. Five values come from the record; everything else is the form.
 
 | on the letter | from |
 | --- | --- |
@@ -375,6 +376,7 @@ One A4 page. Four values come from the record; everything else is the form.
 | (c) No.Pendaftaran/Matrix Pelajar | the IC number again, as on the academy's form — **not** `student_no` |
 | (g) the two dates | `courses.start_date` *sehingga* `courses.end_date` of the student's course |
 | (i) Tahun Pengajian Semasa | the year of the start date |
+| Tarikh, beside the signature | `student_kwsp_letters.created_at`, the day on the **Malaysian** calendar |
 
 **Fixed text, as in the offer letter and for the same reason**: the programme
 (*Pengajaran Prasekolah*, *Tahap 4*, `P851-002-4:2025`), the institution's
@@ -388,9 +390,14 @@ letter says `5515 9112 8510`, *Maybank Berhad*; the offer letter says
 was built from says. One of the two is wrong and only the academy knows which —
 it is one string in `PAYEE`.
 
-**The signature and the date are left blank**, to be given by hand with the
-academy's stamp, as on the form supplied. The offer letter's signature picture
-is not laid on it.
+**Signed, stamped and dated on the page.** The signature is the offer
+letter's picture (`offer-letter/assets/signature.png`), laid across the line
+and drawn before it. The stamp is the signatory's name stamp as the academy
+applies it by hand — *ROSZLINDA BINTI SHAM / Pengurus Pusat Latihan / Hawary
+Academy*, in blue, centred under the line — typed in `STAMP`, not a scan. The
+date is the day the letter was **created**, read in `Asia/Kuala_Lumpur` as the
+offer letter's acceptance date is: downloading again does not move it, and
+taking the letter back and creating it again does.
 
 **What was changed from the supplied form:** four misspellings in the running
 text — `diddaftarkan`, `insitusi` (three times), `pembiayaaan`,
@@ -401,7 +408,10 @@ labels of the lettered rows are left exactly as the form has them, including
 rows (k) and (l).
 
 **A long name** wraps to a second line and the signature line gives up that
-much room, never the footer's.
+much room, never the footer's. The page is full: the signature's white ground
+must not reach the last paragraph, nor the stamp the footer, so the paragraph
+gaps are tight and the line has a floor (`SIGN_FLOOR`). A name of three lines —
+over a hundred characters — is the one case where the two touch.
 
 ## Not done
 

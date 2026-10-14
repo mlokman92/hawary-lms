@@ -4,6 +4,7 @@ import {
   b,
   block,
   letterDate,
+  letterDateOf,
   letterFileName,
   letterIc,
   letterhead,
@@ -11,6 +12,7 @@ import {
   setFont,
   widthOf,
   type BlockOptions,
+  type Images,
   type Run,
 } from '@/features/offer-letter/letter'
 
@@ -23,9 +25,9 @@ import {
  * letterhead and footer, built on demand from what the record says today,
  * nothing stored. The wording and the order are the academy's own form.
  *
- * The name, the IC number and the course's two dates come from the record.
- * Everything else — the programme, its code, the fee, the payee — is the form.
- * The signature and its date are left to be given by hand.
+ * The name, the IC number, the course's two dates and the day the letter was
+ * created come from the record. Everything else — the programme, its code, the
+ * fee, the payee, the signature and the stamp — is the form.
  */
 
 export type KwspLetterInput = {
@@ -36,6 +38,8 @@ export type KwspLetterInput = {
   /** `courses.start_date` and `end_date` of the student's course, 'YYYY-MM-DD'. */
   startDate: string | null
   endDate: string | null
+  /** `student_kwsp_letters.created_at` — the day the letter is signed on. */
+  createdAt: string | null
 }
 
 // --- page geometry (pt, A4 portrait) ----------------------------------------
@@ -44,8 +48,8 @@ const R = 539.3 // the wordmark's right edge; the form is too dense for less
 const SIZE = 9
 const FORM = 8.5 // the lettered rows, as the form sets them
 const LEAD = 10.6
-const PARA = LEAD + 6 // last line of one paragraph to the first of the next
-const TOP = 120
+const PARA = LEAD + 4 // last line of one paragraph to the first of the next
+const TOP = 114
 
 const X_TEXT = L + 36 // the text of "2." and "3."
 const X_SUB = L + 19 // "2.1"
@@ -58,10 +62,15 @@ const X_PAYEE_LABEL = L + 54
 const X_PAYEE_COLON = L + 166
 const X_PAYEE_VALUE = L + 174
 
-const SIGN_GAP = 40 // room to sign and stamp above the line
+const SIGN_GAP = 35 // room for the signature above the line
 const SIGN_RULE = 135
 const DATE_X = R - 165
-const SIGN_FLOOR = 730 // the lowest the line may sit and still clear the footer
+const SIGN_FLOOR = 699 // the lowest the line may sit, the stamp under it clear of the footer
+
+// The signatory's name stamp, in the stamp's blue, centred under the line.
+const STAMP = ['ROSZLINDA BINTI SHAM', 'Pengurus Pusat Latihan', 'Hawary Academy']
+const STAMP_INK: [number, number, number] = [30, 58, 168]
+const STAMP_SIZE = 9.5
 
 // --- the form ---------------------------------------------------------------
 
@@ -170,7 +179,7 @@ function rule(doc: jsPDF, from: number, to: number, y: number) {
   doc.line(from, y, to, y)
 }
 
-function page(doc: jsPDF, input: KwspLetterInput) {
+function page(doc: jsPDF, input: KwspLetterInput, images: Images) {
   const set = (size: number) => (y: number, runs: Run[], options: BlockOptions = {}) =>
     block(doc, y, runs, { right: R, size, lead: LEAD, justify: false, ...options })
   const text = set(SIZE)
@@ -256,14 +265,29 @@ function page(doc: jsPDF, input: KwspLetterInput) {
     'Dengan ini kami mengesahkan maklumat di atas adalah benar dan mematuhi peruntukan yang di sediakan di bawah Seksyen 54(6), Akta KWSP 1991 (pindaan) 2007.',
   ])
 
-  // Signed, stamped and dated by hand. A name that ran to a second line has
-  // already spent some of the room; the line gives it up rather than the footer.
+  // A name that ran to a second line has already spent some of the room; the
+  // line gives it up rather than the footer.
   y = Math.min(y + SIGN_GAP, SIGN_FLOOR)
+
+  // The signature sits across the line, as it does on paper. Drawn first: the
+  // scan is ink on white, and the line and the stamp have to land on top of it.
+  doc.addImage(images.signature, 'PNG', L + 36, y - 32, 60, 48.4)
   rule(doc, L, L + SIGN_RULE, y)
-  const date = 'Tarikh :'
-  text(y, [date], { x: DATE_X })
+
+  doc.setFont('helvetica', 'bold')
+  STAMP.forEach((line, i) => {
+    if (i === 1) doc.setFont('helvetica', 'normal')
+    doc.setFontSize(STAMP_SIZE)
+    doc.setTextColor(...STAMP_INK)
+    doc.text(line, L + SIGN_RULE / 2, y + 18 + i * 10.5, { align: 'center' })
+  })
+
+  const label = 'Tarikh :'
+  text(y, [label], { x: DATE_X })
   setFont(doc, 'normal', SIZE)
-  rule(doc, DATE_X + widthOf(doc, date) + 2, R, y)
+  const from = DATE_X + widthOf(doc, label) + 2
+  text(y - 2, [letterDateOf(input.createdAt)], { x: from + 6 })
+  rule(doc, from, R, y)
 }
 
 // --- entry points -----------------------------------------------------------
@@ -285,7 +309,7 @@ export async function buildKwspLetters(inputs: KwspLetterInput[]) {
   inputs.forEach((input, i) => {
     if (i > 0) doc.addPage()
     letterhead(doc, images)
-    page(doc, input)
+    page(doc, input, images)
   })
   const only = inputs.length === 1 ? inputs[0] : undefined
   return {

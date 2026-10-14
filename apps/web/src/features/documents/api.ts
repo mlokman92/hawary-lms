@@ -201,6 +201,7 @@ export async function downloadStudentKwspLetters(students: DocumentStudent[]) {
       icNumber: s.ic_number,
       startDate: s.course?.start_date ?? null,
       endDate: s.course?.end_date ?? null,
+      createdAt: s.kwspCreatedAt,
     })),
   )
 }
