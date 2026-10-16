@@ -13,7 +13,7 @@ the mobile apps come later.
 | offer letter | `/documents/offer-letters` — every student, who has signed, download any | `/learn/documents/offer-letter` — sign, agree, download their own |
 | IC copy | `/documents/ic-copies` — every student, view the copy | `/learn/documents/ic-copy` — upload, replace, view |
 | employment letter | `/documents/employment-letters` — as the IC copy | `/learn/documents/employment-letter` — as the IC copy |
-| KWSP letter | `/documents/kwsp-letters` — who has applied, who has one, download; create for many in a dialog | `/learn/kwsp` — apply, and read where it stands; never the letter |
+| KWSP letter | `/documents/kwsp-letters` — who has applied, who has one, download; create for many in a dialog | `/learn/kwsp` — apply, withdraw while under review, and read where it stands; never the letter |
 
 `/documents` and `/learn/documents` redirect to the letter: the parent is a
 heading in the rail, not a page. The staff pages are one roster
@@ -340,6 +340,13 @@ The student asks; an admin answers by creating the letter. Migrations
 - **What comes back is a status, never the file.** The letter carries the
   academy's signature and stamp; it is the academy's to hand over, as it
   always was when both were given by hand.
+- **The student may withdraw while it is under review** — *Withdraw* beside
+  the status on `/learn/kwsp`, through `withdraw_kwsp_application`. The row
+  goes, the page shows *Apply* again, and a later application has a new date.
+  No confirmation: nothing is lost but that date. Once the letter is created
+  the application has been answered and the function refuses, so a letter is
+  never left without the request behind it. Migration
+  `20261017100000_withdraw_kwsp_application.sql`.
 - **Taking a letter back leaves the application waiting again** — the
   application row is still there. *Remove* on an application that has no letter
   turns it away: the row goes, the student reads *not applied* and may ask
@@ -369,6 +376,8 @@ The student asks; an admin answers by creating the letter. Migrations
   wants one to have a letter creates it.
   `remove_kwsp_applications(_student_ids uuid[])` is an admin's, and passes over
   rows of an academy the caller does not administer.
+  `withdraw_kwsp_application(_student_id uuid)` is the student's again — the
+  caller must be the linked account — and only while no letter exists.
 
 ### What the letter says
 
@@ -429,7 +438,6 @@ over a hundred characters — is the one case where the two touch.
   application has no mobile page yet.
 - No notification when a KWSP application arrives or is answered, and no count
   on the staff rail.
-- A student cannot withdraw a KWSP application; an admin removes it.
 - The KWSP letter records that it was created, not who created it, nor each
   download.
 

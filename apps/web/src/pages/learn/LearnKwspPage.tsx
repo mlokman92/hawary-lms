@@ -23,6 +23,7 @@ import {
   kwspState,
   useApplyForKwspLetter,
   useStudentDocuments,
+  useWithdrawKwspApplication,
   type DocumentStudent,
 } from '@/features/documents/api'
 
@@ -35,7 +36,8 @@ import {
  * letter is two lines of it; that is asked for here and saved on the way.
  *
  * What comes back is a status, not a file: an admin answers by creating the
- * letter, and the academy prints, signs and hands it over.
+ * letter, and the academy prints, signs and hands it over. Until then the
+ * student may withdraw it, and apply again later.
  */
 export function LearnKwspPage() {
   const { t } = useT()
@@ -83,6 +85,7 @@ function ApplicationCard({
   const { t } = useT()
   const update = useUpdateMyDetails(academyId)
   const apply = useApplyForKwspLetter(student.id)
+  const withdraw = useWithdrawKwspApplication(student.id)
   // An IC number staff typed freehand can be one the save would refuse, so it
   // counts as missing too — and is offered back to be corrected.
   const storedIc = normalizeIcNumber(student.ic_number ?? '')
@@ -95,6 +98,18 @@ function ApplicationCard({
 
   if (state !== 'none') {
     const status = KWSP_APPLICATION_STATUS[state]
+
+    async function onWithdraw() {
+      setErr(null)
+      try {
+        await withdraw.mutateAsync()
+        // The form comes back; its button must not still read as applied.
+        apply.reset()
+      } catch (e2) {
+        setErr(errorMessage(e2, t('common.error')))
+      }
+    }
+
     return (
       <Card>
         <CardContent className="flex flex-wrap items-center gap-3">
@@ -108,6 +123,22 @@ function ApplicationCard({
                   date: fmtDate(application.kwspAppliedAt),
                 })}
           </span>
+          {state === 'applied' ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-auto"
+              disabled={withdraw.isPending}
+              onClick={() => void onWithdraw()}
+            >
+              {withdraw.isPending
+                ? t('sdoc.kwsp_app.withdrawing')
+                : t('sdoc.kwsp_app.withdraw')}
+            </Button>
+          ) : null}
+          {err ? (
+            <p className="text-destructive w-full text-sm">{err}</p>
+          ) : null}
         </CardContent>
       </Card>
     )

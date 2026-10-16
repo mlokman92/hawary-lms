@@ -3750,6 +3750,10 @@ export type Database = {
               isSetofReturn: false
             }
           }
+      withdraw_kwsp_application: {
+        Args: { _student_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       academy_status: "active" | "suspended" | "cancelled"

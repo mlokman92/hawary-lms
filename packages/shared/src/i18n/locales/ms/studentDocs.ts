@@ -68,6 +68,8 @@ export const studentDocs: StudentDocsDict = {
     'Mohon surat pengesahan pendaftaran daripada akademi untuk pengeluaran KWSP anda.',
   'sdoc.kwsp_app.apply': 'Mohon',
   'sdoc.kwsp_app.applying': 'Memohon…',
+  'sdoc.kwsp_app.withdraw': 'Tarik balik',
+  'sdoc.kwsp_app.withdrawing': 'Menarik balik…',
   'sdoc.kwsp_app.not_applied': 'Belum memohon',
   'sdoc.kwsp_app.in_review': 'Dalam semakan',
   'sdoc.kwsp_app.approved': 'Diluluskan',

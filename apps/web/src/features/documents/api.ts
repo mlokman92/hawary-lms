@@ -254,6 +254,23 @@ export function useApplyForKwspLetter(studentId: string | undefined) {
 }
 
 /**
+ * Take back a KWSP application while it is still under review. The student's
+ * own act; once the letter is created the function refuses.
+ */
+export function useWithdrawKwspApplication(studentId: string | undefined) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.rpc('withdraw_kwsp_application', {
+        _student_id: studentId!,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['document-students'] }),
+  })
+}
+
+/**
  * The course the signed-in student's letter is about. Null when they are on
  * none — or on one they cannot read yet, which is a course still in draft.
  */

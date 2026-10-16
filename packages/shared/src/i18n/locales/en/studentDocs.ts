@@ -67,6 +67,8 @@ export const studentDocs = {
     'Ask the academy for the letter confirming your registration, for your KWSP withdrawal.',
   'sdoc.kwsp_app.apply': 'Apply',
   'sdoc.kwsp_app.applying': 'Applying…',
+  'sdoc.kwsp_app.withdraw': 'Withdraw',
+  'sdoc.kwsp_app.withdrawing': 'Withdrawing…',
   'sdoc.kwsp_app.not_applied': 'Not applied',
   'sdoc.kwsp_app.in_review': 'Under review',
   'sdoc.kwsp_app.approved': 'Approved',
