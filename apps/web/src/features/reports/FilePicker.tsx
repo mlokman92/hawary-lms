@@ -32,14 +32,16 @@ export function FilePicker({
   /**
    * The part's file types, for a student. Absent for staff, who attach
    * anything. The server refuses the rest too; this only says so before a
-   * 40 MB upload rather than after.
+   * 40 MB upload rather than after. `max` caps how many files one send
+   * carries; at the cap the attach button goes.
    */
-  accept?: { exts: readonly string[]; label: string }
+  accept?: { exts: readonly string[]; label: string; max?: number }
 }) {
   const { t } = useT()
   const input = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const max = accept?.max
 
   async function pick(list: FileList | null) {
     if (!list || list.length === 0) return
@@ -63,7 +65,8 @@ export function FilePicker({
     try {
       // Sequential, not Promise.all: these are big, and a browser firing six
       // 50 MB uploads at once is how the last one times out.
-      for (const file of Array.from(list)) {
+      const picked = Array.from(list)
+      for (const file of max ? picked.slice(0, max - files.length) : picked) {
         added.push(await uploadReportFile(academyId, file))
       }
       onChange([...files, ...added])
@@ -83,7 +86,7 @@ export function FilePicker({
       <input
         ref={input}
         type="file"
-        multiple
+        multiple={max !== 1}
         accept={accept?.exts.map((e) => `.${e}`).join(',')}
         className="hidden"
         onChange={(e) => void pick(e.target.files)}
@@ -112,16 +115,18 @@ export function FilePicker({
         </ul>
       ) : null}
 
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={disabled || busy}
-        onClick={() => input.current?.click()}
-      >
-        <Paperclip />
-        {busy ? t('report.file.uploading') : t('report.file.attach')}
-      </Button>
+      {max && files.length >= max ? null : (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={disabled || busy}
+          onClick={() => input.current?.click()}
+        >
+          <Paperclip />
+          {busy ? t('report.file.uploading') : t('report.file.attach')}
+        </Button>
+      )}
 
       {error ? (
         <p className="text-destructive mt-2 text-xs">{error}</p>

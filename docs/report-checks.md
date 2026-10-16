@@ -238,6 +238,14 @@ document on it, so a student's file has to be that part's kind:
   overloads (through `app.submit_report_impl`) and `comment_on_report`. A PDF
   is allowed on both the report and the slides, because slides are often
   exported to PDF — the part decides which it is.
+- **The report takes one document per send** (17 Oct 2026,
+  `20261017093000_lpkc_report_one_file.sql`). Students were sending the report
+  with their slides (exported to PDF) or their summary beside it, leaving the
+  checker to work out which file was the report. A send with a file is its own
+  version, so this is one document per version. The web picker takes a single
+  file on the report and drops Attach once one is attached
+  (`LPKC_FILE_TYPES.report.max`); the server refuses a second in the same
+  `app.assert_lpkc_files`, so installed mobile builds are held to it too.
 - **Staff are not limited.** The checker's copy and anything an admin attaches
   go on as before.
 - **The web says so before uploading**: the picker offers only those types and

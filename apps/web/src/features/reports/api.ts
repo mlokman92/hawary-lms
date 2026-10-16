@@ -44,15 +44,17 @@ export const LPKC_STAGE_LABEL: Record<LpkcStage, TKey> = {
 /**
  * The files a student may send on each part, by extension — the same lists
  * `app.assert_lpkc_files` enforces on every door. The summary takes none; a
- * PDF is either a report or exported slides, so the part decides which.
- * `label` is product names, the same in both languages.
+ * PDF is either a report or exported slides, so the part decides which. The
+ * report takes one document per send (`max`), so it cannot carry the slides
+ * or the summary along with it. `label` is product names, the same in both
+ * languages.
  */
 export const LPKC_FILE_TYPES: Record<
   LpkcStage,
-  { exts: readonly string[]; label: string }
+  { exts: readonly string[]; label: string; max?: number }
 > = {
   summary: { exts: [], label: '' },
-  report: { exts: ['pdf', 'doc', 'docx'], label: 'PDF / Word' },
+  report: { exts: ['pdf', 'doc', 'docx'], label: 'PDF / Word', max: 1 },
   slide: { exts: ['pptx', 'ppt', 'pdf'], label: 'PowerPoint / PDF' },
 }
 
