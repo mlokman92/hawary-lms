@@ -144,6 +144,13 @@ renders nothing when there is nothing pending, so it sits unconditionally on:
   no record at this address. There is no founding option.
 - **`/profile` and `/learn/profile`** — the only place an existing member would
   ever find out that another branch has added them.
+- **`/enroll/<slug>`**, in place of the course picker, when the signed-in
+  account has a claimable record in that academy. A stashed join intent
+  outranks `/onboarding` on every landing route, so a staff-created student who
+  once opened the public link was sent back to it on every sign-in — and
+  `join_academy` refused them, because their record was already enrolled in an
+  earlier intake (one student, one course). Four accounts were stuck like that
+  in October 2026.
 
 ## Closed: instructor self-claim
 

@@ -23,6 +23,8 @@ import {
   useJoinAcademy,
 } from '@/features/enrollment/api'
 import { errorMessage } from '@/lib/errors'
+import { PendingInviteList } from '@/features/invitations/PendingInviteList'
+import { useMyPendingInvitations } from '@/features/invitations/api'
 
 /**
  * The academy's one public join link.
@@ -46,6 +48,7 @@ export function EnrollPage() {
 
   const { data, isLoading, error } = useAcademyEnrollment(slug)
   const join = useJoinAcademy()
+  const pending = useMyPendingInvitations(!!session)
   const [courseId, setCourseId] = useState('')
   const [failure, setFailure] = useState<string | null>(null)
 
@@ -84,6 +87,14 @@ export function EnrollPage() {
     ? memberships.find((m) => m.academyId === data.academy.id)
     : undefined
   const isStaffHere = !!membership && membership.role !== 'student'
+  // Staff already created a record for this address. Claiming it is the way
+  // in, not joining: that record is usually enrolled in an earlier intake, and
+  // join_academy refuses a second course — while the stashed intent sends every
+  // landing route back here, never to /onboarding where the claim lives.
+  const claimable =
+    !!session &&
+    !membership &&
+    !!pending.data?.some((p) => p.academy_id === data?.academy.id)
 
   async function submit() {
     if (!slug || !courseId) return
@@ -100,7 +111,7 @@ export function EnrollPage() {
     }
   }
 
-  if (isLoading || authLoading) {
+  if (isLoading || authLoading || (session && pending.isLoading)) {
     return (
       <PublicShell>
         <p className="text-muted-foreground py-16 text-center text-sm">
@@ -149,6 +160,19 @@ export function EnrollPage() {
             </Button>
           </CardContent>
         </Card>
+      </PublicShell>
+    )
+  }
+
+  if (claimable) {
+    return (
+      <PublicShell academy={data.academy}>
+        <PendingInviteList
+          onAccepted={() => {
+            clearEnrollIntent()
+            navigate('/learn', { replace: true })
+          }}
+        />
       </PublicShell>
     )
   }
