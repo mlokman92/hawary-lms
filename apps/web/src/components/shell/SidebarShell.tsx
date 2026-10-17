@@ -34,6 +34,7 @@ export function SidebarShell({
   sidebar,
   headerSlot,
   academyId,
+  notificationsHref,
   children,
 }: {
   sidebar: ReactNode
@@ -41,6 +42,8 @@ export function SidebarShell({
   /** The tenant this shell is showing. Staff pass the back-office's active
    *  academy, the learner tree passes its own. */
   academyId: string | null
+  /** This shell's full notifications page, which the bell's "View all" opens. */
+  notificationsHref: string
   children: ReactNode
 }) {
   return (
@@ -60,7 +63,10 @@ export function SidebarShell({
           {/* Its own `ml-auto` pins it right whether or not a headerSlot is
               there, so the learner header does not need a spacer to hold it
               in place. */}
-          <NotificationBell academyId={academyId} />
+          <NotificationBell
+            academyId={academyId}
+            allHref={notificationsHref}
+          />
         </header>
         {/* A div, not a <main>: SidebarInset already renders one, and nesting a
             second landmark inside it was a bug on every back-office route. */}

@@ -11,6 +11,7 @@ export const notifications = {
   'notif.unread_aria': '{count} unread',
   'notif.mark_all': 'Mark all read',
   'notif.empty': 'Nothing yet.',
+  'notif.view_all': 'View all',
 
   // --- appointment_booked ---------------------------------------------------
   'notif.appt_booked.student': 'Session booked with {name}',

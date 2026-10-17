@@ -62,7 +62,7 @@ export type ReportEventData = {
   status: 'submitted' | 'in_review' | 'changes_requested' | 'approved'
 }
 
-/** How many rows the panel holds. Older ones are not paged to — see the doc. */
+/** How many rows the panel holds. Older ones are on the full page. */
 export const NOTIFICATION_LIMIT = 20
 
 const listKey = (a: string | null) => ['notifications', a] as const
@@ -85,6 +85,34 @@ export function useNotifications(academyId: string | null) {
         .limit(NOTIFICATION_LIMIT)
       if (error) throw error
       return (data ?? []) as Notification[]
+    },
+  })
+}
+
+/** Rows per page on the full notifications page. */
+export const NOTIFICATION_PAGE_SIZE = 25
+
+/**
+ * One page of the full list, newest first, with the total for the pager.
+ *
+ * Keyed under `listKey`, so marking read refreshes it along with the bell.
+ */
+export function useNotificationPage(academyId: string | null, page: number) {
+  return useQuery({
+    queryKey: [...listKey(academyId), 'page', page] as const,
+    enabled: !!academyId,
+    refetchInterval: POLL_MS,
+    placeholderData: (prev) => prev,
+    queryFn: async () => {
+      const from = (page - 1) * NOTIFICATION_PAGE_SIZE
+      const { data, count, error } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact' })
+        .eq('academy_id', academyId!)
+        .order('created_at', { ascending: false })
+        .range(from, from + NOTIFICATION_PAGE_SIZE - 1)
+      if (error) throw error
+      return { rows: (data ?? []) as Notification[], total: count ?? 0 }
     },
   })
 }

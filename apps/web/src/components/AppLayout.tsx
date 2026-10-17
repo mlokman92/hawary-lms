@@ -14,6 +14,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       sidebar={<AppSidebar />}
       headerSlot={<HeaderSearch />}
       academyId={activeAcademyId}
+      notificationsHref="/notifications"
     >
       {children}
     </SidebarShell>

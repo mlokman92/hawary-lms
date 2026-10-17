@@ -126,8 +126,18 @@ control.
   opened. A closed bell costs one count per minute.
 - The badge is drawn **only above zero**, the same rule the sidebar counts
   follow: a badge showing "0" is decoration, and its absence already says it.
-- Opening a row marks it read and navigates. There is no "mark unread", no
-  filter, and no page of older notifications — twenty is what the panel holds.
+- Opening a row marks it read and navigates. There is no "mark unread" and no
+  filter. The panel holds twenty; its **View all** link opens the full page.
+
+### The full page
+
+`/notifications` (back-office) and `/learn/notifications` (learner) render
+`features/notifications/NotificationsPage`: every row, newest first, 25 to a
+page, with the same "Mark all read" and the same row as the bell
+(`NotificationRow`) plus when it arrived. Each shell hands the bell its own
+page as `notificationsHref`, for the same reason it hands down `academyId`.
+Where a row leads (`linkOf`) lives in `features/notifications/link.ts`, shared
+by both. It is not in the sidebar: the bell is how you get there.
 
 The words are not in the bell. `features/notifications/render.ts` holds
 `titleOf` and `detailOf` as pure functions, because three surfaces render the

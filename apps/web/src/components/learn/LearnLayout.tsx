@@ -15,7 +15,11 @@ import { LearnSidebar } from './LearnSidebar'
 export function LearnLayout() {
   const { academyId } = useStudentAcademy()
   return (
-    <SidebarShell sidebar={<LearnSidebar />} academyId={academyId}>
+    <SidebarShell
+      sidebar={<LearnSidebar />}
+      academyId={academyId}
+      notificationsHref="/learn/notifications"
+    >
       <Outlet />
     </SidebarShell>
   )

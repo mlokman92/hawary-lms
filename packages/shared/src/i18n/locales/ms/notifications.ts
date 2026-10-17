@@ -6,6 +6,7 @@ export const notifications: NotificationsDict = {
   'notif.unread_aria': '{count} belum dibaca',
   'notif.mark_all': 'Tandakan semua dibaca',
   'notif.empty': 'Tiada apa-apa lagi.',
+  'notif.view_all': 'Lihat semua',
 
   // --- appointment_booked ---------------------------------------------------
   'notif.appt_booked.student': 'Sesi ditempah bersama {name}',

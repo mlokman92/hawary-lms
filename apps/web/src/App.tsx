@@ -84,6 +84,8 @@ import { OfferLettersPage } from './pages/OfferLettersPage'
 import { IcCopiesPage } from './pages/IcCopiesPage'
 import { EmploymentLettersPage } from './pages/EmploymentLettersPage'
 import { KwspLettersPage } from './pages/KwspLettersPage'
+import { StaffNotificationsPage } from './pages/NotificationsPage'
+import { LearnNotificationsPage } from './pages/learn/LearnNotificationsPage'
 
 function LegacyReportRedirect() {
   const { id } = useParams<{ id: string }>()
@@ -198,6 +200,10 @@ export default function App() {
                         and never holds the letter. */}
                     <Route path="/learn/kwsp" element={<LearnKwspPage />} />
                     <Route path="/learn/profile" element={<LearnProfilePage />} />
+                    <Route
+                      path="/learn/notifications"
+                      element={<LearnNotificationsPage />}
+                    />
                     {/* In-tree catch-all. Without it an unknown /learn/* URL hits
                         the global '*' below, which sends it to '/' — and AppShell
                         bounces a student straight back to /learn. */}
@@ -268,6 +274,10 @@ export default function App() {
                       element={<GradingQueuePage kind="assignment" />}
                     />
                     <Route path="/enrollments" element={<EnrollmentsPage />} />
+                    <Route
+                      path="/notifications"
+                      element={<StaffNotificationsPage />}
+                    />
                     <Route path="/notes/:id" element={<NoteEditorPage />} />
                     <Route
                       path="/assessments/:id"
