@@ -39,6 +39,9 @@ export function SiteFooter() {
           <a href="/support" className="hover:text-foreground">
             Support
           </a>
+          <a href="/privacy" className="hover:text-foreground">
+            Privacy
+          </a>
         </span>
       </div>
     </footer>
