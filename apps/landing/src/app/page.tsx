@@ -19,6 +19,14 @@ export default function Home() {
             <a href="https://app.hawary.my/signup">Sign up</a>
           </Button>
         </div>
+        <p className="text-muted-foreground flex gap-5 text-sm">
+          <a href="/apps" className="hover:text-foreground">
+            The apps
+          </a>
+          <a href="/support" className="hover:text-foreground">
+            Support
+          </a>
+        </p>
       </div>
     </main>
   )

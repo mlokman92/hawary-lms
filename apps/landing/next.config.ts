@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
   // deployment as plain files on Netlify, same as every other host this
   // could move to.
   output: 'export',
+  // Each page as <route>/index.html. The export also writes a <route>/ folder
+  // of its own next to <route>.html, and /support should never depend on how
+  // the host breaks that tie.
+  trailingSlash: true,
   images: {
     unoptimized: true,
   },

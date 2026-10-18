@@ -58,6 +58,12 @@ No environment variables needed — this app makes no Supabase calls.
 
 ## Editing
 
+Three pages: `/` (this pitch), `/apps` — the **marketing URL** on both App
+Store listings — and `/support` — their **support URL**. The two store pages
+share `src/components/site.tsx` (header, footer, the WhatsApp support number).
+Their screenshots are `public/img/*.png`. Exported with `trailingSlash`, so a
+page is `<route>/index.html`.
+
 The two buttons are plain `<a>` tags to `https://app.hawary.my/signup` and
 `https://app.hawary.my/signin` (`App.tsx`'s actual route names) in
 `src/app/page.tsx` — update them directly if those routes ever change.
