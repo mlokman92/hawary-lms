@@ -56,7 +56,11 @@ export default function EnrollmentsScreen() {
       const outcome = await approve.mutateAsync(r.id)
       if (!outcome.result.approved) {
         // Two people pressing Approve on one row is the normal case.
-        notify(t('enroll.requests.stale'))
+        notify(
+          outcome.result.reason === 'full'
+            ? t('enroll.requests.full')
+            : t('enroll.requests.stale'),
+        )
       } else if (outcome.email && !outcome.email.ok) {
         notify(t('enroll.email.failed'))
       }

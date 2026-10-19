@@ -90,8 +90,35 @@ closed. `intro` is free text shown above the course list.
 
 `course_enrollment_settings` — `is_open`, `capacity`, `closes_at`, nothing else.
 A course appears on the link only when it is **published** and switched on here
-(`app.enrollment_open`). Capacity deliberately does **not** close a course: a
-queue of people who want the next seat is the point of approving at all.
+(`app.enrollment_open`).
+
+### Capacity is a hard limit
+
+Until 2026-10-19 capacity only displayed seats left, on the argument that a
+queue for the next seat was the point of approving. The owner reversed that
+for the ADI Perantisan intake (40 seats): once the seats are filled, the 41st
+must not be approved and nobody new may apply.
+
+A **seat** is what `app.course_seats_taken` counts — an `active` enrolment of
+an unarchived student. Pending requests hold no seat, so requests keep arriving
+until 40 are *approved*, and the list is sorted oldest first so the queue reads
+in the order people applied. `app.course_full(course)` is the one test.
+
+- **`enrollments_enforce_capacity`** (BEFORE INSERT / UPDATE OF status,
+  course_id) refuses any write that makes a row `active` on a full course. It
+  is the boundary, because seats are taken from six places (see *Enrolment
+  history*) and SQL. It locks the course's settings row first, so two admins
+  approving the 40th and 41st at once take turns, and counts in a fresh
+  statement after the lock.
+- `approve_enrollment` checks first and answers `reason: 'full'`, so the
+  request list can say why instead of surfacing the trigger's exception.
+- `join_academy` raises "This course is full" before writing anything — unless
+  the caller already has a live row on that course, for whom it stays the no-op
+  it always was.
+- `/enroll/:slug` still lists a full course, marked **Full** and not
+  selectable, and never preselects it.
+
+Raising `capacity` reopens the course; nothing else needs to change.
 
 There is no form configuration. The join form asks for a course; the name, phone
 and email come from the account, which sign-up already collected. Anything else
@@ -321,6 +348,7 @@ enrol does not raise an invoice; those students show on
   approved *through the request list* is told".
 - No retry, queue or sweeper for a failed send. `pg_cron`/`pg_net` are now
   installed (for the appointment reminder) but nothing here uses them.
-- No waitlist entity. Over-capacity requests stay `pending`.
+- No waitlist entity. Requests filed before the course filled stay `pending`
+  and cannot be approved until a seat frees up or capacity is raised.
 - No bulk approve.
 - Bulk enrol does not create student records. Deliberate — see above.

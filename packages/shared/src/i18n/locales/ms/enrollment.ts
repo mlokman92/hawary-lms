@@ -25,6 +25,7 @@ export const enrollment: EnrollmentDict = {
   'enroll.seats.left_one': '{count} tempat kosong',
   'enroll.seats.left_other': '{count} tempat kosong',
   'enroll.seats.enrolled': '{count} telah mendaftar',
+  'enroll.seats.full': 'Penuh',
   'enroll.closes': 'Ditutup {date}',
 
   // --- Status pendaftaran ---------------------------------------------------
@@ -65,7 +66,7 @@ export const enrollment: EnrollmentDict = {
   'enroll.limits.description': 'Terpakai untuk {course}.',
   'enroll.limits.capacity': 'Tempat',
   'enroll.limits.capacity_hint':
-    'Kosongkan untuk tiada had. Kursus yang penuh masih menerima permohonan — anda yang menentukan siapa mendapat tempat.',
+    'Kosongkan untuk tiada had. Apabila semua tempat telah diisi, kursus tidak lagi menerima permohonan baharu dan tiada kelulusan lagi.',
   'enroll.limits.closes_at': 'Berhenti menerima permohonan pada',
   'enroll.limits.closes_at_hint':
     'Kosongkan untuk kekal terbuka sehingga anda mematikannya.',
@@ -86,6 +87,7 @@ export const enrollment: EnrollmentDict = {
   'enroll.requests.reject': 'Tolak',
   'enroll.requests.failed': 'Permohonan ini tidak dapat dikemas kini.',
   'enroll.requests.stale': 'Permohonan ini telah diuruskan oleh orang lain.',
+  'enroll.requests.full': 'Kursus ini sudah penuh.',
   'enroll.email.failed':
     'Telah didaftarkan, tetapi e-mel tidak dapat dihantar.',
 

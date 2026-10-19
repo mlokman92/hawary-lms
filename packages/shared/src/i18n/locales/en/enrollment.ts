@@ -26,6 +26,7 @@ export const enrollment = {
   'enroll.seats.left_one': '{count} seat left',
   'enroll.seats.left_other': '{count} seats left',
   'enroll.seats.enrolled': '{count} enrolled',
+  'enroll.seats.full': 'Full',
   'enroll.closes': 'Closes {date}',
 
   // --- Enrollment status ----------------------------------------------------
@@ -66,7 +67,7 @@ export const enrollment = {
   'enroll.limits.description': 'Applies to {course}.',
   'enroll.limits.capacity': 'Seats',
   'enroll.limits.capacity_hint':
-    'Blank for no limit. A full course still takes requests — you decide who gets the seat.',
+    'Blank for no limit. Once every seat is taken, the course accepts no new requests and no more approvals.',
   'enroll.limits.closes_at': 'Stop accepting requests on',
   'enroll.limits.closes_at_hint': 'Blank to stay open until you switch it off.',
   'enroll.limits.access_email': 'Acceptance email',
@@ -86,6 +87,7 @@ export const enrollment = {
   'enroll.requests.reject': 'Reject',
   'enroll.requests.failed': 'Could not update this request.',
   'enroll.requests.stale': 'Someone else already handled this request.',
+  'enroll.requests.full': 'This course is full.',
   'enroll.email.failed': 'Enrolled, but the email could not be sent.',
 
   // --- Staff: bulk enroll by email ------------------------------------------

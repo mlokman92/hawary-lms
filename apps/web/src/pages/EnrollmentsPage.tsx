@@ -343,7 +343,9 @@ export function EnrollmentsPage() {
                                 setProblem(
                                   result.reason === 'already_active'
                                     ? t('enroll.requests.stale')
-                                    : t('enroll.requests.failed'),
+                                    : result.reason === 'full'
+                                      ? t('enroll.requests.full')
+                                      : t('enroll.requests.failed'),
                                 )
                                 return
                               }

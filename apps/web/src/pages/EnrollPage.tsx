@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { PublicShell } from '@/features/enrollment/PublicShell'
 import {
+  isFull,
   seatsLeft,
   useAcademyEnrollment,
   useJoinAcademy,
@@ -73,9 +74,13 @@ export function EnrollPage() {
   //
   // Guarded on `courseId` being empty so a refetch never moves a choice the
   // visitor has already made.
+  //
+  // A full course is never preselected — it cannot be picked at all.
   useEffect(() => {
-    if (courseId || !data?.courses.length) return
-    const newest = data.courses.reduce((a, b) =>
+    if (courseId || !data) return
+    const open = data.courses.filter((c) => !isFull(c.capacity, c.seats_taken))
+    if (!open.length) return
+    const newest = open.reduce((a, b) =>
       new Date(a.created_at).getTime() >= new Date(b.created_at).getTime()
         ? a
         : b,
@@ -199,6 +204,7 @@ export function EnrollPage() {
               <RadioGroup value={courseId} onValueChange={setCourseId} className="gap-2">
                 {data.courses.map((c) => {
                   const left = seatsLeft(c.capacity, c.seats_taken)
+                  const full = left === 0
                   const meta = [
                     c.code,
                     c.price_sen > 0
@@ -206,7 +212,9 @@ export function EnrollPage() {
                       : t('enroll.price_free'),
                     left === null
                       ? t('enroll.seats.enrolled', { count: c.seats_taken })
-                      : tn('enroll.seats.left', left),
+                      : full
+                        ? t('enroll.seats.full')
+                        : tn('enroll.seats.left', left),
                     c.closes_at
                       ? t('enroll.closes', { date: fmtDate(c.closes_at) })
                       : null,
@@ -215,9 +223,14 @@ export function EnrollPage() {
                     <Label
                       key={c.id}
                       htmlFor={c.id}
-                      className="hover:bg-accent has-[:checked]:border-primary flex cursor-pointer items-start gap-3 rounded-lg border p-3 font-normal transition-colors"
+                      className="hover:bg-accent has-[:checked]:border-primary has-[:disabled]:hover:bg-transparent has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60 flex cursor-pointer items-start gap-3 rounded-lg border p-3 font-normal transition-colors"
                     >
-                      <RadioGroupItem value={c.id} id={c.id} className="mt-0.5" />
+                      <RadioGroupItem
+                        value={c.id}
+                        id={c.id}
+                        disabled={full}
+                        className="mt-0.5"
+                      />
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-medium">
                           {c.title}

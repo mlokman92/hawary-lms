@@ -99,6 +99,15 @@ export function seatsLeft(capacity: number | null, taken: number): number | null
   return capacity === null ? null : Math.max(0, capacity - taken)
 }
 
+/**
+ * Capacity is a hard limit: a full course takes no new requests and no more
+ * approvals. The database refuses both (`app.course_full` and the
+ * `enrollments_enforce_capacity` trigger); this only keeps the page honest.
+ */
+export function isFull(capacity: number | null, taken: number): boolean {
+  return seatsLeft(capacity, taken) === 0
+}
+
 // ---------------------------------------------------------------------------
 // Public — works signed out, both grants reach anon
 // ---------------------------------------------------------------------------
@@ -296,7 +305,9 @@ export function useEnrollmentRequests(academyId: string | null) {
           '*, students(id, full_name, student_no, email, phone), courses(id, title)',
         )
         .eq('academy_id', academyId!)
-        .order('created_at', { ascending: false })
+        // Oldest first: seats are limited, so whoever applied first is at the
+        // top of the queue.
+        .order('created_at', { ascending: true })
       if (error) throw error
       return (data ?? []) as unknown as EnrollmentRequest[]
     },
@@ -350,7 +361,8 @@ function invalidateEnrollment(qc: QueryClient, academyId: string | null) {
 export type ApproveResult = {
   approved: boolean
   notify: boolean
-  reason?: 'not_found' | 'already_active'
+  /** `full`: every seat on the course is taken; nothing was written. */
+  reason?: 'not_found' | 'already_active' | 'full'
   status?: EnrollmentStatus
   /**
    * The course invoice this approval raised, or null when it raised none —
