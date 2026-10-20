@@ -87,6 +87,23 @@ text now, and a click on it opens the panel like the rest of the row.
 The invoice detail page still *prints* the note read-only under its payment row;
 `invalidateMoney` plus the invoice key means an edit on the log reaches it.
 
+### Deleting a payment
+
+The payment's panel has **⋯ → Delete**, behind a confirm that names the amount
+and the invoice. It is for a payment that should never have been recorded — a
+duplicate, the wrong invoice — not for correcting one: the note and a bank
+transfer's amount and date are edited in place, because a re-entry moves
+`created_at`.
+
+`useDeletePayment` is a plain PostgREST delete under `payments: admin delete`
+(`app.is_admin`), with `.select('id').single()` for the note's reason — a
+refused DELETE is 200 with zero rows. `app.sync_invoice_paid` recomputes the
+invoice on the DELETE, so a paid invoice drops back; the receipt row cascades
+and its file stays in the bucket (see "Not done" under receipts). The menu
+appears only once the payment's own read has answered, never off the clicked
+row alone. Any method and any status can be deleted, a Director-checked
+transfer included — the amount/date lock is a trigger on UPDATE only.
+
 `kwsp` joined `payment_method` for the same reason `bank_transfer` is not
 "Other" — an EPF Account 2 education withdrawal arrives by its own route, with
 its own paperwork. It sits before `other` in the enum so the catch-all stays

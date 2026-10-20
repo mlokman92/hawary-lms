@@ -1,14 +1,31 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Pencil } from 'lucide-react'
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { formatMYR } from '@hawary/shared'
+import { errorMessage } from '@/lib/errors'
 import { fmtDate, fmtDateTime } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
 import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Sheet,
   SheetContent,
@@ -20,6 +37,7 @@ import {
   PAYMENT_METHOD_LABEL,
   PAYMENT_STATUS_LABEL,
   PAYMENT_STATUS_VARIANT,
+  useDeletePayment,
   type PaymentLogRow,
 } from './api'
 import {
@@ -123,6 +141,8 @@ export function PaymentSheet({
   const one = usePayment(academyId, paymentId)
   const p = one.data ?? (one.data === undefined ? hint : undefined)
   const [editing, setEditing] = useState<TransferTarget | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const remove = useDeletePayment(academyId ?? '')
   // A bank transfer's amount and date can be corrected until a Director has
   // checked them against the receipt. Only the payment's own read knows that,
   // so the clicked row alone never offers it.
@@ -260,10 +280,81 @@ export function PaymentSheet({
                   </Link>
                 </Button>
               ) : null}
+              {/* Only once the payment's own read has confirmed the row is
+                  still there — never off the clicked row alone. */}
+              {academyId && one.data ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon-sm" className="ml-auto">
+                      <MoreHorizontal />
+                      <span className="sr-only">{t('common.actions')}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => {
+                        remove.reset()
+                        setConfirmDelete(true)
+                      }}
+                    >
+                      <Trash2 /> {t('common.delete')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : null}
             </div>
           </div>
         )}
       </SheetContent>
+      <AlertDialog
+        open={confirmDelete && !!one.data}
+        onOpenChange={(next) => !remove.isPending && setConfirmDelete(next)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('payments.log.delete_title')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {one.data
+                ? t('payments.log.delete_body', {
+                    amount: formatMYR(one.data.amount_sen),
+                    invoice: one.data.invoice_no ?? '—',
+                  })
+                : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {remove.error ? (
+            <p className="text-destructive text-sm">
+              {errorMessage(remove.error, t('payments.error.delete_failed'))}
+            </p>
+          ) : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={remove.isPending}>
+              {t('common.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={remove.isPending}
+              onClick={(e) => {
+                // Stays open until the delete lands, so a refusal is read here.
+                e.preventDefault()
+                if (!one.data) return
+                remove.mutate(
+                  { id: one.data.id, invoiceId: one.data.invoice_id },
+                  {
+                    onSuccess: () => {
+                      setConfirmDelete(false)
+                      onClose()
+                    },
+                  },
+                )
+              }}
+            >
+              {remove.isPending ? t('common.deleting') : t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <EditBankTransferDialog
         academyId={academyId}
         target={editing}

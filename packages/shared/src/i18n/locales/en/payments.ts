@@ -129,6 +129,9 @@ export const payments = {
   // One key for the column and the CSV header — the same word either way.
   'payments.log.note': 'Note',
   'payments.log.note_edit': 'Edit note',
+  'payments.log.delete_title': 'Delete this payment?',
+  'payments.log.delete_body':
+    '{amount} on {invoice} will be removed and the invoice balance recalculated. This cannot be undone.',
   'payments.log.recorded_manually': 'Recorded manually',
   'payments.log.recorded_at': 'Recorded {when}',
   'payments.log.sort.recorded': 'Newest recorded',
@@ -260,6 +263,7 @@ export const payments = {
   'payments.error.start_payment': 'Could not start payment.',
   'payments.error.check_status': 'Could not check payment status.',
   'payments.error.note_failed': 'Could not save the note.',
+  'payments.error.delete_failed': 'Could not delete the payment.',
 } as const
 
 export type PaymentsDict = Record<keyof typeof payments, string>

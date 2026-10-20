@@ -1065,6 +1065,44 @@ export function useUpdatePaymentNote(academyId: string) {
 }
 
 /**
+ * Deletes a payment that should never have been recorded — a duplicate, the
+ * wrong invoice, an amount nobody banked.
+ *
+ * A plain PostgREST delete, like the note: `payments: admin delete` has been
+ * `app.is_admin(academy_id)` since the billing migration. `app.sync_invoice_paid`
+ * fires on the DELETE and recomputes the invoice from the payments left, so a
+ * paid invoice drops back to partly paid or issued; the receipt row goes with
+ * it by cascade (its file stays in the bucket — nothing sweeps it).
+ *
+ * `.select('id').single()` for the note's reason: a DELETE that RLS refuses is
+ * 200 with zero rows, and the panel must not close on a payment still there.
+ */
+export function useDeletePayment(academyId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { id: string; invoiceId?: string | null }) => {
+      const { data, error } = await supabase
+        .from('payments')
+        .delete()
+        .eq('id', input.id)
+        .eq('academy_id', academyId)
+        .select('id')
+        .single()
+      if (error) throw error
+      if (!data) throw new Error(translate('payments.error.delete_failed'))
+    },
+    onSuccess: (_d, vars) => {
+      invalidateMoney(qc, academyId)
+      qc.invalidateQueries({ queryKey: ['bank-transfer-receipts'] })
+      qc.invalidateQueries({ queryKey: ['bank-transfer-receipt-counts'] })
+      if (vars.invoiceId) {
+        qc.invalidateQueries({ queryKey: oneKey(vars.invoiceId) })
+      }
+    },
+  })
+}
+
+/**
  * The online payment terms, editable after the invoice is issued.
  *
  * Turning instalments on for an invoice the student already has is the ordinary

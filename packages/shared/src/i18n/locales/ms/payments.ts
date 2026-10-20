@@ -133,6 +133,9 @@ export const payments: PaymentsDict = {
   // Satu kunci untuk lajur dan pengepala CSV — perkataan yang sama.
   'payments.log.note': 'Nota',
   'payments.log.note_edit': 'Sunting nota',
+  'payments.log.delete_title': 'Padam bayaran ini?',
+  'payments.log.delete_body':
+    '{amount} bagi {invoice} akan dibuang dan baki invois dikira semula. Tindakan ini tidak boleh dibatalkan.',
   'payments.log.recorded_manually': 'Direkod secara manual',
   'payments.log.recorded_at': 'Direkod {when}',
   'payments.log.sort.recorded': 'Terbaharu direkod',
@@ -266,4 +269,5 @@ export const payments: PaymentsDict = {
   'payments.error.start_payment': 'Pembayaran tidak dapat dimulakan.',
   'payments.error.check_status': 'Status bayaran tidak dapat disemak.',
   'payments.error.note_failed': 'Nota tidak dapat disimpan.',
+  'payments.error.delete_failed': 'Bayaran tidak dapat dipadam.',
 }
