@@ -35,5 +35,7 @@ export const notifications: NotificationsDict = {
   'notif.invoice_issued': 'Invois baharu {no}',
   'notif.payment_received': 'Bayaran diterima untuk {no}',
   'notif.announcement': 'Pengumuman',
+  'notif.employment_letter_rejected':
+    'Surat Pengesahan Tempoh Bekerja anda ditolak. Muat naik semula.',
 
 }

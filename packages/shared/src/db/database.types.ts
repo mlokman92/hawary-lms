@@ -2631,7 +2631,11 @@ export type Database = {
           created_at: string
           file_name: string
           file_path: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           size_bytes: number
+          status: string
           student_id: string
           uploaded_by: string | null
         }
@@ -2640,7 +2644,11 @@ export type Database = {
           created_at?: string
           file_name: string
           file_path: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           size_bytes: number
+          status?: string
           student_id: string
           uploaded_by?: string | null
         }
@@ -2649,7 +2657,11 @@ export type Database = {
           created_at?: string
           file_name?: string
           file_path?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           size_bytes?: number
+          status?: string
           student_id?: string
           uploaded_by?: string | null
         }
@@ -2932,6 +2944,10 @@ export type Database = {
       }
     }
     Functions: {
+      accept_employment_letter: {
+        Args: { _student_id: string }
+        Returns: undefined
+      }
       accept_invitation: { Args: { _token: string }; Returns: Json }
       accept_pending_invitation: {
         Args: { _kind: string; _record_id: string }
@@ -3492,6 +3508,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      reject_employment_letter: {
+        Args: { _note: string; _student_id: string }
+        Returns: undefined
+      }
       remove_billplz_credentials: {
         Args: { _academy: string }
         Returns: undefined
@@ -3647,6 +3667,7 @@ export type Database = {
         Args: { _instructor_id: string }
         Returns: Json
       }
+      unregister_all_push_devices: { Args: never; Returns: undefined }
       unregister_push_device: { Args: { _token: string }; Returns: undefined }
       update_my_billing_details: {
         Args: { _address: string; _organization: string; _student_id: string }
@@ -3803,6 +3824,7 @@ export type Database = {
         | "payment_received"
         | "appointment_reminder"
         | "announcement"
+        | "employment_letter_rejected"
       payment_method:
         | "cash"
         | "bank_transfer"
@@ -4010,6 +4032,7 @@ export const Constants = {
         "payment_received",
         "appointment_reminder",
         "announcement",
+        "employment_letter_rejected",
       ],
       payment_method: [
         "cash",

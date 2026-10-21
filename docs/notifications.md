@@ -1,8 +1,9 @@
 # Notifications
 
-The bell in the header. One table, one bell, thirteen event kinds in four
-families — appointments, report checks, a student's work and money, and
-announcements. What follows is the shape everything else plugs into.
+The bell in the header. One table, one bell, fourteen event kinds in five
+families — appointments, report checks, a student's work and money,
+announcements, and a rejected employment letter. What follows is the shape
+everything else plugs into.
 
 The two mobile apps show the same rows on a screen of their own and are
 **pushed** a copy of each — see [mobile-apps.md](mobile-apps.md) → "Push",
@@ -113,6 +114,16 @@ and where the row leads, are the same questions whatever became of it.
 
 The **outgoing** instructor is told nothing on a handover. That is a real gap,
 not an oversight — see `docs/appointments.md` → "Deliberately not done".
+
+## A rejected employment letter
+
+`employment_letter_rejected` goes to the student when an admin rejects their
+Surat Pengesahan Tempoh Bekerja, written by `reject_employment_letter` in the
+same transaction as the rejection. `data` is `{ student_id, note }`; the note
+is the second line, because it is what the student has to fix, and the row
+leads to `/learn/documents/employment-letter`. No `role`, so the push goes to
+the Student app. Accepting tells nobody. See
+[documents.md](documents.md#the-employment-letter-is-reviewed).
 
 ## The bell
 

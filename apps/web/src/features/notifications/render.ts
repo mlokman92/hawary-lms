@@ -74,6 +74,12 @@ export type AnnouncementData = {
   author: string | null
 }
 
+/** `data` for `employment_letter_rejected`: what the admin wrote. */
+export type EmploymentLetterRejectedData = {
+  student_id: string
+  note: string | null
+}
+
 export function reportData(row: Notification): ReportEventData | null {
   const d = row.data as Partial<ReportEventData> | null
   return d && typeof d === 'object' && typeof d.report_id === 'string'
@@ -106,6 +112,15 @@ export function announcementData(row: Notification): AnnouncementData | null {
   const d = row.data as Partial<AnnouncementData> | null
   return d && typeof d === 'object' && typeof d.announcement_id === 'string'
     ? (d as AnnouncementData)
+    : null
+}
+
+export function employmentLetterData(
+  row: Notification,
+): EmploymentLetterRejectedData | null {
+  const d = row.data as Partial<EmploymentLetterRejectedData> | null
+  return d && typeof d === 'object' && typeof d.student_id === 'string'
+    ? (d as EmploymentLetterRejectedData)
     : null
 }
 
@@ -153,6 +168,9 @@ export function titleOf(row: Notification, t: TFn): string {
   }
   if (row.kind === 'announcement') {
     return announcementData(row)?.title?.trim() || t('notif.announcement')
+  }
+  if (row.kind === 'employment_letter_rejected') {
+    return t('notif.employment_letter_rejected')
   }
 
   const d = apptData(row)
@@ -222,6 +240,10 @@ export function detailOf(row: Notification, locale: string): string {
   if (row.kind === 'announcement') {
     const d = announcementData(row)
     return d ? joined(d.course, d.preview) : ''
+  }
+  // Why, in the admin's words: it is what the student has to fix.
+  if (row.kind === 'employment_letter_rejected') {
+    return employmentLetterData(row)?.note?.trim() ?? ''
   }
   const d = apptData(row)
   return d ? fmtWhen(d.starts_at, d.tz || DEFAULT_TZ, locale) : ''

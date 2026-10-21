@@ -32,11 +32,32 @@ export type DocumentCourse = {
   end_date: string | null
 }
 
-/** A student's own PDF on file — an IC copy or an employment letter. */
+/**
+ * A student's own PDF on file — an IC copy or an employment letter. Only the
+ * employment letter is reviewed, so only it carries `status` and the note.
+ */
 export type UploadedPdf = Pick<
   Tables<'student_ic_copies'>,
   'created_at' | 'file_name'
->
+> & {
+  status?: EmploymentLetterStatus
+  review_note?: string | null
+}
+
+/**
+ * Where an employment letter stands: every upload is `pending` until an admin
+ * accepts it or rejects it with a note, and a new file starts again.
+ */
+export type EmploymentLetterStatus = 'pending' | 'accepted' | 'rejected'
+
+export const EMPLOYMENT_LETTER_STATUS: Record<
+  EmploymentLetterStatus,
+  { labelKey: TKey; tone: Tone }
+> = {
+  pending: { labelKey: 'sdoc.review.pending', tone: 'warning' },
+  accepted: { labelKey: 'sdoc.review.accepted', tone: 'positive' },
+  rejected: { labelKey: 'sdoc.review.rejected', tone: 'danger' },
+}
 
 export type DocumentStudent = Pick<
   Tables<'students'>,
@@ -97,7 +118,7 @@ function courseOf(enrollments: EnrollmentEmbed[] | null): DocumentCourse | null 
 }
 
 const DOCUMENT_STUDENT_SELECT =
-  'id, student_no, full_name, email, ic_number, personal_address, enrollments(status, courses(id, title, start_date, end_date)), ic_copy:student_ic_copies(created_at, file_name), employment_letter:student_employment_letters(created_at, file_name), offer_acceptance:student_offer_acceptances(accepted_at), kwsp_letter:student_kwsp_letters(created_at), kwsp_application:student_kwsp_applications(created_at)'
+  'id, student_no, full_name, email, ic_number, personal_address, enrollments(status, courses(id, title, start_date, end_date)), ic_copy:student_ic_copies(created_at, file_name), employment_letter:student_employment_letters(created_at, file_name, status, review_note), offer_acceptance:student_offer_acceptances(accepted_at), kwsp_letter:student_kwsp_letters(created_at), kwsp_application:student_kwsp_applications(created_at)'
 
 type DocumentStudentRow = Omit<
   DocumentStudent,
@@ -351,12 +372,14 @@ export type UploadedPdfKind = 'ic' | 'employment'
 const PDF_KINDS = {
   ic: {
     table: 'student_ic_copies',
+    columns: 'created_at, file_name',
     key: 'my-ic-copy',
     upload: uploadIcCopy,
     url: icCopyUrl,
   },
   employment: {
     table: 'student_employment_letters',
+    columns: 'created_at, file_name, status, review_note',
     key: 'my-employment-letter',
     upload: uploadEmploymentLetter,
     url: employmentLetterUrl,
@@ -373,7 +396,7 @@ export function useMyPdf(kind: UploadedPdfKind, studentId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from(PDF_KINDS[kind].table)
-        .select('created_at, file_name')
+        .select(PDF_KINDS[kind].columns)
         .eq('student_id', studentId!)
         .maybeSingle()
       if (error) throw error
@@ -404,5 +427,32 @@ export function useOpenPdf(kind: UploadedPdfKind) {
       // window.opener would hand the new tab a reference back to this one.
       window.open(url, '_blank', 'noopener,noreferrer')
     },
+  })
+}
+
+/**
+ * An admin's answer to an employment letter. Rejecting needs a note, which is
+ * what the student reads, and tells them in the same call; accepting a
+ * rejected letter takes the rejection back.
+ */
+export function useReviewEmploymentLetter() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (
+      review:
+        | { studentId: string; accept: true }
+        | { studentId: string; accept: false; note: string },
+    ) => {
+      const { error } = review.accept
+        ? await supabase.rpc('accept_employment_letter', {
+            _student_id: review.studentId,
+          })
+        : await supabase.rpc('reject_employment_letter', {
+            _student_id: review.studentId,
+            _note: review.note,
+          })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['document-students'] }),
   })
 }

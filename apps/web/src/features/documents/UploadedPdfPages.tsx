@@ -2,8 +2,11 @@ import { useRef, useState, type ChangeEvent } from 'react'
 import { ExternalLink, Upload } from 'lucide-react'
 import { useT } from '@/lib/i18n'
 import { errorMessage } from '@/lib/errors'
-import { fmtDate } from '@/lib/format'
+import { fmtDate, personName } from '@/lib/format'
+import { TONE_CLASS } from '@/lib/tone'
+import { cn } from '@/lib/utils'
 import { useStudentAcademy } from '@/lib/studentAcademy'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { PageHeader } from '@/components/patterns/PageHeader'
@@ -11,7 +14,9 @@ import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
 import { NoStudentRecord } from '@/components/learn/NoStudentRecord'
 import { useMyStudent } from '@/features/learn/api'
 import { DocumentStudentList } from './DocumentStudentList'
+import { EmploymentLetterReview } from './EmploymentLetterReview'
 import {
+  EMPLOYMENT_LETTER_STATUS,
   useMyPdf,
   useOpenPdf,
   useUploadMyPdf,
@@ -36,6 +41,10 @@ const onFile: Record<UploadedPdfKind, (s: DocumentStudent) => UploadedPdf | null
 /** The latest intake at the top. */
 const courseStart = (s: DocumentStudent) => s.course?.start_date
 
+/** Employment letters still waiting on an admin, ahead of the rest. */
+const awaitingReview = (s: DocumentStudent) =>
+  s.employmentLetter?.status === 'pending'
+
 /**
  * Who has sent theirs, and the file itself. Read-only for staff: the student
  * uploads their own. Opening one mints a link for that click — the bucket is
@@ -43,6 +52,9 @@ const courseStart = (s: DocumentStudent) => s.course?.start_date
  *
  * Newest course first, and opens on the students who have uploaded: what an
  * admin comes here to look at.
+ *
+ * The employment letter is also reviewed: each row says where it stands, the
+ * letters waiting on an admin come first, and the row carries the answer.
  */
 export function UploadedPdfRoster({
   kind,
@@ -55,6 +67,7 @@ export function UploadedPdfRoster({
   const open = useOpenPdf(kind)
   const [error, setError] = useState<string | null>(null)
   const pick = onFile[kind]
+  const reviewed = kind === 'employment'
 
   return (
     <div className="mx-auto w-full max-w-6xl">
@@ -62,24 +75,49 @@ export function UploadedPdfRoster({
       {error ? <p className="text-destructive mt-4 text-sm">{error}</p> : null}
       <DocumentStudentList
         latestFirst={courseStart}
+        first={reviewed ? awaitingReview : undefined}
         statusFilter={{
           label: t('common.status'),
           allLabel: t('sdoc.offer.all_statuses'),
           defaultValue: 'uploaded',
           options: [
             { value: 'uploaded', label: t('sdoc.file.uploaded') },
+            ...(reviewed
+              ? (['pending', 'accepted', 'rejected'] as const).map((v) => ({
+                  value: v,
+                  label: t(EMPLOYMENT_LETTER_STATUS[v].labelKey),
+                }))
+              : []),
             { value: 'missing', label: t('sdoc.file.not_uploaded') },
           ],
-          matches: (s, value) => (value === 'uploaded') === !!pick(s),
+          matches: (s, value) => {
+            const file = pick(s)
+            if (value === 'missing') return !file
+            if (value === 'uploaded') return !!file
+            return file?.status === value
+          },
         }}
         lastHead={title}
         lastCell={(s) => {
           const file = pick(s)
+          const review =
+            reviewed && file?.status
+              ? EMPLOYMENT_LETTER_STATUS[file.status]
+              : null
           return file ? (
             <div className="flex items-center justify-end gap-3">
               <span className="text-muted-foreground text-xs">
                 {fmtDate(file.created_at)}
               </span>
+              {review ? (
+                <span
+                  className={cn('text-xs', TONE_CLASS[review.tone])}
+                  // What the student was told, for the admin who told them.
+                  title={file.review_note ?? undefined}
+                >
+                  {t(review.labelKey)}
+                </span>
+              ) : null}
               <Button
                 variant="outline"
                 size="sm"
@@ -93,6 +131,14 @@ export function UploadedPdfRoster({
               >
                 <ExternalLink /> {t('common.view')}
               </Button>
+              {reviewed ? (
+                <EmploymentLetterReview
+                  studentId={s.id}
+                  studentName={personName(s.full_name, s.email) ?? s.student_no}
+                  letter={file}
+                  onError={setError}
+                />
+              ) : null}
             </div>
           ) : (
             <span className="text-muted-foreground text-sm">
@@ -158,6 +204,10 @@ export function OwnPdfUpload({
 
   const error = student.error ?? copy.error
   const loading = student.isLoading || (!!studentId && copy.isLoading)
+  // Only the employment letter is reviewed; an IC copy has no status.
+  const review = copy.data?.status
+    ? EMPLOYMENT_LETTER_STATUS[copy.data.status]
+    : null
 
   return (
     <div className="mx-auto w-full max-w-3xl">
@@ -173,16 +223,33 @@ export function OwnPdfUpload({
           <Card>
             <CardContent className="grid gap-4">
               {copy.data ? (
-                <div>
-                  <p className="truncate text-sm font-medium">
-                    {copy.data.file_name}
-                  </p>
-                  <p className="text-muted-foreground text-xs">
-                    {t('sdoc.file.uploaded_on', {
-                      date: fmtDate(copy.data.created_at),
-                    })}
-                  </p>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {copy.data.file_name}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      {t('sdoc.file.uploaded_on', {
+                        date: fmtDate(copy.data.created_at),
+                      })}
+                    </p>
+                  </div>
+                  {review ? (
+                    <Badge
+                      variant="outline"
+                      className={TONE_CLASS[review.tone]}
+                    >
+                      {t(review.labelKey)}
+                    </Badge>
+                  ) : null}
                 </div>
+              ) : null}
+
+              {/* What the admin wants fixed; uploading a new file answers it. */}
+              {copy.data?.status === 'rejected' && copy.data.review_note ? (
+                <p className="text-destructive text-sm whitespace-pre-line">
+                  {copy.data.review_note}
+                </p>
               ) : null}
 
               {err ? <p className="text-destructive text-sm">{err}</p> : null}

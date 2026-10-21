@@ -52,7 +52,9 @@ row to the table in `CLAUDE.md` if it is a new area.
   creates it; the file stays with the academy); the offer letter (drawn on demand from the
   record; the student's signature and agreement to its terms, and what they
   need before they may download theirs), and the IC copy and the employment
-  letter (a private bucket and one Edge Function each, admin-or-own).
+  letter (a private bucket and one Edge Function each, admin-or-own; the
+  employment letter is accepted or rejected with a note, and the student is
+  told).
 - [academy-registration.md](academy-registration.md) — the original plan for
   account setup and identity reconciliation. Its self-registration half is
   superseded by [single-owner.md](single-owner.md).

@@ -30,6 +30,7 @@ import {
   useMyReports,
 } from '@/features/reports/api'
 import {
+  EMPLOYMENT_LETTER_STATUS,
   KWSP_APPLICATION_STATUS,
   kwspState,
   useStudentDocuments,
@@ -211,10 +212,17 @@ export function LearnDashboardPage() {
       ? reportTargets(reports.data.courses)
       : []
 
+    // An employment letter reads as its review — a rejected one is the
+    // student's to send again.
     const uploaded = (file: UploadedPdf | null): Status =>
-      file
-        ? { label: t('sdoc.file.uploaded'), tone: 'positive' }
-        : { label: t('sdoc.file.not_uploaded'), tone: 'muted' }
+      file?.status
+        ? {
+            label: t(EMPLOYMENT_LETTER_STATUS[file.status].labelKey),
+            tone: EMPLOYMENT_LETTER_STATUS[file.status].tone,
+          }
+        : file
+          ? { label: t('sdoc.file.uploaded'), tone: 'positive' }
+          : { label: t('sdoc.file.not_uploaded'), tone: 'muted' }
     const kwsp = docs.data
       ? KWSP_APPLICATION_STATUS[kwspState(docs.data)]
       : null

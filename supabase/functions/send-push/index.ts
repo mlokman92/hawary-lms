@@ -20,7 +20,8 @@
 //   A person can have both apps on one phone. `data.role` says which side of
 //   the event the recipient is on — 'student' goes to the Student app,
 //   'instructor' to the Academy app. Kinds without a role are student-only
-//   today (work, invoices, payments, announcements).
+//   today (work, invoices, payments, announcements, a rejected employment
+//   letter).
 //
 // Language
 //   The row stores an event, not a sentence (docs/notifications.md), and the
@@ -217,6 +218,14 @@ function compose(row: Row, lang: Lang): { title: string; body: string } | null {
       return {
         title: str(d.title) || (ms ? 'Pengumuman' : 'Announcement'),
         body: join(str(d.course), str(d.preview)),
+      }
+
+    case 'employment_letter_rejected':
+      return {
+        title: ms
+          ? 'Surat Pengesahan Tempoh Bekerja anda ditolak'
+          : 'Your employment duration letter was rejected',
+        body: str(d.note) || (ms ? 'Muat naik semula.' : 'Upload it again.'),
       }
   }
   return null

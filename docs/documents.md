@@ -12,7 +12,7 @@ the mobile apps come later.
 | --- | --- | --- |
 | offer letter | `/documents/offer-letters` — every student, who has signed, download any | `/learn/documents/offer-letter` — sign, agree, download their own |
 | IC copy | `/documents/ic-copies` — every student, view the copy | `/learn/documents/ic-copy` — upload, replace, view |
-| employment letter | `/documents/employment-letters` — as the IC copy | `/learn/documents/employment-letter` — as the IC copy |
+| employment letter | `/documents/employment-letters` — as the IC copy, plus accept, or reject with a note | `/learn/documents/employment-letter` — as the IC copy, plus where it stands and why it was rejected |
 | KWSP letter | `/documents/kwsp-letters` — who has applied, who has one, download; create for many in a dialog | `/learn/kwsp` — apply, withdraw while under review, and read where it stands; never the letter |
 
 `/documents` and `/learn/documents` redirect to the letter: the parent is a
@@ -224,7 +224,8 @@ web's upload and link helpers are one pair of functions over a function name
 (`lib/storage.ts`).
 
 The employment letter is **not required of anyone** — nothing blocks on it, and
-a student with none simply shows *Not uploaded*.
+a student with none simply shows *Not uploaded*. It differs from the IC copy in
+one respect: an admin reviews it ([below](#the-employment-letter-is-reviewed)).
 
 ### Shape
 
@@ -261,6 +262,50 @@ second branch in the function and a button on the staff page.
 
 Deleting a student takes the row with it; the object stays in the bucket,
 orphaned, as a deleted payment's receipt does. Nothing sweeps either yet.
+
+### The employment letter is reviewed
+
+Added 2026-10-22, migrations `20261022090000_employment_letter_rejected_kind.sql`
+and `20261022090100_employment_letter_review.sql`. The academy found letters
+that would not do and wanted those students to send them again.
+
+- **Three states on the row**, `student_employment_letters.status`: *pending*
+  (sent, nobody has looked), *accepted*, *rejected* — with `review_note`,
+  `reviewed_at` and `reviewed_by`. A check constraint makes a rejection carry a
+  note.
+- **The 104 letters on file when this arrived are accepted**, not pending: the
+  column was added with a default of `accepted` and then switched to `pending`.
+  Their `reviewed_at` is null — nobody reviewed them. The owner did not want
+  them back in a queue; the few that are wrong are rejected like any other.
+- **Every new file is pending**, a replacement included. That is a trigger
+  (`student_employment_letters_new_file`, when `file_path` changes), not the
+  Edge Function: the function was not touched, and every upload — web, the
+  Student app, an old build of either — lands in front of an admin.
+- **Accept and reject are RPCs**, `accept_employment_letter(_student_id)` and
+  `reject_employment_letter(_student_id, _note)`: SECURITY DEFINER, an admin of
+  the letter's academy, as the KWSP functions. Rejecting needs a note (1,000
+  characters at most) and notifies the student in the same transaction
+  (`employment_letter_rejected`, [notifications.md](notifications.md)).
+  Rejecting can happen in any state — an accepted letter is how the old
+  problem ones are sent back — and again, with a new note. Accepting a
+  rejected letter takes the rejection back; the student keeps the
+  notification.
+- **The file stays when it is rejected**, so both sides can still open what was
+  turned away until a new one replaces it.
+
+On the page, each row reads *Pending review*, *Accepted* or *Rejected* (the
+note on hover), pending rows come first, and the status filter has the three
+beside *Uploaded* and *Not uploaded*; it still opens on *Uploaded*. *Accept* is
+a button on a pending row; *Reject…* — and *Accept*, on a rejected one — are
+behind `⋯`, and the same control sits on the student's Documents card
+(`features/documents/EmploymentLetterReview.tsx`). The student's page shows the
+state beside the file and the note under it; uploading again is the answer.
+Their dashboard reads the state too.
+
+**Web only so far.** The Student app still shows *Uploaded* and nothing else,
+and its notification screen does not know the new kind until the mobile
+catch-up syncs `render.ts` and `link.ts`; the push itself is sent correctly
+(`send-push` composes it server-side).
 
 ## The KWSP letter
 
@@ -454,3 +499,6 @@ over a hundred characters — is the one case where the two touch.
   replace it.
 - The employment letter has no expiry and no notion of which employer or period
   it covers; it is a file, as the IC copy is.
+- Admins are not told when a letter arrives or is replaced; the page lists
+  pending letters first, and there is no count on the rail.
+- The IC copy is not reviewed.

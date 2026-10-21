@@ -46,6 +46,17 @@ export const studentDocs = {
   'sdoc.employment.pdf_only':
     'Upload your employment duration letter as a PDF file.',
 
+  // Employment letter — the admin's review, and what the student reads of it
+  'sdoc.review.pending': 'Pending review',
+  'sdoc.review.accepted': 'Accepted',
+  'sdoc.review.rejected': 'Rejected',
+  'sdoc.review.accept': 'Accept',
+  'sdoc.review.reject': 'Reject…',
+  'sdoc.review.reject_title': 'Reject {name}’s letter',
+  'sdoc.review.note': 'Note to the student',
+  'sdoc.review.note_required': 'Write why the letter is rejected.',
+  'sdoc.review.reject_confirm': 'Reject and notify',
+
   // KWSP letter (Surat Pengesahan Pendaftaran Pelajar) — the staff side
   'sdoc.kwsp.title': 'KWSP letter',
   'sdoc.kwsp.not_created': 'Not created',

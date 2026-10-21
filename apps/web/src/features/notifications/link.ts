@@ -46,6 +46,8 @@ export function linkOf(row: Notification): string | null {
   // Announcements are read in the mobile apps; the web has no page for them,
   // so the row carries the message's first lines and leads nowhere.
   if (row.kind === 'announcement') return null
+  if (row.kind === 'employment_letter_rejected')
+    return '/learn/documents/employment-letter'
   const d = apptData(row)
   if (!d) return null
   return d.role === 'instructor' ? '/appointments/list' : '/learn/appointments'

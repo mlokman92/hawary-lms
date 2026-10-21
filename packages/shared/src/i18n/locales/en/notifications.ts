@@ -44,6 +44,8 @@ export const notifications = {
   'notif.invoice_issued': 'New invoice {no}',
   'notif.payment_received': 'Payment received for {no}',
   'notif.announcement': 'Announcement',
+  'notif.employment_letter_rejected':
+    'Your employment duration letter was rejected. Upload it again.',
 
 } as const
 

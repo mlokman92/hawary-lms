@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Download, ExternalLink, MoreHorizontal, Plus } from 'lucide-react'
 import { useT } from '@/lib/i18n'
 import { errorMessage } from '@/lib/errors'
-import { fmtDate } from '@/lib/format'
+import { fmtDate, personName } from '@/lib/format'
 import { ErrorBlock } from '@/components/patterns/QueryState'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
+  EMPLOYMENT_LETTER_STATUS,
   downloadStudentKwspLetters,
   downloadStudentOfferLetter,
   useCreateKwspLetters,
@@ -22,6 +23,7 @@ import {
   type DocumentStudent,
   type UploadedPdf,
 } from './api'
+import { EmploymentLetterReview } from './EmploymentLetterReview'
 import { KwspDateDialog } from './KwspDateDialog'
 
 function Row({
@@ -86,29 +88,53 @@ export function StudentDocumentsCard({ studentId }: { studentId: string }) {
     title: string,
     file: UploadedPdf | null,
     open: ReturnType<typeof useOpenPdf>,
+    student: DocumentStudent,
   ) {
+    const view = file ? (
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={open.isPending}
+        onClick={() => {
+          setErr(null)
+          open.mutate(studentId, { onError: failed })
+        }}
+      >
+        <ExternalLink /> {t('common.view')}
+      </Button>
+    ) : null
     return (
       <Row
         title={title}
         status={
           file
-            ? t('sdoc.file.uploaded_on', { date: fmtDate(file.created_at) })
+            ? [
+                t('sdoc.file.uploaded_on', { date: fmtDate(file.created_at) }),
+                file.status
+                  ? t(EMPLOYMENT_LETTER_STATUS[file.status].labelKey)
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')
             : t('sdoc.file.not_uploaded')
         }
         action={
-          file ? (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={open.isPending}
-              onClick={() => {
-                setErr(null)
-                open.mutate(studentId, { onError: failed })
-              }}
-            >
-              <ExternalLink /> {t('common.view')}
-            </Button>
-          ) : null
+          file?.status ? (
+            <div className="flex items-center gap-2">
+              {view}
+              <EmploymentLetterReview
+                studentId={studentId}
+                studentName={
+                  personName(student.full_name, student.email) ??
+                  student.student_no
+                }
+                letter={file}
+                onError={setErr}
+              />
+            </div>
+          ) : (
+            view
+          )
         }
       />
     )
@@ -149,11 +175,17 @@ export function StudentDocumentsCard({ studentId }: { studentId: string }) {
                   </Button>
                 }
               />
-              {uploaded(t('sdoc.ic.title'), docs.data.icCopy, openIc)}
+              {uploaded(
+                t('sdoc.ic.title'),
+                docs.data.icCopy,
+                openIc,
+                docs.data,
+              )}
               {uploaded(
                 t('sdoc.employment.title'),
                 docs.data.employmentLetter,
                 openEmployment,
+                docs.data,
               )}
               {/* Not every student has one: it is created here, or for many
                   at once on /documents/kwsp-letters. A student who has asked

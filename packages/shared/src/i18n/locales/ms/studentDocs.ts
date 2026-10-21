@@ -47,6 +47,17 @@ export const studentDocs: StudentDocsDict = {
   'sdoc.employment.pdf_only':
     'Muat naik Surat Pengesahan Tempoh Bekerja anda sebagai fail PDF.',
 
+  // Surat Pengesahan Tempoh Bekerja — semakan admin, dan apa yang pelajar baca
+  'sdoc.review.pending': 'Menunggu semakan',
+  'sdoc.review.accepted': 'Diterima',
+  'sdoc.review.rejected': 'Ditolak',
+  'sdoc.review.accept': 'Terima',
+  'sdoc.review.reject': 'Tolak…',
+  'sdoc.review.reject_title': 'Tolak surat {name}',
+  'sdoc.review.note': 'Nota kepada pelajar',
+  'sdoc.review.note_required': 'Tulis sebab surat ini ditolak.',
+  'sdoc.review.reject_confirm': 'Tolak dan maklumkan',
+
   // Surat KWSP (Surat Pengesahan Pendaftaran Pelajar) — bahagian staf
   'sdoc.kwsp.title': 'Surat KWSP',
   'sdoc.kwsp.not_created': 'Belum dicipta',
