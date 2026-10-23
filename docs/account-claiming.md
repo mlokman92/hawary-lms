@@ -225,6 +225,11 @@ Three rules hold both triggers together:
   moves it, so a phone-only save never overwrites a name staff typed since,
   and a staff rename stays until the student renames again. Instructors are
   still fill-only: an instructor's record name is the Director's to keep.
+  Renames made *before* that migration never moved, and re-saving the same
+  name is not a change, so six students sat with their old name on the offer
+  letter. `20261023100000_student_name_catch_up` applied the rule to them
+  once: a record still holding the exact name its account signed up with (the
+  student typed it, not staff) took the profile's name.
 - **Match on `user_id`, never on a matching email.** Two of the four blank rows
   in this database have an auth account with the same address and are left
   alone. Guessing at a record nobody has claimed is a different decision, and a
