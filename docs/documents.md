@@ -382,9 +382,8 @@ The student asks; an admin answers by creating the letter. Migrations
   `update_my_student_details` on the way, as on the offer letter's page; the
   function refuses an application from a record with no IC number, so the rule
   does not rest on the page.
-- **What comes back is a status, never the file.** The letter carries the
-  academy's signature and stamp; it is the academy's to hand over, as it
-  always was when both were given by hand.
+- **What comes back is a status, never the file.** The letter is the
+  academy's to sign, stamp and hand over, as it always was.
 - **The student may withdraw while it is under review** — *Withdraw* beside
   the status on `/learn/kwsp`, through `withdraw_kwsp_application`. The row
   goes, the page shows *Apply* again, and a later application has a new date.
@@ -449,11 +448,10 @@ form printed `5515 9112 8510`; the academy confirmed 5511 is the account
 (2026-10-14). The bank is still the form's *Maybank Berhad*, where the offer
 letter says *Maybank Islamic Berhad*. It is one string in `PAYEE`.
 
-**Signed, stamped and dated on the page.** The signature is the offer
-letter's picture (`offer-letter/assets/signature.png`), laid across the line
-and drawn before it. The stamp is the signatory's name stamp as the academy
-applies it by hand — *ROSZLINDA BINTI SHAM / Pengurus Pusat Latihan / Hawary
-Academy*, in blue, centred under the line — typed in `STAMP`, not a scan.
+**Dated on the page, signed and stamped by hand.** The signature line is
+printed blank, with no signature picture and no name stamp under it; the
+academy signs and stamps the printed letter (2026-10-23, at the owner's
+request — it used to carry the offer letter's signature and a typed stamp).
 
 **The date is the day of the download**, today in `Asia/Kuala_Lumpur`
 (`todayInMalaysia`), so a letter printed for KWSP reads as current. *Download*
@@ -472,10 +470,10 @@ labels of the lettered rows are left exactly as the form has them, including
 rows (k) and (l).
 
 **A long name** wraps to a second line and the signature line gives up that
-much room, never the footer's. The page is full: the signature's white ground
-must not reach the last paragraph, nor the stamp the footer, so the paragraph
-gaps are tight and the line has a floor (`SIGN_FLOOR`). A name of three lines —
-over a hundred characters — is the one case where the two touch.
+much room, never the footer's. The page is full: a hand signature needs room
+above the line and a stamp below it, clear of the footer, so the paragraph gaps
+are tight and the line has a floor (`SIGN_FLOOR`). A name of three lines — over
+a hundred characters — is the one case where the two touch.
 
 ## Not done
 

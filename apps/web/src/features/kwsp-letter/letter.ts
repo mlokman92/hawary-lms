@@ -11,7 +11,6 @@ import {
   setFont,
   widthOf,
   type BlockOptions,
-  type Images,
   type Run,
 } from '@/features/offer-letter/letter'
 
@@ -25,9 +24,10 @@ import {
  * nothing stored. The wording and the order are the academy's own form.
  *
  * The name, the IC number and the course's two dates come from the record, and
- * the date beside the signature from whoever downloads it — today, unless they
- * chose another. Everything else — the programme, its code, the fee, the payee,
- * the signature and the stamp — is the form.
+ * the date beside the signature line from whoever downloads it — today, unless
+ * they chose another. Everything else — the programme, its code, the fee, the
+ * payee — is the form. The signature line is left blank, to sign and stamp by
+ * hand.
  */
 
 export type KwspLetterInput = {
@@ -65,12 +65,7 @@ const X_PAYEE_VALUE = L + 174
 const SIGN_GAP = 35 // room for the signature above the line
 const SIGN_RULE = 135
 const DATE_X = R - 165
-const SIGN_FLOOR = 699 // the lowest the line may sit, the stamp under it clear of the footer
-
-// The signatory's name stamp, in the stamp's blue, centred under the line.
-const STAMP = ['ROSZLINDA BINTI SHAM', 'Pengurus Pusat Latihan', 'Hawary Academy']
-const STAMP_INK: [number, number, number] = [30, 58, 168]
-const STAMP_SIZE = 9.5
+const SIGN_FLOOR = 699 // the lowest the line may sit, room for a stamp under it clear of the footer
 
 // --- the form ---------------------------------------------------------------
 
@@ -179,7 +174,7 @@ function rule(doc: jsPDF, from: number, to: number, y: number) {
   doc.line(from, y, to, y)
 }
 
-function page(doc: jsPDF, input: KwspLetterInput, images: Images) {
+function page(doc: jsPDF, input: KwspLetterInput) {
   const set = (size: number) => (y: number, runs: Run[], options: BlockOptions = {}) =>
     block(doc, y, runs, { right: R, size, lead: LEAD, justify: false, ...options })
   const text = set(SIZE)
@@ -269,18 +264,8 @@ function page(doc: jsPDF, input: KwspLetterInput, images: Images) {
   // line gives it up rather than the footer.
   y = Math.min(y + SIGN_GAP, SIGN_FLOOR)
 
-  // The signature sits across the line, as it does on paper. Drawn first: the
-  // scan is ink on white, and the line and the stamp have to land on top of it.
-  doc.addImage(images.signature, 'PNG', L + 36, y - 32, 60, 48.4)
+  // Blank: the academy signs and stamps the printed letter by hand.
   rule(doc, L, L + SIGN_RULE, y)
-
-  doc.setFont('helvetica', 'bold')
-  STAMP.forEach((line, i) => {
-    if (i === 1) doc.setFont('helvetica', 'normal')
-    doc.setFontSize(STAMP_SIZE)
-    doc.setTextColor(...STAMP_INK)
-    doc.text(line, L + SIGN_RULE / 2, y + 18 + i * 10.5, { align: 'center' })
-  })
 
   const label = 'Tarikh :'
   text(y, [label], { x: DATE_X })
@@ -322,7 +307,7 @@ export async function buildKwspLetters(inputs: KwspLetterInput[]) {
   inputs.forEach((input, i) => {
     if (i > 0) doc.addPage()
     letterhead(doc, images)
-    page(doc, input, images)
+    page(doc, input)
   })
   const only = inputs.length === 1 ? inputs[0] : undefined
   return {
