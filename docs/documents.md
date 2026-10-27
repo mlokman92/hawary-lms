@@ -344,6 +344,11 @@ Anybody else is not on the page at all; there is no "not created" row.
 - An application's row says when it was sent and carries **Create** — the
   review is reading the row, and creating the letter is the answer. A letter's
   row carries its date and **Download**, as before.
+- Every row carries **Payment history**: a panel
+  (`features/payments/StudentPaymentsSheet.tsx`) of what the student has paid,
+  every status, read through `payment_log_page` scoped to the student — so it
+  is the ledger's own answer, admin-only like the rest of the money. Whether a
+  student has paid is asked before their letter is created.
 - Ticking rows brings up *Create (n)* for the applications among them,
   *Download (n)* for the letters — one file, a letter to a page — and
   *Remove (n)* behind `⋯`.

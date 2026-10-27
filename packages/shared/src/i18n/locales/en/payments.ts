@@ -120,6 +120,7 @@ export const payments = {
 
   // Payment log (/payments/log) — the money-in ledger
   'payments.log.title': 'Payment log',
+  'payments.history.title': 'Payment history',
   'payments.log.subtitle': 'Every payment received, newest first.',
   'payments.log.search_placeholder':
     'Search student, invoice, reference, or note',
