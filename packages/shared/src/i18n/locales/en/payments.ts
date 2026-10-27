@@ -208,7 +208,6 @@ export const payments = {
   'payments.receipts.paid_on': 'Paid {date}',
   'payments.receipts.replace': 'Replace receipt',
   'payments.receipts.view': 'View receipt',
-  'payments.receipts.kwsp': 'KWSP withdrawal receipt',
   'payments.receipts.pending': 'Receipt pending',
   'payments.transfer.edit': 'Edit amount and date',
 

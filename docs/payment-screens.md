@@ -39,12 +39,15 @@ payment*, **not a staff-private one**: `payments: admin view all, student view
 own` lets the student read their own rows, so nothing typed here should be
 anything you would not say to them.
 
-### The note is a column, and it is editable
+### The note is in the panel, and it is editable
 
-It used to be a third sub-line under the method, below the source line. A note
-that reads as a caption on another column is a note nobody searches for by eye,
-and the log's own search box already indexes it — so it is **its own column**
-between Method and Amount, and the method cell is back to two lines.
+It was a sub-line under the method first, then its own column between Method
+and Amount. On 2026-10-27 the owner had the column removed: with the KWSP
+receipt column beside it the table ran off a 15-inch laptop, and the row
+already opens the panel, which shows the note. The log's search still indexes
+it and the CSV export still carries it. Student and Method cells wrap
+(`whitespace-normal`) for the same reason — a long name or recorder pushed the
+amount off the screen.
 
 It is also the one field on a payment row that is routinely **wrong when first
 typed**: the cheque number is on a slip somebody is still holding, the reason an
@@ -81,8 +84,7 @@ page, and the payment it is editing lives in the page's state.
 **The note is edited from the payment's panel only.** The Note cell in a row
 was once the trigger — the whole cell a button, a pencil on hover. The owner had
 it removed: the row opens the panel, the panel has the note and its pencil, and
-a second way in from the list was one more control per row. The cell is plain
-text now, and a click on it opens the panel like the rest of the row.
+a second way in from the list was one more control per row.
 
 The invoice detail page still *prints* the note read-only under its payment row;
 `invalidateMoney` plus the invoice key means an edit on the log reaches it.
@@ -659,7 +661,8 @@ it was made from, the other is right when you get there.
 ### The Resit Pengeluaran KWSP — `/payments/log?method=kwsp`
 
 The academy keeps KWSP's own withdrawal receipt beside each KWSP payment. With
-the log filtered to KWSP, the table gains a **Resit Pengeluaran KWSP** column:
+the log filtered to KWSP, the table gains a **Receipt** column (the filter
+already says whose):
 Upload on every succeeded KWSP row, or View with Replace behind `⋯` — the
 invoice page's control. Other filters do not draw the column.
 

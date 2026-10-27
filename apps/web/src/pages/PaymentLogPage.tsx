@@ -502,13 +502,12 @@ export function PaymentLogPage() {
                   <TableHead>{t('common.student')}</TableHead>
                   <TableHead>{t('payments.table.invoice')}</TableHead>
                   <TableHead>{t('payments.log.method')}</TableHead>
-                  <TableHead>{t('payments.log.note')}</TableHead>
                   <TableHead className="text-right">
                     {t('common.amount')}
                   </TableHead>
                   {kwsp ? (
                     <TableHead className="text-right">
-                      {t('payments.receipts.kwsp')}
+                      {t('payments.receipts.receipt')}
                     </TableHead>
                   ) : null}
                 </TableRow>
@@ -535,7 +534,9 @@ export function PaymentLogPage() {
                         </div>
                       ) : null}
                     </TableCell>
-                    <TableCell>
+                    {/* Names wrap: `TableCell` is nowrap by default, and a
+                        long name pushed the amount off a laptop screen. */}
+                    <TableCell className="whitespace-normal">
                       {p.student_id ? (
                         <Link
                           to={`/students/${p.student_id}`}
@@ -566,7 +567,7 @@ export function PaymentLogPage() {
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-normal">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span>{t(PAYMENT_METHOD_LABEL[p.method])}</span>
                         {/* Only worth a badge when it is not the normal case. */}
@@ -579,13 +580,6 @@ export function PaymentLogPage() {
                       <div className="text-muted-foreground text-xs">
                         {sourceLine(p, t)}
                       </div>
-                    </TableCell>
-                    {/* The sentence a person typed when banking it — the one
-                        thing in this row no other column can reconstruct.
-                        Read here; edited in the payment's panel, which the
-                        row opens. */}
-                    <TableCell className="text-muted-foreground max-w-[18rem] text-xs break-words whitespace-pre-wrap">
-                      {p.note ?? '—'}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatMYR(p.amount_sen)}
