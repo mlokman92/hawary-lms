@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Download, MoreHorizontal, Plus, Wallet } from 'lucide-react'
+import { Download, MoreHorizontal, Plus } from 'lucide-react'
 import { useAcademy } from '@/lib/academy'
 import { errorMessage } from '@/lib/errors'
 import { fmtDate } from '@/lib/format'
@@ -15,7 +15,6 @@ import {
 import { DocumentStudentList } from '@/features/documents/DocumentStudentList'
 import { KwspCreateDialog } from '@/features/documents/KwspCreateDialog'
 import { KwspDateDialog } from '@/features/documents/KwspDateDialog'
-import { StudentPaymentsSheet } from '@/features/payments/StudentPaymentsSheet'
 import {
   downloadStudentKwspLetters,
   kwspState,
@@ -44,9 +43,6 @@ const idOf = (s: DocumentStudent) => s.id
  * The student sees where their application stands and never the letter: the
  * academy prints and hands it over. A letter is signed on the day it is
  * downloaded; *Download with date…* behind `⋯` picks another day.
- *
- * *Payment history* on every row opens what the student has paid, in a panel:
- * whether they have paid is asked before the letter is created.
  */
 export function KwspLettersPage() {
   const { t } = useT()
@@ -61,8 +57,6 @@ export function KwspLettersPage() {
   const [selected, setSelected] = useState<Set<string>>(() => new Set())
   // A student's id while their one letter is drawn, 'selected' for the batch.
   const [drawing, setDrawing] = useState<string | null>(null)
-  // The student whose payments are open in the panel.
-  const [paying, setPaying] = useState<DocumentStudent | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const chosen = useMemo(
@@ -181,18 +175,12 @@ export function KwspLettersPage() {
           ) : null
         }
         lastHead={t('sdoc.kwsp.title')}
-        lastCell={(s) => {
-          const history = (
-            <Button variant="outline" size="sm" onClick={() => setPaying(s)}>
-              <Wallet /> {t('payments.history.title')}
-            </Button>
-          )
-          return hasLetter(s) ? (
+        lastCell={(s) =>
+          hasLetter(s) ? (
             <div className="flex items-center justify-end gap-3">
               <span className="text-muted-foreground text-xs">
                 {fmtDate(s.kwspCreatedAt)}
               </span>
-              {history}
               <Button
                 variant="outline"
                 size="sm"
@@ -209,7 +197,6 @@ export function KwspLettersPage() {
                   date: fmtDate(s.kwspAppliedAt),
                 })}
               </span>
-              {history}
               <Button
                 size="sm"
                 disabled={create.isPending}
@@ -219,14 +206,9 @@ export function KwspLettersPage() {
               </Button>
             </div>
           )
-        }}
+        }
       />
       <KwspCreateDialog open={creating} onOpenChange={setCreating} />
-      <StudentPaymentsSheet
-        academyId={activeAcademyId}
-        student={paying}
-        onClose={() => setPaying(null)}
-      />
       <KwspDateDialog
         open={dating}
         onOpenChange={setDating}

@@ -124,7 +124,6 @@ export const payments: PaymentsDict = {
 
   // Log bayaran (/payments/log) — lejar wang masuk
   'payments.log.title': 'Log bayaran',
-  'payments.history.title': 'Sejarah bayaran',
   'payments.log.subtitle': 'Setiap bayaran yang diterima, terbaharu dahulu.',
   'payments.log.search_placeholder':
     'Cari pelajar, invois, rujukan, atau nota',
