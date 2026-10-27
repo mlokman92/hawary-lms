@@ -212,6 +212,7 @@ export const payments: PaymentsDict = {
   'payments.receipts.paid_on': 'Dibayar {date}',
   'payments.receipts.replace': 'Ganti resit',
   'payments.receipts.view': 'Lihat resit',
+  'payments.receipts.kwsp': 'Resit Pengeluaran KWSP',
   'payments.receipts.pending': 'Resit menunggu',
   'payments.transfer.edit': 'Sunting jumlah dan tarikh',
 

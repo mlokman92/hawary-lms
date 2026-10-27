@@ -11,13 +11,16 @@ import {
   ArrowLeftRight,
   Banknote,
   Download,
+  MoreHorizontal,
   Search,
+  Upload,
   Wallet,
   Zap,
 } from 'lucide-react'
 import { formatMYR } from '@hawary/shared'
 import { useAcademy } from '@/lib/academy'
 import { downloadCsv } from '@/lib/csv'
+import { errorMessage } from '@/lib/errors'
 import { fmtDate, fmtDateTime } from '@/lib/format'
 import { useT, type TFn } from '@/lib/i18n'
 import { useDebounced } from '@/lib/useDebounced'
@@ -31,6 +34,12 @@ import { StatCard } from '@/components/patterns/StatCard'
 import { ErrorBlock, LoadingBlock } from '@/components/patterns/QueryState'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -70,6 +79,11 @@ import {
 } from '@/features/payments/api'
 import { InvoiceSheet } from '@/features/payments/InvoiceSheet'
 import { PaymentSheet } from '@/features/payments/PaymentSheet'
+import {
+  useOpenPaymentReceipt,
+  usePaymentReceiptsFor,
+  useReceiptPicker,
+} from '@/features/payments/receipts'
 import { sourceLine } from '@/features/payments/sourceLine'
 
 const ALL = '__all__'
@@ -300,6 +314,23 @@ export function PaymentLogPage() {
 
   const total = totals.data?.total ?? 0
   const list = rows.data ?? []
+
+  // Filtered to KWSP, every succeeded row takes its Resit Pengeluaran KWSP —
+  // uploaded and opened the way a bank transfer's receipt is, on the same
+  // table, and like it admin-only. Paperwork only: nothing that counts money
+  // reads a KWSP payment's receipt.
+  const kwsp = method === 'kwsp'
+  const takesReceipt = (p: PaymentLogRow) =>
+    kwsp && p.method === 'kwsp' && p.status === 'succeeded'
+  // The query key hashes the ids by value, so a fresh array is not a refetch.
+  const receipts = usePaymentReceiptsFor(
+    activeAcademyId,
+    list.filter(takesReceipt).map((p) => p.id),
+  )
+  const picker = useReceiptPicker()
+  const openReceipt = useOpenPaymentReceipt()
+  const receiptFailure = picker.error ?? openReceipt.error ?? receipts.error
+
   // A dash, not RM 0.00, while the totals are in flight: a confident zero
   // reads as "nothing was collected", which is a claim and not a placeholder.
   const money = (sen: number | undefined) =>
@@ -475,6 +506,11 @@ export function PaymentLogPage() {
                   <TableHead className="text-right">
                     {t('common.amount')}
                   </TableHead>
+                  {kwsp ? (
+                    <TableHead className="text-right">
+                      {t('payments.receipts.kwsp')}
+                    </TableHead>
+                  ) : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -554,12 +590,71 @@ export function PaymentLogPage() {
                     <TableCell className="text-right tabular-nums">
                       {formatMYR(p.amount_sen)}
                     </TableCell>
+                    {kwsp ? (
+                      // Its buttons are its own; the rest of the row opens
+                      // the payment.
+                      <TableCell
+                        className="text-right"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {!takesReceipt(p) || !receipts.data ? null : picker.uploadingId ===
+                          p.id ? (
+                          <Button variant="outline" size="sm" disabled>
+                            {t('common.uploading')}
+                          </Button>
+                        ) : receipts.data.has(p.id) ? (
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={openReceipt.isPending}
+                              title={receipts.data.get(p.id)}
+                              onClick={() => openReceipt.mutate(p.id)}
+                            >
+                              {t('payments.receipts.view')}
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon-sm">
+                                  <MoreHorizontal />
+                                  <span className="sr-only">
+                                    {t('common.actions')}
+                                  </span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => picker.pick(p.id)}
+                                >
+                                  <Upload /> {t('payments.receipts.replace')}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={picker.busy}
+                            onClick={() => picker.pick(p.id)}
+                          >
+                            <Upload /> {t('common.upload')}
+                          </Button>
+                        )}
+                      </TableCell>
+                    ) : null}
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
         )}
+        {receiptFailure ? (
+          <p className="text-destructive mt-3 text-sm">
+            {errorMessage(receiptFailure, t('upload.failed'))}
+          </p>
+        ) : null}
+        <input {...picker.inputProps} />
 
         <Pager
           page={page}

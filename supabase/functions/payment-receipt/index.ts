@@ -1,7 +1,7 @@
 // ============================================================================
 // Edge Function: payment-receipt
-// The receipt a bank-transfer payment was recorded from — attach one, or get a
-// short-lived link to look at it.
+// The receipt a bank-transfer payment was recorded from, or a KWSP payment's
+// Resit Pengeluaran KWSP — attach one, or get a short-lived link to look at it.
 //
 //   multipart/form-data  file + payment_id   -> upload (or replace)
 //   application/json     { payment_id }      -> signed URL
@@ -63,6 +63,9 @@ const EXT_BY_TYPE: Record<string, string> = {
   'image/png': 'png',
   'image/webp': 'webp',
 }
+
+/** The methods whose payments carry a receipt. */
+const RECEIPT_METHODS = ['bank_transfer', 'kwsp']
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -197,10 +200,13 @@ Deno.serve(async (req) => {
   // caller who has no business with it.
   if (!membership) return json(NOT_FOUND, 404)
 
-  if (payment.method !== 'bank_transfer')
+  // A KWSP payment takes one too: the Resit Pengeluaran KWSP. Every money
+  // figure that reads `has_receipt` is narrowed to bank transfers, so on a KWSP
+  // payment the receipt is paperwork only.
+  if (!RECEIPT_METHODS.includes(payment.method))
     return json(
       {
-        error: 'Only a bank-transfer payment takes a receipt.',
+        error: 'Only a bank-transfer or KWSP payment takes a receipt.',
         code: 'not_bank_transfer',
       },
       400,

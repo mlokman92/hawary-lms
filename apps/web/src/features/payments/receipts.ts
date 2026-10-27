@@ -409,14 +409,43 @@ export function useUpdateBankTransfer(academyId: string | null) {
   })
 }
 
+/**
+ * The receipts of the payments in hand, by payment id — the Resit Pengeluaran
+ * KWSP beside each KWSP row on `/payments/log?method=kwsp`.
+ *
+ * A plain read of the table rather than a column on `payment_log_page`: the log
+ * function is the ledger, and only one filter of it asks. Admin-only by the
+ * table's own policy, as the log is. Under `payment-log` so the ledger's
+ * refetches carry it along.
+ */
+export function usePaymentReceiptsFor(
+  academyId: string | null,
+  paymentIds: string[],
+) {
+  return useQuery({
+    queryKey: ['payment-log', 'receipts', academyId, paymentIds] as const,
+    enabled: !!academyId && paymentIds.length > 0,
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('payment_receipts')
+        .select('payment_id, file_name')
+        .eq('academy_id', academyId!)
+        .in('payment_id', paymentIds)
+      if (error) throw error
+      return new Map((data ?? []).map((r) => [r.payment_id, r.file_name]))
+    },
+  })
+}
+
 /** What the file picker offers. The function and the bucket both re-check. */
 export const RECEIPT_ACCEPT = 'application/pdf,image/jpeg,image/png,image/webp'
 
 /**
  * One hidden file input for a whole screen of payments.
  *
- * Both screens that take a receipt — the receipts queue and the invoice page —
- * list several payments, and only one of them can be choosing a file at a
+ * Every screen that takes a receipt — the receipts queue, the invoice page and
+ * the KWSP log — lists several payments, and only one of them can be choosing a file at a
  * time. So the screen mounts a single `<input {...inputProps} />`, each row's
  * button calls `pick(paymentId)`, and the file that comes back belongs to
  * whichever payment asked last.

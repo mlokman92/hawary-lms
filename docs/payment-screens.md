@@ -656,6 +656,24 @@ and each row's button says which payment the next chosen file belongs to. An
 upload invalidates the queue, its counts and the invoice, so whichever screen
 it was made from, the other is right when you get there.
 
+### The Resit Pengeluaran KWSP — `/payments/log?method=kwsp`
+
+The academy keeps KWSP's own withdrawal receipt beside each KWSP payment. With
+the log filtered to KWSP, the table gains a **Resit Pengeluaran KWSP** column:
+Upload on every succeeded KWSP row, or View with Replace behind `⋯` — the
+invoice page's control. Other filters do not draw the column.
+
+It is the same `payment_receipts` row, bucket and `payment-receipt` Edge
+Function, which accepts `bank_transfer` and `kwsp`. Attaching one does flip
+`payments.has_receipt`, and that is harmless: every figure that reads it
+(`sync_invoice_paid`, `payment_log_totals`, `payment_report`) is narrowed to
+bank transfers, so a KWSP receipt moves no money. The queue at
+`/payments/receipts` and its Director check stay bank transfers only.
+
+The log learns which rows have one from a plain read of `payment_receipts` for
+the page's ids (`usePaymentReceiptsFor`), not from `payment_log_page`: one
+filter of the ledger asks, and the function is the ledger.
+
 ### Recording a payment
 
 **Three methods can be recorded by hand: Cash, Bank transfer, KWSP**
