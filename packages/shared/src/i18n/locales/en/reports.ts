@@ -65,6 +65,8 @@ export const reports = {
   'report.file.download': 'Download {name}',
   'report.cpc': 'Competency Profile Chart',
   'report.file.wrong_type': '{name} cannot be sent here. This part takes {types} only.',
+  'report.file.too_large': '{name} is larger than {mb} MB. Make it smaller and attach it again.',
+  'report.file.unreadable': '{name} could not be read. Save it to this device first, then attach it from your files.',
 
   // --- sending --------------------------------------------------------------
   'report.submit.title': 'Send a report for checking',

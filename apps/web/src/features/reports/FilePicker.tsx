@@ -5,6 +5,9 @@ import { errorMessage } from '@/lib/errors'
 import { Button } from '@/components/ui/button'
 import { uploadReportFile, type PendingFile } from './api'
 
+/** upload-media's cap for the private buckets. Said here before the upload. */
+const MAX_MB = 50
+
 /**
  * Attach documents to a thread.
  *
@@ -43,6 +46,26 @@ export function FilePicker({
   const [error, setError] = useState<string | null>(null)
   const max = accept?.max
 
+  /**
+   * The file as bytes in memory, read before anything is sent.
+   *
+   * A file picked on Android through Drive, WhatsApp or a scanner app's share
+   * sheet is a content-provider handle, and Chrome can fail to read it while
+   * streaming the request body (ERR_UPLOAD_FILE_CHANGED). The preflight goes
+   * out, the POST never does, and all the student sees is "upload failed".
+   * Reading it here first sidesteps that for a file Chrome can read at all, and
+   * names the fix for one it cannot.
+   */
+  async function inMemory(file: File): Promise<File> {
+    if (file.size > MAX_MB * 1024 * 1024)
+      throw new Error(t('report.file.too_large', { name: file.name, mb: MAX_MB }))
+    try {
+      return new File([await file.arrayBuffer()], file.name, { type: file.type })
+    } catch {
+      throw new Error(t('report.file.unreadable', { name: file.name }))
+    }
+  }
+
   async function pick(list: FileList | null) {
     if (!list || list.length === 0) return
     setError(null)
@@ -67,7 +90,7 @@ export function FilePicker({
       // 50 MB uploads at once is how the last one times out.
       const picked = Array.from(list)
       for (const file of max ? picked.slice(0, max - files.length) : picked) {
-        added.push(await uploadReportFile(academyId, file))
+        added.push(await uploadReportFile(academyId, await inMemory(file)))
       }
       onChange([...files, ...added])
     } catch (e) {

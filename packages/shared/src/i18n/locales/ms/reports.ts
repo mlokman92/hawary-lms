@@ -56,6 +56,8 @@ export const reports: ReportsDict = {
   'report.file.download': 'Muat turun {name}',
   'report.cpc': 'Carta Profil Kompetensi',
   'report.file.wrong_type': '{name} tidak boleh dihantar di sini. Bahagian ini menerima {types} sahaja.',
+  'report.file.too_large': '{name} melebihi {mb} MB. Kecilkan fail dan lampirkan semula.',
+  'report.file.unreadable': '{name} tidak dapat dibaca. Simpan fail ke peranti ini dahulu, kemudian lampirkan dari folder fail anda.',
 
   // --- sending --------------------------------------------------------------
   'report.submit.title': 'Hantar laporan untuk semakan',
