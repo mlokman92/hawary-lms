@@ -31,7 +31,9 @@ export function PageHeader({
         ) : null}
       </div>
       {children ? (
-        <div className="flex items-center gap-2">{children}</div>
+        <div className="flex max-w-full items-center gap-2">
+          {children}
+        </div>
       ) : null}
     </div>
   )

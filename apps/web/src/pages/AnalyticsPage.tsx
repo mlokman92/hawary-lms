@@ -129,7 +129,10 @@ export function AnalyticsPage() {
             setPage(1)
           }}
         >
-          <SelectTrigger className="w-56" aria-label={t('common.course')}>
+          <SelectTrigger
+            className="w-56 min-w-0"
+            aria-label={t('common.course')}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -150,7 +153,10 @@ export function AnalyticsPage() {
             writeParams({ m: m === stats.data?.months[0] ? null : m })
           }
         >
-          <SelectTrigger className="w-44" aria-label={t('analytics.month')}>
+          <SelectTrigger
+            className="w-44 shrink-0"
+            aria-label={t('analytics.month')}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
