@@ -2,7 +2,7 @@ import { useRef, useState, type ChangeEvent } from 'react'
 import { ExternalLink, Upload } from 'lucide-react'
 import { useT } from '@/lib/i18n'
 import { errorMessage } from '@/lib/errors'
-import { fmtDate, personName } from '@/lib/format'
+import { fmtDate, fmtDateTime, personName } from '@/lib/format'
 import { TONE_CLASS } from '@/lib/tone'
 import { cn } from '@/lib/utils'
 import { useStudentAcademy } from '@/lib/studentAcademy'
@@ -79,7 +79,9 @@ export function UploadedPdfRoster({
         statusFilter={{
           label: t('common.status'),
           allLabel: t('sdoc.offer.all_statuses'),
-          defaultValue: 'uploaded',
+          // The employment letter opens on what is waiting for an answer —
+          // the number on its nav item.
+          defaultValue: reviewed ? 'pending' : 'uploaded',
           options: [
             { value: 'uploaded', label: t('sdoc.file.uploaded') },
             ...(reviewed
@@ -104,20 +106,38 @@ export function UploadedPdfRoster({
             reviewed && file?.status
               ? EMPLOYMENT_LETTER_STATUS[file.status]
               : null
+          // Who answered, and when. The letters accepted when the review
+          // arrived have no reviewer, and read as plain *Accepted*.
+          const reviewer = file?.reviewed_by_name?.trim()
+          const answered =
+            reviewer && (file?.status === 'accepted' || file?.status === 'rejected')
           return file ? (
-            <div className="flex items-center justify-end gap-3">
-              <span className="text-muted-foreground text-xs">
-                {fmtDate(file.created_at)}
-              </span>
-              {review ? (
-                <span
-                  className={cn('text-xs', TONE_CLASS[review.tone])}
-                  // What the student was told, for the admin who told them.
-                  title={file.review_note ?? undefined}
-                >
-                  {t(review.labelKey)}
-                </span>
-              ) : null}
+            <div className="flex items-center justify-end gap-2">
+              {/* Two short lines, not one long one: the row has to fit a
+                  laptop beside the sidebar. */}
+              <div
+                className="text-right text-xs leading-tight"
+                // What the student was told, for the admin who told them.
+                title={file.review_note ?? undefined}
+              >
+                {review ? (
+                  <div className={cn('font-medium', TONE_CLASS[review.tone])}>
+                    {answered
+                      ? t(
+                          file.status === 'accepted'
+                            ? 'sdoc.review.accepted_by'
+                            : 'sdoc.review.rejected_by',
+                          { name: reviewer },
+                        )
+                      : t(review.labelKey)}
+                  </div>
+                ) : null}
+                <div className="text-muted-foreground whitespace-nowrap">
+                  {answered
+                    ? fmtDateTime(file.reviewed_at)
+                    : fmtDate(file.created_at)}
+                </div>
+              </div>
               <Button
                 variant="outline"
                 size="sm"

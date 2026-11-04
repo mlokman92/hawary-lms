@@ -42,6 +42,9 @@ export type UploadedPdf = Pick<
 > & {
   status?: EmploymentLetterStatus
   review_note?: string | null
+  /** Who answered it and when — on the staff read only, null until reviewed. */
+  reviewed_at?: string | null
+  reviewed_by_name?: string | null
 }
 
 /**
@@ -118,7 +121,7 @@ function courseOf(enrollments: EnrollmentEmbed[] | null): DocumentCourse | null 
 }
 
 const DOCUMENT_STUDENT_SELECT =
-  'id, student_no, full_name, email, ic_number, personal_address, enrollments(status, courses(id, title, start_date, end_date)), ic_copy:student_ic_copies(created_at, file_name), employment_letter:student_employment_letters(created_at, file_name, status, review_note), offer_acceptance:student_offer_acceptances(accepted_at), kwsp_letter:student_kwsp_letters(created_at), kwsp_application:student_kwsp_applications(created_at)'
+  'id, student_no, full_name, email, ic_number, personal_address, enrollments(status, courses(id, title, start_date, end_date)), ic_copy:student_ic_copies(created_at, file_name), employment_letter:student_employment_letters(created_at, file_name, status, review_note, reviewed_at, reviewed_by_name), offer_acceptance:student_offer_acceptances(accepted_at), kwsp_letter:student_kwsp_letters(created_at), kwsp_application:student_kwsp_applications(created_at)'
 
 type DocumentStudentRow = Omit<
   DocumentStudent,
@@ -172,6 +175,34 @@ export function useDocumentStudents(academyId: string | null) {
       return ((data ?? []) as unknown as DocumentStudentRow[]).map(
         toDocumentStudent,
       )
+    },
+  })
+}
+
+/**
+ * Employment letters waiting on an admin, for the pill on the nav. Counted as
+ * the roster counts them — live students only. Keyed under the roster's, so a
+ * review refreshes it; refetched on focus because the sidebar outlives every
+ * navigation and nobody is told when a letter arrives.
+ */
+export function usePendingEmploymentLetterCount(academyId: string | null) {
+  return useQuery({
+    queryKey: ['document-students', 'employment-pending', academyId] as const,
+    enabled: !!academyId,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('student_employment_letters')
+        .select('student_id, students!inner(archived_at)', {
+          count: 'exact',
+          head: true,
+        })
+        .eq('academy_id', academyId!)
+        .eq('status', 'pending')
+        .is('students.archived_at', null)
+      if (error) throw error
+      return count ?? 0
     },
   })
 }

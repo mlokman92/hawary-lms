@@ -28,6 +28,7 @@ import { usePendingEnrollmentCount } from '@/features/enrollment/api'
 import { useUpcomingAppointmentCount } from '@/features/appointments/api'
 import { deskStage, useReportCounts } from '@/features/reports/api'
 import { useAnalyticsAccess } from '@/features/analytics/api'
+import { usePendingEmploymentLetterCount } from '@/features/documents/api'
 import { AcademySwitcher } from './AcademySwitcher'
 import { ShellSidebar } from './shell/ShellSidebar'
 import type { NavGroup, NavItem } from './shell/nav'
@@ -111,7 +112,11 @@ const nav = (
 // same thing (`app.is_admin`), so leaving these in the shared list would only
 // have pointed a trainer at a page that renders an empty ledger. Settings is
 // narrower still: every control on it is a Director write.
-const adminNav = (t: TFn, isDirector: boolean): NavItem[] => [
+const adminNav = (
+  t: TFn,
+  isDirector: boolean,
+  pendingEmploymentLetters: number,
+): NavItem[] => [
   {
     title: t('nav.payments'),
     to: '/payments',
@@ -151,6 +156,9 @@ const adminNav = (t: TFn, isDirector: boolean): NavItem[] => [
         title: t('nav.employment_letter'),
         to: '/documents/employment-letters',
         icon: Briefcase,
+        // Letters nobody has answered yet — the page opens on them. Nobody is
+        // notified when one arrives, so this is how an admin finds out.
+        badge: pendingEmploymentLetters,
       },
       // The one the academy prepares for some students and not others.
       { title: t('nav.kwsp_letter'), to: '/documents/kwsp-letters', icon: Landmark },
@@ -176,6 +184,10 @@ export function AppSidebar() {
   // Not folded into adminNav: the page is let in by `app.can_view_analytics`,
   // which names one account by address whatever its role here.
   const { allowed: canViewAnalytics } = useAnalyticsAccess()
+  // Admin-only like the page; a trainer's count would be zero under RLS anyway.
+  const { data: pendingEmploymentLetters } = usePendingEmploymentLetterCount(
+    active?.role === 'admin' ? activeAcademyId : null,
+  )
 
   const items = nav(
     t,
@@ -188,7 +200,10 @@ export function AppSidebar() {
       label: t('nav.group.platform'),
       items: [
         ...(active?.role === 'admin'
-          ? [...items, ...adminNav(t, active.isDirector)]
+          ? [
+              ...items,
+              ...adminNav(t, active.isDirector, pendingEmploymentLetters ?? 0),
+            ]
           : items),
         ...(canViewAnalytics
           ? [{ title: t('nav.analytics'), to: '/analytics', icon: ChartLine }]

@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Download, ExternalLink, MoreHorizontal, Plus } from 'lucide-react'
 import { useT } from '@/lib/i18n'
 import { errorMessage } from '@/lib/errors'
-import { fmtDate, personName } from '@/lib/format'
+import { fmtDate, fmtDateTime, personName } from '@/lib/format'
 import { ErrorBlock } from '@/components/patterns/QueryState'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -112,6 +112,10 @@ export function StudentDocumentsCard({ studentId }: { studentId: string }) {
                 t('sdoc.file.uploaded_on', { date: fmtDate(file.created_at) }),
                 file.status
                   ? t(EMPLOYMENT_LETTER_STATUS[file.status].labelKey)
+                  : null,
+                // Who answered it and when, as the roster says.
+                file.status !== 'pending' && file.reviewed_by_name?.trim()
+                  ? `${file.reviewed_by_name.trim()}, ${fmtDateTime(file.reviewed_at)}`
                   : null,
               ]
                 .filter(Boolean)

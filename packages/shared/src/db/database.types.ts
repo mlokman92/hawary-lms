@@ -2634,6 +2634,7 @@ export type Database = {
           review_note: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          reviewed_by_name: string | null
           size_bytes: number
           status: string
           student_id: string
@@ -2647,6 +2648,7 @@ export type Database = {
           review_note?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          reviewed_by_name?: string | null
           size_bytes: number
           status?: string
           student_id: string
@@ -2660,6 +2662,7 @@ export type Database = {
           review_note?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          reviewed_by_name?: string | null
           size_bytes?: number
           status?: string
           student_id?: string

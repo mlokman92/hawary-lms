@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Search } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 import { useAcademy } from '@/lib/academy'
 import { fmtDay, personName } from '@/lib/format'
 import { useT } from '@/lib/i18n'
@@ -110,7 +111,43 @@ export function DocumentStudentList({
   )
   const [search, setSearch] = useState('')
   const [course, setCourse] = useState('all')
-  const [status, setStatus] = useState(statusFilter?.defaultValue ?? 'all')
+  // The status lives in the URL (`?status=`), so a filtered roster can be
+  // linked to and survives a reload. Anything the page does not offer reads
+  // as its default. Only a roster with a status filter touches the URL — the
+  // KWSP create dialog's roster sits on a page that has its own.
+  const [params, setParams] = useSearchParams()
+  const fallback = statusFilter?.defaultValue ?? 'all'
+  const fromUrl = params.get('status')
+  const status =
+    statusFilter &&
+    fromUrl &&
+    (fromUrl === 'all' || statusFilter.options.some((o) => o.value === fromUrl))
+      ? fromUrl
+      : fallback
+  const setStatus = (value: string) =>
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.set('status', value)
+        return next
+      },
+      { replace: true },
+    )
+  // Opened with no status (or one it does not know), the URL is given the one
+  // in effect, so what is on screen is always what the address says.
+  const hasFilter = !!statusFilter
+  useEffect(() => {
+    if (hasFilter && fromUrl !== status) {
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          next.set('status', status)
+          return next
+        },
+        { replace: true },
+      )
+    }
+  }, [hasFilter, fromUrl, status, setParams])
 
   const courses = useMemo(() => {
     const byId = new Map<string, string>()
@@ -240,7 +277,6 @@ export function DocumentStudentList({
                 <TableHead>{t('common.student')}</TableHead>
                 <TableHead>{t('sdoc.col.ic')}</TableHead>
                 <TableHead>{t('common.course')}</TableHead>
-                <TableHead>{t('sdoc.col.start_date')}</TableHead>
                 {lastCell ? (
                   <TableHead className="text-right">{lastHead}</TableHead>
                 ) : null}
@@ -276,8 +312,16 @@ export function DocumentStudentList({
                   <TableCell className="tabular-nums">
                     {s.ic_number ?? '—'}
                   </TableCell>
-                  <TableCell>{s.course?.title ?? '—'}</TableCell>
-                  <TableCell>{fmtDay(s.course?.start_date)}</TableCell>
+                  {/* The start date under the course, not a column of its
+                      own: the trailing cell needs the width on a laptop. */}
+                  <TableCell>
+                    <div>{s.course?.title ?? '—'}</div>
+                    {s.course?.start_date ? (
+                      <div className="text-muted-foreground text-xs">
+                        {fmtDay(s.course.start_date)}
+                      </div>
+                    ) : null}
+                  </TableCell>
                   {lastCell ? (
                     <TableCell className="text-right">{lastCell(s)}</TableCell>
                   ) : null}

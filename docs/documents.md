@@ -23,11 +23,18 @@ cell that is the page's own business.
 
 **The roster opens on the interesting half.** Each page's third filter has a
 default (`statusFilter.defaultValue`): the offer letter opens on *Signed and
-agreed*, the IC copy and the employment letter on *Uploaded*. *All statuses* is
-one click away; the choice is not remembered between visits. Each page also
+agreed*, the IC copy on *Uploaded*, the employment letter on *Pending review*.
+*All statuses* is one click away. **The status is in the URL** (`?status=`,
+written on open and on every change, `replace` so it adds no history): a
+filtered roster can be linked to and survives a reload; a value the page does
+not offer reads as its default. Each page also
 orders latest first (`latestFirst`, no date last, names alphabetical within a
 date): the offer letter by when it was signed, the two uploaded documents by
 the course's `start_date`.
+
+**The start date sits under the course**, not in a column of its own, so the
+trailing cell has room on a laptop beside the sidebar (2026-11-04: the
+employment letter's row was cut off at ~1,100 px).
 
 **50 rows, then *Load more*.** The roster is one read and filters in the
 browser, so the limit is only on what is drawn; changing a filter or the
@@ -292,10 +299,23 @@ that would not do and wanted those students to send them again.
   notification.
 - **The file stays when it is rejected**, so both sides can still open what was
   turned away until a new one replaces it.
+- **Who answered is on the row**, `reviewed_by_name` — a snapshot of the
+  admin's profile name (else their sign-in email) taken by the two RPCs, as
+  `payment_receipts.confirmed_by_name` is, so the page reads it without a join
+  to an account and it stays right after a rename. The new-file trigger clears
+  it with the rest. Migration `20261104090000_employment_letter_reviewer_name.sql`
+  (2026-11-04). The letters accepted on arrival have none and read plain
+  *Accepted*.
 
-On the page, each row reads *Pending review*, *Accepted* or *Rejected* (the
-note on hover), pending rows come first, and the status filter has the three
-beside *Uploaded* and *Not uploaded*; it still opens on *Uploaded*. *Accept* is
+On the page, each row reads *Pending review* over the upload date, or
+*Accepted by {name}* / *Rejected by {name}* over the day and time of the answer
+(the note on hover); pending rows come first, and the status filter has the
+three beside *Uploaded* and *Not uploaded*. It opens on *Pending review*, the
+same letters the **pill on the nav item** counts
+(`usePendingEmploymentLetterCount`: live students only, as the roster; keyed
+under the roster's so a review refreshes it; refetched on focus, because nobody
+is notified when a letter arrives). The student's Documents card on
+`/students/:id` carries the name and time too. *Accept* is
 a button on a pending row; *Reject…* — and *Accept*, on a rejected one — are
 behind `⋯`, and the same control sits on the student's Documents card
 (`features/documents/EmploymentLetterReview.tsx`). The student's page shows the

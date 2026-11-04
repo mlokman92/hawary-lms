@@ -50,6 +50,8 @@ export const studentDocs = {
   'sdoc.review.pending': 'Pending review',
   'sdoc.review.accepted': 'Accepted',
   'sdoc.review.rejected': 'Rejected',
+  'sdoc.review.accepted_by': 'Accepted by {name}',
+  'sdoc.review.rejected_by': 'Rejected by {name}',
   'sdoc.review.accept': 'Accept',
   'sdoc.review.reject': 'Reject…',
   'sdoc.review.reject_title': 'Reject {name}’s letter',
