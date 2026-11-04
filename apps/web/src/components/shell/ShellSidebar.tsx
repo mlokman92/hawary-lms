@@ -124,9 +124,14 @@ export function ShellSidebar({
                           const { icon: ChildIcon } = child
                           return (
                             <SidebarMenuSubItem key={child.to}>
+                              {/* Grows to the label: a long one (the
+                                  employment letter, more so in Malay) wraps
+                                  to a second line instead of being clipped
+                                  by the button's fixed height or cut short. */}
                               <SidebarMenuSubButton
                                 asChild
                                 isActive={childActive}
+                                className="h-auto min-h-7 py-1"
                               >
                                 <Link
                                   to={child.to}
@@ -136,11 +141,13 @@ export function ShellSidebar({
                                   }
                                 >
                                   <ChildIcon />
-                                  <span>{child.title}</span>
+                                  <span className="min-w-0 flex-1 leading-snug whitespace-normal!">
+                                    {child.title}
+                                  </span>
                                   {child.badge ? (
                                     <span
                                       className={cn(
-                                        'ml-auto flex h-5 min-w-5 items-center justify-center px-1',
+                                        'ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center px-1',
                                         badgeClass(child.badgeTone),
                                       )}
                                     >
