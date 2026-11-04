@@ -204,7 +204,9 @@ answer for it to read.
   on its own path — a second call from the browser, which is exactly why the
   notification is the more reliable of the two. Each mail function mirrors its
   own kinds; routing them through one dispatcher is the move to make when the
-  third family arrives, not the second.
+  third family arrives, not the second. The third arrived on 2026-11-04 —
+  `send-employment-letter-notice`, one kind, mailed the same way — and was kept
+  on its own path to ship it the same day; the dispatcher is still owed.
 
   Note the two families answer "who is told" **differently**, and that is
   deliberate, not drift: appointments tell both parties *including the actor*

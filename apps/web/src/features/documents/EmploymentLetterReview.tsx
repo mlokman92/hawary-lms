@@ -101,7 +101,7 @@ export function EmploymentLetterReview({
   )
 }
 
-function RejectDialog({
+export function RejectDialog({
   open,
   onOpenChange,
   studentName,

@@ -450,6 +450,25 @@ export function useUploadMyPdf(
   })
 }
 
+/**
+ * A link to a student's PDF for the viewer sheet to draw. Minted once per file
+ * — `version` is its upload time, so a replaced file gets a new link — and
+ * dropped when the sheet closes: the link lives 60 seconds, enough to load.
+ */
+export function usePdfPreviewUrl(
+  kind: UploadedPdfKind,
+  studentId: string | null,
+  version: string | null,
+) {
+  return useQuery({
+    queryKey: ['pdf-preview-url', kind, studentId, version] as const,
+    enabled: !!studentId && !!version,
+    staleTime: Infinity,
+    gcTime: 0,
+    queryFn: () => PDF_KINDS[kind].url(studentId!),
+  })
+}
+
 /** Open a student's PDF in a new tab, through a link minted for the click. */
 export function useOpenPdf(kind: UploadedPdfKind) {
   return useMutation({
@@ -463,8 +482,8 @@ export function useOpenPdf(kind: UploadedPdfKind) {
 
 /**
  * An admin's answer to an employment letter. Rejecting needs a note, which is
- * what the student reads, and tells them in the same call; accepting a
- * rejected letter takes the rejection back.
+ * what the student reads, and tells them in the same call (bell + push) and
+ * then by email; accepting a rejected letter takes the rejection back.
  */
 export function useReviewEmploymentLetter() {
   const qc = useQueryClient()
@@ -483,7 +502,25 @@ export function useReviewEmploymentLetter() {
             _note: review.note,
           })
       if (error) throw error
+      if (!review.accept) await mailRejection(review.studentId)
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['document-students'] }),
   })
+}
+
+/**
+ * The email after a rejection, a second call once the RPC has committed — the
+ * shape `send-report-notice` has. The function reads the note and the address
+ * from the rows itself. Its failure is never thrown: the rejection and the
+ * in-app notification are already in, so a missing email is a missing email,
+ * not a failed rejection.
+ */
+async function mailRejection(studentId: string) {
+  try {
+    await supabase.functions.invoke('send-employment-letter-notice', {
+      body: { student_id: studentId, origin: window.location.origin },
+    })
+  } catch {
+    // Deliberately silent. See above.
+  }
 }

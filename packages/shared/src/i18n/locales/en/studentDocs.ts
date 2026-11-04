@@ -34,6 +34,7 @@ export const studentDocs = {
   'sdoc.file.not_uploaded': 'Not uploaded',
   'sdoc.file.choose': 'Upload PDF',
   'sdoc.file.replace': 'Replace PDF',
+  'sdoc.file.upload_again': 'Upload again',
   'sdoc.file.too_large': 'The file is larger than {max} MB.',
   'sdoc.file.uploaded_on': 'Uploaded {date}',
 

@@ -1,10 +1,10 @@
-import { useRef, useState, type ChangeEvent } from 'react'
-import { ExternalLink, Upload } from 'lucide-react'
+import { useMemo, useRef, useState, type ChangeEvent } from 'react'
+import { ExternalLink, Eye, Upload } from 'lucide-react'
+import { useAcademy } from '@/lib/academy'
 import { useT } from '@/lib/i18n'
 import { errorMessage } from '@/lib/errors'
-import { fmtDate, fmtDateTime, personName } from '@/lib/format'
+import { fmtDate, personName } from '@/lib/format'
 import { TONE_CLASS } from '@/lib/tone'
-import { cn } from '@/lib/utils'
 import { useStudentAcademy } from '@/lib/studentAcademy'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -15,8 +15,10 @@ import { NoStudentRecord } from '@/components/learn/NoStudentRecord'
 import { useMyStudent } from '@/features/learn/api'
 import { DocumentStudentList } from './DocumentStudentList'
 import { EmploymentLetterReview } from './EmploymentLetterReview'
+import { ReviewStatus, UploadedPdfSheet } from './UploadedPdfSheet'
 import {
   EMPLOYMENT_LETTER_STATUS,
+  useDocumentStudents,
   useMyPdf,
   useOpenPdf,
   useUploadMyPdf,
@@ -47,14 +49,18 @@ const awaitingReview = (s: DocumentStudent) =>
 
 /**
  * Who has sent theirs, and the file itself. Read-only for staff: the student
- * uploads their own. Opening one mints a link for that click — the bucket is
- * private and nothing here holds a URL.
+ * uploads their own. *View* opens the file in a sheet beside the roster
+ * (`UploadedPdfSheet`) through a link minted for it — the bucket is private
+ * and nothing here holds a URL.
  *
  * Newest course first, and opens on the students who have uploaded: what an
  * admin comes here to look at.
  *
  * The employment letter is also reviewed: each row says where it stands, the
- * letters waiting on an admin come first, and the row carries the answer.
+ * letters waiting on an admin come first, and the row — and the sheet, above
+ * the file — carries the answer. A decision in the sheet moves on to the next
+ * letter that was waiting when it opened, so a queue is worked without closing
+ * it.
  */
 export function UploadedPdfRoster({
   kind,
@@ -64,10 +70,43 @@ export function UploadedPdfRoster({
   title: string
 }) {
   const { t } = useT()
-  const open = useOpenPdf(kind)
+  const { activeAcademyId } = useAcademy()
+  const { data: students } = useDocumentStudents(activeAcademyId)
   const [error, setError] = useState<string | null>(null)
   const pick = onFile[kind]
   const reviewed = kind === 'employment'
+
+  // The open student is read from the roster's data, so the sheet shows the
+  // answer the moment the roster refetches after it.
+  const [viewing, setViewing] = useState<string | null>(null)
+  const [queue, setQueue] = useState<string[]>([])
+  const byId = useMemo(
+    () => new Map((students ?? []).map((s) => [s.id, s])),
+    [students],
+  )
+
+  function view(id: string) {
+    // The letters waiting, in the roster's own order (latest intake first,
+    // then by name), taken now so the order does not move under the reader.
+    setQueue(
+      reviewed
+        ? (students ?? [])
+            .filter(awaitingReview)
+            .sort((a, b) => {
+              const x = courseStart(a) ?? ''
+              const y = courseStart(b) ?? ''
+              return x === y ? 0 : x < y ? 1 : -1
+            })
+            .map((s) => s.id)
+        : [],
+    )
+    setViewing(id)
+  }
+
+  function decided(id: string) {
+    const at = queue.indexOf(id)
+    setViewing(at >= 0 && at + 1 < queue.length ? queue[at + 1] : null)
+  }
 
   return (
     <div className="mx-auto w-full max-w-6xl">
@@ -102,59 +141,19 @@ export function UploadedPdfRoster({
         lastHead={title}
         lastCell={(s) => {
           const file = pick(s)
-          const review =
-            reviewed && file?.status
-              ? EMPLOYMENT_LETTER_STATUS[file.status]
-              : null
-          // Who answered, and when. The letters on file when the review
-          // arrived (2026-10-22) were accepted by the migration, not by an
-          // admin: no reviewer, so they say *Accepted automatically*.
-          const reviewer = file?.reviewed_by_name?.trim()
-          const answered =
-            reviewer && (file?.status === 'accepted' || file?.status === 'rejected')
-          const autoAccepted =
-            file?.status === 'accepted' && !file.reviewed_at && !reviewer
           return file ? (
             <div className="flex items-center justify-end gap-2">
               {/* Two short lines, not one long one: the row has to fit a
                   laptop beside the sidebar. */}
-              <div
-                className="text-right text-xs leading-tight"
-                // What the student was told, for the admin who told them.
-                title={file.review_note ?? undefined}
-              >
-                {review ? (
-                  <div className={cn('font-medium', TONE_CLASS[review.tone])}>
-                    {answered
-                      ? t(
-                          file.status === 'accepted'
-                            ? 'sdoc.review.accepted_by'
-                            : 'sdoc.review.rejected_by',
-                          { name: reviewer },
-                        )
-                      : autoAccepted
-                        ? t('sdoc.review.accepted_auto')
-                        : t(review.labelKey)}
-                  </div>
-                ) : null}
-                <div className="text-muted-foreground whitespace-nowrap">
-                  {answered
-                    ? fmtDateTime(file.reviewed_at)
-                    : fmtDate(file.created_at)}
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={open.isPending && open.variables === s.id}
-                onClick={() => {
-                  setError(null)
-                  open.mutate(s.id, {
-                    onError: (e) => setError(errorMessage(e, t('common.error'))),
-                  })
-                }}
-              >
-                <ExternalLink /> {t('common.view')}
+              {reviewed && file.status ? (
+                <ReviewStatus file={file} className="text-right" />
+              ) : (
+                <span className="text-muted-foreground text-xs">
+                  {fmtDate(file.created_at)}
+                </span>
+              )}
+              <Button variant="outline" size="sm" onClick={() => view(s.id)}>
+                <Eye /> {t('common.view')}
               </Button>
               {reviewed ? (
                 <EmploymentLetterReview
@@ -171,6 +170,12 @@ export function UploadedPdfRoster({
             </span>
           )
         }}
+      />
+      <UploadedPdfSheet
+        kind={kind}
+        student={viewing ? (byId.get(viewing) ?? null) : null}
+        onClose={() => setViewing(null)}
+        onDecided={decided}
       />
     </div>
   )
@@ -288,16 +293,23 @@ export function OwnPdfUpload({
                   onChange={(e) => void onPick(e)}
                 />
                 <Button
-                  variant={copy.data ? 'outline' : 'default'}
+                  // A rejected letter's one job is a new file: the main action.
+                  variant={
+                    copy.data && copy.data.status !== 'rejected'
+                      ? 'outline'
+                      : 'default'
+                  }
                   disabled={upload.isPending}
                   onClick={() => input.current?.click()}
                 >
                   <Upload />{' '}
                   {upload.isPending
                     ? t('common.uploading')
-                    : copy.data
-                      ? t('sdoc.file.replace')
-                      : t('sdoc.file.choose')}
+                    : copy.data?.status === 'rejected'
+                      ? t('sdoc.file.upload_again')
+                      : copy.data
+                        ? t('sdoc.file.replace')
+                        : t('sdoc.file.choose')}
                 </Button>
                 {copy.data ? (
                   <Button

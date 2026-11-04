@@ -35,6 +35,7 @@ export const studentDocs: StudentDocsDict = {
   'sdoc.file.not_uploaded': 'Belum dimuat naik',
   'sdoc.file.choose': 'Muat naik PDF',
   'sdoc.file.replace': 'Ganti PDF',
+  'sdoc.file.upload_again': 'Muat naik semula',
   'sdoc.file.too_large': 'Fail melebihi {max} MB.',
   'sdoc.file.uploaded_on': 'Dimuat naik pada {date}',
 

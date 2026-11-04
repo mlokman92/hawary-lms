@@ -299,6 +299,22 @@ that would not do and wanted those students to send them again.
   notification.
 - **The file stays when it is rejected**, so both sides can still open what was
   turned away until a new one replaces it.
+- **A rejection is also emailed** (2026-11-04), by
+  `send-employment-letter-notice`: a second call from the web once the RPC has
+  committed, the `send-report-notice` shape. The body is the student id only —
+  the function reads the note, the status and the address itself, and mails
+  only a letter that is rejected, for a caller who is an active admin of its
+  academy. The address is `students.email`, else the linked account's. One
+  Resend Idempotency-Key per (student, `reviewed_at`), so rejecting again with
+  a new note is a new mail. Soft failure: the rejection and the bell are in
+  whatever the mail does. English, like every transactional mail here. Until
+  then a rejection reached only the bell and the phone — the first one (a
+  student with no phone app) sat unread, and was put back to *pending* on
+  2026-11-04 so it could be rejected again with the email.
+- **The student resubmits by uploading again** — any time; the upload function
+  has no status gate and the new-file trigger puts it back to *pending*. On
+  their page a rejected letter's button reads *Upload again* and is the main
+  action.
 - **Who answered is on the row**, `reviewed_by_name` — a snapshot of the
   admin's profile name (else their sign-in email) taken by the two RPCs, as
   `payment_receipts.confirmed_by_name` is, so the page reads it without a join
@@ -307,6 +323,14 @@ that would not do and wanted those students to send them again.
   (2026-11-04). The letters accepted on arrival have no reviewer at all and
   read *Accepted automatically* — the honest answer to "who accepted it", since
   nobody did (all 68 were uploaded before 2026-10-22).
+
+**The viewer.** *View* on a row opens the file in a sheet beside the roster
+(`features/documents/UploadedPdfSheet.tsx`, the receipt sheet's embedded
+preview): the student, the status, *Open* (a new tab), and for the employment
+letter *Reject…* and *Accept* above the PDF. A decision moves the sheet on to
+the next letter that was pending when it was opened, in the roster's order, and
+closes it after the last — so the queue is read and answered without leaving
+the page. The IC copy page uses the same sheet without the review buttons.
 
 On the page, each row reads *Pending review* over the upload date, or
 *Accepted by {name}* / *Rejected by {name}* over the day and time of the answer
