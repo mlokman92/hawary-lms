@@ -53,6 +53,7 @@ export const studentDocs: StudentDocsDict = {
   'sdoc.review.rejected': 'Ditolak',
   'sdoc.review.accepted_by': 'Diterima oleh {name}',
   'sdoc.review.rejected_by': 'Ditolak oleh {name}',
+  'sdoc.review.accepted_auto': 'Diterima secara automatik',
   'sdoc.review.accept': 'Terima',
   'sdoc.review.reject': 'Tolak…',
   'sdoc.review.reject_title': 'Tolak surat {name}',

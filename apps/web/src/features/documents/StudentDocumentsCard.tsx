@@ -110,9 +110,13 @@ export function StudentDocumentsCard({ studentId }: { studentId: string }) {
           file
             ? [
                 t('sdoc.file.uploaded_on', { date: fmtDate(file.created_at) }),
-                file.status
-                  ? t(EMPLOYMENT_LETTER_STATUS[file.status].labelKey)
-                  : null,
+                file.status === 'accepted' &&
+                !file.reviewed_at &&
+                !file.reviewed_by_name?.trim()
+                  ? t('sdoc.review.accepted_auto')
+                  : file.status
+                    ? t(EMPLOYMENT_LETTER_STATUS[file.status].labelKey)
+                    : null,
                 // Who answered it and when, as the roster says.
                 file.status !== 'pending' && file.reviewed_by_name?.trim()
                   ? `${file.reviewed_by_name.trim()}, ${fmtDateTime(file.reviewed_at)}`

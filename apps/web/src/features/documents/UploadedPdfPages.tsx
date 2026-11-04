@@ -106,11 +106,14 @@ export function UploadedPdfRoster({
             reviewed && file?.status
               ? EMPLOYMENT_LETTER_STATUS[file.status]
               : null
-          // Who answered, and when. The letters accepted when the review
-          // arrived have no reviewer, and read as plain *Accepted*.
+          // Who answered, and when. The letters on file when the review
+          // arrived (2026-10-22) were accepted by the migration, not by an
+          // admin: no reviewer, so they say *Accepted automatically*.
           const reviewer = file?.reviewed_by_name?.trim()
           const answered =
             reviewer && (file?.status === 'accepted' || file?.status === 'rejected')
+          const autoAccepted =
+            file?.status === 'accepted' && !file.reviewed_at && !reviewer
           return file ? (
             <div className="flex items-center justify-end gap-2">
               {/* Two short lines, not one long one: the row has to fit a
@@ -129,7 +132,9 @@ export function UploadedPdfRoster({
                             : 'sdoc.review.rejected_by',
                           { name: reviewer },
                         )
-                      : t(review.labelKey)}
+                      : autoAccepted
+                        ? t('sdoc.review.accepted_auto')
+                        : t(review.labelKey)}
                   </div>
                 ) : null}
                 <div className="text-muted-foreground whitespace-nowrap">

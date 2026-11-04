@@ -304,8 +304,9 @@ that would not do and wanted those students to send them again.
   `payment_receipts.confirmed_by_name` is, so the page reads it without a join
   to an account and it stays right after a rename. The new-file trigger clears
   it with the rest. Migration `20261104090000_employment_letter_reviewer_name.sql`
-  (2026-11-04). The letters accepted on arrival have none and read plain
-  *Accepted*.
+  (2026-11-04). The letters accepted on arrival have no reviewer at all and
+  read *Accepted automatically* — the honest answer to "who accepted it", since
+  nobody did (all 68 were uploaded before 2026-10-22).
 
 On the page, each row reads *Pending review* over the upload date, or
 *Accepted by {name}* / *Rejected by {name}* over the day and time of the answer
