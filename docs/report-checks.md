@@ -608,7 +608,7 @@ tie-break. It has been through three shapes in a week; this is the one the owner
 settled on (Oct 2026):
 
 - **The cards are All and the three parts of the LPKC** — summary, report,
-  slides — and they are the page's only filter, each with its count. A checker
+  slides — each with its count. A checker
   works through one kind at a time, so the kind is what they pick. **It opens
   on All** (it opened on the summaries for a day); pressing the pressed kind
   goes back to All. Every row carries its part as a
@@ -616,7 +616,14 @@ settled on (Oct 2026):
   no status uses, so it is not read for the outlined status badge). A row does
   not show the report's title — the student's own wording is read on the
   thread.
-- **No filter by status; the list is sorted by it instead**: moderating,
+- **A status select beside the search** (Nov 2026, at the owner's request —
+  it had been left out on purpose until then). It combines with the part card,
+  sits in the address as `?status=` beside `?type=` (so Back from a thread
+  keeps both), and the card counts follow it, so a card counts what pressing it
+  would list. The options are the four stages staff read — moderating, pending
+  trainer approval, changes needed, approved — and a trainer is not offered
+  moderating.
+- **The list is also sorted by status**: moderating,
   pending trainer approval, changes needed, approved — what needs somebody at
   the top, what is finished at the bottom. Within a status the oldest
   `updated_at` comes first, and that is the date the row shows.

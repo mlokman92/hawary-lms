@@ -21,6 +21,13 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -61,10 +68,11 @@ import {
  * so the kind is what they pick. It opens on All; pressing the pressed kind
  * goes back to it.
  *
- * There is no filter by status. The list is sorted by it instead — moderating,
- * pending trainer approval, changes needed, approved — so what needs somebody
- * is at the top and what is finished sinks, and within a status the report
- * that has gone longest without anything happening comes first.
+ * Status is a select beside the search, and works with the part. The list is
+ * also sorted by it — moderating, pending trainer approval, changes needed,
+ * approved — so on All what needs somebody is at the top and what is finished
+ * sinks, and within a status the report that has gone longest without
+ * anything happening comes first.
  *
  * A trainer is not shown a report that is still being moderated: it has not
  * reached them yet, and the three statuses they act on are the ones they see.
@@ -100,16 +108,38 @@ function partOf(raw: string | null): Part {
   return LPKC_STAGES.includes(raw as LpkcStage) ? (raw as LpkcStage) : 'all'
 }
 
-/** Reports of one part that this reader is shown. */
+/**
+ * The stages staff read a report as, in the order the list sorts them.
+ * `submitted` and `in_review` are not here: for staff an `in_review` report is
+ * always one of the first two, and `submitted` is no longer written.
+ */
+const STATUS_OPTIONS: ReportStage[] = [
+  'moderating',
+  'pending_approval',
+  'changes_requested',
+  'approved',
+]
+
+/** `?status=` — absent, or one this reader is not offered, means every one. */
+function statusOf(raw: string | null, options: ReportStage[]): ReportStage | 'all' {
+  return options.includes(raw as ReportStage) ? (raw as ReportStage) : 'all'
+}
+
+/**
+ * Reports of one part that this reader is shown — of one stage when a status
+ * is picked, so a card counts what pressing it would list.
+ */
 function countOf(
   counts: ReportPartCounts | undefined,
   part: LpkcStage,
   hideModerating: boolean,
+  status: ReportStage | 'all',
 ): number {
   if (!counts) return 0
   let n = 0
   for (const s of Object.keys(counts[part]) as ReportStage[]) {
     if (hideModerating && s === 'moderating') continue
+    if (status !== 'all' && s !== status) continue
     n += counts[part][s]
   }
   return n
@@ -127,6 +157,11 @@ export function ReportsPage() {
   // through (the row passes this page's query string along as `state.back`).
   const [params, setParams] = useSearchParams()
   const part = partOf(params.get('type'))
+  // A trainer is not offered "moderating": it is never on their list.
+  const statusOptions = hideModerating
+    ? STATUS_OPTIONS.filter((s) => s !== 'moderating')
+    : STATUS_OPTIONS
+  const status = statusOf(params.get('status'), statusOptions)
 
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
@@ -135,13 +170,13 @@ export function ReportsPage() {
   const debounced = useDebounced(search)
   const filters = useMemo<ReportFilters>(
     () => ({
-      status: 'all',
+      status,
       part,
       search: debounced,
       hideModerating,
       order: 'stage',
     }),
-    [part, debounced, hideModerating],
+    [status, part, debounced, hideModerating],
   )
 
   const queue = useReportQueue(activeAcademyId, filters, page)
@@ -150,14 +185,28 @@ export function ReportsPage() {
   const rows = queue.data?.rows ?? []
   const total = queue.data?.total ?? 0
   const everyKind = LPKC_STAGES.reduce(
-    (n, p) => n + countOf(counts, p, hideModerating),
+    (n, p) => n + countOf(counts, p, hideModerating, status),
+    0,
+  )
+  const anything = LPKC_STAGES.reduce(
+    (n, p) => n + countOf(counts, p, hideModerating, 'all'),
     0,
   )
 
+  /** Both filters live in the address; null drops one. */
+  function writeParams(next: { type?: LpkcStage | null; status?: ReportStage | null }) {
+    const p = new URLSearchParams(params)
+    for (const [k, v] of Object.entries(next)) {
+      if (v) p.set(k, v)
+      else p.delete(k)
+    }
+    setParams(p, { replace: true })
+    setPage(0)
+  }
+
   /** A kind both filters and un-filters: pressing the pressed one is All. */
   function toggle(next: LpkcStage) {
-    setParams(part === next ? {} : { type: next }, { replace: true })
-    setPage(0)
+    writeParams({ type: part === next ? null : next })
   }
 
   return (
@@ -194,16 +243,13 @@ export function ReportsPage() {
           icon={Layers}
           tone="info"
           active={part === 'all'}
-          onClick={() => {
-            setParams({}, { replace: true })
-            setPage(0)
-          }}
+          onClick={() => writeParams({ type: null })}
         />
         {LPKC_STAGES.map((p) => (
           <FilterStatCard
             key={p}
             label={t(LPKC_STAGE_LABEL[p])}
-            value={countOf(counts, p, hideModerating)}
+            value={countOf(counts, p, hideModerating, status)}
             icon={PART_ICON[p]}
             tone="info"
             active={part === p}
@@ -212,7 +258,7 @@ export function ReportsPage() {
         ))}
       </div>
 
-      <div className="mt-6">
+      <div className="mt-6 flex flex-col gap-2 sm:flex-row">
         <Input
           value={search}
           onChange={(e) => {
@@ -220,8 +266,26 @@ export function ReportsPage() {
             setPage(0)
           }}
           placeholder={t('report.queue.search')}
-          className="max-w-sm"
+          className="sm:max-w-sm"
         />
+        <Select
+          value={status}
+          onValueChange={(s) =>
+            writeParams({ status: s === 'all' ? null : (s as ReportStage) })
+          }
+        >
+          <SelectTrigger className="w-full sm:w-56" aria-label={t('common.status')}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('report.queue.all_statuses')}</SelectItem>
+            {statusOptions.map((s) => (
+              <SelectItem key={s} value={s}>
+                {t(REPORT_STATUS[s].labelKey)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="mt-4">
@@ -235,7 +299,7 @@ export function ReportsPage() {
             // A kind with nothing in it is "nothing waiting", not a search
             // that found nothing.
             title={
-              debounced
+              debounced || status !== 'all'
                 ? t('report.queue.empty_filtered')
                 : t('report.queue.empty')
             }
@@ -244,7 +308,7 @@ export function ReportsPage() {
             // set the rota would point at a control that is not on their screen
             // and is not theirs to change.
             body={
-              isAdmin && everyKind === 0 && !debounced
+              isAdmin && anything === 0 && !debounced
                 ? t('report.queue.empty_hint')
                 : undefined
             }

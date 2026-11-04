@@ -17,6 +17,7 @@ export const reports: ReportsDict = {
   'report.queue.desc':
     'Laporan yang dihantar untuk semakan, mengikut status, yang paling lama menunggu di atas.',
   'report.queue.search': 'Cari mengikut nama pelajar',
+  'report.queue.all_statuses': 'Semua status',
   'report.queue.empty': 'Tiada yang menunggu.',
   'report.queue.empty_hint':
     'Pelajar menghantar laporan dari halaman mereka sendiri. Tetapkan siapa yang menyemak melalui menu di atas.',
