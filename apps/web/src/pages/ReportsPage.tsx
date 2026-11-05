@@ -44,8 +44,9 @@ import {
   LPKC_STAGE_LABEL,
   REPORT_PAGE_SIZE,
   REPORT_STATUS,
+  partCountsOf,
   stageOf,
-  useReportPartCounts,
+  useReportCourseCounts,
   useReportQueue,
   type LpkcStage,
   type ReportFilters,
@@ -68,7 +69,9 @@ import {
  * so the kind is what they pick. It opens on All; pressing the pressed kind
  * goes back to it.
  *
- * Status is a select beside the search, and works with the part. The list is
+ * Course and status are selects beside the search, and work with the part.
+ * The course select offers only the courses this reader has reports in, and
+ * is not drawn when that is one course. The list is
  * also sorted by it — moderating, pending trainer approval, changes needed,
  * approved — so on All what needs somebody is at the top and what is finished
  * sinks, and within a status the report that has gone longest without
@@ -163,6 +166,28 @@ export function ReportsPage() {
     : STATUS_OPTIONS
   const status = statusOf(params.get('status'), statusOptions)
 
+  const { data: courseCounts } = useReportCourseCounts(activeAcademyId)
+  // The courses this reader has reports in, by title — from the counts, so a
+  // course with nothing on this reader's list is not offered.
+  const courseOptions = useMemo(() => {
+    const byId = new Map<string, string>()
+    for (const r of courseCounts ?? []) {
+      if (hideModerating && r.stage === 'moderating') continue
+      byId.set(r.course_id, r.course_title)
+    }
+    return [...byId]
+      .map(([id, title]) => ({ id, title }))
+      .sort((a, b) => a.title.localeCompare(b.title))
+  }, [courseCounts, hideModerating])
+  // `?course=` — absent means every course. Taken as given until the counts
+  // arrive, so the list filters at once; then one not offered is every course.
+  const rawCourse = params.get('course')
+  const course =
+    !rawCourse ||
+    (courseCounts && !courseOptions.some((c) => c.id === rawCourse))
+      ? 'all'
+      : rawCourse
+
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
   const [poolOpen, setPoolOpen] = useState(false)
@@ -172,15 +197,19 @@ export function ReportsPage() {
     () => ({
       status,
       part,
+      course,
       search: debounced,
       hideModerating,
       order: 'stage',
     }),
-    [status, part, debounced, hideModerating],
+    [status, part, course, debounced, hideModerating],
   )
 
   const queue = useReportQueue(activeAcademyId, filters, page)
-  const { data: counts } = useReportPartCounts(activeAcademyId)
+  const counts = useMemo(
+    () => partCountsOf(courseCounts, course),
+    [courseCounts, course],
+  )
 
   const rows = queue.data?.rows ?? []
   const total = queue.data?.total ?? 0
@@ -193,8 +222,12 @@ export function ReportsPage() {
     0,
   )
 
-  /** Both filters live in the address; null drops one. */
-  function writeParams(next: { type?: LpkcStage | null; status?: ReportStage | null }) {
+  /** The filters live in the address; null drops one. */
+  function writeParams(next: {
+    type?: LpkcStage | null
+    status?: ReportStage | null
+    course?: string | null
+  }) {
     const p = new URLSearchParams(params)
     for (const [k, v] of Object.entries(next)) {
       if (v) p.set(k, v)
@@ -286,6 +319,24 @@ export function ReportsPage() {
             ))}
           </SelectContent>
         </Select>
+        {courseOptions.length > 1 ? (
+          <Select
+            value={course}
+            onValueChange={(c) => writeParams({ course: c === 'all' ? null : c })}
+          >
+            <SelectTrigger className="w-full sm:w-64" aria-label={t('common.course')}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('common.all_courses')}</SelectItem>
+              {courseOptions.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
       </div>
 
       <div className="mt-4">
@@ -299,7 +350,7 @@ export function ReportsPage() {
             // A kind with nothing in it is "nothing waiting", not a search
             // that found nothing.
             title={
-              debounced || status !== 'all'
+              debounced || status !== 'all' || course !== 'all'
                 ? t('report.queue.empty_filtered')
                 : t('report.queue.empty')
             }

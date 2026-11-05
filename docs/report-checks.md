@@ -623,6 +623,14 @@ settled on (Oct 2026):
   would list. The options are the four stages staff read — moderating, pending
   trainer approval, changes needed, approved — and a trainer is not offered
   moderating.
+- **A course select beside it** (Nov 2026, at the owner's request), in the
+  address as `?course=`. It offers only the courses this reader has reports in
+  — a trainer's own desk, through RLS — and is not drawn when that is one
+  course. The cards count within it. Both come from one call,
+  `report_course_part_counts`: the part × stage counts split by course, with
+  the course title, folded on the client. It replaced `report_part_counts`,
+  which is left in the database until the build that stopped calling it is
+  deployed and can then be dropped.
 - **The list is also sorted by status**: moderating,
   pending trainer approval, changes needed, approved — what needs somebody at
   the top, what is finished at the bottom. Within a status the oldest

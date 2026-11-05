@@ -283,6 +283,8 @@ export type ReportFilters = {
   status: ReportStage | 'all'
   /** Which part of the LPKC. Left out, or 'all', is every part. */
   part?: LpkcStage | 'all'
+  /** One course's reports. Left out, or 'all', is every course. */
+  course?: string | 'all'
   /**
    * Leave out the reports still being moderated. What `/lpkc` lists for a
    * trainer, whose turn those have not reached — a choice of what to show, not
@@ -310,14 +312,15 @@ const queueKey = (a: string | null, f: ReportFilters, page: number) =>
     'queue',
     f.status,
     f.part ?? 'all',
+    f.course ?? 'all',
     f.hideModerating ?? false,
     f.order ?? 'waiting',
     f.search,
     page,
   ] as const
 const countsKey = (a: string | null) => ['reports', a, 'counts'] as const
-const partCountsKey = (a: string | null) =>
-  ['reports', a, 'part-counts'] as const
+const courseCountsKey = (a: string | null) =>
+  ['reports', a, 'course-part-counts'] as const
 const threadKey = (id: string | null) => ['report', id] as const
 const mineKey = (a: string | null) => ['reports', a, 'mine'] as const
 const poolKey = (a: string | null) => ['report-pool', a] as const
@@ -390,6 +393,9 @@ export function useReportQueue(
       if (filters.part && filters.part !== 'all') {
         q = q.eq('lpkc_stage', filters.part)
       }
+      if (filters.course && filters.course !== 'all') {
+        q = q.eq('course_id', filters.course)
+      }
       if (filters.hideModerating) {
         q = q.filter('report_stage', 'neq', 'moderating')
       }
@@ -452,41 +458,64 @@ export function useReportCounts(academyId: string | null) {
 /** How many reports sit at each stage, for each part of the LPKC. */
 export type ReportPartCounts = Record<LpkcStage, Record<ReportStage, number>>
 
+/** One row of `report_course_part_counts`: a course, a part, a stage. */
+export type ReportCourseCount = {
+  course_id: string
+  course_title: string
+  part: LpkcStage
+  stage: ReportStage
+  n: number
+}
+
 /**
- * The same counts as the tiles', split by part. `/lpkc` filters on a part and a
- * stage at once, so a tile has to count within the part that is picked and a
- * part within the tile that is pressed — one grid answers both, and neither
- * number can then disagree with the list under it.
+ * The same counts as the tiles', split by part and by course. `/lpkc` filters
+ * on a course, a part and a stage at once, so a card has to count within the
+ * course and the status that are picked — one grid answers all three, and no
+ * number can then disagree with the list under it. The course select is filled
+ * from the same rows, so it offers only the courses this reader has reports in.
  */
-export function useReportPartCounts(academyId: string | null) {
+export function useReportCourseCounts(academyId: string | null) {
   return useQuery({
-    queryKey: partCountsKey(academyId),
+    queryKey: courseCountsKey(academyId),
     enabled: !!academyId,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('report_part_counts', {
+      const { data, error } = await supabase.rpc('report_course_part_counts', {
         _academy_id: academyId!,
       })
       if (error) throw error
-      const none = (): Record<ReportStage, number> => ({
-        submitted: 0,
-        in_review: 0,
-        moderating: 0,
-        pending_approval: 0,
-        changes_requested: 0,
-        approved: 0,
-      })
-      const out: ReportPartCounts = {
-        summary: none(),
-        report: none(),
-        slide: none(),
-      }
-      for (const r of data ?? []) {
-        const row = out[r.part]
-        if (row && r.stage in row) row[r.stage as ReportStage] = Number(r.n)
-      }
-      return out
+      return (data ?? []).map((r) => ({
+        ...r,
+        stage: r.stage as ReportStage,
+        n: Number(r.n),
+      })) as ReportCourseCount[]
     },
   })
+}
+
+/** The rows of one course, or of every course, folded into a part × stage grid. */
+export function partCountsOf(
+  rows: ReportCourseCount[] | undefined,
+  course: string | 'all',
+): ReportPartCounts {
+  const none = (): Record<ReportStage, number> => ({
+    submitted: 0,
+    in_review: 0,
+    moderating: 0,
+    pending_approval: 0,
+    changes_requested: 0,
+    approved: 0,
+  })
+  const out: ReportPartCounts = {
+    summary: none(),
+    report: none(),
+    slide: none(),
+  }
+  for (const r of rows ?? []) {
+    if (course !== 'all' && r.course_id !== course) continue
+    const row = out[r.part]
+    if (row && r.stage in row) row[r.stage] += r.n
+  }
+  return out
 }
 
 /**

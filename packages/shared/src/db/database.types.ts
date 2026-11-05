@@ -3544,6 +3544,16 @@ export type Database = {
           status: Database["public"]["Enums"]["report_status"]
         }[]
       }
+      report_course_part_counts: {
+        Args: { _academy_id: string }
+        Returns: {
+          course_id: string
+          course_title: string
+          n: number
+          part: Database["public"]["Enums"]["lpkc_stage"]
+          stage: string
+        }[]
+      }
       report_download: {
         Args: { _file_id: string }
         Returns: {
