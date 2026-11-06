@@ -47,3 +47,6 @@ Thumbs.db
 
 # Note: .vscode/ and .claude/settings.local.json are intentionally NOT ignored here;
 # adjust to your team's preference.
+
+# The promo film (video/) lives only on the owner's machine.
+/video/
