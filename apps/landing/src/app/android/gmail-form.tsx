@@ -7,12 +7,15 @@ import { SUPPORT_WHATSAPP_URL } from '@/components/site'
 const GMAIL = /^[^\s@]+@(gmail|googlemail)\.com$/
 
 export function GmailForm() {
-  const [email, setEmail] = useState('')
   const [error, setError] = useState(false)
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    const address = email.trim().toLowerCase()
+    // Read the field itself, not React state: on a slow phone the address can be
+    // typed or autofilled before hydration, and state would still be empty.
+    const address = String(new FormData(e.currentTarget).get('email') ?? '')
+      .trim()
+      .toLowerCase()
     if (!GMAIL.test(address)) {
       setError(true)
       return
@@ -38,11 +41,7 @@ export function GmailForm() {
           autoCapitalize="none"
           spellCheck={false}
           placeholder="name@gmail.com"
-          value={email}
-          onChange={(e) => {
-            setEmail(e.target.value)
-            setError(false)
-          }}
+          onChange={() => setError(false)}
           aria-invalid={error || undefined}
           aria-describedby={error ? 'email-error' : undefined}
           className="border-input bg-background placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/30 aria-invalid:border-destructive h-10 w-full min-w-0 rounded-4xl border px-4 text-base outline-none focus-visible:ring-3"
