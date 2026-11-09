@@ -155,7 +155,7 @@ and nobody is ever "moderating".
   values and a student keeps seeing "Being checked": a student's JWT reads that
   column straight from PostgREST, so a stored `moderating` would have shown them
   the step. The stage is built from the staff-only entry, which they cannot
-  read.
+  read while it is pending.
 - **`public.report_stage(report_submissions)`** returns it, and PostgREST
   serves it as a computed column — the queue selects `report_stage` and filters
   on it. It re-reads the row by id and checks `app.report_role`, because it is
@@ -373,11 +373,22 @@ it as a **staff-only entry** (`report_events.staff_only`):
 
 - **It moves nothing.** The report stays `in_review`, and `reviewed_at` is left
   alone — the student's own list reads that as "last activity".
-- **The student cannot read it, or its files.** `get_report` leaves it out of a
-  student's thread and does not carry the flag at all; the SELECT policies on
-  `report_events` and `report_files` refuse it, because a student's JWT reads
-  those tables straight from PostgREST; and `report_download` will not sign its
-  file. The student is not notified, mailed or pushed.
+- **The student reads it once their checker has answered it** (owner,
+  2026-11-09, `20261109100000_student_sees_answered_copy.sql`). Until then it
+  is the trainer's alone — that is what "Pending trainer approval" means. The
+  moment a staff member (the checker, or an admin) writes a visible entry after
+  it on the same version — a reply, Approve, Reopen — the student's thread shows
+  it, headlined "Hawary Academy LMS", with its document. A student's own reply
+  does not open it, and a later version does not hide it again. One test,
+  `app.report_copy_answered`, is read by all four places that decide: the
+  SELECT policies on `report_events` and `report_files` (a student's JWT reads
+  those straight from PostgREST), `get_report` (which now carries `staff_only`
+  to the student too, so both apps headline the entry the same way) and
+  `report_download`. The copy itself is never notified, mailed or pushed to the
+  student: the checker's reply is what tells them.
+  Before this the copy was hidden from the student for good, and trainers
+  ended up telling students their report had been corrected while the student
+  had nothing to open.
 - **It carries no person's name.** `actor_name` is null and `actor_role` is
   `system`; the timeline headlines it "Hawary Academy LMS" (`report.event.annotated`,
   the same in EN and BM, for old entries and new). It is a document for the
@@ -385,11 +396,12 @@ it as a **staff-only entry** (`report_events.staff_only`):
 - **It is the moment the checker is told** — with `report_submitted`, the notice
   they would have had when the report came in, worded the same.
 
-**Nothing in the product says this step exists**, and that is the owner's rule,
-not an oversight. From the student's side nothing happens between sending a
-report and hearing from their checker. On the staff side there is the copy and
-nothing about where it came from: no badge, no "pre-checked", no name on the
-entry, no line in an email or a push. Do not add one.
+**Nothing in the product explains where the copy came from**, and that is the
+owner's rule, not an oversight. From the student's side nothing happens between
+sending a report and hearing from their checker, and the copy arrives with that
+reply. On either side there is the entry and its "Hawary Academy LMS" headline
+and nothing more: no badge, no "pre-checked", no name on the entry, no line in
+an email or a push. Do not add one.
 
 ### A summary is received by itself (Oct 2026)
 
@@ -455,7 +467,8 @@ hiding rows in the client would have changed nothing.
 
 `report_events` and `report_files` follow the thread with an `EXISTS` against
 the parent rather than repeating the three tests, so the two cannot disagree —
-plus one test of their own: a student does not see a staff-only entry (see
+plus one test of their own: a student does not see a staff-only entry until
+their checker has answered it (see
 "The copy a checker starts from").
 
 Clients have **no DML on any of the three tables.** Assignment has to be fair,

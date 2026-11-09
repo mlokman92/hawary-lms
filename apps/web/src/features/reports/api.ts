@@ -152,9 +152,8 @@ export type ReportEvent = {
   created_at: string
   files: ReportFile[]
   /**
-   * An entry the student cannot read: the annotated copy the checker starts
-   * from. Present for staff only — a student's thread leaves these out and
-   * does not carry the field.
+   * The "Hawary Academy LMS" copy the checker starts from. A student's thread
+   * carries it only once their checker has answered it (the server decides).
    */
   staff_only?: boolean
 }
