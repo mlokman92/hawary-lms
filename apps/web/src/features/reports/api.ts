@@ -398,7 +398,13 @@ export function useReportQueue(
       if (filters.hideModerating) {
         q = q.filter('report_stage', 'neq', 'moderating')
       }
-      if (search) q = q.ilike('students.full_name', `%${search}%`)
+      // Each word on its own: names are stored as "AMUTHA A/P SELLAN", so
+      // "Amutha Sellan" has to match both words, not the phrase. `%`, `_` and
+      // `,` would be read as patterns or as PostgREST syntax, so they go.
+      for (const word of search.split(/\s+/)) {
+        const w = word.replace(/[%_,()]/g, '')
+        if (w) q = q.ilike('students.full_name', `%${w}%`)
+      }
 
       // Oldest first either way: a queue is answered from the top. By stage,
       // `report_stage_rank` is a computed column like `report_stage`, so the
