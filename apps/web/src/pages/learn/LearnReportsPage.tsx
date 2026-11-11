@@ -28,8 +28,8 @@ import {
  * nothing sent yet is a row with a Send button rather than an absence to
  * interpret. That is the same argument `/courses/:id/billing` makes about
  * students who were never invoiced: the thing you cannot see is the thing you
- * came to find out about. Each part is its own thread, checked and approved for
- * itself, so the report and its slides sit here as two rows.
+ * came to find out about. Each part is its own thread, sent once and corrected
+ * for itself, so the report and its slides sit here as two rows.
  *
  * When the academy has nobody in the checking rota the page says so and offers
  * nothing — the pool is the switch, so there is no separate setting to read and
@@ -126,7 +126,12 @@ export function LearnReportsPage() {
                                 : null,
                               fmtDateTime(r.last_at),
                             ]
-                          : [row.courseTitle, t('report.learn.nothing_sent')]
+                          : [
+                              row.courseTitle,
+                              row.needsReport
+                                ? t('report.learn.report_first')
+                                : t('report.learn.nothing_sent'),
+                            ]
                         )
                           .filter(Boolean)
                           .join(' · ')}
@@ -142,18 +147,17 @@ export function LearnReportsPage() {
                       </Badge>
                     ) : null}
 
-                    {/* The action is on the row that needs it. An approved
-                        report has nothing left to send, so the button goes —
-                        a disabled one would only raise the question. */}
-                    {!r || r.status !== 'approved' ? (
+                    {/* The action is on the row that needs it. A part is sent
+                        once, and the slides only after the report, so the
+                        button is there only for a part that can be sent. */}
+                    {!r && !row.needsReport ? (
                       <Button
                         size="sm"
-                        variant={r ? 'outline' : 'default'}
                         className="shrink-0"
                         onClick={() => setSubmitFor(row)}
                       >
                         <Upload />
-                        {r ? t('report.resubmit') : t('report.submit.send')}
+                        {t('report.submit.send')}
                       </Button>
                     ) : null}
                   </li>

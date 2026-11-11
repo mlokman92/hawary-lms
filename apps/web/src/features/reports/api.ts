@@ -59,19 +59,20 @@ export const LPKC_FILE_TYPES: Record<
 }
 
 /**
- * What staff read a report as. The stored status plus two stages inside "being
- * checked": `moderating` until a system admin has added something, then
- * `pending_approval` — the trainer's turn. A reading, not a column: the
- * student's own copy of the report never carries either, and `stage` equals
- * `status` for them (docs/report-checks.md → "Stages staff see").
+ * What staff read a report as. In an academy with a system admin everything
+ * still `in_review` reads `moderating`; elsewhere it stays `in_review`, the
+ * checker's turn. A reading, not a column: the student's own copy of the report
+ * never carries it, and `stage` equals `status` for them
+ * (docs/report-checks.md → "Stages staff see").
  */
-export type ReportStage = ReportStatus | 'moderating' | 'pending_approval'
+export type ReportStage = ReportStatus | 'moderating'
 
 /**
- * The status follows whoever spoke last: the student sending anything makes it
- * `in_review`, the academy replying makes it `changes_requested`, and
- * `approved` is the one decision somebody presses. `submitted` is no longer
- * written — it is here for timeline entries from before that rule.
+ * A part of the LPKC is sent once. The academy's reply (the corrected copy and
+ * the trainer's message) makes it `changes_requested`, read as "Correction
+ * complete"; a student's reply moves nothing. Nothing is approved any more:
+ * `approved` and `submitted` are no longer written and are here for rows and
+ * timeline entries from before.
  */
 export const REPORT_STATUS: Record<
   ReportStage,
@@ -80,13 +81,9 @@ export const REPORT_STATUS: Record<
   submitted: { labelKey: 'report.status.submitted', tone: 'info' },
   in_review: { labelKey: 'report.status.in_review', tone: 'warning' },
   moderating: { labelKey: 'report.status.moderating', tone: 'info' },
-  pending_approval: {
-    labelKey: 'report.status.pending_approval',
-    tone: 'warning',
-  },
   changes_requested: {
     labelKey: 'report.status.changes_requested',
-    tone: 'danger',
+    tone: 'positive',
   },
   approved: { labelKey: 'report.status.approved', tone: 'positive' },
 }
@@ -99,23 +96,19 @@ export function awaitingChecker(
   counts: Record<ReportStage, number> | undefined,
 ): number {
   if (!counts) return 0
-  return (
-    counts.submitted +
-    counts.in_review +
-    counts.moderating +
-    counts.pending_approval
-  )
+  return counts.submitted + counts.in_review + counts.moderating
 }
 
 /**
  * The stage that is this reader's to act on: an admin's (a Director's and the
  * system admin's with them) is the reports still being moderated; a trainer's
- * is the ones waiting for their approval. It is what `/lpkc` opens on and what
- * the sidebar counts. The counts themselves come through RLS, so a trainer's is
- * of the reports assigned to them and an admin's is of the academy's.
+ * is `in_review`, which only an academy with no system admin has — where there
+ * is one, the trainer's reply goes out with the corrected copy. It is what the
+ * sidebar counts. The counts themselves come through RLS, so a trainer's is of
+ * the reports assigned to them and an admin's is of the academy's.
  */
 export function deskStage(role: string | null | undefined): ReportStage {
-  return role === 'admin' ? 'moderating' : 'pending_approval'
+  return role === 'admin' ? 'moderating' : 'in_review'
 }
 
 /** The stage a row is read as; the plain status where the server gave none. */
@@ -250,18 +243,25 @@ export type ReportTarget = {
   report: MyReport | null
   /** The project's title from another part, to start a new one from. */
   titleHint: string
+  /**
+   * The slides wait for the report: a student with no LPKC report on this
+   * course cannot send slides yet (`app.submit_report_impl` refuses it too).
+   */
+  needsReport: boolean
 }
 
 /** Every (course, part) a student can see, in list order. */
 export function reportTargets(courses: MyReportRow[]): ReportTarget[] {
   return courses.flatMap((c) => {
     const titleHint = c.stages.find((s) => s.report)?.report?.title ?? ''
+    const hasReport = c.stages.some((s) => s.stage === 'report' && !!s.report)
     return c.stages.map((s) => ({
       courseId: c.course_id,
       courseTitle: c.course_title,
       stage: s.stage,
       report: s.report,
       titleHint,
+      needsReport: s.stage === 'slide' && !hasReport,
     }))
   })
 }
@@ -292,7 +292,7 @@ export type ReportFilters = {
   hideModerating?: boolean
   /**
    * 'waiting' (the default): longest since it was sent first. 'stage': by
-   * stage — moderating, pending trainer approval, changes needed, approved —
+   * stage — moderating, being checked, correction complete —
    * and within one, longest since anything changed first.
    */
   order?: 'waiting' | 'stage'
@@ -382,9 +382,9 @@ export function useReportQueue(
         )
         .eq('academy_id', academyId!)
 
-      // The two stages are a reading of the thread, so they filter on the
-      // computed column; the stored statuses stay on the indexed column.
-      if (filters.status === 'moderating' || filters.status === 'pending_approval') {
+      // Moderating is a reading of the thread, so it filters on the computed
+      // column; the stored statuses stay on the indexed column.
+      if (filters.status === 'moderating') {
         q = q.filter('report_stage', 'eq', filters.status)
       } else if (filters.status !== 'all') {
         q = q.eq('status', filters.status)
@@ -442,7 +442,6 @@ export function useReportCounts(academyId: string | null) {
         submitted: 0,
         in_review: 0,
         moderating: 0,
-        pending_approval: 0,
         changes_requested: 0,
         approved: 0,
       }
@@ -500,7 +499,6 @@ export function partCountsOf(
     submitted: 0,
     in_review: 0,
     moderating: 0,
-    pending_approval: 0,
     changes_requested: 0,
     approved: 0,
   })
@@ -794,10 +792,9 @@ export function useSetReportBrief(academyId: string | null) {
 }
 
 /**
- * Say something. The server moves the status by itself — to "being checked"
- * when the student writes, to "changes needed" when the academy does — so
- * `toStatus` is only for the two decisions staff make by hand: approve, and
- * reopen an approved report. A student's `toStatus` is dropped by the server.
+ * Say something. The server moves the status by itself — the academy's reply
+ * makes it "correction complete", a student's moves nothing — so the clients
+ * pass no `toStatus` (the server refuses `approved`, and drops a student's).
  */
 export function useCommentOnReport(academyId: string | null) {
   const qc = useQueryClient()

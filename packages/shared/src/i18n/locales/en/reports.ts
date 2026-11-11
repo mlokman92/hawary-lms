@@ -15,7 +15,7 @@ export const reports = {
   'report.status.in_review': 'Being checked',
   'report.status.moderating': 'Moderating',
   'report.status.pending_approval': 'Pending trainer approval',
-  'report.status.changes_requested': 'Changes needed',
+  'report.status.changes_requested': 'Correction complete',
   'report.status.approved': 'Approved',
 
   // --- page titles ----------------------------------------------------------
@@ -98,6 +98,7 @@ export const reports = {
   'report.learn.closed_hint': 'Ask the office how to send yours in.',
   'report.learn.no_courses': 'You are not on a course yet.',
   'report.learn.nothing_sent': 'Nothing sent yet',
+  'report.learn.report_first': 'Send the LPKC report first',
 
   // --- dashboards -----------------------------------------------------------
   'report.dash.staff.title': 'Reports to check',

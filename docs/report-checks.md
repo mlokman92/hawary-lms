@@ -74,6 +74,44 @@ files the new documents under a `submitted` event carrying that number, sets the
 status to `in_review` and **keeps the same checker**. The person who asked
 for the changes is the person who should see them.
 
+## One send, no approval (Nov 2026)
+
+The owner's rules since 11 Nov 2026 (`20261111100000_lpkc_one_send.sql`,
+`20261111110000_lpkc_slides_need_report.sql`,
+`20261111120000_lpkc_no_approval.sql`). They override the older sections
+below wherever those talk about versions, "changes needed", "pending trainer
+approval" or Approve.
+
+- **A part is sent once.** `submit_report` refuses a second send on a thread
+  that exists ("This part of the LPKC has already been sent"), and a student's
+  reply may not carry a document. There is no version 2: every thread is
+  version 1. The student sends from `/learn/reports` (or the Student app's LPKC
+  tab); the thread screen has no "Send a new version" and no attach for a
+  student. Staff still attach — the corrected copy arrives that way.
+- **The slides wait for the report.** A student with no LPKC report thread on
+  the course cannot send slides ("Send the LPKC report first"); the clients
+  hide the slides' Send and say so on the row (`ReportTarget.needsReport`).
+- **Three stages.** Staff read a thread as **Moderating** (`in_review` in an
+  academy with a system admin; elsewhere plain `in_review`, "Being checked",
+  the checker's turn), then **Correction complete** (`changes_requested`,
+  relabelled — set by the academy's reply), and that is the end. "Pending
+  trainer approval" is gone.
+- **A student's reply moves nothing.** It still reaches the checker (or the
+  system admins before the copy), but a question after the correction leaves
+  it complete.
+- **No approval.** The Approve / Reopen button is gone and the server refuses
+  an explicit `approved`. The enum value stays; the four approved rows (all in
+  the App Store demo academy) were left.
+- **The clean-up.** Every thread past version 1 was collapsed to one send: the
+  send the corrected copy was built from (or, with no copy, the newest; a
+  summary keeps its newest, since its text is the thread's), renumbered to 1,
+  with every other send, superseded copy and their notices removed. A
+  duplicated academy reply on 127 report threads was removed too. Everything
+  removed is in `app.report_events_reset_20261111`,
+  `app.report_files_reset_20261111`, `app.notifications_reset_20261111`, and
+  the threads as they were in `app.report_submissions_reset_20261111` (no
+  client access); the storage objects were not touched.
+
 ## Tables
 
 | table                | holds                                                        |

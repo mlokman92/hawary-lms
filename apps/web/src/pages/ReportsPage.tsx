@@ -72,9 +72,8 @@ import {
  * Course and status are selects beside the search, and work with the part.
  * The course select offers only the courses this reader has reports in, and
  * is not drawn when that is one course. The list is
- * also sorted by it — moderating, pending trainer approval, changes needed,
- * approved — so on All what needs somebody is at the top and what is finished
- * sinks, and within a status the report that has gone longest without
+ * also sorted by it — moderating, being checked, correction complete — so on
+ * All what needs somebody is at the top and what is finished sinks, and within a status the report that has gone longest without
  * anything happening comes first.
  *
  * A trainer is not shown a report that is still being moderated: it has not
@@ -113,14 +112,14 @@ function partOf(raw: string | null): Part {
 
 /**
  * The stages staff read a report as, in the order the list sorts them.
- * `submitted` and `in_review` are not here: for staff an `in_review` report is
- * always one of the first two, and `submitted` is no longer written.
+ * `in_review` stands for "being checked" in an academy with no system admin;
+ * with one, everything not yet corrected reads `moderating`. `submitted` is no
+ * longer written, and nothing is approved any more.
  */
 const STATUS_OPTIONS: ReportStage[] = [
   'moderating',
-  'pending_approval',
+  'in_review',
   'changes_requested',
-  'approved',
 ]
 
 /** `?status=` — absent, or one this reader is not offered, means every one. */

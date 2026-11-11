@@ -6,7 +6,7 @@ export const reports: ReportsDict = {
   'report.status.in_review': 'Sedang disemak',
   'report.status.moderating': 'Sedang dimoderasi',
   'report.status.pending_approval': 'Menunggu kelulusan jurulatih',
-  'report.status.changes_requested': 'Perlu pembetulan',
+  'report.status.changes_requested': 'Pembetulan selesai',
   'report.status.approved': 'Diluluskan',
 
   // --- page titles ----------------------------------------------------------
@@ -92,6 +92,7 @@ export const reports: ReportsDict = {
     'Tanya pejabat bagaimana untuk menghantar laporan anda.',
   'report.learn.no_courses': 'Anda belum berada dalam mana-mana kursus.',
   'report.learn.nothing_sent': 'Belum ada yang dihantar',
+  'report.learn.report_first': 'Hantar Laporan LPKC dahulu',
 
   // --- dashboards -----------------------------------------------------------
   'report.dash.staff.title': 'Laporan untuk disemak',

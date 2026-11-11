@@ -1,12 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Check,
   FileText,
   MoreHorizontal,
-  RotateCcw,
   Send,
-  Upload,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useT } from '@/lib/i18n'
@@ -29,7 +26,6 @@ import { CpcSheet } from './CpcSheet'
 import { FilePicker } from './FilePicker'
 import { ReportTimeline } from './ReportTimeline'
 import {
-  LPKC_FILE_TYPES,
   LPKC_STAGE_LABEL,
   REPORT_STATUS,
   useCommentOnReport,
@@ -37,7 +33,6 @@ import {
   useReport,
   useSetReportBrief,
   type PendingFile,
-  type ReportStatus,
 } from './api'
 
 /**
@@ -49,19 +44,15 @@ import {
  * copied into both is a rule that will drift. A button that fails at the policy
  * is worse than no button.
  *
- * What differs between the two callers is the one thing that genuinely differs:
- * a student uploads the next version, staff approve. Neither is a cosmetic
- * variation of the other, so `onResubmit` is a prop rather than a flag.
+ * A part of the LPKC is sent once (from the list), so a student here reads and
+ * replies in words; staff reply, attach and approve.
  */
 export function ReportThreadView({
   academyId,
   reportId,
-  onResubmit,
 }: {
   academyId: string | null
   reportId: string
-  /** Rendered as the student's action. Absent for staff, who never upload. */
-  onResubmit?: () => void
 }) {
   const { t } = useT()
   const { user } = useAuth()
@@ -88,9 +79,8 @@ export function ReportThreadView({
   const status = REPORT_STATUS[report.stage ?? report.status]
   const isStudent = report.my_role === 'student'
   const isAdmin = report.my_role === 'admin'
-  const canDecide = !isStudent
+  const showCpc = !isStudent
   const canReassign = !isStudent
-  const done = report.status === 'approved'
 
   const fields = [
     { key: 'introduction', labelKey: 'report.submit.introduction', text: report.introduction },
@@ -122,13 +112,13 @@ export function ReportThreadView({
     }
   }
 
-  async function post(toStatus: ReportStatus | null) {
+  async function post() {
     setFailure(null)
     try {
       await comment.mutateAsync({
         reportId,
         body,
-        toStatus,
+        toStatus: null,
         files,
       })
       setBody('')
@@ -147,14 +137,9 @@ export function ReportThreadView({
     }
   }
 
-  // A summary is text: its student sends no documents with it, on the first
-  // send or in a reply. Staff still attach — the checker's copy arrives here.
-  // A student's file is the part's kind only, and arrives as the next version
-  // — so not on an approved report, which takes no more versions.
-  const canAttach = !(
-    isStudent &&
-    (report.lpkc_stage === 'summary' || done)
-  )
+  // A part of the LPKC is sent once, so a student's reply is words only.
+  // Staff still attach — the corrected copy arrives here.
+  const canAttach = !isStudent
 
   const busy = comment.isPending || reassign.isPending
   const nothingToSay = body.trim() === '' && files.length === 0
@@ -202,15 +187,6 @@ export function ReportThreadView({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* A student's one action, and only while there is something to do:
-              an approved report has nothing left to resubmit. */}
-          {isStudent && onResubmit && !done ? (
-            <Button onClick={onResubmit}>
-              <Upload />
-              {t('report.resubmit')}
-            </Button>
-          ) : null}
-
           {/* Staff: the occasional actions. Reassigning is rare and
               irreversible-ish, so it belongs behind the menu, not beside the
               reply box. */}
@@ -313,9 +289,8 @@ export function ReportThreadView({
             }
           />
 
-          {/* Send is the whole act: the server moves the status to "being
-              checked" when the student sends and to "changes needed" when the
-              academy does, so there is nothing else to press. */}
+          {/* Send is the whole act: the academy's reply makes the thread
+              "correction complete"; a student's reply moves nothing. */}
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             {academyId && canAttach ? (
               <FilePicker
@@ -323,9 +298,6 @@ export function ReportThreadView({
                 files={files}
                 onChange={setFiles}
                 disabled={busy}
-                accept={
-                  isStudent ? LPKC_FILE_TYPES[report.lpkc_stage] : undefined
-                }
               />
             ) : (
               <span />
@@ -335,7 +307,7 @@ export function ReportThreadView({
               type="button"
               size="sm"
               disabled={busy || nothingToSay}
-              onClick={() => void post(null)}
+              onClick={() => void post()}
             >
               <Send />
               {t('report.send')}
@@ -361,32 +333,13 @@ export function ReportThreadView({
         </div>
       </Card>
 
-      {/* Staff's two standing actions, pinned so they are there wherever the
-          thread is scrolled: the decision in the middle, the chart every LPKC
-          part is checked against on the right. */}
-      {canDecide ? (
+      {/* Staff's standing action, pinned so it is there wherever the thread
+          is scrolled: the chart every LPKC part is checked against. There is
+          no approval — a part ends at "Correction complete". */}
+      {showCpc ? (
         <>
           {/* Room to scroll the reply box's Send clear of the pinned buttons. */}
           <div className="h-20" aria-hidden />
-
-          {/* Approve is the one status nobody's reply sets. Once approved the
-              same button reads Reopen — the undo, one click away. Anything in
-              the reply box goes with either, as the note explaining it. */}
-          <Button
-            size="lg"
-            variant={done ? 'outline' : 'default'}
-            className={cn(
-              'fixed bottom-6 left-1/2 z-40 -translate-x-1/2 px-8 shadow-lg',
-              done
-                ? 'bg-background'
-                : 'bg-emerald-600 text-white hover:bg-emerald-700',
-            )}
-            disabled={busy}
-            onClick={() => void post(done ? 'in_review' : 'approved')}
-          >
-            {done ? <RotateCcw /> : <Check />}
-            {done ? t('report.reopen') : t('report.approve')}
-          </Button>
 
           <Button
             variant="outline"
@@ -395,8 +348,7 @@ export function ReportThreadView({
             aria-label={t('report.cpc')}
           >
             <FileText />
-            {/* Icon only on a phone, where the label would run into Approve. */}
-            <span className="hidden sm:inline">{t('report.cpc')}</span>
+            <span>{t('report.cpc')}</span>
           </Button>
           <CpcSheet open={cpcOpen} onOpenChange={setCpcOpen} />
         </>

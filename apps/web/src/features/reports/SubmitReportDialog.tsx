@@ -23,16 +23,13 @@ import {
 } from './api'
 
 /**
- * Send one part of the LPKC for checking, or send the next version of it.
- *
- * One dialog for both because the server has one RPC for both: a resubmission
- * is the next version of the same thread and keeps the same checker. Only the
- * wording changes, which is what `target.report` decides.
+ * Send one part of the LPKC for checking. A part is sent once: there is no
+ * next version (`submit_report` refuses one), so this opens only for a part
+ * with nothing sent yet.
  *
  * What it asks for is what the part is made of. The summary IS its
- * introduction, objectives and problem statement — required on every send, and
- * seeded from the thread so a new version starts from what is there — and
- * takes no documents at all. The report and the slides are a document, so
+ * introduction, objectives and problem statement — required — and takes no
+ * documents at all. The report and the slides are a document, so
  * those ask for one and for nothing else. The server makes the same split.
  *
  * The title is the project's, so a new part starts from the title the student
@@ -61,31 +58,19 @@ export function SubmitReportDialog({
   const [files, setFiles] = useState<PendingFile[]>([])
   const [error, setError] = useState<string | null>(null)
 
-  const existing = target?.report ?? null
   const isSummary = target?.stage === 'summary'
   const titleHint = target?.titleHint ?? ''
 
-  // Reset per opening, and seed the text from the thread being added to: a
-  // resubmission is nearly always the same work again, so making somebody
-  // retype their title — or their introduction — would be asking a question
-  // whose answer is already on screen. A summary sent before the three fields
-  // were asked for seeds them empty, and so must be filled in.
+  // Reset per opening; the title starts from the one another part was given.
   useEffect(() => {
     if (!open) return
-    setTitle(existing?.title ?? titleHint)
-    setIntroduction(existing?.introduction ?? '')
-    setObjectives(existing?.objectives ?? '')
-    setProblem(existing?.problem_statement ?? '')
+    setTitle(titleHint)
+    setIntroduction('')
+    setObjectives('')
+    setProblem('')
     setFiles([])
     setError(null)
-  }, [
-    open,
-    titleHint,
-    existing?.title,
-    existing?.introduction,
-    existing?.objectives,
-    existing?.problem_statement,
-  ])
+  }, [open, titleHint])
 
   async function save() {
     if (!target) return
@@ -117,11 +102,7 @@ export function SubmitReportDialog({
             {target ? t(LPKC_STAGE_LABEL[target.stage]) : null}
           </DialogTitle>
           <DialogDescription>
-            {existing
-              ? t('report.submit.desc_again', {
-                  version: existing.version + 1,
-                })
-              : t('report.submit.desc', { course: target?.courseTitle ?? '' })}
+            {t('report.submit.desc', { course: target?.courseTitle ?? '' })}
           </DialogDescription>
         </DialogHeader>
 
