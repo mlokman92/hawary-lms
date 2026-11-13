@@ -268,6 +268,16 @@ Two properties of the file decide how it plays, and neither is in the app:
   pattern ([course-materials.md](course-materials.md)) with a lifetime of hours,
   not 60 seconds, because a player keeps requesting ranges on the same URL.
 
+**Or a Google Drive recording** — `<iframe src="https://drive.google.com/file/d/<id>/preview">`,
+the `DriveVideo` node, registered in the same two places. Since 2026-11-13,
+because that second Supabase account is gone (its host no longer resolves) and a
+multi-GB file cannot go in this project's Storage (50 MB upload cap, and egress
+per watch). A Drive file that large cannot be a `<video src>` — Drive returns a
+"too large to scan" page — so it plays in Drive's own player. Only the file id
+is parsed; the src is rebuilt from it, so no other iframe survives. The file must
+be shared "anyone with the link", and Drive's player shows its own pop-out and
+download control. Still SQL-only, like `<video>`.
+
 ## Storage
 
 Public `avatars` + `note-media` buckets, keyed `<academy_id>/<uuid>.<ext>`;

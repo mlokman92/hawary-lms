@@ -206,15 +206,16 @@
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
-.tiptap :where(video) {
+.tiptap :where(video, iframe) {
   width: 100%;
   aspect-ratio: 16 / 9;
   background: #000;
   border-radius: 0.5rem;
   margin: 0.75rem 0;
   display: block;
+  border: 0;
 }
-.tiptap :where(video).ProseMirror-selectednode {
+.tiptap :where(video, iframe).ProseMirror-selectednode {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }

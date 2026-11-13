@@ -1,6 +1,7 @@
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
+import { DriveVideo } from '@/components/DriveVideo'
 import { LectureVideo } from '@/components/LectureVideo'
 
 /**
@@ -33,6 +34,7 @@ export function RichTextView({ html }: { html: string }) {
       }),
       Image.configure({ inline: false, allowBase64: false }),
       LectureVideo,
+      DriveVideo,
     ],
     editorProps: {
       attributes: { class: 'tiptap text-sm leading-7 focus:outline-none' },
