@@ -177,6 +177,10 @@ export const common = {
     'Signed in as {account}, which is not staff of this academy. Sign in with the account that owns this course.',
   'upload.another_account': 'another account',
   'upload.failed': 'Upload failed',
+  'upload.unreadable':
+    'This file could not be read. Save it to your phone or computer first (not from Google Drive or WhatsApp), then choose it again.',
+  'upload.network':
+    'Could not reach the server. Check your connection and try again.',
 } as const
 
 export type CommonDict = Record<keyof typeof common, string>

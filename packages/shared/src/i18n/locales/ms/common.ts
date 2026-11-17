@@ -165,4 +165,8 @@ export const common: CommonDict = {
     'Anda log masuk sebagai {account}, yang bukan kakitangan akademi ini. Sila log masuk dengan akaun yang memiliki kursus ini.',
   'upload.another_account': 'akaun lain',
   'upload.failed': 'Muat naik gagal',
+  'upload.unreadable':
+    'Fail ini tidak dapat dibaca. Simpan fail ke dalam telefon atau komputer anda dahulu (bukan dari Google Drive atau WhatsApp), kemudian pilih semula.',
+  'upload.network':
+    'Tidak dapat menghubungi pelayan. Semak sambungan internet anda dan cuba lagi.',
 }

@@ -21,8 +21,29 @@ type UploadResponse = {
   your_academies?: string[]
 }
 
+/**
+ * The picked file, copied into memory before it is sent.
+ *
+ * On Android a picked file is a handle the browser reads while uploading. A
+ * file chosen from Google Drive or WhatsApp, or one that changed after it was
+ * picked, cannot be read at that point, and the browser drops the request
+ * after the preflight — the student saw only "Failed to send a request to the
+ * Edge Function". Reading it here first sends bytes that are already in hand,
+ * and a file that cannot be read gets a sentence saying so.
+ */
+async function inMemory(file: File): Promise<File> {
+  try {
+    return new File([await file.arrayBuffer()], file.name, { type: file.type })
+  } catch {
+    throw new Error(translate('upload.unreadable'))
+  }
+}
+
 /** Turn a FunctionsHttpError into the sentence the function actually sent. */
 async function functionError(error: unknown): Promise<Error> {
+  // The request never reached the function (FunctionsFetchError).
+  if ((error as { name?: string }).name === 'FunctionsFetchError')
+    return new Error(translate('upload.network'))
   const ctx = (error as { context?: Response }).context
   if (ctx && typeof ctx.json === 'function') {
     const detail = (await ctx.json().catch(() => null)) as UploadResponse | null
@@ -160,7 +181,7 @@ export async function uploadPaymentReceipt(
   file: File,
 ): Promise<void> {
   const body = new FormData()
-  body.append('file', file)
+  body.append('file', await inMemory(file))
   body.append('payment_id', paymentId)
 
   const { data, error } = await supabase.functions.invoke<UploadResponse>(
@@ -203,7 +224,7 @@ async function uploadStudentPdf(
   file: File,
 ): Promise<void> {
   const body = new FormData()
-  body.append('file', file)
+  body.append('file', await inMemory(file))
   body.append('student_id', studentId)
 
   const { data, error } = await supabase.functions.invoke<UploadResponse>(fn, {
