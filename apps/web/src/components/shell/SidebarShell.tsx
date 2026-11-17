@@ -49,7 +49,11 @@ export function SidebarShell({
   return (
     <SidebarProvider>
       {sidebar}
-      <SidebarInset>
+      {/* `min-w-0`: beside the sidebar this is a flex item, and at the
+          default `min-width: auto` one unbreakable line — a `truncate` row on
+          /learn/reports — widened the whole page past the window and pushed
+          the row's Send button off-screen on a laptop. */}
+      <SidebarInset className="min-w-0">
         <header className="bg-background sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
           {/* The divider separates the trigger from what follows it — with an
