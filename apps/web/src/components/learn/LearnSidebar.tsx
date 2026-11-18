@@ -15,6 +15,8 @@ import {
   UserRound,
 } from 'lucide-react'
 import { useT } from '@/lib/i18n'
+import { useStudentAcademy } from '@/lib/studentAcademy'
+import { useAppointmentsEntry } from '@/features/appointments/api'
 import { ShellSidebar } from '@/components/shell/ShellSidebar'
 import type { NavGroup } from '@/components/shell/nav'
 import { LearnAcademySwitcher } from './LearnAcademySwitcher'
@@ -35,6 +37,10 @@ import { LearnAcademySwitcher } from './LearnAcademySwitcher'
  */
 export function LearnSidebar() {
   const { t } = useT()
+  const { academyId } = useStudentAcademy()
+  // Off for a course whose appointments are switched off, unless the student
+  // still has a session coming up there.
+  const appointments = useAppointmentsEntry(academyId)
 
   const groups: NavGroup[] = [
     {
@@ -64,11 +70,15 @@ export function LearnSidebar() {
           ],
         },
         { title: t('nav.learn.work'), to: '/learn/work', icon: ListTodo },
-        {
-          title: t('nav.learn.appointments'),
-          to: '/learn/appointments',
-          icon: CalendarClock,
-        },
+        ...(appointments.show
+          ? [
+              {
+                title: t('nav.learn.appointments'),
+                to: '/learn/appointments',
+                icon: CalendarClock,
+              },
+            ]
+          : []),
         // Its own item and not a child of My work: My work is coursework with
         // a deadline, and a report is a document you hand over and wait on.
         {

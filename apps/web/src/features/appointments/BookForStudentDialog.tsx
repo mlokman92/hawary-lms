@@ -117,7 +117,13 @@ export function BookForStudentDialog({
 
   const matches = useMemo(() => {
     const q = search.trim().toLowerCase()
-    const rows = students ?? []
+    // Only students whose course has appointments switched on —
+    // `book_appointment` refuses the rest (app.appointments_enabled_for).
+    const rows = (students ?? []).filter((s) =>
+      s.enrollments.some(
+        (e) => e.status === 'active' && e.courses?.appointments_enabled,
+      ),
+    )
     if (!q) return rows.slice(0, 8)
     return rows
       .filter((s) =>

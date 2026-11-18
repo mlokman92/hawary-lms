@@ -20,7 +20,11 @@ export type StudentRow = Student & {
   enrollments: {
     id: string
     status: Enums<'enrollment_status'>
-    courses: { id: string; title: string } | null
+    courses: {
+      id: string
+      title: string
+      appointments_enabled: boolean
+    } | null
   }[]
 }
 
@@ -51,7 +55,7 @@ export function useStudents(academyId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('students')
-        .select('*, enrollments(id, status, courses(id, title))')
+        .select('*, enrollments(id, status, courses(id, title, appointments_enabled))')
         .eq('academy_id', academyId!)
         .is('archived_at', null)
         .order('created_at', { ascending: false })

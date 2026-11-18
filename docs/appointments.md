@@ -536,6 +536,42 @@ it to `app.is_admin OR app.owns_instructor(instructor_id) OR instructor_id is
 null` would be the matching move, and is a policy decision rather than part of
 building this screen.
 
+## Which courses may book
+
+`courses.appointments_enabled`. One student, one course, so this is a switch
+for a whole intake. It was added on 2026-11-19, when the owner wanted only the
+current intake (DKM Prasekolah Siri 3/2026) booking teacher time. Siri 1 and 2
+were switched off that day and their 10 upcoming sessions were cancelled by
+hand, with in-app notifications. The store demo academy's course stays on for
+the reviewers.
+
+- **One test, `app.appointments_enabled_for(student)`**: an `active`
+  enrollment in a course with the switch on. Pending, completed, dropped and
+  cancelled enrollments do not count, and neither does a student with no
+  enrollment at all.
+- **Both doors check it.** `get_booking_options` answers `is_open: false`, so
+  the learner page shows booking as closed. `book_appointment` refuses, and it
+  refuses **staff booking on the student's behalf** too, because the switch is
+  about the student's course, not about who pressed the button. The staff
+  booking dialog therefore lists only students who can be booked.
+- **What is already booked is left alone.** `get_my_appointments` and
+  `cancel_appointment` do not consult the switch. Switching a course off must
+  not strand a student with a session they can neither see nor cancel.
+- **Off by default.** A new course gets no teacher time until an admin says so,
+  the same rule as `instructors.is_bookable`. `duplicate_course` does not copy
+  the switch.
+- **Admin-only.** The `courses` UPDATE policy is `app.is_staff` (trainers edit
+  their courses), so `app.guard_course_appointments` refuses a non-admin who
+  changes the column. It has the same shape as `guard_course_lpkc_stage`.
+- **The learner's entry hides itself.** `my_appointments_enabled` feeds
+  `useAppointmentsEntry`, which draws the sidebar item, the dashboard section
+  and the mobile tab only when the course books **or** a session is still
+  ahead. The mobile tab goes `hidden`, not away, so a notification's link
+  still opens it.
+
+The switches are a card on `/appointments/settings` (admin only), beside the
+booking pool. Both decide who meets whom, and both are set rarely.
+
 ## Email: three events, one function
 
 `supabase/functions/send-appointment-notice` tells **both** parties what became
@@ -671,8 +707,9 @@ same question whatever became of it.
   `/payments`, the same call the enrolment work made.
 - **No approval step.** Booking is instant. Round robin only makes sense
   self-serve — if staff review every booking they may as well pick the teacher.
-- **Not tied to a course.** Any active student may book; the session is academy
-  time, not course time.
+- **A session is not about a course.** It carries no `course_id`; the course
+  decides only *whether* its students may book — see **Which courses may
+  book**.
 - **No reschedule.** Cancel and book again. Staff can move one by editing
   `starts_at`; the exclusion constraint still protects them.
 - **No instructor reminder.** The evening-before email goes to students only —

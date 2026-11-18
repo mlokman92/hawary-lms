@@ -915,3 +915,35 @@ export function useMyAppointments(academyId: string | null) {
     },
   })
 }
+
+/**
+ * Whether the learner's Appointments entry is drawn at all.
+ *
+ * Booking is switched on per course (`courses.appointments_enabled`, read by
+ * `my_appointments_enabled`). A student whose course is off still keeps the
+ * entry while they have a session coming up — it is where they see it and
+ * cancel it — and loses it once there is nothing left there for them.
+ * `show` stays false until both answers are in, so the entry never appears
+ * and then vanishes.
+ */
+export function useAppointmentsEntry(academyId: string | null) {
+  const enabled = useQuery({
+    queryKey: ['my-appointments-enabled', academyId] as const,
+    enabled: !!academyId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('my_appointments_enabled', {
+        _academy_id: academyId!,
+      })
+      if (error) throw error
+      return data === true
+    },
+  })
+  const mine = useMyAppointments(academyId)
+  const upcoming = (mine.data ?? []).some(
+    (a) => a.status === 'booked' && Date.parse(a.ends_at) >= Date.now(),
+  )
+  return {
+    show: enabled.data === true || (mine.isSuccess && upcoming),
+    isLoading: enabled.isLoading || mine.isLoading,
+  }
+}

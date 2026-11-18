@@ -20,6 +20,7 @@ import { useMyCourses, useMyStudent } from '@/features/learn/api'
 import {
   DEFAULT_TZ,
   useAcademyTimezone,
+  useAppointmentsEntry,
   useMyAppointments,
 } from '@/features/appointments/api'
 import { fmtWhen } from '@/features/appointments/calendar'
@@ -167,6 +168,7 @@ export function LearnDashboardPage() {
   const courses = useMyCourses(academyId, student?.id ?? null)
   const { data: tz = DEFAULT_TZ } = useAcademyTimezone(academyId)
   const sessions = useMyAppointments(academyId)
+  const appointments = useAppointmentsEntry(academyId)
   const reports = useMyReports(academyId)
   // The student's own row of the documents roster: one read for the three
   // documents and the KWSP application.
@@ -188,6 +190,7 @@ export function LearnDashboardPage() {
   } else if (
     courses.isLoading ||
     sessions.isLoading ||
+    appointments.isLoading ||
     reports.isLoading ||
     docs.isLoading
   ) {
@@ -236,21 +239,23 @@ export function LearnDashboardPage() {
           detail={course?.title}
         />
 
-        <Section
-          icon={CalendarClock}
-          title={t('nav.learn.appointments')}
-          to="/learn/appointments"
-          detail={
-            next
-              ? [
-                  fmtWhen(next.starts_at, tz, localeFor(getLang())),
-                  next.instructor.full_name,
-                ]
-                  .filter(Boolean)
-                  .join(' · ')
-              : null
-          }
-        />
+        {appointments.show ? (
+          <Section
+            icon={CalendarClock}
+            title={t('nav.learn.appointments')}
+            to="/learn/appointments"
+            detail={
+              next
+                ? [
+                    fmtWhen(next.starts_at, tz, localeFor(getLang())),
+                    next.instructor.full_name,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')
+                : null
+            }
+          />
+        ) : null}
 
         {parts.length > 0 || reports.isError ? (
           <Section

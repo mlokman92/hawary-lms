@@ -157,3 +157,40 @@ export function useUpdateCourse(academyId: string) {
     },
   })
 }
+
+/**
+ * Appointments on or off for one course — admin-only, enforced by
+ * `app.guard_course_appointments`. Optimistic for the same reason as the
+ * booking pool's switch: a switch that waits for a round trip reads as broken.
+ */
+export function useSetCourseAppointments(academyId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { id: string; enabled: boolean }) => {
+      const { error } = await supabase
+        .from('courses')
+        .update({ appointments_enabled: input.enabled })
+        .eq('id', input.id)
+      if (error) throw error
+    },
+    onMutate: async (input) => {
+      await qc.cancelQueries({ queryKey: coursesKey(academyId) })
+      const previous = qc.getQueryData<CourseRow[]>(coursesKey(academyId))
+      qc.setQueryData<CourseRow[]>(coursesKey(academyId), (rows) =>
+        (rows ?? []).map((r) =>
+          r.id === input.id ? { ...r, appointments_enabled: input.enabled } : r,
+        ),
+      )
+      return { previous }
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.previous) qc.setQueryData(coursesKey(academyId), ctx.previous)
+    },
+    onSettled: (_d, _e, input) => {
+      void qc.invalidateQueries({ queryKey: coursesKey(academyId) })
+      void qc.invalidateQueries({ queryKey: courseKey(input.id) })
+      // The booking dialog's student list carries the flag on its embed.
+      void qc.invalidateQueries({ queryKey: ['students', academyId] })
+    },
+  })
+}

@@ -7,6 +7,7 @@ import { AvailabilityCard } from '@/features/appointments/AvailabilityCard'
 import { BlockedDatesCard } from '@/features/appointments/BlockedDatesCard'
 import { BookingPoolCard } from '@/features/appointments/BookingPoolCard'
 import { BookingSettingsCard } from '@/features/appointments/BookingSettingsCard'
+import { CourseAppointmentsCard } from '@/features/appointments/CourseAppointmentsCard'
 import { useMyInstructorRecord } from '@/features/profile/api'
 import {
   DEFAULT_TZ,
@@ -110,6 +111,9 @@ export function AppointmentSettingsPage() {
             {isAdmin ? (
               <BookingPoolCard academyId={academyId} instructors={pool ?? []} />
             ) : null}
+
+            {/* 5 — whose students can book */}
+            {isAdmin ? <CourseAppointmentsCard academyId={academyId} /> : null}
           </>
         )}
       </div>

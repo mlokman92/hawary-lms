@@ -1310,6 +1310,7 @@ export type Database = {
       courses: {
         Row: {
           academy_id: string
+          appointments_enabled: boolean
           code: string | null
           cover_url: string | null
           created_at: string
@@ -1327,6 +1328,7 @@ export type Database = {
         }
         Insert: {
           academy_id: string
+          appointments_enabled?: boolean
           code?: string | null
           cover_url?: string | null
           created_at?: string
@@ -1344,6 +1346,7 @@ export type Database = {
         }
         Update: {
           academy_id?: string
+          appointments_enabled?: boolean
           code?: string | null
           cover_url?: string | null
           created_at?: string
@@ -3333,6 +3336,10 @@ export type Database = {
           file_path: string
           mime_type: string
         }[]
+      }
+      my_appointments_enabled: {
+        Args: { _academy_id: string }
+        Returns: boolean
       }
       my_pending_invitations: {
         Args: never

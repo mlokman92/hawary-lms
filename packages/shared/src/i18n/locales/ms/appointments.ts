@@ -108,6 +108,13 @@ export const appointments: AppointmentsDict = {
     'Tidak aktif — ditinggalkan sehingga statusnya berubah.',
   'appt.pool.toggle_aria': 'Boleh ditempah — {name}',
 
+  // --- Kursus yang boleh menempah -------------------------------------------
+  'appt.courses.title': 'Kursus yang boleh menempah',
+  'appt.courses.description':
+    'Hanya pelajar kursus ini boleh menempah. Kursus baharu ditutup sehingga anda hidupkannya.',
+  'appt.courses.none': 'Belum ada kursus',
+  'appt.courses.toggle_aria': 'Temu janji — {name}',
+
   // --- Kakitangan menempah bagi pihak pelajar --------------------------------
   'appt.book_for.action': 'Tempah sesi',
   'appt.book_for.title': 'Tempah sesi',

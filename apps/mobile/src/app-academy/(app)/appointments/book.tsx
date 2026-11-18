@@ -86,9 +86,14 @@ export default function BookScreen() {
     return (students ?? [])
       .filter(
         (s) =>
-          (s.full_name ?? '').toLowerCase().includes(q) ||
+          // Only students whose course has appointments switched on —
+          // book_appointment refuses the rest (docs/appointments.md).
+          s.enrollments.some(
+            (e) => e.status === 'active' && e.courses?.appointments_enabled,
+          ) &&
+          ((s.full_name ?? '').toLowerCase().includes(q) ||
           (s.email ?? '').toLowerCase().includes(q) ||
-          s.student_no.toLowerCase().includes(q),
+          s.student_no.toLowerCase().includes(q)),
       )
       .slice(0, 8)
   }, [students, search])

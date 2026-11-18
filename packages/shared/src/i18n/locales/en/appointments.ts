@@ -112,6 +112,13 @@ export const appointments = {
   'appt.pool.not_active': 'Not active — left out until their status changes.',
   'appt.pool.toggle_aria': 'Bookable — {name}',
 
+  // --- Which courses may book -----------------------------------------------
+  'appt.courses.title': 'Which courses can book',
+  'appt.courses.description':
+    'Only students of these courses can book. A new course is off until you switch it on.',
+  'appt.courses.none': 'No courses yet',
+  'appt.courses.toggle_aria': 'Appointments — {name}',
+
   // --- Staff booking on a student's behalf ----------------------------------
   'appt.book_for.action': 'Book a session',
   'appt.book_for.title': 'Book a session',
